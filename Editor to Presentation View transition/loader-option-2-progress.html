@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loader — Option 2 · Label + progress line</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ease: cubic-bezier(0.23, 1, 0.32, 1); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+      background: #E5E5E5; display: flex; overflow: hidden; }
+
+    .shimmer { width: 100%; height: 100%;
+      background: linear-gradient(90deg, #E5E5E5 0%, #F5F5F5 50%, #E5E5E5 100%);
+      background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    .filmstrip { width: 200px; flex-shrink: 0; padding: 12px 0 12px 12px; }
+    .filmstrip-panel { height: 100%; background: #fff; border-radius: 8px; overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px rgba(11,15,20,0.09); display: flex; flex-direction: column; }
+    .thumbs { flex: 1; overflow: hidden; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+    .thumb { width: 100%; aspect-ratio: 16/9; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+
+    .canvas { flex: 1; position: relative; min-width: 0; }
+    .stage { position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 26px; padding: 40px; }
+    .slide { width: min(62vw, 720px); aspect-ratio: 16/9; border-radius: 2px; overflow: hidden;
+      box-shadow: 0 4px 24px rgba(11,15,20,0.12), 0 0 0 1px rgba(11,15,20,0.04); }
+
+    /* ── Option 2: label + thin determinate progress line, no container ── */
+    .loader2 { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .label { font-size: 14px; font-weight: 500; color: #525252; line-height: 20px;
+      font-variant-numeric: tabular-nums; transition: opacity 160ms var(--ease); }
+    .bar { width: 240px; height: 3px; border-radius: 999px; background: rgba(11,15,20,0.10);
+      overflow: hidden; position: relative; }
+    .fill { height: 100%; width: 0%; border-radius: 999px; background: #0055ED;
+      transition: width 420ms var(--ease); }
+    .bar.indeterminate .fill { width: 40% !important; transition: none;
+      animation: slide 1.15s var(--ease) infinite; }
+    @keyframes slide { from { transform: translateX(-110%); } to { transform: translateX(360%); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .shimmer { animation: none; }
+      .bar.indeterminate .fill { animation: none; width: 100% !important; }
+      .label, .fill { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="filmstrip">
+    <div class="filmstrip-panel"><div class="thumbs" id="thumbs"></div></div>
+  </div>
+  <div class="canvas">
+    <div class="stage">
+      <div class="slide"><div class="shimmer"></div></div>
+      <div class="loader2">
+        <span class="label" id="label">Designing slide 1 of 10…</span>
+        <div class="bar" id="bar"><div class="fill" id="fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const thumbs = document.getElementById("thumbs");
+    for (let i = 0; i < 10; i++) {
+      const t = document.createElement("div");
+      t.className = "thumb"; t.innerHTML = '<div class="shimmer"></div>';
+      thumbs.appendChild(t);
+    }
+
+    const label = document.getElementById("label");
+    const bar = document.getElementById("bar");
+    const fill = document.getElementById("fill");
+    const TOTAL_UNITS = 12; // 10 slides + theme + polish; final = indeterminate
+    const STEPS = [
+      { type: "counter", from: 1, to: 10, perMs: 350, tmpl: (n) => `Designing slide ${n} of 10…` },
+      { type: "hold", ms: 1600, text: "Choosing a theme…", unit: 11 },
+      { type: "hold", ms: 1600, text: "Polishing the layout…", unit: 12 },
+      { type: "final", text: "Opening your presentation…" },
+    ];
+    function setFill(unit) { fill.style.width = Math.round((unit / TOTAL_UNITS) * 100) + "%"; }
+    function fadeTo(text, cb) {
+      label.style.opacity = "0";
+      setTimeout(() => { label.textContent = text; label.style.opacity = "1"; if (cb) cb(); }, 160);
+    }
+    let i = 0;
+    function run() {
+      const s = STEPS[i];
+      if (s.type === "counter") {
+        fadeTo(s.tmpl(s.from), () => {
+          let n = s.from;
+          const tick = () => {
+            label.textContent = s.tmpl(n); setFill(n);
+            if (n < s.to) { n++; setTimeout(tick, s.perMs); }
+            else { i++; setTimeout(run, s.perMs); }
+          };
+          setTimeout(tick, s.perMs);
+        });
+      } else if (s.type === "hold") {
+        fadeTo(s.text); setFill(s.unit); i++; setTimeout(run, s.ms);
+      } else {
+        fadeTo(s.text); bar.classList.add("indeterminate"); // holds until presentation ready
+      }
+    }
+    run();
+  </script>
+</body>
+</html>

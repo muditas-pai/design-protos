@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loader — Option 3 · Step dots + label</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <style>
+    :root { --ease: cubic-bezier(0.23, 1, 0.32, 1); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+      background: #E5E5E5; display: flex; overflow: hidden; }
+
+    .shimmer { width: 100%; height: 100%;
+      background: linear-gradient(90deg, #E5E5E5 0%, #F5F5F5 50%, #E5E5E5 100%);
+      background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    .filmstrip { width: 200px; flex-shrink: 0; padding: 12px 0 12px 12px; }
+    .filmstrip-panel { height: 100%; background: #fff; border-radius: 8px; overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px rgba(11,15,20,0.09); display: flex; flex-direction: column; }
+    .thumbs { flex: 1; overflow: hidden; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+    .thumb { width: 100%; aspect-ratio: 16/9; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+
+    .canvas { flex: 1; position: relative; min-width: 0; }
+    .stage { position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 26px; padding: 40px; }
+    .slide { width: min(62vw, 720px); aspect-ratio: 16/9; border-radius: 2px; overflow: hidden;
+      box-shadow: 0 4px 24px rgba(11,15,20,0.12), 0 0 0 1px rgba(11,15,20,0.04); }
+
+    /* ── Option 3: inline step dots + label, no connectors, no container ── */
+    .loader3 { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .steps { display: inline-flex; align-items: center; gap: 12px; height: 18px; }
+    .node { width: 16px; height: 16px; border-radius: 50%; position: relative;
+      display: inline-flex; align-items: center; justify-content: center; }
+    .node::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
+      border: 1.5px solid rgba(11,15,20,0.18); transition: opacity 200ms var(--ease); }
+    .node.is-active::before, .node.is-done::before { opacity: 0; }
+    .node .dt { width: 8px; height: 8px; border-radius: 50%; background: #0055ED; opacity: 0; }
+    .node.is-active .dt { opacity: 1; animation: pulse 1.1s ease-in-out infinite; }
+    .node .chk { font-size: 16px; line-height: 1; color: #0055ED; opacity: 0; transform: scale(0.85);
+      transition: opacity 220ms var(--ease), transform 220ms var(--ease); position: absolute; }
+    .node.is-done .chk { opacity: 1; transform: scale(1); }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,85,237,0.45); }
+      50%      { transform: scale(0.8); box-shadow: 0 0 0 5px rgba(0,85,237,0); }
+    }
+    .label { font-size: 14px; font-weight: 500; color: #525252; line-height: 20px;
+      font-variant-numeric: tabular-nums; transition: opacity 160ms var(--ease); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .shimmer, .node.is-active .dt { animation: none; }
+      .label, .node .chk, .node::before { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="filmstrip">
+    <div class="filmstrip-panel"><div class="thumbs" id="thumbs"></div></div>
+  </div>
+  <div class="canvas">
+    <div class="stage">
+      <div class="slide"><div class="shimmer"></div></div>
+      <div class="loader3">
+        <div class="steps" id="steps">
+          <span class="node"><span class="dt"></span><i class="ph-fill ph-check-circle chk"></i></span>
+          <span class="node"><span class="dt"></span><i class="ph-fill ph-check-circle chk"></i></span>
+          <span class="node"><span class="dt"></span><i class="ph-fill ph-check-circle chk"></i></span>
+          <span class="node"><span class="dt"></span><i class="ph-fill ph-check-circle chk"></i></span>
+        </div>
+        <span class="label" id="label">Designing slide 1 of 10…</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const thumbs = document.getElementById("thumbs");
+    for (let i = 0; i < 10; i++) {
+      const t = document.createElement("div");
+      t.className = "thumb"; t.innerHTML = '<div class="shimmer"></div>';
+      thumbs.appendChild(t);
+    }
+
+    const label = document.getElementById("label");
+    const nodes = [...document.querySelectorAll("#steps .node")];
+    const STEPS = [
+      { type: "counter", from: 1, to: 10, perMs: 350, tmpl: (n) => `Designing slide ${n} of 10…` },
+      { type: "hold", ms: 1600, text: "Choosing a theme…" },
+      { type: "hold", ms: 1600, text: "Polishing the layout…" },
+      { type: "final", text: "Opening your presentation…" },
+    ];
+    function activate(idx) {
+      nodes.forEach((n, k) => {
+        n.classList.toggle("is-done", k < idx);
+        n.classList.toggle("is-active", k === idx);
+      });
+    }
+    function fadeTo(text, cb) {
+      label.style.opacity = "0";
+      setTimeout(() => { label.textContent = text; label.style.opacity = "1"; if (cb) cb(); }, 160);
+    }
+    let i = 0;
+    function run() {
+      const s = STEPS[i];
+      activate(i);
+      if (s.type === "counter") {
+        fadeTo(s.tmpl(s.from), () => {
+          let n = s.from;
+          const tick = () => {
+            label.textContent = s.tmpl(n);
+            if (n < s.to) { n++; setTimeout(tick, s.perMs); }
+            else { i++; setTimeout(run, s.perMs); }
+          };
+          setTimeout(tick, s.perMs);
+        });
+      } else if (s.type === "hold") {
+        fadeTo(s.text); i++; setTimeout(run, s.ms);
+      } else {
+        fadeTo(s.text); // final node stays active (pulsing) until presentation ready
+      }
+    }
+    run();
+  </script>
+</body>
+</html>
