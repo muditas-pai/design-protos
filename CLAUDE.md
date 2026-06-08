@@ -40,6 +40,12 @@ as a template, fill in their work, and add a card under "Designers" on the root 
 the root short no matter how many designers join. Keep both the designer's index and the root in
 sync when work is added.
 
+### Marking explorations handoff-ready
+When an exploration is ready to hand to engineering, add a green **Handoff ready** tag next to its
+title on the designer's index: `<span class="tag-handoff"><i class="ph ph-check"></i>Handoff ready</span>`
+(the `.tag-handoff` style lives in each designer's `index.html`). Remove it if the status changes
+back. Only set it on cards that are genuinely ready — it's a signal to eng, not decoration.
+
 ### Migrating an existing repo
 To import a designer's existing proto repo, drop its whole working tree under
 `explorations/<designer>/<problem>/` keeping the internal structure (so its relative asset paths
