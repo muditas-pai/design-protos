@@ -5,6 +5,20 @@ This repo holds **HTML design prototypes** for presentations.ai. Designers build
 directly in a browser (from Finder) and is published via GitHub Pages at
 **https://muditas-pai.github.io/design-protos/**.
 
+## Don't edit another designer's proto — duplicate instead
+Treat every existing `.html` proto like a designer's own Figma frame: people reuse work by
+**copying** components into their own file, not by editing someone else's frame.
+
+- **Before writing to or editing a proto file you didn't just create, ASK permission first.**
+- Default to **duplicating**: copy the file to a new short-named proto (or lift just the
+  components/snippets that are needed into a new file) and iterate there — never modify the
+  original in place to do a new exploration.
+- Only edit a proto directly when the person asking created it (e.g. you made it earlier in
+  this same session) or they explicitly confirm they want *that file* changed.
+- Unsure who owns a file? Check `git log -1 --format='%an %ar' <file>` — and when in doubt, ask.
+- **Exception — shared infrastructure** is meant to be updated, so edit these normally:
+  `design-system/`, `index.html` (the landing page), `CLAUDE.md`, and `README.md`.
+
 ## Building a proto
 - One self-contained `.html` per proto, at the **repo root**. Short, kebab-case, **no spaces**
   (clean Pages URLs): `editor-to-present.html`, not `My Proto.html`.
