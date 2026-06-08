@@ -15,8 +15,9 @@ asking, and don't quietly change the key screens.
 design-protos/
 ├── key-screens/          canonical screens that mirror the live product (read-only refs)
 │                         · dashboard · editor · login · pricing
-├── explorations/         everyone's playground — most work lives here
-│   └── <designer>/       one folder per designer (group your own frames here)
+├── explorations/                everyone's playground — most work lives here
+│   └── <designer>/<problem>/    one folder per problem statement —
+│                                a designer's 8–10 attempts at it live together
 ├── design-system/        shared tokens + components (pai.tailwind.js, pai.css, …)
 ├── index.html            the landing page = the index of all frames
 └── CLAUDE.md  README.md
@@ -24,9 +25,11 @@ design-protos/
 
 - **key-screens/** — the reference frames everyone duplicates from. Treat as read-only;
   copy one into your explorations to riff on it.
-- **explorations/<designer>/** — your space; anything goes. If a designer is new or has no
-  space yet, offer to make them an `explorations/<their-name>/` folder — but adapt to however
-  they like to organise (a flat file is fine too).
+- **explorations/<designer>/<problem>/** — your space; anything goes. A designer usually does
+  **8–10 HTML files solving the same problem**, so make a folder per problem statement and keep
+  the variations together (`explorations/mudita/editor-to-present-transition/loader-1.html`, …).
+  If a designer is new, offer to set up `explorations/<their-name>/<problem>/` — but adapt to
+  however they like to organise.
 - **design-system/** — what every proto is built on. Don't hardcode brand values; use these.
 
 ## Branch vs commit to `main`
@@ -58,12 +61,13 @@ components into their own file, not by editing someone else's frame.
 
 ## Building a proto
 
-- One self-contained `.html`, usually under `explorations/<designer>/`. Short, kebab-case,
-  **no spaces** (clean Pages URLs).
+- One self-contained `.html`, usually under `explorations/<designer>/<problem>/`. Short,
+  kebab-case, **no spaces** (clean Pages URLs).
 - **No local asset files** — inline SVG/CSS and Phosphor icons, so it renders from Finder and on
   Pages.
 - Start from `design-system/template.html`, or put this in the `<head>` (fix the relative depth
-  to the repo root, e.g. `../../design-system/pai.css` from `explorations/<you>/`):
+  to the repo root — e.g. `../../../design-system/pai.css` from
+  `explorations/<you>/<problem>/`):
 
 ```html
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
