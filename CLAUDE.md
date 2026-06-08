@@ -36,9 +36,10 @@ branch is isolated but has no live URL. So, as a rule of thumb:
 
 | Situation | Do this |
 |---|---|
-| Your own exploration, or editing your own file | Commit straight to `main` |
-| Changing shared stuff with blast radius — `design-system/` or `key-screens/` | Branch + PR |
-| Someone else's frame | Don't — duplicate it first (see below) |
+| Your own exploration, or your own file | Commit straight to `main` |
+| A **key screen you own** | Commit to `main` (it's yours to maintain) |
+| `design-system/` (everyone depends on it) | Branch + PR |
+| Someone else's frame, or a key screen you don't own | Don't — duplicate it, or ask the owner |
 
 Run `git pull --rebase` before pushing; separate files rarely collide.
 
@@ -78,13 +79,25 @@ components into their own file, not by editing someone else's frame.
   list: `design-system/README.md` and the live gallery `design-system/components.html`.
 - Add a card to `index.html` so the proto is linked from the landing page.
 
-## Keeping key-screens fresh
+## Key screens — owned and hand-maintained
 
-Each key screen carries a stamp: `<!-- synced from <app route> · <date> · <owner> -->`. They will
-drift from the live app over time — that's expected, not a failure. To refresh one, the designer
-just asks: *"re-sync the editor key screen from pitchdeckdoclist."* Re-derive it from the current
-app source (`~/Documents/GitHub/PAI/pitchdeckdoclist`), rebuild with the design system, and bump
-the stamp. Don't hand-patch a key screen into staleness — re-derive it from the source.
+Key screens are **hand-built and hand-maintained by a designated owner.** Translating the live
+React app to HTML is too lossy to trust (well under 80% accurate), so there is **no auto-sync** —
+keeping a key screen current is a manual design job that belongs to its owner.
+
+| Screen | Owner |
+|---|---|
+| editor | Mudita |
+| dashboard | Tyo |
+| pricing | Mani |
+| login | _(unassigned)_ |
+
+- Each screen carries a stamp at the top: `<!-- key screen: <name> · owner: <name> · updated: <date> -->`.
+- The owner is the only person who changes their screen. When the live screen changes, the owner
+  updates it by hand — you (Claude) can help build and polish, but **don't auto-derive a key
+  screen from the app and pass it off as current**; treat the app only as a visual reference.
+- Not the owner and want changes? Duplicate the screen into your `explorations/<you>/`, or ask
+  the owner to update theirs.
 
 ## Brand voice (presentations.ai)
 
@@ -104,6 +117,6 @@ new frames are linked.
 
 ## The design system is a snapshot
 
-`design-system/` and `key-screens/` are ported from the production app
-(`~/Documents/GitHub/PAI/pitchdeckdoclist`). If app tokens, components, or screens change,
-re-sync these — don't let the proto system drift silently.
+`design-system/` is ported from the production app (`~/Documents/GitHub/PAI/pitchdeckdoclist`) —
+if app tokens or components change, re-sync it so protos don't drift. (Key screens are different:
+they're hand-maintained by their owners, not auto-synced — see above.)
