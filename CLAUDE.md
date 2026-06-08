@@ -140,6 +140,20 @@ design-protos with Claude Code** — no `~/.claude/skills` install or symlink ne
 Source of truth: `muditas-pai/pai-design-skills`. These are **copies** — if a skill changes there,
 re-vendor it into `.claude/skills/<name>/SKILL.md`.
 
+### Using crazy8s in this repo
+crazy8s is the throwaway *divergence engine* — it rewrites one rolling `crazy8s.html` each round
+and discards old rounds. It doesn't know our conventions, so steer it:
+
+- **Seed the baseline from `design-system/template.html`** so all 8 variations inherit the design
+  system (crazy8s preserves the baseline's stack but won't add ours on its own).
+- **Run it inside the designer's `explorations/<you>/<problem>/` folder** so `crazy8s.html` lands
+  there, not at the repo root. Treat `crazy8s.html` as a **scratchpad — don't link it in any index.**
+- On **"freeze it"**, save the picked variant as a clean, named `.html` in that same problem folder
+  (strip the gallery scaffolding) and add *that* file to the designer's index. The 8–10 keepers in
+  a problem folder are the frozen picks, not the rolling file.
+- Iterating on **someone else's** frame? Duplicate it into your own folder first, then run crazy8s
+  on the copy — never let it overwrite another designer's file.
+
 ## Brand voice (presentations.ai)
 
 - **Navy `#0A1925` is the action color** — primary CTAs are navy-filled. **Orange `#FF5500` is
