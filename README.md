@@ -1,8 +1,15 @@
-# muditas-protos
+# design-protos
 
 Self-contained HTML prototypes (open any file directly in a browser — all assets
 load from CDNs). Live, rendered versions are on GitHub Pages:
-**https://muditas-pai.github.io/muditas-protos/**
+**https://muditas-pai.github.io/design-protos/**
+
+## design-system/
+A browser-ready port of the production presentations.ai design system (Tailwind tokens +
+UI components) for building HTML protos with no React and no build step. See
+[`design-system/README.md`](design-system/README.md). Start with the
+**[components gallery](https://muditas-pai.github.io/design-protos/design-system/components.html)**
+or copy `design-system/template.html` for a new proto.
 
 ## Editor → Presentation View transition
 The stitched flow: the Editor loads (shimmer → generation loader → slides stream in),
