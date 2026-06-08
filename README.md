@@ -1,14 +1,16 @@
 # design-protos
 
-Self-contained HTML prototypes (open any file directly in a browser — all assets
-load from CDNs). Live, rendered versions are on GitHub Pages:
-**https://muditas-pai.github.io/design-protos/**
+Self-contained HTML prototypes for presentations.ai, built with Claude. Open any file
+directly in a browser (all assets load from CDNs), or browse the live, rendered versions
+on GitHub Pages: **https://muditas-pai.github.io/design-protos/**
+
+> **Building protos here?** Read [`CLAUDE.md`](CLAUDE.md) — it's the guide Claude follows
+> for scaffolding protos with the design system.
 
 ## design-system/
 A browser-ready port of the production presentations.ai design system (Tailwind tokens +
-UI components) for building HTML protos with no React and no build step. See
-[`design-system/README.md`](design-system/README.md). Start with the
-**[components gallery](https://muditas-pai.github.io/design-protos/design-system/components.html)**
+UI components) — no React, no build step. Reference: [`design-system/README.md`](design-system/README.md).
+Start with the **[components gallery](https://muditas-pai.github.io/design-protos/design-system/components.html)**
 or copy `design-system/template.html` for a new proto.
 
 ## Editor → Presentation View transition
