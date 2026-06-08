@@ -32,6 +32,21 @@ design-protos/
   however they like to organise.
 - **design-system/** — what every proto is built on. Don't hardcode brand values; use these.
 
+### The landing page scales by designer
+The root `index.html` lists three things: **Design system**, **Key screens**, and **Designers** —
+one card per designer linking to their own `explorations/<designer>/index.html`, which lists that
+designer's problems and protos. To add a designer: copy an existing `explorations/<name>/index.html`
+as a template, fill in their work, and add a card under "Designers" on the root index. This keeps
+the root short no matter how many designers join. Keep both the designer's index and the root in
+sync when work is added.
+
+### Migrating an existing repo
+To import a designer's existing proto repo, drop its whole working tree under
+`explorations/<designer>/<problem>/` keeping the internal structure (so its relative asset paths
+still resolve), bring the `assets/` along, and note the provenance (source repo + date) on the
+designer's index. Skip build cruft (`.git`, lockfiles, binary docs) where you can. Then give the
+designer a clean `explorations/<designer>/index.html` that links to the key protos.
+
 ## Branch vs commit to `main`
 
 Pages publishes **only from `main`**, so a push to `main` is an instant shareable link, while a
@@ -63,8 +78,11 @@ components into their own file, not by editing someone else's frame.
 
 - One self-contained `.html`, usually under `explorations/<designer>/<problem>/`. Short,
   kebab-case, **no spaces** (clean Pages URLs).
-- **No local asset files** — inline SVG/CSS and Phosphor icons, so it renders from Finder and on
-  Pages.
+- **Prefer no local asset files** — inline SVG/CSS and Phosphor icons keep a proto portable
+  (opens from Finder, trivial to duplicate). But local assets are fine when a proto genuinely
+  needs them (photos, logos, migrated work): keep them **inside that proto's own folder**
+  (e.g. `explorations/<designer>/<problem>/assets/`), never at the repo root, and reference them
+  with **relative** paths (not `/assets/…`) so they resolve under the Pages subpath.
 - Start from `design-system/template.html`, or put this in the `<head>` (fix the relative depth
   to the repo root — e.g. `../../../design-system/pai.css` from
   `explorations/<you>/<problem>/`):

@@ -1,0 +1,1860 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OrderPPT pricing modal · experiment</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "gray-50": "#F4F4F4",
+            "gray-75": "#ECECEC",
+            "gray-100": "#E0E0E0",
+            "gray-200": "#C6C6C6",
+            "gray-300": "#A8A8A8",
+            "gray-400": "#8D8D8D",
+            "gray-500": "#6F6F6F",
+            "gray-600": "#525252",
+            "gray-700": "#393939",
+            "gray-800": "#262626",
+            "gray-900": "#161616",
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+            mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <link rel="preconnect" href="https://rsms.me/" />
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+
+  <style>
+    html { font-family: Inter, system-ui, sans-serif; }
+    body { background: #eef0f3; min-height: 100vh; margin: 0; }
+
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .uni-ticker-track {
+      display: flex;
+      width: max-content;
+      animation: ticker-scroll 40s linear infinite;
+    }
+    .uni-ticker-mask {
+      mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+    }
+    .uni-name {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 14px;
+      color: #6F6F6F;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      padding: 0 28px;
+      flex-shrink: 0;
+    }
+    /* Logo strip pinned to viewport bottom on mobile — content scrolls behind it */
+    @media (max-width: 767px) {
+      .logo-strip-mobile-sticky {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        box-shadow: 0 -6px 18px rgba(0,0,0,0.08);
+      }
+      /* Reserve space at modal bottom so last card features don't hide behind logo strip */
+      .offer-modal-shell { padding-bottom: 80px; }
+    }
+    .logo-img {
+      height: 40px;
+      width: auto;
+      padding: 0 18px;
+      flex-shrink: 0;
+      opacity: 0.6;
+      filter: grayscale(100%);
+      object-fit: contain;
+    }
+
+    @keyframes chip-shimmer {
+      0%        { transform: translateX(-100%); }
+      60%, 100% { transform: translateX(100%); }
+    }
+    @keyframes chip-icon-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .chip-icon-spin {
+      animation: chip-icon-spin 2s linear infinite;
+      transform-origin: center;
+    }
+
+    /* Text shimmer — bright sweep moves left → right across the text glyphs */
+    @keyframes text-shimmer-sweep {
+      0%   { background-position: 200% 0; }
+      30%  { background-position: -100% 0; }
+      100% { background-position: -100% 0; }
+    }
+    .text-shimmer {
+      background-image: linear-gradient(
+        110deg,
+        #16a34a 30%,
+        #86efac 50%,
+        #16a34a 70%
+      );
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: text-shimmer-sweep 3.5s ease-out infinite;
+    }
+    .chip-shimmer {
+      overflow: hidden;
+      background-color: #16a34a;
+    }
+    .chip-shimmer::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(
+        100deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.6) 50%,
+        transparent 65%
+      );
+      transform: translateX(-100%);
+      animation: chip-shimmer 3.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    /* Currency symbol — scales relative to price size */
+    .usd {
+      font-size: 0.45em;
+      font-weight: 600;
+      vertical-align: 0.45em;
+      margin-right: 2px;
+      letter-spacing: 0;
+    }
+    .illus-base { width: 56px; height: 56px; background-size: contain; background-repeat: no-repeat; background-position: left center; }
+    .illus-basic { background-image: url("assets/export-ppt/icons-v2.png"); }
+    .illus-pro { background-image: url(data:image/png;base64,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); }
+
+
+    @keyframes reveal-fade {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .reveal { animation: reveal-fade 220ms ease-out both; }
+
+    /* ---- Nudge chip (post-bump) — copied from pricing-20-4-2026 reference ---- */
+    .pro-discount-chip {
+      position: relative;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #0055ED; color: #ffffff;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+      padding: 5px 12px; border-radius: 999px;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      animation: pro-chip-bob 2.6s ease-in-out infinite,
+                 pro-chip-glow 2.2s ease-in-out infinite;
+    }
+    .pro-discount-chip i { font-size: 12px; color: #ffffff; }
+    @keyframes pro-chip-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-3px); }
+    }
+    @keyframes pro-chip-glow {
+      0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                             0 0 0 0   rgba(0, 85, 237, 0.55); }
+      70%      { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                             0 0 0 9px rgba(0, 85, 237, 0); }
+      100%     { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                             0 0 0 0   rgba(0, 85, 237, 0); }
+    }
+
+    /* ---- Feedback modal (close-intent survey → bumps discount) ---- */
+    /* Copied verbatim from pricing-20-4-2026/index.html */
+    .fb-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+    }
+    .fb-backdrop[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .fb-card {
+      width: 620px;
+      max-width: calc(100vw - 48px);
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.1);
+      transform: translateY(12px);
+      transition: transform .22s ease;
+      position: relative;
+    }
+    .fb-survey-wrap { border-radius: 4px; overflow: hidden; }
+    .fb-backdrop[data-open="true"] .fb-card { transform: translateY(0); }
+    .fb-dialog-wrap { position: relative; }
+    .fb-close {
+      position: absolute;
+      top: -20px; right: -20px;
+      width: 40px; height: 40px; border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #ffffff;
+      color: #171717;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+      transition: transform .15s ease, background .15s;
+      z-index: 2;
+      border: 0;
+      cursor: pointer;
+    }
+    .fb-close:hover { transform: scale(1.06); background: #f5f5f5; }
+    .fb-survey-wrap { display: grid; grid-template-columns: 240px 1fr; }
+    .fb-panel-left {
+      padding: 30px 26px 28px;
+      position: relative; overflow: hidden;
+      display: flex; flex-direction: column; justify-content: space-between;
+      background: #ffeee5;
+      color: #171717;
+    }
+    .fb-panel-left::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at bottom left, rgba(255,85,0,0.22), transparent 60%);
+      z-index: 0;
+    }
+    .fb-panel-left > * { position: relative; z-index: 2; }
+    .fb-gift {
+      font-size: 56px; line-height: 1; display: inline-block;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.12));
+      animation: fb-gift-bounce 1.8s ease-in-out infinite;
+    }
+    @keyframes fb-gift-bounce {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+    .fb-tag {
+      display: inline-flex; align-items: center;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      background: rgba(10, 25, 37, 0.08);
+      color: #525252;
+      margin-bottom: 12px;
+    }
+    .fb-panel-title {
+      display: flex; flex-direction: column; align-items: flex-start;
+      margin-top: 4px; line-height: 1.1;
+      letter-spacing: -0.02em;
+      font-size: 22px; font-weight: 600; color: #171717;
+    }
+    .fb-panel-sub {
+      font-size: 12px; line-height: 1.55; color: #525252;
+      margin-top: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .fb-panel-sub .arrow {
+      color: #525252;
+      display: inline-flex;
+      animation: fb-arrow-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes fb-arrow-pulse {
+      0%, 100% { transform: translateX(0); opacity: 0.8; }
+      50%      { transform: translateX(5px); opacity: 1; }
+    }
+    .fb-conf {
+      position: absolute;
+      opacity: 0.7;
+      z-index: 1;
+      animation-name: fb-float-drift;
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+    }
+    @keyframes fb-float-drift {
+      0%, 100% { transform: translate(0,0) rotate(var(--r, 0deg)); }
+      50%      { transform: translate(var(--tx, 0), var(--ty, -10px)) rotate(calc(var(--r, 0deg) + 15deg)); }
+    }
+    .fb-right-col { padding: 32px 32px 28px; }
+
+    /* === Testimonial single-col modal shell (ported from testimonial.html) === */
+    .t-offer-nudge {
+      position: relative;
+      width: 520px; max-width: calc(100vw - 48px);
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      box-shadow: 0 30px 60px -12px rgba(0,0,0,0.35), 0 18px 36px -18px rgba(0,0,0,0.40);
+      animation: t-nudge-pop 0.45s cubic-bezier(0.34, 1.35, 0.64, 1);
+    }
+    @keyframes t-nudge-pop {
+      0%   { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    .t-nudge-header {
+      position: relative;
+      height: 180px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: linear-gradient(164.93deg, #d4dae2 0%, #eef2f6 71.43%);
+    }
+    .t-nudge-header-row {
+      position: absolute;
+      top: 50%;
+      left: 30px;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: flex-end;
+      gap: 30px;
+      z-index: 2;
+    }
+    .t-gift-emoji {
+      font-size: 68px;
+      line-height: 1;
+      display: inline-block;
+      animation: t-gift-bounce 1.8s ease-in-out infinite;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.10));
+    }
+    @keyframes t-gift-bounce {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+    .t-nudge-copy { display: flex; flex-direction: column; gap: 12px; }
+    .t-nudge-copy .t-price-line { margin-top: 0; gap: 12px; }
+    .t-badge {
+      display: inline-flex; align-items: center;
+      align-self: flex-start;
+      background: rgba(10, 25, 37, 0.08);
+      color: #525252;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+    .t-price-line {
+      display: flex; flex-direction: column; align-items: flex-start;
+      line-height: 1; letter-spacing: -0.02em; margin-top: 4px;
+    }
+    .t-price-line .t-amt {
+      font-size: 36px; font-weight: 800;
+      line-height: 40px; height: 40px;
+      color: #0A1925;
+      display: inline-flex; align-items: stretch;
+    }
+    .t-price-line .t-amt-real {
+      display: inline-flex; align-items: stretch;
+      color: #0A1925;
+    }
+    .t-price-line .t-amt .t-sym {
+      font-size: 22px; font-weight: 700;
+      line-height: 40px; padding-top: 2px; margin-right: 1px;
+      display: inline-block; color: #0A1925;
+    }
+    /* V8 — Slow drift dial. Multi-rotation digit columns with edge mask + blur reveal. */
+    .t-digits { display: inline-flex; gap: 4px; height: 40px; }
+    .t-digit {
+      display: inline-block;
+      position: relative;
+      width: 26px; height: 40px;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%, #000 70%, transparent 100%);
+              mask-image: linear-gradient(to bottom, transparent 0%, #000 30%, #000 70%, transparent 100%);
+    }
+    .t-digit-track {
+      display: block;
+      transform: translateY(0);
+      transition: transform 4s cubic-bezier(0.16, 1, 0.3, 1), filter 3.6s ease-out;
+    }
+    .t-digit:nth-child(2) .t-digit-track {
+      transition: transform 4.2s cubic-bezier(0.16, 1, 0.3, 1), filter 3.8s ease-out;
+    }
+    .t-digit-track > span {
+      display: block;
+      height: 40px; line-height: 40px;
+      text-align: center;
+      font-weight: 800;
+      color: #0A1925;
+    }
+    /* Initial "00" is blurred during hold; blur clears as spin begins */
+    .t-amt[data-price-loading="true"]  .t-digit-track { filter: blur(6px); }
+    .t-amt[data-price-loading="false"] .t-digit-track { filter: blur(0); }
+    .t-price-line .t-lbl {
+      font-size: 22px; font-weight: 500; color: #171717;
+      margin-top: 0; line-height: 1.15;
+    }
+    .t-conf {
+      position: absolute; pointer-events: none; z-index: 1;
+      animation: t-conf-drift 4.6s ease-in-out infinite;
+    }
+    @keyframes t-conf-drift {
+      0%, 100% { transform: translate(0,0) rotate(var(--r, 0deg)); }
+      50%      { transform: translate(var(--tx, 0), var(--ty, -8px)) rotate(calc(var(--r, 0deg) + 12deg)); }
+    }
+    .t-body {
+      padding: 24px 32px 28px;
+      display: flex; flex-direction: column;
+      gap: 12px;
+    }
+    .t-heading {
+      font-size: 13px; font-weight: 600; color: #171717;
+      margin: 0;
+    }
+    .t-success-title {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 42px; line-height: 1;
+      color: #171717;
+      letter-spacing: -0.015em;
+      margin: 0;
+    }
+    .t-success-body {
+      font-size: 14px; color: #525252; line-height: 1.6; margin-top: 12px;
+    }
+    .t-success-body strong { color: #171717; font-weight: 600; }
+
+    /* Nudge chip below Buy CTA — mirrors v2 .pro-bumped-pill exactly */
+    .t-nudge-cta-badge {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px;
+      background: #0055ED;
+      color: #fff;
+      border-radius: 999px;
+      font-size: 11px; font-weight: 800;
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      transform: translate(-50%, 0);
+      animation: t-pill-bob 2.6s ease-in-out infinite,
+                 t-pill-glow 2.2s ease-in-out infinite;
+      z-index: 2;
+    }
+    .t-nudge-cta-badge::before {
+      content: ''; position: absolute;
+      top: -4px; left: 50%;
+      width: 8px; height: 8px; background: #0055ED;
+      transform: translateX(-50%) rotate(45deg);
+      border-radius: 1px;
+    }
+    .t-nudge-cta-badge i { font-size: 12px; color: #fff; }
+    @keyframes t-pill-bob {
+      0%, 100% { transform: translate(-50%, 0); }
+      50%      { transform: translate(-50%, -3px); }
+    }
+    @keyframes t-pill-glow {
+      0%, 100% { box-shadow: 0 6px 16px rgba(0,0,0,0.18),
+                             0 0 0 0   rgba(0, 85, 237, 0.55); }
+      70%      { box-shadow: 0 6px 16px rgba(0,0,0,0.18),
+                             0 0 0 9px rgba(0, 85, 237, 0); }
+      100%     { box-shadow: 0 6px 16px rgba(0,0,0,0.18),
+                             0 0 0 0   rgba(0, 85, 237, 0); }
+    }
+
+    /* Testimonial picker (ported from testimonial.html) */
+    .t-input-card {
+      position: relative;
+      width: 100%;
+      height: 175px;
+      border: 1px solid rgba(26,26,26,0.15);
+      border-radius: 4px;
+      overflow: hidden;
+      padding: 19px;
+      background: #fafafa;
+      transition: border-color .2s, background .2s;
+    }
+    .t-input-card:focus-within { border-color: #0A1925; background: #fff; }
+    .t-input-card .t-quote {
+      font-size: 13px; color: #161616; line-height: 1.5; margin: 0;
+      min-height: 60px; max-height: 80px; overflow-y: auto;
+      outline: none; cursor: text;
+      transition: max-height .35s ease;
+      padding-right: 4px;
+    }
+    .t-input-card.picked .t-quote { max-height: 130px; min-height: 130px; }
+    .t-input-card .t-quote:empty::before {
+      content: attr(data-placeholder);
+      color: #9ca3af; font-style: italic; pointer-events: none;
+    }
+    .t-input-card .t-quote::-webkit-scrollbar { width: 4px; }
+    .t-input-card .t-quote::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
+    .t-emoji-row {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: 70px; overflow: hidden; pointer-events: none;
+      opacity: 1;
+      transition: opacity .35s ease, transform .35s ease;
+    }
+    .t-input-card.picked .t-emoji-row { opacity: 0; transform: translateY(8px); pointer-events: none; }
+    .t-input-card.picked .t-emoji-row::before,
+    .t-input-card.picked .t-emoji-row::after { opacity: 0; }
+    .t-emoji-row::before, .t-emoji-row::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 32px;
+      pointer-events: none; z-index: 3;
+    }
+    .t-emoji-row::before { left: 0;  background: linear-gradient(90deg, #fafafa 0%, rgba(250,250,250,0.92) 50%, rgba(250,250,250,0) 100%); }
+    .t-emoji-row::after  { right: 0; background: linear-gradient(270deg, #fafafa 0%, rgba(250,250,250,0.92) 50%, rgba(250,250,250,0) 100%); }
+    .t-emoji-track {
+      display: flex; gap: 10px; align-items: center;
+      width: max-content; height: 100%;
+      padding: 0 4px;
+      animation: t-emoji-marquee 60s linear infinite;
+      will-change: transform;
+      transform: translate3d(0,0,0);
+      backface-visibility: hidden;
+      pointer-events: auto;
+    }
+    .t-emoji-row:hover .t-emoji-track { animation-play-state: paused; }
+    @keyframes t-emoji-marquee {
+      from { transform: translate3d(0, 0, 0); }
+      to   { transform: translate3d(-50%, 0, 0); }
+    }
+    .t-emoji-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 6px 12px;
+      border: 1px solid rgba(26,26,26,0.15);
+      border-radius: 4px; background: #fff;
+      cursor: pointer; font: inherit;
+      font-size: 13px; font-weight: 500; color: #525252;
+      transition: border-color .15s, background .15s, color .15s;
+      flex-shrink: 0;
+    }
+    .t-emoji-chip:hover:not(.active) {
+      border-color: #171717; color: #171717;
+    }
+    .t-emoji-chip .em { font-size: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .t-emoji-chip .lbl { font-size: 13px; font-weight: 500; color: inherit; display: inline; white-space: nowrap; }
+    .t-emoji-chip.active { border-color: #0A1925; background: #f2f5f9; color: #0A1925; }
+    .t-disclaimer { font-size: 12px; color: #8d8d8d; margin: 12px 0 0; line-height: 1.4; }
+
+    .fb-section { margin-top: 32px; }
+    .fb-section:first-child { margin-top: 0; }
+    .fb-question { font-size: 13px; font-weight: 600; color: #171717; margin-bottom: 12px; }
+    .fb-smiley-row { display: flex; gap: 12px; }
+    .fb-smiley {
+      width: 48px; height: 48px; flex: 0 0 auto; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(26,26,26,0.15);
+      border-radius: 999px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+    .fb-smiley:active { transform: scale(0.95); }
+    .fb-smiley .emoji { font-size: 26px; line-height: 1; filter: grayscale(30%); transition: filter .2s, transform .2s; }
+    .fb-smiley.active .emoji { transform: scale(1.12); filter: none; }
+    .fb-smiley:hover:not(.active) { border-color: #171717; }
+    .fb-smiley.active { border-color: #0A1925; background: #f2f5f9; }
+    .fb-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .fb-chip {
+      padding: 8px 14px;
+      border: 1px solid rgba(26,26,26,0.15);
+      border-radius: 4px;
+      background: #fff;
+      font-size: 13px; font-weight: 500; color: #525252;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, color .15s;
+    }
+    .fb-chip:hover:not(.active) { border-color: #171717; color: #171717; }
+    .fb-chip.active {
+      border-color: #0A1925;
+      background: #f2f5f9;
+      color: #0A1925;
+    }
+    .fb-actions { display: flex; gap: 8px; margin-top: 36px; }
+    .fb-btn-primary {
+      flex: 1;
+      height: 48px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #1c3550 0%, #0A1925 100%);
+      color: #fff;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0);
+      border: 0;
+      position: relative; overflow: hidden;
+    }
+    .fb-btn-primary:hover:not([disabled]) { filter: brightness(1.03); }
+    .fb-btn-primary[disabled] {
+      background: #e5e5e5;
+      color: #a3a3a3;
+      cursor: not-allowed;
+    }
+    .fb-lock {
+      position: relative;
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .fb-lock i {
+      position: absolute;
+      font-size: 22px;
+      line-height: 1;
+      transition: opacity .25s ease;
+    }
+    .fb-lock .ph-lock { opacity: 1; }
+    .fb-lock .ph-lock-open { opacity: 0; }
+    .fb-btn-primary:not([disabled]) .fb-lock .ph-lock { opacity: 0; }
+    .fb-btn-primary:not([disabled]) .fb-lock .ph-lock-open {
+      opacity: 1;
+      animation: lock-pop 0.55s cubic-bezier(0.34, 1.35, 0.64, 1);
+    }
+    @keyframes lock-pop {
+      0%   { transform: rotate(-18deg) scale(0.6);  opacity: 0; }
+      60%  { transform: rotate(8deg)   scale(1.15); opacity: 1; }
+      100% { transform: rotate(0deg)   scale(1);    opacity: 1; }
+    }
+    .fb-success-title {
+      font-family: "Hedvig Letters Serif", Georgia, "Times New Roman", serif;
+      font-style: italic;
+      font-size: 42px; line-height: 1;
+      color: #171717;
+      letter-spacing: -0.015em;
+      margin: 0;
+    }
+    .fb-success-body  { font-size: 14px; color: #525252; line-height: 1.6; margin-top: 12px; }
+    .fb-success-body strong { color: #171717; font-weight: 600; }
+    .fb-btn-timer {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-left: 2px;
+    }
+    .fb-cta-wrap { position: relative; }
+    .fb-cta-badge {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 50%;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px;
+      background: #0055ED;
+      color: #ffffff;
+      border-radius: 999px;
+      font-size: 11px; font-weight: 800;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      transform: translate(-50%, 0);
+      animation: fb-cta-badge-pulse 1.8s ease-in-out infinite,
+                 fb-cta-badge-ripple 2.2s ease-in-out infinite;
+      z-index: 1;
+    }
+    @keyframes fb-cta-badge-ripple {
+      0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.18),
+                              0 0 0 0   rgba(0, 85, 237, 0.55); }
+      70%      { box-shadow: 0 4px 14px rgba(0,0,0,0.18),
+                              0 0 0 12px rgba(0, 85, 237, 0); }
+      100%     { box-shadow: 0 4px 14px rgba(0,0,0,0.18),
+                              0 0 0 0   rgba(0, 85, 237, 0); }
+    }
+    .fb-cta-badge::after {
+      content: ''; position: absolute;
+      bottom: -4px; left: 50%;
+      width: 8px; height: 8px; background: #0055ED;
+      transform: translateX(-50%) rotate(45deg);
+      border-radius: 1px;
+    }
+    .fb-cta-badge i { font-size: 12px; color: #ffffff; }
+    @keyframes fb-cta-badge-pulse {
+      0%, 100% { transform: translate(-50%, 0); }
+      50%      { transform: translate(-50%, -4px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, Fragment, useEffect, useRef, createContext, useContext } = React;
+
+    const PricingContext = createContext(null);
+    const usePricing = () => useContext(PricingContext);
+
+    /* ---------- data ---------- */
+
+    const ONE_TIME_BASE = {
+      label: "Export just this deck.",
+      sublabel: "One-time PPT export",
+      shortName: "Single PPT",
+      tagline: "Export this deck once.",
+      originalPrice: 59,
+      price: 59,
+      hideStrikeout: true,
+      discountLabel: null,
+      buyLabel: "Export a single PPT",
+      compareDiscount: "Single export",
+    };
+    const ONE_TIME_BUMPED = {
+      label: "Export just this deck at a whooping 90% discount.",
+      sublabel: "Special offer on your first deck export",
+      shortName: "Single PPT",
+      tagline: "Export this deck once at 90% off.",
+      originalPrice: 99,
+      price: 9,
+      discountLabel: "90% one-time discount",
+      buyLabel: "Buy Now • 90% Off",
+      compareDiscount: "90% off (one-time)",
+    };
+
+    const UNLIMITED_BASE = {
+      label: "Buy our Pro plan and get unlimited PPT exports plus a lot more at 25% off.",
+      sublabel: "Buy Pro plan and unlock unlimited exports and lots more",
+      shortName: "Pro Plan",
+      tagline: "Unlimited exports plus a lot more at 25% off.",
+      originalPriceMonthly: 20,
+      studentPriceMonthly: 15,
+      discountLabel: "25% education discount",
+      buyLabel: "Buy Now • 25% Off",
+      compareDiscount: "25% education discount",
+      billed: "billed annually",
+    };
+    const UNLIMITED_BUMPED = {
+      label: "Buy our Pro plan and get unlimited PPT exports plus a lot more at 50% off.",
+      sublabel: "Buy Pro Student plan and unlock unlimited exports and lots more",
+      shortName: "Pro Plan",
+      tagline: "Unlimited exports plus a lot more at 50% off.",
+      originalPriceMonthly: 20,
+      studentPriceMonthly: 10,
+      discountLabel: "50% student discount",
+      buyLabel: "Buy Now • 50% Off",
+      compareDiscount: "50% student discount",
+      billed: "billed annually",
+    };
+
+    // Tier 1 audience — full pricing, no education discount, no strikeout.
+    // Single PPT $99 billed once. Pro Plan $20/mo billed annually
+    // (matches v2.html Pro Annual price).
+    const ONE_TIME_TIER1_BASE = {
+      label: "Export just this deck.",
+      sublabel: "One-time PPT export",
+      shortName: "Single PPT",
+      tagline: "Export this deck once.",
+      originalPrice: 119,
+      price: 119,
+      hideStrikeout: true,
+      discountLabel: null,
+      buyLabel: "Export a single PPT",
+      compareDiscount: "Single export",
+    };
+    const UNLIMITED_TIER1_BASE = {
+      label: "Buy Pro Annual for unlimited PPT exports plus a lot more.",
+      sublabel: "Unlock unlimited exports and lots more",
+      shortName: "Pro Plan",
+      tagline: "Unlimited exports plus a lot more.",
+      originalPriceMonthly: 20,
+      studentPriceMonthly: 20,
+      hideStrikeout: true,
+      discountLabel: null,
+      buyLabel: "Export unlimited PPT with Pro",
+      compareDiscount: "Pro Annual",
+      billed: "billed annually",
+    };
+
+    // Tier 1 BUMPED — applied when user submits feedback. Deeper discounts
+    // shown with strikeout + discount-label feature row.
+    const ONE_TIME_TIER1_BUMPED = {
+      ...ONE_TIME_TIER1_BASE,
+      originalPrice: 119,
+      price: 49,                             // 119 - 70 = 49
+      hideStrikeout: false,
+      discountLabel: "$70 off Single PPT",
+      compareDiscount: "$70 off",
+    };
+    const UNLIMITED_TIER1_BUMPED = {
+      ...UNLIMITED_TIER1_BASE,
+      originalPriceMonthly: 20,
+      studentPriceMonthly: 15,               // 20 - 5 = 15  ($60/yr off)
+      hideStrikeout: false,
+      discountLabel: "$60 off Pro Annual",
+      compareDiscount: "$60 off Pro",
+    };
+
+    // Module-level aliases for legacy components that read base values directly.
+    // Live components read the current tier from PricingContext.
+    const ONE_TIME = ONE_TIME_BASE;
+    const UNLIMITED = UNLIMITED_BASE;
+
+    const TESTIMONIAL = {
+      portrait: "assets/export-ppt/priya.png",
+      quote: "Tried one PPT for an assignment. The export was so crisp I was on the yearly plan within the hour. Every submission since: pixel-perfect.",
+      name: "Jenny Wong",
+      school: "Stanford GSB",
+      plan: "Pro member",
+      stars: 5,
+    };
+
+    const TESTIMONIAL_TIER1 = {
+      portrait: "assets/export-ppt/priya.png",
+      quote: "Exported one board deck and the formatting held up perfectly in the boardroom. Switched the team to Pro the next morning. Every exec deck since has shipped pixel-perfect.",
+      name: "Marcus Chen",
+      school: "VP Strategy · Fortune 500",
+      plan: "Pro Annual member",
+      stars: 5,
+    };
+
+    const UNIVERSITIES = [
+      "Stanford GSB", "Harvard Business School", "Wharton", "INSEAD", "IIM Bangalore",
+      "Oxford Saïd", "MIT Sloan", "Cambridge Judge", "ISB Hyderabad", "London Business School",
+      "Kellogg", "IIM Ahmedabad", "Yale SOM", "HEC Paris",
+    ];
+
+    const FEELINGS = [
+      { em: "😀", label: "Happy", qs: [
+        "In just 2 minutes I built an investment pitch from cofounder notes — slides were polished and ready to share.",
+        "Walked into the QBR with a deck I was actually proud of. Smooth flow, clean layout, zero last-minute panic.",
+        "Built our annual offsite keynote in one afternoon. Looked like a pro deck, felt like a real story.",
+        "My team applauded after the all-hands deck I shipped. First time that's ever happened.",
+        "Took my rough Friday brainstorm and shipped a 20-slide product update by Monday. Clients loved it.",
+      ] },
+      { em: "⚡️", label: "Fast", qs: [
+        "Generated a full investor deck before my second coffee. Game-changer for exec reviews.",
+        "Shipped the board update in 8 minutes flat — that used to be a half-day job for my team.",
+        "Last-minute client pitch turned around in under 15 minutes. Walked in confident, walked out with the deal.",
+        "Three decks in one hour for three different stakeholders. My calendar finally stopped owning me.",
+        "Friday afternoon ask, Monday morning slides. AI did in minutes what my designer did in days.",
+      ] },
+      { em: "📝", label: "Detailed", qs: [
+        "Notes from our offsite turned into a 30-slide narrative I felt proud to walk into the boardroom with.",
+        "My scrappy bullet points became a structured strategy deck — every slide earned its place.",
+        "It picked up the nuance in my data and turned it into slide-level stories, not just bullets.",
+        "Detailed enough that even my CFO didn't have follow-up questions on the financial slides.",
+        "Each slide felt curated — narrative, visuals, data callouts. Not a single throwaway page.",
+      ] },
+      { em: "🤯", label: "Mind blown", qs: [
+        "Mind blown. AI nailed our brand voice on the first pass — investors thought we hired an agency.",
+        "I gave it 3 lines of context and got back a deck that closed our seed round.",
+        "Did not expect this level of slide design from typed notes. Truly mind-blowing output.",
+        "Generated a customer-success deck so good our VP forwarded it to the entire org as a template.",
+        "Watched it turn rough talking points into a pixel-perfect product launch deck. Speechless.",
+      ] },
+      { em: "😍", label: "Love it", qs: [
+        "In love with this. Every deck I ship now lands harder than the last — won't go back to slide-by-slide work.",
+        "I look forward to making decks now. Never thought I'd say that about pitch prep.",
+        "My favorite tool of the year. Board prep used to drain me; now it energizes me.",
+        "Obsessed. Used it for our IPO roadshow deck and the bankers asked who designed it.",
+        "Every slide feels intentional. I love how it treats narrative like a first-class citizen.",
+      ] },
+      { em: "😲", label: "Surprised", qs: [
+        "Did not see this coming — output landed sharper than our deck designer's work.",
+        "Surprised how on-brand the slides came out. Logo, palette, type — all matched our system.",
+        "Honestly didn't think AI could write a coherent investor narrative. Proved me wrong on slide 1.",
+        "Walked into the demo expecting rough drafts; got a presentation-ready deck instead.",
+        "Surprised the data viz was thoughtful — chart types matched the insight, not just default bars.",
+      ] },
+      { em: "🙌", label: "Grateful", qs: [
+        "Finally — investor storytelling that doesn't eat my weekend. My family thanks you.",
+        "Grateful. Cleared 6 hours off my prep schedule for our last fundraise round.",
+        "Saved my team during a brutal quarter. We shipped 4 board decks in a week without burning out.",
+        "Thank you for building a tool that respects my time. Slides done, kids tucked in, evening reclaimed.",
+        "Genuinely grateful. Helped me nail the keynote that got me promoted.",
+      ] },
+      { em: "🖌️", label: "Crafted", qs: [
+        "The narrative arc from my rough notes reads like I wrote it — only sharper.",
+        "Crafted slides — typography, spacing, hierarchy. Not template soup.",
+        "Felt designed, not generated. Every slide had visual rhythm; nothing felt copy-pasted.",
+        "The cover slide alone was worth it. Looked like a magazine spread, not a corp template.",
+        "Layouts varied across the deck — section dividers, data slides, quote slides. Real editorial polish.",
+      ] },
+    ];
+    const FEELING_BY_LABEL_T = Object.fromEntries(FEELINGS.map((f) => [f.label, f]));
+    const pickRandomQuoteT = (label) => {
+      const f = FEELING_BY_LABEL_T[label];
+      if (!f || !f.qs || !f.qs.length) return '';
+      return f.qs[Math.floor(Math.random() * f.qs.length)];
+    };
+
+    const LOGOS = [
+      { src: "assets/export-ppt/logos/adobelogo.svg",     alt: "Adobe" },
+      { src: "assets/export-ppt/logos/eylogo.svg",        alt: "EY" },
+      { src: "assets/export-ppt/logos/bcglogo.svg",       alt: "BCG" },
+      { src: "assets/export-ppt/logos/amazonlogo.svg",    alt: "Amazon" },
+      { src: "assets/export-ppt/logos/facebooklogo.svg",  alt: "Facebook" },
+      { src: "assets/export-ppt/logos/googlelogo.svg",    alt: "Google" },
+      { src: "assets/export-ppt/logos/mckinseylogo.svg",  alt: "McKinsey" },
+      { src: "assets/export-ppt/logos/microsoftlogo.svg", alt: "Microsoft" },
+      { src: "assets/export-ppt/logos/notionlogo.svg",    alt: "Notion" },
+    ];
+    const LOGOS_EDU = [
+      { src: "assets/export-ppt/logos-edu/logo1.png", alt: "University 1" },
+      { src: "assets/export-ppt/logos-edu/logo2.png", alt: "University 2" },
+      { src: "assets/export-ppt/logos-edu/logo3.png", alt: "University 3" },
+      { src: "assets/export-ppt/logos-edu/logo4.png", alt: "University 4" },
+      { src: "assets/export-ppt/logos-edu/logo5.png", alt: "University 5" },
+      { src: "assets/export-ppt/logos-edu/logo6.png", alt: "University 6" },
+      { src: "assets/export-ppt/logos-edu/logo7.png", alt: "University 7" },
+      { src: "assets/export-ppt/logos-edu/logo8.png", alt: "University 8" },
+    ];
+
+    const formatPrice = (n) => "$" + n.toLocaleString("en-US");
+
+    const cardBase = "w-full text-left rounded-lg border transition-all";
+    const cardSelected = "border-[#0A1925] bg-[#f2f5f9] shadow-sm";
+    const cardIdle = "border-gray-200 bg-white hover:border-gray-400";
+
+    const PAY_GRADIENT = "linear-gradient(180deg, #1c3550 0%, #0A1925 100%)";
+
+    const buildCompareRows = (oneTime, unlimited) => [
+      { key: "discount", label: "Discount",  basic: oneTime.compareDiscount,    pro: unlimited.compareDiscount },
+      { key: "exports",  label: "Exports",   basic: "Just this deck",           pro: "Unlimited" },
+      { key: "credits",  label: "Credits",   basic: "—",                        pro: "5,000 / month" },
+      { key: "models",   label: "AI models", basic: "—",                        pro: "Advanced models + agents" },
+    ];
+
+    const SERIF = '"Hedvig Letters Serif", Georgia, "Times New Roman", serif';
+
+    /* ---------- shared sub-components ---------- */
+
+    function Eyebrow() {
+      return (
+        <div className="font-mono text-[10px] font-bold tracking-[0.08em] uppercase text-[#0055ED] mb-2">
+          Your deck is ready
+        </div>
+      );
+    }
+
+    function Heading({ size = "text-[26px]" }) {
+      return (
+        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+          <h2 className={size + " font-medium leading-tight text-gray-900"}>
+            Select an export option
+          </h2>
+          <a
+            href="v2.html"
+            className="text-[12px] font-medium text-[#0055ED] hover:underline whitespace-nowrap inline-flex items-center gap-1"
+          >
+            Explore other plans
+            <i className="ph ph-arrow-right text-[12px]"></i>
+          </a>
+        </div>
+      );
+    }
+
+    function CardOneTime({ selected, mb = "mb-7" }) {
+      return (
+        <div
+          className={cardBase + " relative px-5 py-10 flex items-center justify-between gap-4 " + mb + " " + (selected ? cardSelected : cardIdle)}
+        >
+          <span className="absolute -top-3 left-4 chip-shimmer text-white font-mono text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded whitespace-nowrap shadow-sm flex items-center gap-1">
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0 chip-icon-spin" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="8" y1="16" x2="16" y2="8" />
+              <circle cx="8.5" cy="8.5" r="1.25" fill="currentColor" stroke="none" />
+              <circle cx="15.5" cy="15.5" r="1.25" fill="currentColor" stroke="none" />
+            </svg>
+            {ONE_TIME.discountLabel}
+          </span>
+          <div>
+            <div className="text-[16px] font-medium text-gray-900">{ONE_TIME.label}</div>
+            <div className="text-[12px] text-gray-600 mt-0.5">{ONE_TIME.sublabel}</div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="flex items-baseline justify-end gap-1.5">
+              <span className="text-[13px] text-gray-400 line-through">{formatPrice(ONE_TIME.originalPrice)}</span>
+              <span className="text-[20px] font-medium text-gray-900">{formatPrice(ONE_TIME.price)}</span>
+            </div>
+            <div className="text-[11px] text-gray-500 mt-0.5">one-time</div>
+          </div>
+        </div>
+      );
+    }
+
+    function CardUnlimited({ selected, mb = "mb-6" }) {
+      return (
+        <div
+          className={cardBase + " relative px-5 py-10 flex items-center justify-between gap-4 " + mb + " " + (selected ? cardSelected : cardIdle)}
+        >
+          <span className="absolute -top-3 left-4 chip-shimmer text-white font-mono text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded whitespace-nowrap shadow-sm flex items-center gap-1">
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0 chip-icon-spin" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="8" y1="16" x2="16" y2="8" />
+              <circle cx="8.5" cy="8.5" r="1.25" fill="currentColor" stroke="none" />
+              <circle cx="15.5" cy="15.5" r="1.25" fill="currentColor" stroke="none" />
+            </svg>
+            {UNLIMITED.discountLabel}
+          </span>
+          <div>
+            <div className="text-[16px] font-medium text-gray-900">{UNLIMITED.label}</div>
+            <div className="text-[12px] text-gray-600 mt-0.5">{UNLIMITED.sublabel}</div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="flex items-baseline justify-end gap-1.5">
+              <span className="text-[13px] text-gray-400 line-through">{formatPrice(UNLIMITED.originalPriceMonthly)}</span>
+              <span className="text-[20px] font-medium text-gray-900">{formatPrice(UNLIMITED.studentPriceMonthly)}</span>
+              <span className="text-[11px] font-medium text-gray-400">/mo</span>
+            </div>
+            <div className="text-[11px] text-gray-500 mt-0.5">{UNLIMITED.billed}</div>
+          </div>
+        </div>
+      );
+    }
+
+    function PayButton({ selection }) {
+      let payLabel = null;
+      if (selection === "single") payLabel = "Pay " + formatPrice(ONE_TIME.price) + " • one time";
+      else if (selection === "unlimited") payLabel = "Pay " + formatPrice(UNLIMITED.studentPriceMonthly) + "/mo · " + UNLIMITED.billed;
+      return (
+        <button
+          type="button"
+          className="w-full h-12 rounded text-white text-sm font-semibold"
+          style={{ background: PAY_GRADIENT }}
+        >
+          {payLabel}
+        </button>
+      );
+    }
+
+    function Portrait({ flip = true, size = 180, marginLeft = "-ml-3" }) {
+      const style = {
+        mixBlendMode: "multiply",
+      };
+      if (flip) style.transform = "scaleX(-1)";
+      return (
+        <img
+          src={TESTIMONIAL.portrait}
+          alt={TESTIMONIAL.name}
+          className={"block object-cover mb-2 " + marginLeft}
+          style={{ ...style, width: size + "px", height: size + "px" }}
+        />
+      );
+    }
+
+    function Bio({ pl = "pl-1.5" }) {
+      return (
+        <Fragment>
+          <div className={pl + " text-[13px] font-semibold text-gray-900"}>{TESTIMONIAL.name}</div>
+          <div className={pl + " text-[11px] text-gray-600 mt-px"}>{TESTIMONIAL.school}</div>
+          <div className={pl + " text-[11px] text-gray-600"}>{TESTIMONIAL.plan}</div>
+          <div className={pl + " text-[11px] text-[#0A1925] mt-1 tracking-widest"}>
+            {"★".repeat(TESTIMONIAL.stars)}
+          </div>
+        </Fragment>
+      );
+    }
+
+    function Quote({ size = "text-[28px]", tone = "text-gray-900", weight = "" }) {
+      const { testimonial } = usePricing();
+      return (
+        <p className={"m-0 italic " + size + " leading-snug " + tone + " " + weight} style={{ fontFamily: '"Hedvig Letters Serif", Georgia, "Times New Roman", serif' }}>
+          {testimonial.quote}
+        </p>
+      );
+    }
+
+    function UniTicker({ negativeMargin = "-mx-10" }) {
+      const tickerLoop = [...LOGOS, ...LOGOS];
+      return (
+        <Fragment>
+          <div className="text-[12px] text-gray-600 mb-3 text-center">
+            Trusted by teams at
+          </div>
+          <div className={"uni-ticker-mask overflow-hidden " + negativeMargin}>
+            <div className="uni-ticker-track">
+              {tickerLoop.map((logo, i) => (
+                <img key={i} className="logo-img" src={logo.src} alt={logo.alt} />
+              ))}
+            </div>
+          </div>
+        </Fragment>
+      );
+    }
+
+    function CloseButton() {
+      const { handleClose } = usePricing();
+      return (
+        <button
+          type="button"
+          onClick={handleClose}
+          className="absolute top-2 right-2 md:top-0 md:-right-14 w-9 h-9 rounded-full bg-white shadow-md hover:shadow-lg flex items-center justify-center text-gray-700 text-xl leading-none z-10"
+          aria-label="Close"
+        >×</button>
+      );
+    }
+
+    /* ---------- 10 LAYOUTS ---------- */
+
+    /* ---------- card-pair helpers ---------- */
+
+    function DiscountIcon({ size = "w-3.5 h-3.5" }) {
+      return (
+        <svg viewBox="0 0 24 24" className={size + " shrink-0 chip-icon-spin"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="8" y1="16" x2="16" y2="8" />
+          <circle cx="8.5" cy="8.5" r="1.25" fill="currentColor" stroke="none" />
+          <circle cx="15.5" cy="15.5" r="1.25" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    }
+
+    function DiscountChip({ children, position = "absolute -top-3 left-4" }) {
+      return (
+        <span className={"chip-shimmer text-white font-mono text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded whitespace-nowrap shadow-sm flex items-center gap-1 " + position}>
+          <DiscountIcon />
+          {children}
+        </span>
+      );
+    }
+
+    function CardCta({ children, variant = "dark" }) {
+      if (variant === "light") {
+        return (
+          <button type="button" className="w-full h-12 rounded bg-white text-[#0A1925] text-[14px] font-bold">
+            {children}
+          </button>
+        );
+      }
+      return (
+        <button type="button" className="w-full h-12 rounded text-white text-[14px] font-bold" style={{ background: PAY_GRADIENT }}>
+          {children}
+        </button>
+      );
+    }
+
+
+
+    // Card design ported from pricing-20-4-2026 reference (illustration top, plan name + price row, outlined buy button, feature list)
+    const buildOneTimeFeatures = (oneTime) => [
+      { icon: "ph-fill ph-seal-percent",  text: oneTime.discountLabel, accent: true },
+      { icon: "ph ph-file-ppt",           text: "Export just this deck" },
+      { icon: "ph ph-pencil-simple",      text: "Pixel-perfect, fully editable export" },
+    ].filter((f) => f.text);
+    const buildUnlimitedFeatures = (unlimited) => [
+      { icon: "ph-fill ph-seal-percent",  text: unlimited.discountLabel, accent: true },
+      { icon: "ph ph-file-ppt",           text: "Export unlimited decks" },
+      { icon: "ph ph-pencil-simple",      text: "Pixel-perfect, fully editable export" },
+      { icon: "ph ph-coin",               text: "5,000 Credits" },
+      { icon: "ph ph-star-four",          text: "Advanced AI models and agents" },
+    ].filter((f) => f.text);
+
+    function FeatureList({ items }) {
+      return (
+        <ul className="mt-6 flex flex-col gap-3 text-[13px] leading-snug">
+          {items.map((f, i) => (
+            <li key={i} className={"flex items-start gap-2.5 " + (f.accent ? "text-[#16a34a] font-semibold" : "text-gray-700")}>
+              <i className={f.icon + " text-[18px] leading-none mt-px shrink-0 inline-block " + (f.accent ? "text-[#16a34a] chip-icon-spin" : "text-gray-900")} />
+              <span>{f.text}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    function OutlinedCta({ children }) {
+      return (
+        <button type="button" className="w-full h-12 rounded border border-[#0A1925] bg-white text-[#0A1925] text-[14px] font-bold hover:bg-gray-50">
+          {children}
+        </button>
+      );
+    }
+
+    function NudgeChip({ amount, timer, label }) {
+      const text = label || `$${amount} off`;
+      return (
+        <div className="t-nudge-cta-badge" aria-hidden="true">
+          <span>{text}</span>
+          <i className="ph-fill ph-clock"></i>
+          <span>Ends in {timer}</span>
+        </div>
+      );
+    }
+
+    function CardsImagePlan() {
+      const { oneTime, unlimited, discountTier, timerLabel, extraOneTime, extraUnlimited, audience: aud } = usePricing();
+      const cls = "relative rounded-lg border border-gray-200 bg-white p-6 flex flex-col order-2";
+      const proCls = "relative rounded-lg border-2 border-[#b8c1cc] p-6 flex flex-col shadow-lg order-1 md:order-2";
+      const proBgStyle = { backgroundImage: "linear-gradient(125.62deg, #ffffff 2.19%, #ffffff 41.38%, #eef2f6 98.14%)" };
+      const showNudge = discountTier === "bumped";
+      const proNudgeLabel = aud === "edu" ? "50% off" : `$${extraUnlimited} off`;
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={cls}>
+            <div className="illus-base illus-basic" aria-hidden="true" />
+            <div className="flex items-center justify-between gap-3 mt-5 min-h-[68px]">
+              <h3 className="text-[28px] font-bold text-gray-900 leading-none">{oneTime.shortName}</h3>
+              <div className="flex flex-col items-end justify-center gap-1 min-h-[68px]">
+                {!oneTime.hideStrikeout && (
+                  <p className="text-[14px] font-medium line-through text-gray-400 leading-none">${oneTime.originalPrice}</p>
+                )}
+                <p className="text-[28px] font-bold text-gray-900 leading-none"><span className="usd">$</span>{oneTime.price}</p>
+                <p className="text-[12px] text-gray-500 leading-none">billed once</p>
+              </div>
+            </div>
+            <div className="mt-6 relative">
+              <OutlinedCta>{oneTime.buyLabel}</OutlinedCta>
+            </div>
+            <FeatureList items={buildOneTimeFeatures(oneTime)} />
+          </div>
+          <div className={proCls} style={proBgStyle}>
+            <span className="absolute -top-3 right-4 bg-[#0055ED] text-white font-mono text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded shadow-sm whitespace-nowrap">
+              Most popular
+            </span>
+            <div className="illus-base illus-pro" aria-hidden="true" />
+            <div className="flex items-center justify-between gap-3 mt-5 min-h-[68px]">
+              <h3 className="text-[28px] font-bold text-gray-900 leading-none">{unlimited.shortName}</h3>
+              <div className="flex flex-col items-end justify-center gap-1 min-h-[68px]">
+                {!unlimited.hideStrikeout && (
+                  <p className="text-[14px] font-medium line-through text-gray-400 leading-none">${unlimited.originalPriceMonthly}</p>
+                )}
+                <div className="flex items-baseline gap-1">
+                  <p className="text-[28px] font-bold text-gray-900 leading-none"><span className="usd">$</span>{unlimited.studentPriceMonthly}</p>
+                  <span className="text-[13px] text-gray-400">/mo</span>
+                </div>
+                <p className="text-[12px] text-gray-500 leading-none">{unlimited.billed}</p>
+              </div>
+            </div>
+            <div className={"mt-6 relative" + (showNudge ? " mb-10" : "")}>
+              <CardCta>{showNudge ? unlimited.buyLabel.replace(/\s*•.*$/, "") : unlimited.buyLabel}</CardCta>
+              {showNudge && <NudgeChip label={proNudgeLabel} timer={timerLabel} />}
+            </div>
+            <FeatureList items={buildUnlimitedFeatures(unlimited)} />
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------- the shared layout shell ---------- */
+
+    function Layout08BShell({ Cards }) {
+      const { testimonial, audience: aud } = usePricing();
+      const activeLogos = aud === "edu" ? LOGOS_EDU : LOGOS;
+      return (
+        <div className="offer-modal-shell relative w-full max-w-[1200px] mx-auto">
+          <CloseButton />
+          <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-[35fr_65fr]">
+              <div className="p-6 md:p-10 bg-gray-50 md:border-r border-t md:border-t-0 border-gray-100 flex flex-col relative overflow-hidden order-2 md:order-1">
+                <span aria-hidden="true" className="absolute -top-3 left-2 text-[280px] leading-none text-gray-100 opacity-60 select-none pointer-events-none" style={{ fontFamily: '"Hedvig Letters Serif", Georgia, serif' }}>“</span>
+                <div className="relative z-10 pt-[23px]">
+                  <Quote size="text-[24px]" tone="text-gray-400" weight="font-extralight" />
+                </div>
+                <div className="mt-auto pt-0 flex items-end gap-0">
+                  <img
+                    src={aud === "edu" ? "assets/export-ppt/priya.png" : "assets/export-ppt/illo2.png"}
+                    alt={testimonial.name}
+                    className="block w-[150px] h-[150px] object-contain flex-shrink-0 -ml-6"
+                    style={{ mixBlendMode: "multiply", transform: aud === "edu" ? "scaleX(-1)" : "none" }}
+                  />
+                  <div className="py-5 pr-5 pl-0 space-y-1 -ml-2">
+                    <div className="text-[14px] font-semibold text-gray-900 whitespace-nowrap">{testimonial.name}</div>
+                    <div className="text-[12px] text-gray-500">{testimonial.school}</div>
+                    <div className="text-[12px] text-gray-500">{testimonial.plan}</div>
+                    <div className="text-[12px] text-[#0A1925] tracking-widest pt-1">
+                      {"★".repeat(testimonial.stars)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 md:p-10 flex flex-col order-1 md:order-2">
+                <Eyebrow />
+                <div className="mb-6 md:mb-8"><Heading /></div>
+                <Cards />
+              </div>
+            </div>
+            <div className="logo-strip-mobile-sticky px-6 md:px-10 py-4 border-t border-gray-100 bg-white">
+              <div className="uni-ticker-mask overflow-hidden -mx-6 md:-mx-10">
+                <div className="uni-ticker-track">
+                  {[...activeLogos, ...activeLogos].map((logo, i) => (
+                    <img key={i} className="logo-img" src={logo.src} alt={logo.alt} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
+
+    /* ---------- Variation B helpers (Compact one-liner from crazy8s round 5 v4) ---------- */
+
+    function EyebrowB({ size = "text-[10px]", tracking = "tracking-[0.08em]", className = "" }) {
+      return (
+        <div className={"font-mono font-bold uppercase text-[#0055ED] mb-2 " + size + " " + tracking + " " + className}>
+          Your deck is ready
+        </div>
+      );
+    }
+
+    function HeadingB({ size = "text-[22px]", weight = "font-medium", className = "" }) {
+      return (
+        <h2 className={size + " " + weight + " leading-tight text-gray-900 " + className}>
+          Select an export option
+        </h2>
+      );
+    }
+
+    function MostPopularPill({ className = "" }) {
+      return (
+        <span className={"bg-[#0055ED] text-white font-mono text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded shadow-sm whitespace-nowrap " + className}>
+          Most popular
+        </span>
+      );
+    }
+
+    function Stars({ className = "" }) {
+      return (
+        <span className={"text-[#0A1925] tracking-widest " + className}>{"★".repeat(TESTIMONIAL.stars)}</span>
+      );
+    }
+
+    function PortraitB({ size = 40, flip = true, rounded = "rounded-full", className = "" }) {
+      const style = { mixBlendMode: "multiply", width: size + "px", height: size + "px" };
+      if (flip) style.transform = "scaleX(-1)";
+      return (
+        <img src={TESTIMONIAL.portrait} alt={TESTIMONIAL.name} className={"block object-cover " + rounded + " " + className} style={style} />
+      );
+    }
+
+    function BasicCTA({ size = "h-9", text = "text-[12px]", weight = "font-bold", className = "" }) {
+      const { oneTime } = usePricing();
+      return (
+        <button type="button" className={"w-full rounded border border-[#0A1925] bg-white text-[#0A1925] " + weight + " " + size + " " + text + " " + className}>
+          {oneTime.buyLabel}
+        </button>
+      );
+    }
+    function ProCTA({ size = "h-9", text = "text-[12px]", weight = "font-bold", className = "" }) {
+      const { unlimited } = usePricing();
+      return (
+        <button type="button" className={"w-full rounded text-white " + weight + " " + size + " " + text + " " + className} style={{ background: PAY_GRADIENT }}>
+          {unlimited.buyLabel}
+        </button>
+      );
+    }
+
+    const monoLabelB = "font-mono uppercase tracking-[0.22em]";
+
+    function CompareRows() {
+      const { oneTime, unlimited } = usePricing();
+      const rows = buildCompareRows(oneTime, unlimited);
+      return (
+        <Fragment>
+          {rows.map((r) => {
+            const isDiscount = r.key === "discount";
+            return (
+              <Fragment key={r.key}>
+                <div className={"py-3.5 text-[10px] text-gray-500 border-t border-gray-100 " + monoLabelB}>{r.label}</div>
+                <div className={"py-3.5 px-5 border-l border-t border-gray-100 font-mono text-[12px] " + (isDiscount ? "text-[#16a34a] font-semibold" : "text-gray-700")}>{r.basic}</div>
+                <div className={"py-3.5 px-5 border-l border-t border-gray-100 font-mono text-[12px] bg-[#f7f9fc] " + (isDiscount ? "text-[#16a34a] font-semibold" : "text-gray-900")}>{r.pro}</div>
+              </Fragment>
+            );
+          })}
+        </Fragment>
+      );
+    }
+
+    function Layout04CompactOneLiner() {
+      const { oneTime, unlimited, discountTier, timerLabel, extraOneTime, extraUnlimited } = usePricing();
+      const showNudge = discountTier === "bumped";
+      return (
+        <div className="w-full max-w-[940px] mx-auto relative">
+          <CloseButton />
+          <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div className="px-10 pt-7 pb-5 border-b border-gray-100 relative overflow-hidden">
+              <div className="relative z-10">
+                <EyebrowB size="text-[10px]" tracking="tracking-[0.28em]" />
+                <HeadingB size="text-[22px]" />
+              </div>
+              {/* Universities ticker — flows from the right, dissolves under the title */}
+              <div
+                className="absolute inset-0 flex items-center pointer-events-none"
+                style={{
+                  maskImage: "linear-gradient(to right, transparent 0%, transparent 38%, black 70%, black 100%)",
+                  WebkitMaskImage: "linear-gradient(to right, transparent 0%, transparent 38%, black 70%, black 100%)",
+                }}
+                aria-hidden="true"
+              >
+                <div className="uni-ticker-track">
+                  {[...UNIVERSITIES, ...UNIVERSITIES].map((uni, i) => (
+                    <span key={i} className="uni-name">{uni}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-10 py-6">
+              <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-y-1">
+                <div className="pr-6 pb-6">
+                  <p className="m-0 italic text-[20px] text-gray-400 leading-[1.5]" style={{ fontFamily: SERIF }}>{TESTIMONIAL.quote}</p>
+                  <div className="mt-3.5 flex items-center gap-2.5">
+                    <PortraitB size={32} className="shrink-0" />
+                    <span className="text-[12px] text-gray-500 leading-tight truncate">
+                      {TESTIMONIAL.name} · {TESTIMONIAL.school} · <Stars className="text-[11px] align-middle" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="px-5 pb-6 border-l border-gray-100">
+                  <div className="text-[14px] font-medium text-gray-900 mb-3">{oneTime.shortName}</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[12px] line-through text-gray-300 font-mono">${oneTime.originalPrice}</span>
+                    <span className="text-[38px] font-bold text-gray-900 leading-none"><span className="usd">$</span>{oneTime.price}</span>
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-2 mb-4">one-time</div>
+                  <BasicCTA size="h-9" text="text-[11px]" />
+                  {showNudge && <NudgeChip amount={extraOneTime} timer={timerLabel} />}
+                </div>
+
+                <div className="px-5 pb-6 border-l border-gray-100 bg-gradient-to-b from-[#f7f9fc] to-white relative">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-[14px] font-medium text-gray-900">{unlimited.shortName}</div>
+                    <MostPopularPill />
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[12px] line-through text-gray-300 font-mono">${unlimited.originalPriceMonthly}</span>
+                    <span className="text-[38px] font-bold text-gray-900 leading-none"><span className="usd">$</span>{unlimited.studentPriceMonthly}</span>
+                    <span className="text-[11px] text-gray-500">/mo</span>
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-2 mb-4">billed annually</div>
+                  <ProCTA size="h-9" text="text-[11px]" />
+                  {showNudge && <NudgeChip amount={extraUnlimited} timer={timerLabel} />}
+                </div>
+
+                <CompareRows />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------- Feedback modal ---------- */
+
+    function FeedbackModal({ open, onSubmit, onClose, timerLabel, audience }) {
+      const isEdu = audience === "edu";
+      const offerLabel = isEdu ? "50% off" : "$60 off Pro Annual";
+      const [feeling, setFeeling] = useState(null);
+      const [quote, setQuote] = useState("");
+      const [step, setStep] = useState("form"); // "form" | "success"
+      const submitBtnRef = useRef(null);
+      const quoteRef = useRef(null);
+      const wasDisabledRef = useRef(true);
+
+      // Reset state whenever the modal opens
+      useEffect(() => {
+        if (open) {
+          setFeeling(null);
+          setQuote("");
+          setStep("form");
+          if (quoteRef.current) quoteRef.current.textContent = "";
+        }
+      }, [open]);
+
+      // V8 Slow Drift dial — hold blurred 1.2s, then dreamy multi-rotation slide
+      useEffect(() => {
+        if (!open) return;
+        const DIGIT_H = 40;
+        const cycleCounts = [5, 6]; // tens then ones
+        const digits = Array.from(document.querySelectorAll('.t-digit[data-target]'));
+        if (!digits.length) return;
+
+        // Build tracks (cycles + 1 final stretch of 0..9)
+        digits.forEach((digit, i) => {
+          const track = digit.querySelector('.t-digit-track');
+          if (!track) return;
+          track.innerHTML = '';
+          const totalCycles = cycleCounts[i] + 1;
+          for (let c = 0; c < totalCycles; c++) {
+            for (let n = 0; n <= 9; n++) {
+              const span = document.createElement('span');
+              span.textContent = String(n);
+              track.appendChild(span);
+            }
+          }
+          track.dataset.cycles = String(cycleCounts[i]);
+          track.style.transition = 'none';
+          track.style.transform = 'translateY(0)';
+        });
+
+        // Set loading state for blur
+        const amtEls = document.querySelectorAll('.t-amt');
+        amtEls.forEach((el) => { el.dataset.priceLoading = 'true'; });
+
+        // Force reflow then restore CSS transitions
+        void document.body.offsetWidth;
+        digits.forEach((digit) => {
+          const track = digit.querySelector('.t-digit-track');
+          if (track) track.style.transition = '';
+        });
+
+        // After 1.2s hold, clear blur + slide to target
+        const holdId = setTimeout(() => {
+          amtEls.forEach((el) => { el.dataset.priceLoading = 'false'; });
+          digits.forEach((digit) => {
+            const track = digit.querySelector('.t-digit-track');
+            if (!track) return;
+            const target = parseInt(digit.dataset.target || '0', 10);
+            const cycles = parseInt(track.dataset.cycles || '0', 10);
+            const offset = (cycles * 10 + target) * DIGIT_H;
+            track.style.transform = `translateY(-${offset}px)`;
+          });
+        }, 1200);
+
+        return () => clearTimeout(holdId);
+      }, [open]);
+
+      const submitDisabled = !quote.trim();
+
+      // Lock-pop + shine fire when CTA flips disabled → enabled
+      useEffect(() => {
+        const btn = submitBtnRef.current;
+        if (!btn) return;
+        if (wasDisabledRef.current && !submitDisabled) {
+          btn.classList.remove("just-unlocked");
+          void btn.offsetWidth;
+          btn.classList.add("just-unlocked");
+        }
+        wasDisabledRef.current = submitDisabled;
+      }, [submitDisabled]);
+
+      const handleSubmit = () => {
+        if (submitDisabled) return;
+        setStep("success");
+      };
+
+      const handleClaim = () => {
+        onSubmit(); // parent flips discountTier + closes modal + starts timer
+      };
+
+      const onPickFeeling = (f) => {
+        const q = pickRandomQuoteT(f.label);
+        setFeeling(f.label);
+        setQuote(q);
+        if (quoteRef.current) quoteRef.current.textContent = q;
+      };
+
+      const onQuoteInput = (e) => {
+        const txt = e.currentTarget.textContent;
+        setQuote(txt);
+        if (!txt.trim()) setFeeling(null);
+      };
+
+      const trackChips = [...FEELINGS, ...FEELINGS]; // doubled for seamless marquee
+
+      return (
+        <div className="fb-backdrop" data-open={open ? "true" : "false"} role="dialog" aria-modal="true" aria-labelledby="fb-title">
+          <div className="fb-dialog-wrap">
+            <button className="fb-close" onClick={onClose} aria-label="Close">
+              <i className="ph ph-x" style={{ fontSize: 18 }}></i>
+            </button>
+            <div className="t-offer-nudge">
+              {/* Orange header on top */}
+              <div className="t-nudge-header">
+                <span className="t-conf" style={{ top: 10,  left: 60,  width: 6,  height: 6,  borderRadius: 999, background: "#4285f4", "--r": "0deg",   "--tx": "-3px", "--ty": "-8px",  animationDuration: "5.4s", animationDelay: "-1.4s" }}></span>
+                <span className="t-conf" style={{ top: 12,  left: 200, width: 5,  height: 5,  borderRadius: 999, background: "#16a34a", "--r": "0deg",   "--tx": "3px",  "--ty": "-10px", animationDuration: "5s",   animationDelay: "-2.2s" }}></span>
+                <span className="t-conf" style={{ top: 14,  left: 382, width: 10, height: 16, background: "#ff5500", "--r": "22deg",  "--tx": "-6px", "--ty": "-8px",  animationDuration: "4.2s", animationDelay: "-0.3s" }}></span>
+                <span className="t-conf" style={{ top: 32,  left: 432, width: 6,  height: 6,  borderRadius: 999, background: "#4285f4", "--r": "0deg",   "--tx": "4px",  "--ty": "-12px", animationDuration: "5.5s", animationDelay: "-1.1s" }}></span>
+                <span className="t-conf" style={{ top: 80,  left: 472, width: 7,  height: 11, background: "#ff732d", "--r": "12deg",  "--tx": "-4px", "--ty": "-10px", animationDuration: "5.2s", animationDelay: "-1.6s" }}></span>
+                <span className="t-conf" style={{ top: 60,  left: 478, width: 8,  height: 8,  borderRadius: 999, background: "#16a34a", "--r": "0deg",   "--tx": "6px",  "--ty": "-14px", animationDuration: "6s",   animationDelay: "-2s" }}></span>
+                <span className="t-conf" style={{ bottom: 18, left: 432, width: 10, height: 16, background: "#fbbc04", "--r": "-30deg", "--tx": "-5px", "--ty": "-9px",  animationDuration: "4.8s", animationDelay: "-0.6s" }}></span>
+                <span className="t-conf" style={{ bottom: 60, left: 6,   width: 5,  height: 5,  borderRadius: 999, background: "#fbbc04", "--r": "0deg",   "--tx": "-3px", "--ty": "-10px", animationDuration: "5.6s", animationDelay: "-2.4s" }}></span>
+
+                <div className="t-nudge-header-row">
+                  <span className="t-gift-emoji">🎁</span>
+                  <div className="t-nudge-copy">
+                    <span className="t-badge" id="fb-title">
+                      {step === "form" ? "Share Feedback and Get" : "Thank you"}
+                    </span>
+                    <div className="t-price-line">
+                      <span className="t-amt" data-price-loading="true">
+                        <span className="t-amt-real">
+                          {!isEdu && <span className="t-sym">$</span>}
+                          <span className="t-digits">
+                            <span className="t-digit" data-target={isEdu ? "5" : "6"}><span className="t-digit-track"></span></span>
+                            <span className="t-digit" data-target="0"><span className="t-digit-track"></span></span>
+                          </span>
+                          {isEdu && <span style={{ fontSize: "22px", lineHeight: "40px", paddingTop: "2px", marginLeft: 2, color: "#0055ED", display: "inline-block" }}>%</span>}
+                        </span>
+                      </span>
+                      <span className="t-lbl">{step === "success" ? "off Pro Annual Unlocked" : "off Pro Annual"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="t-body">
+                {step === "form" && (
+                  <div>
+                    <h3 className="t-heading" style={{ marginBottom: 12, fontSize: 16, fontWeight: 600 }}>Your feedback</h3>
+
+                    <div className={"t-input-card" + (feeling || quote.trim() ? " picked" : "")}>
+                      <div
+                        ref={quoteRef}
+                        className="t-quote"
+                        contentEditable
+                        suppressContentEditableWarning
+                        role="textbox"
+                        aria-multiline="true"
+                        data-placeholder="Tap a feeling — or type your own testimonial."
+                        onInput={onQuoteInput}
+                      ></div>
+                      <div className="t-emoji-row">
+                        <div className="t-emoji-track">
+                          {trackChips.map((f, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              className={"t-emoji-chip" + (feeling === f.label ? " active" : "")}
+                              title={f.label}
+                              onClick={() => onPickFeeling(f)}
+                            >
+                              <span className="em">{f.em}</span><span className="lbl">{f.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button ref={submitBtnRef} className="fb-btn-primary" style={{ width: "100%", marginTop: 16 }} disabled={submitDisabled} onClick={handleSubmit}>
+                      <span className="fb-lock" aria-hidden="true">
+                        <i className="ph-fill ph-lock"></i>
+                        <i className="ph-fill ph-lock-open"></i>
+                      </span>
+                      Submit feedback and unlock discount
+                    </button>
+
+                    <p className="t-disclaimer" style={{ textAlign: "center", marginTop: 12 }}>We may share your testimonial for marketing.</p>
+                  </div>
+                )}
+                {step === "success" && (
+                  <div style={{ position: "relative" }}>
+                    <p className="t-success-body">
+                      We heard you. As a token of appreciation, we've unlocked <strong>{offerLabel}</strong> for the next <strong>hour</strong>.
+                    </p>
+                    <div className="fb-actions fb-cta-wrap" style={{ marginTop: 36 }}>
+                      <span className="fb-cta-badge" aria-hidden="true">
+                        <i className="ph-fill ph-clock"></i>
+                        Ends in <span className="fb-btn-timer">{timerLabel}</span>
+                      </span>
+                      <button className="fb-btn-primary" onClick={handleClaim}>
+                        Buy Pro Annual at $60 off
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------- page ---------- */
+
+    const BUMP_DURATION_MS = 60 * 60 * 1000; // 60 minutes
+    const formatTimer = (ms) => {
+      const totalSec = Math.max(0, Math.floor(ms / 1000));
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    };
+
+    function Page() {
+      const [discountTier, setDiscountTier] = useState("base"); // "base" | "bumped"
+      const [audience, setAudience] = useState("tier1"); // "tier1" | "edu"
+      const [feedbackOpen, setFeedbackOpen] = useState(false);
+      const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+      const [bumpStart, setBumpStart] = useState(null);
+      const [now, setNow] = useState(Date.now());
+
+      // Pre-success preview countdown (so the success step has a live ticker
+      // even before the user clicks "See your offers")
+      useEffect(() => {
+        if (!feedbackOpen && bumpStart === null) return;
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+      }, [feedbackOpen, bumpStart]);
+
+      // Auto-revert when timer expires
+      useEffect(() => {
+        if (bumpStart === null) return;
+        const elapsed = now - bumpStart;
+        if (elapsed >= BUMP_DURATION_MS && discountTier === "bumped") {
+          setDiscountTier("base");
+        }
+      }, [now, bumpStart, discountTier]);
+
+      const remainingMs = bumpStart === null
+        ? BUMP_DURATION_MS - 1000   // shows 59:59 in success step before claim
+        : Math.max(0, BUMP_DURATION_MS - (now - bumpStart));
+      const timerLabel = formatTimer(remainingMs);
+
+      // Single PPT never discounts — always use base price across all tabs
+      const oneTime = audience === "tier1" ? ONE_TIME_TIER1_BASE : ONE_TIME_BASE;
+      const unlimited = audience === "tier1"
+        ? (discountTier === "bumped" ? UNLIMITED_TIER1_BUMPED : UNLIMITED_TIER1_BASE)
+        : (discountTier === "bumped" ? UNLIMITED_BUMPED : UNLIMITED_BASE);
+      const testimonial = audience === "tier1" ? TESTIMONIAL_TIER1 : TESTIMONIAL;
+      const extraOneTime = audience === "tier1"
+        ? ONE_TIME_TIER1_BASE.price - ONE_TIME_TIER1_BUMPED.price            // 119 - 49 = 70
+        : ONE_TIME_BASE.price - ONE_TIME_BUMPED.price;                       // 49 - 9 = 40
+      const extraUnlimited = audience === "tier1"
+        ? (UNLIMITED_TIER1_BASE.studentPriceMonthly - UNLIMITED_TIER1_BUMPED.studentPriceMonthly) * 12  // 5 × 12 = 60 annual
+        : (UNLIMITED_BASE.studentPriceMonthly - UNLIMITED_BUMPED.studentPriceMonthly) * 12;             // 5 × 12 = 60 annual
+
+      const handleClose = () => {
+        if (!feedbackSubmitted) {
+          setFeedbackOpen(true);
+        }
+        // else: no-op — gallery context, modals stay rendered
+      };
+
+      const handleFeedbackSubmit = () => {
+        setFeedbackSubmitted(true);
+        setDiscountTier("bumped");
+        setBumpStart(Date.now());
+        setNow(Date.now());
+        setFeedbackOpen(false);
+      };
+
+      const handleFeedbackClose = () => {
+        // Close without submitting → still apply discount on Pro Plan card.
+        setFeedbackSubmitted(true);
+        setDiscountTier("bumped");
+        setBumpStart(Date.now());
+        setNow(Date.now());
+        setFeedbackOpen(false);
+      };
+
+      const ctx = {
+        oneTime,
+        unlimited,
+        testimonial,
+        discountTier,
+        audience,
+        timerLabel,
+        extraOneTime,
+        extraUnlimited,
+        handleClose,
+      };
+
+      return (
+        <PricingContext.Provider value={ctx}>
+          {/* Dashboard backdrop loaded behind the modal */}
+          <iframe
+            src="_archive/dashboard-flash-sale-bg.html"
+            title="Dashboard backdrop"
+            className="fixed inset-0 w-screen h-screen border-0 pointer-events-none"
+            style={{ zIndex: 0 }}
+          />
+          {/* Black opacity scrim */}
+          <div
+            className="fixed inset-0 bg-black/50"
+            style={{ zIndex: 1 }}
+          />
+          {/* Variation A modal centered above */}
+          <div
+            className="relative min-h-screen py-6 px-3 md:py-16 md:px-6 flex flex-col items-center justify-center"
+            style={{ zIndex: 2 }}
+          >
+            <Layout08BShell Cards={CardsImagePlan} />
+          </div>
+          <FeedbackModal
+            open={feedbackOpen}
+            onSubmit={handleFeedbackSubmit}
+            onClose={handleFeedbackClose}
+            timerLabel={timerLabel}
+            audience={audience}
+          />
+          {/* Audience toggle (debug) — flips between EDU and Tier 1 pricing */}
+          <div
+            className="fixed top-4 left-1/2 -translate-x-1/2 bg-white rounded-xl p-2 flex items-center gap-1 border border-gray-200"
+            style={{ zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.10)" }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 px-2">Audience</span>
+            {[
+              { key: "tier1",     label: "Offer not seen" },
+              { key: "tier1seen", label: "Offer seen"     },
+              { key: "edu",       label: "EDU"            },
+            ].map((opt) => {
+              const isTier1 = opt.key === "tier1" || opt.key === "tier1seen";
+              const on = isTier1
+                ? (audience === "tier1" && (opt.key === "tier1seen" ? discountTier === "bumped" : discountTier === "base"))
+                : audience === opt.key;
+              const handleClick = () => {
+                if (opt.key === "tier1seen") {
+                  setAudience("tier1");
+                  setDiscountTier("bumped");
+                  setBumpStart(Date.now());
+                  setNow(Date.now());
+                  setFeedbackSubmitted(true);
+                  setFeedbackOpen(false);
+                } else if (opt.key === "tier1") {
+                  setAudience("tier1");
+                  setDiscountTier("base");
+                  setBumpStart(null);
+                  setFeedbackSubmitted(false);
+                  setFeedbackOpen(false);
+                } else {
+                  setAudience("edu");
+                  setDiscountTier("base");
+                  setBumpStart(null);
+                  setFeedbackSubmitted(false);
+                  setFeedbackOpen(false);
+                }
+              };
+              return (
+                <button
+                  key={opt.key}
+                  onClick={handleClick}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${on ? "bg-[#0055ED] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </PricingContext.Provider>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<Page />);
+  </script>
+
+  <div id="agentation-root"></div>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.3.1",
+        "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+        "react/jsx-dev-runtime": "https://esm.sh/react@18.3.1/jsx-dev-runtime",
+        "react-dom": "https://esm.sh/react-dom@18.3.1",
+        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+      }
+    }
+  </script>
+  <script type="module">
+    import React from "react";
+    import { createRoot } from "react-dom/client";
+    import { Agentation } from "https://esm.sh/agentation@3?external=react,react-dom";
+    createRoot(document.getElementById("agentation-root"))
+      .render(React.createElement(Agentation));
+  </script>
+</body>
+</html>

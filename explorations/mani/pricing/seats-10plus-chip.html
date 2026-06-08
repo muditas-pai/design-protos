@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Team seats — chip-to-input</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { background: #f5f5f5; color: #0A1925; }
+
+    .usd { font-size: 0.6em; font-weight: 600; vertical-align: 0.22em; margin-right: 1px; }
+    .navy-btn {
+      width: 100%; height: 48px;
+      background: linear-gradient(180deg, #1c3550 0%, #0A1925 100%);
+      color: #fff; border-radius: 4px;
+      font-weight: 700; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .success-fg { color: #16a34a; }
+    .ink-2 { color: #525252; }
+    .ink-3 { color: #737373; }
+
+    /* Seat chip row */
+    .seat-chip-row { display: flex; gap: 6px; width: 312px; }
+    .seat-chip {
+      position: relative; flex: 1; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600;
+      border-radius: 4px;
+      border: 1px solid #e5e5e5;
+      background: #fff; color: #0A1925;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .seat-chip:hover { border-color: #b8c1cc; }
+    .seat-chip.active {
+      background: #f2f5f9;
+      border-color: #0A1925;
+      color: #0A1925;
+    }
+
+    /* MOST BOUGHT badge */
+    .seat-chip-badge {
+      position: absolute;
+      top: -7px; left: 0; right: 0;
+      margin: 0 auto;
+      padding: 1px 4px;
+      background: #ff5500; color: #fff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      border-radius: 3px;
+      pointer-events: none; text-align: center;
+      white-space: nowrap;
+      width: fit-content; max-width: calc(100% - 4px);
+    }
+
+    /* Custom chip when active: holds [-] [input] [+] as one unit */
+    .seat-chip.custom.active {
+      padding: 0 2px;
+      box-shadow: inset 0 0 0 1px #0A1925, 0 0 0 3px rgba(10,25,37,0.08);
+    }
+    .seat-chip-stepper {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; height: 100%;
+    }
+    .seat-chip-stepper .step {
+      width: 22px; height: 26px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 3px;
+      color: #0A1925;
+      background: transparent;
+      transition: background .12s;
+      flex: none;
+    }
+    .seat-chip-stepper .step:hover:not(:disabled) { background: #e6ebf1; }
+    .seat-chip-stepper .step:disabled { opacity: 0.3; cursor: not-allowed; }
+    .seat-chip-stepper .step i { font-size: 14px; line-height: 1; }
+
+    .seat-chip-input {
+      flex: 1; min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      text-align: center;
+      font: inherit;
+      color: inherit;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      padding: 0;
+      caret-color: #ff5500;
+    }
+    .seat-chip-input::-webkit-outer-spin-button,
+    .seat-chip-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .seat-chip-input { -moz-appearance: textfield; }
+
+    /* Hint under the chips when the custom chip is live */
+    .chip-hint {
+      font-size: 11px; color: #737373; font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+      min-height: 14px;
+    }
+    .chip-hint i { font-size: 12px; color: #0A1925; }
+
+    /* Mini card shell */
+    .mini-card {
+      position: relative;
+      width: 360px;
+      background: linear-gradient(125.62deg, #ffffff 2.19%, #ffffff 41.38%, #eef2f6 98.14%);
+      border: 2px solid #b8c1cc;
+      border-radius: 4px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    /* Live price block */
+    .price-live {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 12px 14px; border-radius: 4px;
+      background: #f2f5f9;
+      font-variant-numeric: tabular-nums;
+    }
+    .price-live .total { font-size: 20px; font-weight: 800; color: #0A1925; }
+    .price-live .sub   { font-size: 11px; color: #525252; font-weight: 600; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <header class="bg-white border-b border-neutral-200">
+    <div class="max-w-[1120px] mx-auto px-6 py-5">
+      <h1 class="text-[20px] font-bold leading-tight">Team seats — chip becomes input</h1>
+      <p class="text-[13px] text-neutral-500 mt-1">Click the "10+" chip. Instead of dropping a separate input below, the chip itself turns into a typeable field and keeps showing whatever number you enter.</p>
+    </div>
+  </header>
+
+  <main class="max-w-[1120px] mx-auto px-6 py-10 flex justify-center">
+
+    <section class="mini-card flex flex-col gap-4">
+      <div class="flex items-baseline justify-between" style="width:312px;">
+        <h3 class="text-[22px] font-bold">Pro</h3>
+        <div class="flex flex-col items-end gap-1" data-price-slot></div>
+      </div>
+
+      <div class="flex flex-col gap-2" style="width:312px;">
+        <p class="text-[12px] font-medium ink-2">How many seats?</p>
+        <div class="seat-chip-row" id="chips">
+          <button type="button" class="seat-chip" data-value="3">3</button>
+          <button type="button" class="seat-chip active" data-value="5">
+            <span class="seat-chip-badge">MOST BOUGHT</span>
+            5
+          </button>
+          <button type="button" class="seat-chip custom" data-value="custom" aria-label="Enter a custom seat count">
+            <span class="custom-label">10+</span>
+          </button>
+        </div>
+        <p class="chip-hint" id="chip-hint"></p>
+      </div>
+
+      <div class="price-live" data-live>
+        <div>
+          <span class="total" data-total></span>
+          <span class="text-[12px] ink-3 font-medium">/mo</span>
+        </div>
+        <span class="sub" data-sub></span>
+      </div>
+
+      <div class="flex flex-col gap-2" style="width:312px;">
+        <button class="navy-btn" data-cta>Buy seats</button>
+        <p class="text-[12px] font-medium success-fg flex items-center justify-center gap-1 leading-none" data-hint></p>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="max-w-[1120px] mx-auto px-6 pb-16">
+    <p class="text-[12px] text-neutral-500 leading-snug max-w-[640px]">
+      Pricing: 1–4 seats $20/seat, 5–9 seats $18/seat, 10+ seats $17/seat, billed annually.
+      Clicking 3 or 5 restores the "10+" label. Click the custom chip once to activate it — click again (or type) to edit.
+    </p>
+  </div>
+
+  <script>
+    const RATE = { a: 20, b: 18, c: 17 };
+    const tierFor = n => n <= 4 ? 'a' : (n <= 9 ? 'b' : 'c');
+    const perSeat = n => RATE[tierFor(n)];
+    const total   = n => n * perSeat(n);
+    const savings = n => n * (20 - perSeat(n)) * 12;
+
+    const chipsRow   = document.getElementById('chips');
+    const chipNodes  = chipsRow.querySelectorAll('.seat-chip');
+    const customChip = chipsRow.querySelector('[data-value="custom"]');
+    const customLbl  = customChip.querySelector('.custom-label');
+    const hintEl     = document.getElementById('chip-hint');
+
+    const priceSlot = document.querySelector('[data-price-slot]');
+    const totalEl   = document.querySelector('[data-total]');
+    const subEl     = document.querySelector('[data-sub]');
+    const cta       = document.querySelector('[data-cta]');
+    const hint      = document.querySelector('[data-hint]');
+
+    // state: n = active seat count, custom = is the custom chip the active one?
+    let n = 5, custom = false, hasTyped = false, stepper = null, input = null, decBtn = null, incBtn = null;
+
+    function setStandard(val) {
+      custom = false;
+      hasTyped = false;
+      n = val;
+      if (stepper) {
+        stepper.remove();
+        stepper = input = decBtn = incBtn = null;
+        customLbl.style.display = '';
+        customLbl.textContent = '10+';
+      }
+      render();
+    }
+
+    function bump(delta) {
+      n = Math.max(10, Math.min(999, n + delta));
+      hasTyped = true;
+      render();
+    }
+
+    function activateCustom() {
+      const firstTime = !custom;
+      custom = true;
+      if (!hasTyped) n = 10;
+
+      customLbl.style.display = 'none';
+      if (!stepper) {
+        stepper = document.createElement('div');
+        stepper.className = 'seat-chip-stepper';
+        stepper.innerHTML = `
+          <button type="button" class="step" data-dec aria-label="Decrease seats"><i class="ph ph-minus"></i></button>
+          <input type="number" class="seat-chip-input" min="10" max="999" aria-label="Seat count">
+          <button type="button" class="step" data-inc aria-label="Increase seats"><i class="ph ph-plus"></i></button>`;
+        customChip.appendChild(stepper);
+
+        input  = stepper.querySelector('input');
+        decBtn = stepper.querySelector('[data-dec]');
+        incBtn = stepper.querySelector('[data-inc]');
+
+        // Keep clicks on the buttons from re-triggering the chip's click handler.
+        decBtn.addEventListener('click', (e) => { e.stopPropagation(); bump(-1); input.focus(); });
+        incBtn.addEventListener('click', (e) => { e.stopPropagation(); bump(+1); input.focus(); });
+
+        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('input', () => {
+          const v = parseInt(input.value, 10);
+          if (Number.isNaN(v)) return;
+          n = Math.max(10, Math.min(999, v));
+          hasTyped = true;
+          render(/* skipInputSync */ true);
+        });
+        input.addEventListener('blur', () => {
+          if (!input.value || parseInt(input.value, 10) < 10) input.value = n;
+        });
+      }
+      input.value = n;
+      if (firstTime) { input.focus(); input.select(); }
+      render(/* skipInputSync */ true);
+    }
+
+    chipNodes.forEach(c => {
+      c.addEventListener('click', (e) => {
+        const v = c.dataset.value;
+        if (v === 'custom') activateCustom();
+        else setStandard(parseInt(v, 10));
+      });
+    });
+
+    function render(skipInputSync) {
+      chipNodes.forEach(c => {
+        const v = c.dataset.value;
+        const active = (v === 'custom' && custom) || (!custom && parseInt(v, 10) === n);
+        c.classList.toggle('active', active);
+      });
+
+      priceSlot.innerHTML = `
+        <div class="flex items-baseline gap-1">
+          <p class="text-[24px] font-bold leading-none"><span class="usd">$</span>${perSeat(n)}</p>
+          <span class="text-[13px] font-medium ink-3">/seat/mo</span>
+        </div>
+        <p class="text-[11px] ink-3">billed annually</p>`;
+
+      totalEl.innerHTML = `<span class="usd">$</span>${total(n).toLocaleString()}`;
+      subEl.textContent = `${n} seats × $${perSeat(n)}`;
+      cta.textContent   = `Buy ${n} seats`;
+
+      if (n >= 5) {
+        hint.innerHTML = `<i class="ph-fill ph-check-circle text-[13px]"></i>Save $${savings(n).toLocaleString()} / year vs list`;
+      } else {
+        hint.innerHTML = '';
+      }
+
+      if (custom) {
+        hintEl.innerHTML = hasTyped
+          ? `<i class="ph-fill ph-pencil-simple"></i>You can change this any time`
+          : `<i class="ph ph-keyboard"></i>Type the exact number of seats`;
+      } else {
+        hintEl.innerHTML = '';
+      }
+
+      if (input && !skipInputSync) input.value = n;
+      if (decBtn) decBtn.disabled = n <= 10;
+    }
+
+    render();
+  </script>
+</body>
+</html>
