@@ -87,10 +87,13 @@ keeping a key screen current is a manual design job that belongs to its owner.
 
 | Screen | Owner |
 |---|---|
-| editor | Mudita |
-| dashboard | Tyo |
-| pricing | Mani |
-| login | _(unassigned)_ |
+| editor | Mudita (`@muditas-pai`) |
+| dashboard | Tyo (`@tyo-pai`) |
+| pricing | Mani (`@manivasakan-arch`) |
+| login | Mudita (`@muditas-pai`) |
+
+Ownership is wired in `.github/CODEOWNERS`, which auto-requests the owner's review on any PR that
+touches their screen.
 
 - Each screen carries a stamp at the top: `<!-- key screen: <name> · owner: <name> · updated: <date> -->`.
 - The owner is the only person who changes their screen. When the live screen changes, the owner

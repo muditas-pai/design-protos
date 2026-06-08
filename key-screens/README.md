@@ -6,10 +6,10 @@ lossy to auto-sync, so keeping these current is a manual design job).
 
 | Screen | Owner |
 |---|---|
-| editor | Mudita |
-| dashboard | Tyo |
-| pricing | Mani |
-| login | _(unassigned)_ |
+| editor | Mudita (`@muditas-pai`) |
+| dashboard | Tyo (`@tyo-pai`) |
+| pricing | Mani (`@manivasakan-arch`) |
+| login | Mudita (`@muditas-pai`) |
 
 - **Treat as read-only unless it's yours.** To explore, copy a screen into your
   `explorations/<you>/` and riff there. Want a change to a screen you don't own? Ask its owner.
