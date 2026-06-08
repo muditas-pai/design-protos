@@ -124,6 +124,22 @@ touches their screen.
 - Not the owner and want changes? Duplicate the screen into your `explorations/<you>/`, or ask
   the owner to update theirs.
 
+## Design skills (in `.claude/skills/`)
+
+These project skills are committed to the repo, so they're **auto-available to anyone working in
+design-protos with Claude Code** — no `~/.claude/skills` install or symlink needed.
+
+- **`/crazy8s`** — branching visual-iteration: produces 8 variations in one rolling `crazy8s.html`,
+  waits for a pick, then branches 8 more off it. Reach for it when exploring alternatives ("give
+  me 8 variations", "different versions of this") — it's the natural way to fill an
+  `explorations/<designer>/<problem>/` folder.
+- **`pai-visual-language`** — presentations.ai brand voice & visual conventions (navy = action,
+  orange = brand/upsell, setup → payoff, density, copy tone). Runs *alongside* the design system;
+  auto-triggers on UI/brand work. The brand-voice section below is the short version of it.
+
+Source of truth: `muditas-pai/pai-design-skills`. These are **copies** — if a skill changes there,
+re-vendor it into `.claude/skills/<name>/SKILL.md`.
+
 ## Brand voice (presentations.ai)
 
 - **Navy `#0A1925` is the action color** — primary CTAs are navy-filled. **Orange `#FF5500` is
