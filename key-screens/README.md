@@ -18,4 +18,4 @@ lossy to auto-sync, so keeping these current is a manual design job).
 - Each screen carries a stamp at the top:
   `<!-- key screen: <name> · owner: <name> · updated: <date> -->`.
 
-_Screens get added here as their owners build them — they're not in place yet._
+_In place: **editor**, **pricing**. Not built yet: dashboard, login._
