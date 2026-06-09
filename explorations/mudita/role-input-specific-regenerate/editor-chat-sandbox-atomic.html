@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Editor Chat Sandbox — Atomic</title>
+
+  <!-- Phosphor icons (regular + fill + bold weights) -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Production design tokens — mirror v10's palette (PAI brand is navy here,
+    // not bright blue — keep the editor-chat surface consistent).
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "bg-elevated": "#FFFFFF",
+            "bg-primary": "#FFFFFF",
+            "bg-secondary": "#FAFAFA",
+            "bg-tertiary": "#F5F5F5",
+            "bg-quaternary": "#E5E5E5",
+            "bg-primary-inverted": "#0A1925",
+            "bg-primary-inverted-hover": "#23303B",
+            "text-primary": "#171717",
+            "text-secondary": "#525252",
+            "text-tertiary": "#737373",
+            "text-brand": "#0A1925",
+            "border-primary": "rgba(11, 15, 20, 0.20)",
+            "border-secondary": "rgba(11, 15, 20, 0.09)",
+            "border-tertiary": "rgba(11, 15, 20, 0.06)",
+            "app-50": "#E5E8EC",
+            "app-200": "#5A6471",
+            "app-600": "#0A1925",
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-drawer:     cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* shadow-elevation-03 — heavier floater elevation (v10 panel) */
+    .shadow-elev-03 {
+      box-shadow:
+        0 0 0 0.75px rgba(10,25,37,0.06),
+        0 0 0 1px rgba(26,26,26,0.06),
+        0 1px 2px 0 rgba(26,26,26,0.06),
+        0 4px 6px 0 rgba(26,26,26,0.06),
+        0 24px 40px -16px rgba(26,26,26,0.06);
+    }
+    /* shadow-elevation-02 — lighter, for the context-picker */
+    .shadow-elev-02 {
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.80) inset,
+        0 0 0 1px rgba(11,15,20,0.09),
+        0 1px 2px 0 rgba(11,15,20,0.09);
+    }
+
+    /* Row entrance — staggered fade-in on list rebuild */
+    @keyframes rowIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .row-stagger {
+      opacity: 0;
+      animation: rowIn 280ms var(--ease-out-strong) forwards;
+    }
+
+    /* Reveal expand/collapse */
+    .reveal {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 280ms var(--ease-out-strong),
+                  opacity 200ms var(--ease-out-strong);
+    }
+    .reveal.is-expanded { opacity: 1; }
+    .reveal.is-expanded.is-chips     { max-height: 140px; }
+    .reveal.is-expanded.is-cards     { max-height: 360px; }
+
+    /* Checkbox indicator — v10 style. Off: hairline border, white bg.
+       On: navy fill with white check. */
+    .check-box {
+      transition: background-color 140ms var(--ease-out-strong),
+                  border-color    140ms var(--ease-out-strong);
+    }
+    .check-box i {
+      transform: scale(0.6);
+      transition: opacity 120ms var(--ease-out-strong),
+                  transform 200ms var(--ease-out-strong);
+    }
+    .check-box.is-on i { transform: scale(1); }
+
+    /* Chip — v10 style. Selected = navy tint, navy text. */
+    .chip {
+      transition: background-color 150ms var(--ease-out-strong),
+                  color           150ms var(--ease-out-strong),
+                  box-shadow      150ms var(--ease-out-strong),
+                  transform       120ms var(--ease-out-strong);
+    }
+    .chip:active:not(:disabled) { transform: scale(0.96); }
+
+    /* Narrative card */
+    .narrative-card {
+      transition: background-color 150ms var(--ease-out-strong),
+                  border-color    150ms var(--ease-out-strong),
+                  transform       120ms var(--ease-out-strong);
+    }
+    .narrative-card:active { transform: scale(0.99); }
+
+    /* PRO badge — brand-blue pill (matches v10/v11). */
+    .pro-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 18px;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 14px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      border-radius: 34px;
+      background: rgba(0, 85, 237, 0.15);
+      color: #0055ED;
+    }
+
+    /* Context-picker chip — small radio-style */
+    .ctx-chip {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 9999px;
+      background: #FFFFFF;
+      color: #525252;
+      box-shadow: inset 0 0 0 1px rgba(11,15,20,0.09);
+      cursor: pointer;
+      transition: background-color 120ms, color 120ms, box-shadow 120ms;
+    }
+    .ctx-chip:hover { background: #F5F5F5; }
+    .ctx-chip.is-active {
+      background: #0A1925;
+      color: #FFFFFF;
+      box-shadow: none;
+    }
+    .ctx-chip.is-checked {
+      background: rgba(10, 25, 37, 0.10);
+      color: #0A1925;
+      box-shadow: inset 0 0 0 1px rgba(10, 25, 37, 0.30);
+    }
+
+    /* Subtle scrollbar in context picker if it overflows */
+    .ctx-scroll::-webkit-scrollbar      { width: 4px; }
+    .ctx-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.14); border-radius: 2px; }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden bg-bg-quaternary p-4">
+
+  <!-- HERO TEXT — explains what this sandbox demos -->
+  <div class="max-w-md mx-auto pt-10 text-center">
+    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Editor Chat — Atomic Sandbox</p>
+    <h1 class="mt-2 text-2xl font-medium text-text-primary leading-tight">
+      <span class="text-text-tertiary">The refine list adapts</span>
+      <br/><span class="text-text-primary">to who you are and what you uploaded.</span>
+    </h1>
+    <p class="mt-3 text-sm text-text-secondary leading-relaxed">
+      Flip role and input on the left. The refine panel rebuilds live — same two anchors at the bottom, different top per context.
+    </p>
+  </div>
+
+
+  <!-- REFINE PANEL — bottom-right -->
+  <div id="refine-panel"
+       class="fixed right-3 bottom-3 w-[400px] bg-bg-elevated rounded-2xl shadow-elev-03 flex flex-col z-40 overflow-hidden">
+
+    <!-- Floating close (display-only in sandbox) -->
+    <button class="absolute top-2.5 right-2.5 w-9 h-9 flex items-center justify-center rounded-md hover:bg-bg-tertiary z-10 text-text-tertiary" title="Close">
+      <i class="ph ph-x text-base"></i>
+    </button>
+
+    <!-- Header -->
+    <div class="px-6 pt-10 pb-3">
+      <i class="ph-fill ph-sparkle text-text-brand text-xl mb-3 block"></i>
+      <h2 class="leading-tight" style="text-wrap: balance;">
+        <span class="block text-xl font-medium text-text-tertiary">Found a few improvements.</span>
+        <span class="block text-xl font-medium text-text-primary mt-0.5">Try any of these?</span>
+      </h2>
+    </div>
+
+    <!-- Composed checklist — populated by render() -->
+    <div id="refine-rows" class="flex-1 overflow-y-auto px-4 pb-3"></div>
+
+    <!-- Footer CTAs -->
+    <div class="flex-shrink-0 px-4 pt-3 pb-4 border-t border-border-tertiary">
+      <button class="w-full h-11 rounded-lg bg-bg-primary-inverted hover:bg-bg-primary-inverted-hover text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+        <i class="ph-fill ph-sparkle text-sm"></i>
+        <span>Re-Generate for Free</span>
+        <span class="text-white/60 text-xs">· Zero Credits Used</span>
+      </button>
+      <button class="w-full mt-2 h-11 rounded-lg bg-white text-text-primary text-sm font-medium flex items-center justify-center gap-2 transition-colors hover:bg-bg-tertiary" style="box-shadow: inset 0 0 0 1px rgba(11,15,20,0.20), 0 1px 2px 0 rgba(11,15,20,0.06);">
+        <span>Hire Our Designers</span>
+        <span class="text-text-tertiary text-xs">· 24HR TURNAROUND</span>
+      </button>
+    </div>
+  </div>
+
+
+  <!-- CONTEXT PICKER — bottom-left -->
+  <div id="ctx-picker"
+       class="fixed left-3 bottom-3 w-[420px] max-h-[calc(100vh-24px)] bg-bg-elevated rounded-xl shadow-elev-02 z-30 overflow-hidden flex flex-col">
+    <div class="px-4 pt-3.5 pb-2 border-b border-border-tertiary flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="ph-fill ph-test-tube text-text-brand text-base"></i>
+        <span class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Context</span>
+      </div>
+      <span class="text-[10px] text-text-tertiary">Sandbox-only</span>
+    </div>
+
+    <div id="ctx-controls" class="flex-1 overflow-y-auto ctx-scroll px-4 pt-3 pb-4 space-y-3.5"></div>
+  </div>
+
+
+  <script>
+  // ============================================================
+  // OPTION LISTS — referenced by atom reveal `group` keys.
+  // Per-role variants are nested by role; the renderer picks based on ctx.role.
+  // ============================================================
+
+  const AUDIENCE_TONE_OPTIONS = [
+    {id:"investors", label:"Investors · Confident"},
+    {id:"board",     label:"Board · Direct"},
+    {id:"customers", label:"Customers · Consultative"},
+    {id:"team",      label:"Team · Collaborative"},
+    {id:"general",   label:"General · Professional"},
+    {id:"custom",    label:"+ Custom…", custom: true},
+  ];
+
+  const LAYOUT_DENSITY_OPTIONS = [
+    {id:"tight",    label:"Tight"},
+    {id:"standard", label:"Standard"},
+    {id:"spacious", label:"Spacious"},
+  ];
+
+  const COPY_DENSITY_OPTIONS = [
+    {id:"brief",    label:"Brief"},
+    {id:"balanced", label:"Balanced"},
+    {id:"detailed", label:"Detailed"},
+  ];
+
+  const NARRATIVE_CARDS = {
+    default:    [{id:"problem_first",        title:"Problem-first",        desc:"Lead with the pain point"},
+                 {id:"momentum_first",       title:"Momentum-first",       desc:"Lead with progress so far"},
+                 {id:"vision_first",         title:"Vision-first",         desc:"Lead with the future state"}],
+    leadership: [{id:"vision_first",         title:"Vision-first",         desc:"Lead with where we're going"},
+                 {id:"problem_first",        title:"Problem-first",        desc:"Lead with what's broken"},
+                 {id:"insight_first",        title:"Insight-first",        desc:"Lead with the realization that changes things"}],
+    consulting: [{id:"recommendation_first", title:"Recommendation-first", desc:"Lead with the answer (BLUF)"},
+                 {id:"situation_first",      title:"Situation-first",      desc:"Lead with where they stand"},
+                 {id:"evidence_first",       title:"Evidence-first",       desc:"Lead with the data"}],
+    sales:      [{id:"pain_first",           title:"Pain-first",           desc:"Lead with the buyer's pain"},
+                 {id:"solution_first",       title:"Solution-first",       desc:"Lead with what we do"},
+                 {id:"outcome_first",        title:"Outcome-first",        desc:"Lead with the after-state"}],
+  };
+
+  const LENGTH_OPTIONS = [
+    {id:"1-5",   label:"1–5 slides"},
+    {id:"5-10",  label:"5–10 slides"},
+    {id:"10-15", label:"10–15 slides"},
+    {id:"15-20", label:"15–20 slides", pro: true},
+    {id:"20-25", label:"20–25 slides", pro: true},
+  ];
+
+  const THEME_OPTIONS = [
+    {id:"mono",      label:"Mono"},
+    {id:"product",   label:"Product"},
+    {id:"gradient",  label:"Gradient"},
+    {id:"dark",      label:"Dark"},
+    {id:"editorial", label:"Editorial"},
+  ];
+
+  const OUTCOME_OPTIONS     = [{id:"align", label:"Align"},        {id:"decide", label:"Decide"},       {id:"inspire", label:"Inspire"}];
+  const ENGAGEMENT_OPTIONS  = [{id:"kickoff", label:"Kickoff"},    {id:"recommendation", label:"Recommendation"}, {id:"deep_dive", label:"Deep-dive"}, {id:"status", label:"Status"}];
+  const SALES_STAGE_OPTIONS = [{id:"discovery", label:"Discovery"}, {id:"demo", label:"Demo"},            {id:"proposal", label:"Proposal"},  {id:"closing", label:"Closing"}];
+  const RESEARCH_OPTIONS    = [{id:"light", label:"Light fill-in"}, {id:"moderate", label:"Moderate"},   {id:"heavy", label:"Heavy"}];
+  const CTA_OPTIONS         = [{id:"schedule_next", label:"Schedule next meeting"}, {id:"sign", label:"Sign now"}, {id:"handoff", label:"Hand off to legal"}];
+  const FOCUS_OPTIONS       = [{id:"intro", label:"Introduction"},   {id:"methods", label:"Methods"},   {id:"findings", label:"Findings"}, {id:"recommendations", label:"Recommendations"}];
+
+
+  // ============================================================
+  // THE ATOM POOL — 18 atoms across 4 buckets.
+  // - Two are `fixed: true` and always emitted at the bottom.
+  // - The remaining 16 declare a `tier` (primary / secondary / tertiary)
+  //   and compete for the top 1–2 slots in that order.
+  // - One (add_context) sets `pin: "slot1"` to bypass tier sort for its
+  //   gating context (simple_prompt).
+  // Atoms are pure data; rendering is generic.
+  // ============================================================
+
+  const ATOMS = [
+
+    // ── A. Fixed (anchored to bottom — no tier, never compete) ──────
+    { id: "length",
+      label: "Number of slides",
+      category: "surface",
+      reveals: { kind: "chips", group: "length" },
+      gating: { fixed: true },
+    },
+    { id: "ai_model",
+      label: "Use a smarter model",
+      desc: "Higher-quality output.",
+      pro: true,
+      category: "surface",
+      reveals: null,
+      gating: { fixed: true },
+    },
+
+    // ── B. Primary (role atoms — strongest fit when role matches) ───
+    // Within-tier ties resolve by file order, so list the most-likely-to-fire
+    // role atom first for each role.
+    { id: "sales_stage",
+      label: "Tune for sales stage",
+      desc: "Sets tone, length, and CTA by stage.",
+      tier: "primary",
+      category: "direction",
+      reveals: { kind: "chips", group: "sales_stage" },
+      // Skips detailed_outline / ppt_redesign / ppt_rewrite: stage shifts imply
+      // a different deck shape that needs restructuring permission. Skeletal
+      // outline and ppt_adapt are loose enough to allow it.
+      gating: { roles: ["sales"], inputs: ["simple_prompt", "skeletal_outline", "unstructured_doc", "ppt_adapt"] },
+    },
+    { id: "outcome",
+      label: "Sharpen the outcome",
+      desc: "What should the room do next?",
+      tier: "primary",
+      category: "direction",
+      reveals: { kind: "chips", group: "outcome" },
+      gating: { roles: ["leadership"], skipFor: ["ppt_redesign"] },
+    },
+    { id: "engagement",
+      label: "Tune for meeting type",
+      desc: "Adjusts voice and depth. Won't reshape an outline you provided.",
+      tier: "primary",
+      category: "direction",
+      reveals: { kind: "chips", group: "engagement" },
+      gating: { roles: ["consulting"], skipFor: ["ppt_redesign"] },
+    },
+    { id: "cta",
+      label: "Strengthen the CTA",
+      tier: "primary",
+      category: "flow",
+      reveals: { kind: "chips", group: "cta" },
+      gating: { roles: ["sales"], skipFor: ["ppt_redesign"] },
+    },
+    { id: "pushback",
+      label: "Address the counter",
+      desc: "Add the strongest objection and how it's handled.",
+      tier: "primary",
+      category: "content",
+      reveals: null,
+      gating: { roles: ["consulting", "leadership"], skipFor: ["ppt_redesign"] },
+    },
+
+    // ── C. Secondary (input atoms — strongest fit when input matches) ──
+    // `pin: "slot1"` on add_context guarantees slot 1 for simple_prompt
+    // regardless of tier sort. Order within tier matters for tiebreaks:
+    // narrative is listed early so it wins over research_depth / focus_area
+    // when both apply.
+    { id: "add_context",
+      label: "Attach docs for context",
+      desc: "Examples, briefs, background — we'll ground the deck in them.",
+      tier: "secondary",
+      pin: "slot1",
+      category: "content",
+      reveals: { kind: "attach", group: "add_context_files" },
+      gating: { inputs: ["simple_prompt"] },
+    },
+    { id: "narrative",
+      label: "Try a different narrative",
+      desc: "Restructure around a new opening angle.",
+      tier: "secondary",
+      category: "flow",
+      reveals: { kind: "cards", group: "narrative" },
+      gating: { inputs: ["simple_prompt", "skeletal_outline", "unstructured_doc", "ppt_adapt"] },
+    },
+    { id: "layout_density",
+      label: "Layout density",
+      desc: "Tight = briefing. Spacious = keynote.",
+      tier: "secondary",
+      category: "surface",
+      reveals: { kind: "chips", group: "layout_density" },
+      gating: { inputs: ["ppt_redesign"] },
+    },
+    { id: "copy_density",
+      label: "Copy density",
+      desc: "How wordy each slide is.",
+      tier: "secondary",
+      category: "voice",
+      reveals: { kind: "chips", group: "copy_density" },
+      gating: { inputs: ["ppt_rewrite"] },
+    },
+    { id: "focus_area",
+      label: "Focus on a different section",
+      tier: "secondary",
+      category: "content",
+      reveals: { kind: "chips", group: "focus" },
+      gating: { inputs: ["unstructured_doc"] },
+    },
+    { id: "research_depth",
+      label: "Add details from research",
+      desc: "Context, examples, and data from outside your input.",
+      tier: "secondary",
+      category: "content",
+      reveals: { kind: "chips", group: "research" },
+      gating: { inputs: ["simple_prompt", "skeletal_outline"] },
+    },
+    { id: "pull_more_source",
+      label: "Pull more from your source",
+      desc: "Surface details we left out.",
+      tier: "secondary",
+      category: "content",
+      reveals: null,
+      gating: { inputs: ["unstructured_doc"] },
+    },
+    { id: "abstract_more",
+      label: "Lean less on the source",
+      desc: "Paraphrase more, echo less.",
+      tier: "secondary",
+      category: "voice",
+      reveals: null,
+      gating: { inputs: ["unstructured_doc"] },
+    },
+
+    // ── D. Tertiary (universal fallback) ────────────────────────────
+    // audience_tone is listed first so it wins over theme/visual when nothing
+    // primary/secondary surfaces.
+    { id: "audience_tone",
+      label: "Audience & tone",
+      desc: "Tune language for who's watching.",
+      tier: "tertiary",
+      category: "voice",
+      reveals: { kind: "chips", group: "audience_tone" },
+      // Visual-only mode doesn't touch copy, so audience/tone is moot there.
+      gating: { universal: true, skipFor: ["ppt_redesign"] },
+    },
+    { id: "theme",
+      label: "Try a different theme",
+      tier: "tertiary",
+      category: "surface",
+      reveals: { kind: "chips", group: "theme" },
+      gating: { universal: true },
+    },
+    { id: "visual",
+      label: "Make it more visual",
+      desc: "More images, diagrams, icons, charts.",
+      tier: "tertiary",
+      category: "surface",
+      reveals: null,
+      gating: { universal: true },
+    },
+  ];
+
+
+  // ============================================================
+  // CONTEXT — what the composer reads.
+  // Lives in the context-picker UI. The composer rebuilds whenever this changes.
+  // ============================================================
+  const ctx = {
+    role:      "default",       // default | leadership | consulting | sales
+    input:     "simple_prompt", // simple_prompt | skeletal_outline | detailed_outline | unstructured_doc | ppt_redesign | ppt_rewrite | ppt_adapt
+    // Per-atom user selections (for reveals). Resets on context change.
+    checked:   new Set(),
+    selections: {},
+  };
+
+
+  // ============================================================
+  // COMPOSER — buildList(ctx).
+  // Three-stage:
+  //   1. Emit the fixed atoms (length, ai_model) at the bottom.
+  //   2. Pinned atoms (currently just add_context) take their slot first.
+  //   3. Fill remaining slots from relevant dynamic atoms, sorted by tier
+  //      (primary → secondary → tertiary). Array.sort is stable, so within
+  //      a tier the file order wins ties.
+  // ============================================================
+
+  const MAX_ITEMS = 4;
+  const FIXED_IDS = ["length", "ai_model"];
+  const TIER_RANK = { primary: 0, secondary: 1, tertiary: 2 };
+
+  function isRelevant(atom) {
+    const g = atom.gating;
+    // skipFor is an exclusion list — applied first so it overrides universal/fixed.
+    if (g.skipFor && g.skipFor.includes(ctx.input)) return false;
+    if (g.fixed) return true;
+    if (g.universal) return true;
+    if (g.roles  && !g.roles.includes(ctx.role)) return false;
+    if (g.inputs && !g.inputs.includes(ctx.input)) return false;
+    return true;
+  }
+
+  function buildList() {
+    const fixed = FIXED_IDS.map(id => ATOMS.find(a => a.id === id))
+      .map(a => ({ atom: a }));
+
+    // Pinned: bypass tier sort, take slot first.
+    const pinned = ATOMS
+      .filter(a => a.pin === "slot1" && isRelevant(a))
+      .map(a => ({ atom: a }));
+
+    // Dynamic: everything else that's relevant, sorted by tier.
+    const dynamic = ATOMS
+      .filter(a => !a.gating.fixed && a.pin !== "slot1" && isRelevant(a))
+      .sort((x, y) => TIER_RANK[x.tier] - TIER_RANK[y.tier])
+      .map(a => ({ atom: a }));
+
+    const top = [...pinned, ...dynamic].slice(0, MAX_ITEMS - fixed.length);
+    return { kept: [...top, ...fixed] };
+  }
+
+
+  // ============================================================
+  // RENDER — context picker + refine panel
+  //
+  // Full render is ONLY called when context-level state changes (role / input /
+  // input). Selections inside the panel (checkboxes, chip picks, narrative
+  // cards) do surgical DOM updates only — never rebuild the row list. Same
+  // pattern as v10's refine panel.
+  // ============================================================
+
+  const $refineRows  = document.getElementById("refine-rows");
+  const $ctxControls = document.getElementById("ctx-controls");
+
+  function render() {
+    renderCtxPicker();
+    renderRefinePanel();
+  }
+
+
+  // ─── Context picker ─────────────────────────────────────────────
+  // Renders a stack of small radio groups. Each control mutates ctx
+  // and triggers a full re-render. Selections + checked state reset on
+  // role/input change so the panel always shows a clean slate.
+
+  const CTX_GROUPS = [
+    { key: "role",      label: "Role",      kind: "radio",
+      options: [
+        { id: "default",    label: "Default"    },
+        { id: "leadership", label: "Leadership" },
+        { id: "consulting", label: "Consulting" },
+        { id: "sales",      label: "Sales"      },
+      ] },
+    { key: "input",     label: "Input",     kind: "radio",
+      options: [
+        { id: "simple_prompt",    label: "Simple prompt"    },
+        { id: "skeletal_outline", label: "Skeletal outline" },
+        { id: "detailed_outline", label: "Detailed outline" },
+        { id: "unstructured_doc", label: "Unstructured doc" },
+        { id: "ppt_redesign",     label: "PPT · Re-design"  },
+        { id: "ppt_rewrite",      label: "PPT · Re-write"   },
+        { id: "ppt_adapt",        label: "PPT · Adapt"      },
+      ] },
+  ];
+
+  function renderCtxPicker() {
+    $ctxControls.innerHTML = "";
+    for (const g of CTX_GROUPS) {
+      const wrap = document.createElement("div");
+
+      const lab = document.createElement("div");
+      lab.className = "text-[10px] font-semibold uppercase tracking-wider text-text-tertiary mb-1.5";
+      lab.textContent = g.label;
+      wrap.appendChild(lab);
+
+      const chipsRow = document.createElement("div");
+      chipsRow.className = "flex flex-wrap gap-1.5";
+
+      for (const opt of g.options) {
+        const chip = document.createElement("button");
+        const isActive = ctx[g.key] === opt.id;
+        chip.className = "ctx-chip" + (isActive ? " is-active" : "");
+        chip.textContent = opt.label;
+        chip.addEventListener("click", () => {
+          if (ctx[g.key] === opt.id) return;
+          ctx[g.key] = opt.id;
+          // Switching role or input invalidates user selections —
+          // they're picking refinements for a different cell.
+          ctx.checked.clear();
+          ctx.selections = {};
+          render();
+        });
+        chipsRow.appendChild(chip);
+      }
+      wrap.appendChild(chipsRow);
+      $ctxControls.appendChild(wrap);
+    }
+  }
+
+
+  // ─── Refine panel rows ──────────────────────────────────────────
+
+  function renderRefinePanel() {
+    const { kept } = buildList();
+    $refineRows.innerHTML = "";
+    if (kept.length === 0) {
+      $refineRows.innerHTML = `<div class="px-3 py-8 text-center text-sm text-text-tertiary">No relevant refinements for this context.</div>`;
+      return;
+    }
+    kept.forEach(({ atom }, i) => {
+      const row = renderRow(atom, i);
+      $refineRows.appendChild(row);
+    });
+  }
+
+  function renderRow(atom, i) {
+    const wrap = document.createElement("div");
+    wrap.className = "row-stagger";
+    wrap.style.animationDelay = `${80 + i * 50}ms`;
+
+    const isChecked = ctx.checked.has(atom.id);
+
+    const label = document.createElement("label");
+    label.className = "flex items-start gap-3 px-3 py-3 rounded-md hover:bg-bg-tertiary cursor-pointer transition-colors";
+
+    label.innerHTML = `
+      <input type="checkbox" class="sr-only peer" ${isChecked ? "checked" : ""} />
+      <span class="check-box w-5 h-5 mt-[1px] flex-shrink-0 rounded border ${isChecked ? "bg-app-600 border-app-600 is-on" : "border-border-primary bg-bg-elevated"} flex items-center justify-center">
+        <i class="ph-bold ph-check text-white text-[11px]" style="opacity: ${isChecked ? "1" : "0"};"></i>
+      </span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-medium text-text-primary leading-tight">${atom.label}</span>
+          ${atom.pro ? '<span class="pro-badge">PRO</span>' : ""}
+        </div>
+        ${atom.desc ? `<div class="text-xs text-text-tertiary mt-0.5 leading-snug">${atom.desc}</div>` : ""}
+      </div>
+    `;
+
+    // Reveal area (only if the atom has one)
+    let reveal = null;
+    if (atom.reveals) {
+      reveal = document.createElement("div");
+      reveal.className = `reveal ml-11 mr-3 ${atom.reveals.kind === "cards" ? "is-cards" : "is-chips"}`;
+      if (isChecked) reveal.classList.add("is-expanded");
+      renderReveal(atom, reveal);
+    }
+
+    // Click handler
+    const cb = label.querySelector("input");
+    const box = label.querySelector(".check-box");
+    const boxIcon = box.querySelector("i");
+    cb.addEventListener("change", () => {
+      if (cb.checked) {
+        ctx.checked.add(atom.id);
+        // Apply default selection if reveal is a chip/cards group and no value yet
+        if (atom.reveals && !ctx.selections[atom.reveals.group] && atom.reveals.group !== "theme") {
+          const opts = optionsFor(atom.reveals.group);
+          if (opts && opts.length) ctx.selections[atom.reveals.group] = opts[0].id;
+        }
+        box.classList.add("bg-app-600", "border-app-600", "is-on");
+        box.classList.remove("border-border-primary", "bg-bg-elevated");
+        boxIcon.style.opacity = "1";
+        if (reveal) {
+          reveal.classList.add("is-expanded");
+          renderReveal(atom, reveal); // re-render to pick up the default
+        }
+      } else {
+        ctx.checked.delete(atom.id);
+        // Optionally clear the selection (lets unchecking truly reset)
+        if (atom.reveals) ctx.selections[atom.reveals.group] = null;
+        box.classList.remove("bg-app-600", "border-app-600", "is-on");
+        box.classList.add("border-border-primary", "bg-bg-elevated");
+        boxIcon.style.opacity = "0";
+        if (reveal) reveal.classList.remove("is-expanded");
+      }
+      // No list rebuild — checkbox toggling only mutates the row + reveal
+      // surgically, mirroring v10's behavior.
+    });
+
+    wrap.appendChild(label);
+    if (reveal) wrap.appendChild(reveal);
+    return wrap;
+  }
+
+
+  // ─── Reveals ────────────────────────────────────────────────────
+
+  function renderReveal(atom, container) {
+    container.innerHTML = "";
+    if (!atom.reveals) return;
+    if (atom.reveals.kind === "chips")  return renderChipsReveal(atom, container);
+    if (atom.reveals.kind === "cards")  return renderCardsReveal(atom, container);
+    if (atom.reveals.kind === "attach") return renderAttachReveal(atom, container);
+  }
+
+  function optionsFor(group) {
+    if (group === "length")          return LENGTH_OPTIONS;
+    if (group === "theme")           return THEME_OPTIONS;
+    if (group === "outcome")         return OUTCOME_OPTIONS;
+    if (group === "engagement")      return ENGAGEMENT_OPTIONS;
+    if (group === "sales_stage")     return SALES_STAGE_OPTIONS;
+    if (group === "research")        return RESEARCH_OPTIONS;
+    if (group === "cta")             return CTA_OPTIONS;
+    if (group === "focus")           return FOCUS_OPTIONS;
+    if (group === "audience_tone")   return AUDIENCE_TONE_OPTIONS;
+    if (group === "layout_density")  return LAYOUT_DENSITY_OPTIONS;
+    if (group === "copy_density")    return COPY_DENSITY_OPTIONS;
+    return [];
+  }
+
+  function renderChipsReveal(atom, container) {
+    const wrap = document.createElement("div");
+    wrap.className = "flex flex-wrap gap-1.5 pt-2 pb-0.5";
+
+    const group = atom.reveals.group;
+    const opts = optionsFor(group);
+    const chipNodes = [];
+
+    // Surgical paint — mutates ONE chip's styles, no DOM rebuild.
+    const paintChip = (btn, opt) => {
+      const isSel = ctx.selections[group] === opt.id;
+      btn.style.boxShadow = isSel ? "none" : "inset 0 0 0 1px rgba(11, 15, 20, 0.09)";
+      btn.style.background = isSel ? "rgba(10, 25, 37, 0.12)" : "#FFFFFF";
+      btn.style.color = isSel ? "#0A1925" : "#525252";
+    };
+
+    const makeBtn = (opt) => {
+      const btn = document.createElement("button");
+      btn.className = "chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium";
+      if (opt.custom) {
+        const text = ctx.selections[group + "_text"];
+        const isSel = ctx.selections[group] === opt.id;
+        const display = isSel && text ? text : "+ Custom…";
+        btn.innerHTML = `<span>${display}</span>`;
+      } else {
+        btn.innerHTML = `<span>${opt.label}</span>` + (opt.pro ? `<span class="pro-badge">PRO</span>` : "");
+      }
+      paintChip(btn, opt);
+      return btn;
+    };
+
+    // Swap a custom chip for an inline text input. On Enter/blur, commit the
+    // value (or clear the selection if empty) and re-render the chip in place.
+    const swapToInput = (btn, opt) => {
+      const existing = ctx.selections[group + "_text"] || "";
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = existing;
+      input.placeholder = "e.g. Founders · Bold";
+      input.className = "chip-input px-3 py-1.5 rounded-full text-xs font-medium";
+      input.style.minWidth = "180px";
+      input.style.background = "#FFFFFF";
+      input.style.boxShadow = "inset 0 0 0 1px rgba(10, 25, 37, 0.35)";
+      input.style.color = "#0A1925";
+      input.style.outline = "none";
+      input.style.border = "none";
+      input.style.fontFamily = "inherit";
+      btn.parentNode.replaceChild(input, btn);
+      const idx = chipNodes.findIndex(([b]) => b === btn);
+
+      let committed = false;
+      const commit = () => {
+        if (committed) return;
+        committed = true;
+        const v = input.value.trim();
+        if (v) {
+          ctx.selections[group + "_text"] = v;
+          ctx.selections[group] = opt.id;
+        } else {
+          delete ctx.selections[group + "_text"];
+          if (ctx.selections[group] === opt.id) ctx.selections[group] = null;
+        }
+        const newBtn = makeBtn(opt);
+        newBtn.addEventListener("click", () => swapToInput(newBtn, opt));
+        if (input.parentNode) input.parentNode.replaceChild(newBtn, input);
+        if (idx >= 0) chipNodes[idx] = [newBtn, opt];
+        chipNodes.forEach(([b, o]) => paintChip(b, o));
+      };
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+        if (e.key === "Escape") { input.value = existing; input.blur(); }
+      });
+      input.addEventListener("blur", commit);
+      requestAnimationFrame(() => input.focus());
+    };
+
+    opts.forEach(opt => {
+      const btn = makeBtn(opt);
+      btn.addEventListener("click", () => {
+        if (opt.custom) { swapToInput(btn, opt); return; }
+        const current = ctx.selections[group];
+        ctx.selections[group] = current === opt.id ? null : opt.id;
+        // Repaint sibling chips only — no full panel re-render.
+        chipNodes.forEach(([b, o]) => paintChip(b, o));
+      });
+      wrap.appendChild(btn);
+      chipNodes.push([btn, opt]);
+    });
+    container.appendChild(wrap);
+  }
+
+  function renderCardsReveal(atom, container) {
+    const cards = NARRATIVE_CARDS[ctx.role] || NARRATIVE_CARDS.default;
+    const group = atom.reveals.group;
+
+    const stack = document.createElement("div");
+    stack.className = "flex flex-col gap-2 pt-2 pb-0.5";
+
+    const cardNodes = [];
+
+    const paintCard = (btn, card) => {
+      const isSel = ctx.selections[group] === card.id;
+      btn.style.background = isSel ? "rgba(10, 25, 37, 0.08)" : "#FFFFFF";
+      btn.style.boxShadow = isSel
+        ? "inset 0 0 0 1px rgba(10, 25, 37, 0.40)"
+        : "inset 0 0 0 1px rgba(11, 15, 20, 0.09), 0 1px 1px rgba(11, 15, 20, 0.04)";
+    };
+
+    cards.forEach(card => {
+      const btn = document.createElement("button");
+      btn.className = "narrative-card text-left px-3 py-2.5 rounded-lg flex flex-col gap-0.5";
+      btn.innerHTML = `
+        <span class="text-sm font-medium text-text-primary">${card.title}</span>
+        <span class="text-xs text-text-tertiary leading-snug">${card.desc}</span>
+      `;
+      paintCard(btn, card);
+      btn.addEventListener("click", () => {
+        const current = ctx.selections[group];
+        ctx.selections[group] = current === card.id ? null : card.id;
+        cardNodes.forEach(([b, c]) => paintCard(b, c));
+      });
+      stack.appendChild(btn);
+      cardNodes.push([btn, card]);
+    });
+    container.appendChild(stack);
+  }
+
+  function renderAttachReveal(atom, container) {
+    const group = atom.reveals.group;
+    if (!Array.isArray(ctx.selections[group])) ctx.selections[group] = [];
+    const files = ctx.selections[group];
+
+    const wrap = document.createElement("div");
+    wrap.className = "pt-2 pb-0.5";
+
+    // Attached-files row (chips with × to remove)
+    const fileRow = document.createElement("div");
+    fileRow.className = "flex flex-wrap gap-1.5 mb-2";
+
+    const paintFiles = () => {
+      fileRow.innerHTML = "";
+      files.forEach((name, idx) => {
+        const chip = document.createElement("button");
+        chip.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium";
+        chip.style.boxShadow = "inset 0 0 0 1px rgba(11, 15, 20, 0.09)";
+        chip.style.background = "rgba(10, 25, 37, 0.06)";
+        chip.style.color = "#0A1925";
+        chip.innerHTML = `
+          <i class="ph-bold ph-file text-[12px]"></i>
+          <span>${name}</span>
+          <i class="ph-bold ph-x text-[10px] opacity-60"></i>
+        `;
+        chip.title = "Remove";
+        chip.addEventListener("click", () => {
+          files.splice(idx, 1);
+          paintFiles();
+        });
+        fileRow.appendChild(chip);
+      });
+    };
+
+    // Hidden file input — single source of truth for the OS picker
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.multiple = true;
+    fileInput.accept = ".pdf,.doc,.docx,.txt,.md,.pptx,.key,.pages";
+    fileInput.style.display = "none";
+    fileInput.addEventListener("change", (e) => {
+      for (const f of e.target.files) files.push(f.name);
+      fileInput.value = ""; // allow re-picking the same file
+      paintFiles();
+    });
+
+    // Attach button
+    const btn = document.createElement("button");
+    btn.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium";
+    btn.style.boxShadow = "inset 0 0 0 1px rgba(11, 15, 20, 0.18)";
+    btn.style.background = "#FFFFFF";
+    btn.style.color = "#0A1925";
+    btn.innerHTML = `<i class="ph-bold ph-paperclip text-[12px]"></i><span>Attach file</span>`;
+    btn.addEventListener("click", () => fileInput.click());
+
+    paintFiles();
+    wrap.appendChild(fileRow);
+    wrap.appendChild(fileInput);
+    wrap.appendChild(btn);
+    container.appendChild(wrap);
+  }
+
+
+  // ─── Boot ──────────────────────────────────────────────────────
+  render();
+  </script>
+
+</body>
+</html>
