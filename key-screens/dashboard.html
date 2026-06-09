@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<!-- key screen: dashboard · owner: Tyo (derived from Figma "AMJ '26 — Dashboard" by Mudita, 9 Jun 2026 — pending owner review)
+     source: figma.com/design/T3VGugpHgpvi3jHsBm43Cn  node 182:11533 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Dashboard · design-protos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hedvig+Letters+Serif:opsz@12..24&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <style>
+    /* ── tokens (from the Figma file's variable set) ───────────────────────── */
+    :root {
+      --bg: #fafafa;            /* page / sidebar canvas        (bg/secondary)   */
+      --surface: #ffffff;       /* main, cards, elevated        (bg/primary)     */
+      --surface-2: #f5f5f5;     /* tertiary fills               (bg/tertiary)    */
+      --fg: #171717;            /* primary text                 (text/primary)   */
+      --fg-2: #525252;          /* secondary text               (text/secondary) */
+      --fg-3: #a3a3a3;          /* tertiary / placeholder       (text/tertiary)  */
+      --brand: #005eff;         /* brand blue                   (text/brand)     */
+      --brand-tint: #e6efff;    /* brand badge fill             (bg/brand-inv)   */
+      --ink: #0b0f14;           /* inverted ink (dark btn, rings)                */
+      --line: rgba(11,15,20,0.09);
+      --line-strong: rgba(11,15,20,0.20);
+      --sel: rgba(22,30,39,0.08);
+      --d1: rgba(11,15,20,0.06);
+      --d2: rgba(11,15,20,0.09);
+      --inner: rgba(255,255,255,0.8);
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+      --sh-card: 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-card-hover: 0 8px 24px -6px var(--d2), 0 2px 6px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-prompt: 0 24px 40px -16px var(--d2), 0 4px 6px 0 var(--d2), 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-btn: 0 1px 2px 1px var(--d1), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-pill: 0 2px 6px 0 var(--d2), 0 0 0 1px var(--d1), inset 0 0 0 1px var(--inner);
+      --sh-ring: 0 0 0 .75px var(--ink), 0 0 0 2px rgba(11,15,20,0.48);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: "Inter", system-ui, sans-serif; font-size: 14px;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── sidebar ───────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 260px; min-width: 260px; height: 100%;
+      background: var(--bg); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+    }
+    .ws {
+      display: flex; align-items: center; gap: 8px;
+      padding: 11px 12px; border-bottom: 1px solid var(--line);
+    }
+    .ws-avatar {
+      width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+      background: linear-gradient(135deg, #ff5a3c, #e0422a);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+      display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px;
+    }
+    .ws-name { flex: 1; min-width: 0; font-weight: 500; color: var(--fg);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--brand-tint); color: var(--brand);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 34px; line-height: 1.33;
+    }
+    .ws .caret { color: var(--fg-2); font-size: 18px; }
+
+    .nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-label { padding: 8px 8px 2px; color: var(--fg-2); font-size: 14px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px; height: 36px;
+      padding: 8px; border-radius: 6px; color: var(--fg-2); cursor: pointer;
+      text-decoration: none; transition: background 140ms var(--ease);
+    }
+    .nav-item i { font-size: 20px; flex-shrink: 0; }
+    .nav-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-item:hover { background: var(--sel); }
+    .nav-item.is-active { background: var(--sel); color: var(--fg); font-weight: 600; }
+    .divider { height: 1px; background: var(--line); margin: 6px 0; box-shadow: 0 1px 0 0 var(--inner); }
+    .sidebar-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 8px; }
+
+    /* ── main ──────────────────────────────────────────────────────────────── */
+    .main { flex: 1; min-width: 0; height: 100%; background: var(--surface); overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 10px; }
+    .main::-webkit-scrollbar-thumb { background: rgba(11,15,20,0.12); border-radius: 99px; border: 3px solid var(--surface); }
+
+    .topbar {
+      height: 56px; display: flex; align-items: center; justify-content: flex-end;
+      gap: 10px; padding: 0 24px; position: sticky; top: 0; z-index: 5;
+      background: var(--surface);
+    }
+    .trial {
+      display: flex; align-items: center; gap: 8px; height: 36px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 6px; padding: 4px 4px 4px 10px;
+    }
+    .trial-text { font-weight: 500; color: var(--fg); white-space: nowrap; }
+    .btn-upgrade {
+      display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 14px;
+      background: var(--brand); color: #fff; border: 0; border-radius: 4px;
+      font: 500 14px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
+      transition: transform 120ms var(--ease), filter 120ms var(--ease);
+    }
+    .btn-upgrade i { font-size: 16px; }
+    .btn-upgrade:hover { filter: brightness(1.07); }
+    .btn-upgrade:active { transform: scale(0.97); }
+    .icon-btn {
+      width: 36px; height: 36px; display: grid; place-items: center;
+      border: 0; background: transparent; color: var(--fg-2); border-radius: 4px;
+      cursor: pointer; font-size: 20px; transition: background 140ms var(--ease);
+    }
+    .icon-btn:hover { background: var(--sel); }
+    .avatar {
+      width: 28px; height: 28px; border-radius: 999px; margin-left: 4px; flex-shrink: 0;
+      background: url("https://i.pravatar.cc/56?img=12") center/cover, var(--surface-2);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+    }
+
+    /* ── hero ──────────────────────────────────────────────────────────────── */
+    .hero { padding: 40px 24px 8px; display: flex; flex-direction: column; align-items: center; }
+    .hero h1 {
+      font-family: "Hedvig Letters Serif", Georgia, serif; font-weight: 400;
+      font-size: 28px; letter-spacing: -0.21px; color: var(--fg); margin: 0 0 22px;
+      text-align: center;
+    }
+    .prompt {
+      width: 100%; max-width: 680px; background: var(--surface);
+      border-radius: 6px; padding: 8px; box-shadow: var(--sh-prompt);
+    }
+    .prompt-field {
+      height: 140px; background: var(--bg); border: 1px dashed var(--line-strong);
+      border-radius: 2px; padding: 20px; display: flex; align-items: flex-start; gap: 8px;
+    }
+    .prompt-field .ph-text { color: var(--fg-3); font-size: 16px; line-height: 1.5; }
+    .prompt-field .ph-text u { text-underline-offset: 2px; }
+    .prompt-field i { color: var(--fg-3); font-size: 20px; margin-top: 1px; }
+
+    .pills { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 0; border-radius: 52px;
+      padding: 4px 16px 4px 4px; box-shadow: var(--sh-pill); cursor: pointer;
+      font: 500 14px "Inter", sans-serif; color: var(--fg);
+      transition: transform 120ms var(--ease), box-shadow 160ms var(--ease);
+    }
+    .pill:hover { box-shadow: var(--sh-pill), 0 6px 16px -6px var(--d2); transform: translateY(-1px); }
+    .pill:active { transform: translateY(0) scale(0.98); }
+    .pill-ic { width: 40px; height: 40px; border-radius: 34px; background: var(--surface-2);
+      display: grid; place-items: center; font-size: 22px; }
+    .pill-ic.blue { color: var(--brand); }
+    .pill-ic.ppt { color: #c43e1c; }
+    .pill-ic.exp { color: var(--fg); }
+
+    /* ── files ─────────────────────────────────────────────────────────────── */
+    .files { padding: 24px; }
+    .files-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .tabs { display: flex; align-items: center; gap: 12px; }
+    .chip {
+      height: 28px; display: inline-flex; align-items: center; padding: 0 12px;
+      background: var(--surface); border-radius: 4px; box-shadow: var(--sh-btn);
+      font-size: 12px; color: var(--fg-2); cursor: pointer; white-space: nowrap;
+      transition: background 140ms var(--ease);
+    }
+    .chip:hover { background: var(--surface-2); }
+    .chip.is-active { color: var(--fg); box-shadow: var(--sh-ring); background: var(--surface); }
+    .toggle {
+      display: flex; align-items: center; gap: 2px; height: 28px; padding: 2px;
+      background: var(--surface-2); border-radius: 4px; box-shadow: var(--sh-btn);
+    }
+    .toggle button {
+      width: 24px; height: 24px; display: grid; place-items: center; border: 0;
+      background: transparent; color: var(--fg-2); border-radius: 2px; cursor: pointer; font-size: 16px;
+    }
+    .toggle button.is-active { background: var(--surface); color: var(--fg); box-shadow: var(--sh-ring); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--surface); border-radius: 6px; overflow: hidden;
+      box-shadow: var(--sh-card); cursor: pointer;
+      transition: box-shadow 220ms var(--ease), transform 160ms var(--ease);
+    }
+    .card:hover { box-shadow: var(--sh-card-hover); transform: translateY(-2px); }
+    .card-body { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .card-title {
+      font-weight: 500; color: var(--fg); line-height: 1.43;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-sub { font-size: 12px; color: var(--fg-2); line-height: 1.33;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* deck cover — a mock navy slide so the proto stays self-contained */
+    .deck { position: relative; aspect-ratio: 366 / 202; background: linear-gradient(135deg, #0a1c38 0%, #0c2444 60%, #0e2a52 100%);
+      overflow: hidden; }
+    .deck-eyebrow { position: absolute; top: 14px; left: 16px; font-size: 8px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: rgba(255,255,255,0.55); }
+    .deck-title { position: absolute; left: 16px; bottom: 14px; width: 56%;
+      color: #fff; font-weight: 600; font-size: 14px; line-height: 1.25; }
+    .deck-collage { position: absolute; top: 30px; right: 14px; width: 34%;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .deck-collage span { border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); aspect-ratio: 1; }
+    .deck-collage span:nth-child(1) { background: linear-gradient(135deg,#5b8def,#23408f); }
+    .deck-collage span:nth-child(2) { background: linear-gradient(135deg,#f4b740,#c2780f); }
+    .deck-collage span:nth-child(3) { background: linear-gradient(135deg,#e25563,#7c1d2b); }
+    .deck-collage span:nth-child(4) { background: linear-gradient(135deg,#34c98b,#0c5f44); aspect-ratio: 2/1; grid-column: 1 / 3; }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="ws">
+        <div class="ws-avatar">F</div>
+        <span class="ws-name">Foursquare</span>
+        <span class="badge">Upgrade</span>
+        <i class="ph ph-caret-down caret"></i>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item is-active"><i class="ph ph-house-simple"></i><span>Home</span></a>
+        <a class="nav-item"><i class="ph ph-file"></i><span>Created by Me</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <div class="nav-label">Projects</div>
+        <a class="nav-item"><i class="ph ph-plus"></i><span>Create project</span><span class="badge" style="flex:none;">Pro</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <a class="nav-item"><i class="ph ph-layout"></i><span>Templates</span></a>
+        <a class="nav-item"><i class="ph ph-pencil-ruler"></i><span>Hire an Expert</span></a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <nav class="nav" style="padding:0;">
+          <a class="nav-item"><i class="ph ph-gear"></i><span>Workspace settings</span></a>
+          <a class="nav-item"><i class="ph ph-user-plus"></i><span>Invite new member</span><span class="badge" style="flex:none;">Pro</span></a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- ── Main ────────────────────────────────────────────────────────── -->
+    <main class="main">
+      <header class="topbar">
+        <div class="trial">
+          <span class="trial-text">🔥 Trial: 4 days left</span>
+          <button class="btn-upgrade"><i class="ph ph-rocket-launch"></i>Upgrade</button>
+        </div>
+        <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
+        <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
+        <button class="icon-btn" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+        <div class="avatar" role="img" aria-label="Your profile"></div>
+      </header>
+
+      <section class="hero">
+        <h1>Start your next presentation</h1>
+        <div class="prompt">
+          <div class="prompt-field">
+            <span class="ph-text">Type here to start, or <u>drop in a file</u></span>
+            <i class="ph ph-upload-simple"></i>
+          </div>
+        </div>
+        <div class="pills">
+          <button class="pill"><span class="pill-ic blue"><i class="ph ph-file-arrow-up"></i></span>Upload &amp; share link</button>
+          <button class="pill"><span class="pill-ic ppt"><i class="ph ph-microsoft-powerpoint-logo"></i></span>Upload PPT</button>
+          <button class="pill"><span class="pill-ic exp"><i class="ph ph-pencil-ruler"></i></span>Hire an Expert</button>
+        </div>
+      </section>
+
+      <section class="files">
+        <div class="files-head">
+          <div class="tabs">
+            <span class="chip is-active">Recent</span>
+            <span class="chip">Starred</span>
+            <span class="chip">Download</span>
+            <span class="chip">Recently deleted</span>
+          </div>
+          <div class="toggle">
+            <button aria-label="List view"><i class="ph ph-list-bullets"></i></button>
+            <button class="is-active" aria-label="Grid view"><i class="ph ph-squares-four"></i></button>
+          </div>
+        </div>
+
+        <div class="grid" id="grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Mock deck data — realistic consulting/agency titles for the Foursquare workspace.
+    var DECKS = [
+      { eyebrow: "Strategy", title: "McKinsey acquires S4G Consulting to help businesses ignite growth", sub: "In Drafts • Created by You" },
+      { eyebrow: "Market entry", title: "Q3 Market Entry Strategy — Southeast Asia", sub: "In Drafts • updated 2 days ago" },
+      { eyebrow: "Transformation", title: "Digital Transformation Roadmap for Retail", sub: "Shared with Me • updated 5 days ago" },
+      { eyebrow: "Operating model", title: "Operating Model Redesign — Executive Readout", sub: "In Drafts • Created by You" },
+      { eyebrow: "Cost", title: "Cost Optimization Playbook 2026", sub: "In Drafts • updated 1 week ago" },
+      { eyebrow: "Brand", title: "Brand Refresh Pitch — Leadership Review", sub: "Shared with Me • updated 3 days ago" }
+    ];
+    document.getElementById("grid").innerHTML = DECKS.map(function (d) {
+      return '' +
+        '<article class="card">' +
+          '<div class="deck">' +
+            '<div class="deck-eyebrow">' + d.eyebrow + '</div>' +
+            '<div class="deck-collage"><span></span><span></span><span></span><span></span></div>' +
+            '<div class="deck-title">' + d.title + '</div>' +
+          '</div>' +
+          '<div class="card-body">' +
+            '<div class="card-title">' + d.title + '</div>' +
+            '<div class="card-sub">' + d.sub + '</div>' +
+          '</div>' +
+        '</article>';
+    }).join("");
+  </script>
+</body>
+</html>
