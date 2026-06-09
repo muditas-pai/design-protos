@@ -93,6 +93,11 @@ components into their own file, not by editing someone else's frame.
 
 - One self-contained `.html`, usually under `explorations/<designer>/<problem>/`. Short,
   kebab-case, **no spaces** (clean Pages URLs).
+- **Every proto is standalone — never link one proto to another (or to a key screen).** A proto
+  must open and demo entirely on its own. For cross-app navigation that's only there for context
+  (e.g. a "Back to Home" affordance), use a **non-navigating placeholder** — a `<button>`, or
+  `href="#"` — never an `href` pointing at another `.html`. (Index/hub pages are the one exception:
+  their whole job is to link out to protos.)
 - **Prefer no local asset files** — inline SVG/CSS and Phosphor icons keep a proto portable
   (opens from Finder, trivial to duplicate). But local assets are fine when a proto genuinely
   needs them (photos, logos, migrated work): keep them **inside that proto's own folder**
