@@ -46,6 +46,15 @@ title on the designer's index: `<span class="tag-dev-ready"><i class="ph ph-chec
 (the `.tag-dev-ready` style lives in each designer's `index.html`). Remove it if the status changes
 back. Only set it on cards that are genuinely ready — it's a signal to eng, not decoration.
 
+### Spec docs alongside protos
+A problem folder often has a Markdown spec next to the prototypes. GitHub Pages serves `.md` as
+**raw text** (we use `.nojekyll`), so to make a spec viewable, add a sibling **`<name>.html`** that
+fetches the `.md` and renders it with marked.js + the design system — use
+`explorations/mudita/role-input-specific-regenerate/editor-chat-atoms-spec.html` as the template.
+The `.md` stays the single source of truth (the page renders it live; it shows a link fallback when
+opened from `file://`, where browsers block fetch). Link the rendered page from the index, and give
+it the **Dev Ready** tag when the spec is ready for eng.
+
 ### Migrating an existing repo
 To import a designer's existing proto repo, drop its whole working tree under
 `explorations/<designer>/<problem>/` keeping the internal structure (so its relative asset paths
