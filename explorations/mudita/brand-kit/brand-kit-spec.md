@@ -64,15 +64,19 @@ intact.
 | **Color palette** | The brand's colors | Overrides the active mood's palette |
 | **Logos** | Multiple variants — light / dark / mono / full-color | Placed on slides; the variant is chosen to suit the background |
 | **Voices** | Many (e.g. Exec · Marketing · Sales); the kit names one **default** | One voice is active per deck; it drives copy tone |
-| **Templates** | Saved decks — locked narrative + refresh-able slots | Picked at creation; refreshed per lead / industry |
-| **Assets** | Uploaded images (photos, illustrations), auto-tagged | AI retrieves by relevance + the user inserts manually |
+| **Templates** | Saved decks — locked narrative + refresh-able slots | Saved into the kit from any deck; picked at creation and refreshed per lead / industry |
+| **Assets** | Uploaded images (photos, illustrations), auto-tagged on upload | AI retrieves by relevance + the user inserts manually |
+
+**No icons — deliberately.** A partial brand icon set mixed with our default set breaks visual
+consistency, so icons are out of scope.
 
 ---
 
 ## Where it lives (IA)
 
-A brand kit is **workspace-scoped** (many per workspace, exactly one default). The entry point is a
-**"Brand Kits"** item in the sidebar, right under "Created by Me".
+A brand kit is **workspace-scoped** — many per workspace, exactly one default, **visible to everyone
+in the workspace and selectable on any deck**. The entry point is a **"Brand Kits"** item in the
+sidebar, right under "Created by Me".
 
 The **manage** surface reuses the existing sidebar as the kit navigator — no second rail — and the
 selected kit's detail fills the main area:
