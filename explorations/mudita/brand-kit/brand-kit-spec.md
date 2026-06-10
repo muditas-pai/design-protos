@@ -69,18 +69,6 @@ intact.
 
 ---
 
-## Decided
-
-| Question | Decision |
-|---|---|
-| **Scope** | Workspace-level. Every kit is visible to everyone in the workspace and selectable on any deck. |
-| **Mood coupling** | A kit overrides only **font pairing + color palette** on top of the active mood. Every other mood property — layout, padding, corners, SVG decor, image masks, animation — is **never** overridden. The kit's mood is a *starting point*, not a lock. |
-| **Templates in v1** | Yes. They already exist in the app; we add the brand-kit binding + a "save as template" action. |
-| **Assets** | Upload → one **auto-tagging** pass → assets are both **AI-retrieved** (by relevance) and **hand-inserted**. |
-| **Icons** | **Out of scope.** A partial brand icon set mixed with our default set breaks visual consistency. |
-
----
-
 ## Where it lives (IA)
 
 A brand kit is **workspace-scoped** (many per workspace, exactly one default). The entry point is a
