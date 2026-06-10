@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spinner loader — tuner</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #f4f4f6;
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1a1a2e;
+  }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+
+  /* ============ Loader ============ */
+  .loader {
+    --blue: #2f2be5;
+    width: 120px;
+    height: 120px;
+    position: relative;
+    background: #fff;
+    overflow: hidden;
+    transform-origin: center;
+  }
+  .loader .ring {
+    position: absolute;
+    inset: 0;
+    animation: ringspin var(--speed, 2.7s) infinite;
+  }
+  .loader .dash {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 19.5px;
+    height: 15.6px;
+    margin: -7.8px 0 0 -9.75px;            /* center the dash box */
+    background: var(--blue);
+    animation: var(--speed, 2.7s) infinite; /* name set per-dash in JS */
+    will-change: opacity;
+  }
+
+  /* ============ Config panel ============ */
+  .panel {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 4px 16px rgba(20, 20, 60, .08);
+    display: grid;
+    grid-template-columns: 110px 1fr 52px;
+    gap: 10px 12px;
+    align-items: center;
+    width: min(420px, 86vw);
+  }
+  .panel h2 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #6b6b80; }
+  .panel label { font-weight: 500; }
+  .panel output { text-align: right; font-variant-numeric: tabular-nums; color: #6b6b80; }
+  .panel input[type=range] { width: 100%; accent-color: #2f2be5; }
+  .panel .row-color { display: flex; gap: 8px; align-items: center; grid-column: 2 / -1; }
+  .panel input[type=color] { width: 36px; height: 24px; border: none; padding: 0; background: none; cursor: pointer; }
+  .panel select { grid-column: 2 / -1; padding: 5px 8px; border: 1px solid #d8d8e2; border-radius: 8px; background: #fafafc; font: inherit; }
+  .panel button {
+    grid-column: 1 / -1; margin-top: 6px; padding: 7px 0;
+    border: 1px solid #d8d8e2; border-radius: 8px; background: #fafafc;
+    cursor: pointer; font: inherit;
+  }
+  .panel button:hover { background: #f0f0f6; }
+  .panel code { grid-column: 1 / -1; font-size: 11px; color: #9a9aae; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="loader" id="loader" role="status" aria-label="Loading">
+    <div class="ring" id="ring"></div>
+  </div>
+
+  <form class="panel" id="panel">
+    <h2>Spinner config</h2>
+
+    <label for="speed">Speed</label>
+    <input type="range" id="speed" min="0.9" max="6" step="0.1" value="2.7">
+    <output for="speed">2.7s</output>
+
+    <label for="hold">Hold / pause</label>
+    <input type="range" id="hold" min="0" max="60" step="1" value="31">
+    <output for="hold">31%</output>
+
+    <label for="slant">Slant</label>
+    <input type="range" id="slant" min="0" max="40" step="1" value="25">
+    <output for="slant">25%</output>
+
+    <label for="scale">Size</label>
+    <input type="range" id="scale" min="0.5" max="3" step="0.1" value="1">
+    <output for="scale">120px</output>
+
+    <label for="spin">Spin / step</label>
+    <input type="range" id="spin" min="0" max="80" step="5" value="40">
+    <output for="spin">40&deg;</output>
+
+    <label for="easing">Easing</label>
+    <select id="easing">
+      <option value="cubic-bezier(0.45,0,0.2,1)" selected>Smooth (Figma-like)</option>
+      <option value="cubic-bezier(0.7,0,0.3,1)">Snappy</option>
+      <option value="cubic-bezier(0.34,1.56,0.64,1)">Overshoot / spring</option>
+      <option value="ease-in-out">Ease in-out</option>
+      <option value="ease-out">Ease out</option>
+      <option value="ease-in">Ease in</option>
+      <option value="ease">Ease</option>
+      <option value="linear">Linear</option>
+      <option value="steps(1,end)">Hard cut (steps)</option>
+    </select>
+
+    <label>Color</label>
+    <div class="row-color">
+      <input type="color" id="color" value="#2f2be5">
+      <span id="colorHex">#2f2be5</span>
+    </div>
+
+    <button type="button" id="reset">Reset to Figma defaults</button>
+    <code id="summary"></code>
+  </form>
+</div>
+
+<script>
+  const N = 8;             // dashes (Figma: 8 at 45deg steps)
+  const RADIUS = 29.25;    // dash-center distance from tile center (Figma)
+  const loader = document.getElementById('loader');
+  const ring = document.getElementById('ring');
+  const dyn = document.head.appendChild(document.createElement('style'));
+  const $ = id => document.getElementById(id);
+  const inputs = { speed: $('speed'), hold: $('hold'), slant: $('slant'), scale: $('scale'), spin: $('spin'), easing: $('easing'), color: $('color') };
+  const DEFAULTS = { speed: 2.7, hold: 31, slant: 25, scale: 1, spin: 40, easing: 'cubic-bezier(0.45,0,0.2,1)', color: '#2f2be5' };
+
+  // Build the 8 dashes once: dash i sits at angle i*45deg, oriented tangentially
+  // (matches Figma frames 27-34: dashes appear one by one around the circle).
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'dash';
+    d.style.transform = `rotate(${i * 360 / N}deg) translate(${RADIUS}px)`;
+    d.style.animationName = `appear${i}`;
+    ring.appendChild(d);
+  }
+
+  function render() {
+    const speed = +inputs.speed.value;
+    const hold  = +inputs.hold.value;   // % of each step spent paused
+    const slant = +inputs.slant.value;  // parallelogram slant, % of dash height
+    const scale = +inputs.scale.value;
+    const spin  = +inputs.spin.value;   // ring rotation per step (deg)
+    const color = inputs.color.value;
+    const easeVal = inputs.easing.value;
+    const ease = `animation-timing-function:${easeVal};`;
+
+    // Cycle = N appear-steps + 1 fade-out step.
+    const SEGS = N + 1;
+    const seg = 100 / SEGS;
+    const arrive = k => (k * seg + seg * (100 - hold) / 100).toFixed(3);
+    const at = k => (k * seg).toFixed(3);
+
+    // One opacity keyframe set per dash: hidden -> fade in at its step ->
+    // hold visible -> all fade out together in the last step.
+    let css = '';
+    for (let i = 0; i < N; i++) {
+      css += `@keyframes appear${i} {
+        0%, ${at(i)}% { opacity: 0; ${ease} }
+        ${arrive(i)}%, ${at(N)}% { opacity: 1; ${ease} }
+        ${arrive(N)}%, 100% { opacity: 0; }
+      }\n`;
+    }
+
+    // Stepped ring rotation: +spin deg per step, hold between steps.
+    // Total = SEGS * spin; loops seamlessly when total % 360 == 0 (default 9*40=360).
+    let rot = '@keyframes ringspin {\n';
+    for (let k = 0; k < SEGS; k++) {
+      rot += `  ${at(k)}% { transform: rotate(${k * spin}deg); ${ease} }\n`;
+      rot += `  ${arrive(k)}%${k === SEGS - 1 ? ', 100%' : ''} { transform: rotate(${(k + 1) * spin}deg); }\n`;
+    }
+    rot += '}\n';
+
+    dyn.textContent = css + rot +
+      `.loader .dash { clip-path: polygon(0% ${slant}%, 100% 0%, 100% ${100 - slant}%, 0% 100%); }`;
+
+    loader.style.setProperty('--speed', speed + 's');
+    loader.style.setProperty('--blue', color);
+    loader.style.transform = `scale(${scale})`;
+
+    // Restart so new keyframes apply cleanly
+    [ring, ...ring.children].forEach(el => {
+      const name = el.style.animationName;
+      el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+      if (name) el.style.animationName = name;
+    });
+
+    document.querySelector('output[for=speed]').textContent = speed.toFixed(1) + 's';
+    document.querySelector('output[for=hold]').textContent = hold + '%';
+    document.querySelector('output[for=slant]').textContent = slant + '%';
+    document.querySelector('output[for=scale]').textContent = Math.round(120 * scale) + 'px';
+    document.querySelector('output[for=spin]').textContent = spin + '°';
+    $('colorHex').textContent = color;
+    $('summary').textContent = `speed:${speed}s hold:${hold}% slant:${slant}% size:${Math.round(120 * scale)}px spin:${spin}deg easing:${easeVal} color:${color}`;
+  }
+
+  Object.values(inputs).forEach(el => el.addEventListener('input', render));
+  $('reset').addEventListener('click', () => {
+    Object.entries(DEFAULTS).forEach(([k, v]) => inputs[k].value = v);
+    render();
+  });
+  render();
+</script>
+</body>
+</html>

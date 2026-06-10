@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>presentations.ai — chat prototype</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: linear-gradient(160deg, #ececf4, #f7f7fa) fixed;
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1a1a2e;
+  }
+
+  /* no card — the chat flows on the page, only the composer sticks */
+  .chat {
+    width: min(720px, 94vw);
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* header */
+  .chat header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 0 14px;
+  }
+  .chat header .brand { font-weight: 600; }
+  .chat header .sub { color: #9a9aae; font-size: 12px; }
+  .chat header .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ec27e; margin-left: auto; }
+
+  /* messages — scroll with the page */
+  #feed { flex: 1; padding: 12px 0 20px; display: flex; flex-direction: column; gap: 16px; }
+  .msg { display: flex; gap: 10px; max-width: 86%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg .bubble {
+    padding: 10px 14px; border-radius: 14px; white-space: pre-wrap;
+  }
+  .msg.user .bubble { background: #2f2be5; color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot .bubble { background: none; padding: 0; min-width: 40px; }
+
+  /* mini loader, scaled 120px -> 20px */
+  .avatar, .mini { width: 20px; height: 20px; position: relative; flex: 0 0 20px; }
+  .avatar .pai-loader, .mini .pai-loader { position: absolute; left: -50px; top: -50px; border-radius: 24px; }
+
+  /* assistant: loader + label row, message below */
+  .msg.bot { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  /* phase label */
+  .phase { display: flex; align-items: center; gap: 4px; min-height: 20px; }
+  .phase-label { color: #44445a; }
+  .phase-label::after { content: '...'; }
+  .thought { color: #9a9aae; }
+  .caret::after { content: '▍'; color: #2f2be5; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* suggestions + composer */
+  .chips { display: flex; gap: 8px; padding: 0 0 10px; flex-wrap: wrap; }
+  .chips button {
+    padding: 6px 12px; border: 1px solid #d8d8e2; border-radius: 999px;
+    background: #fafafc; cursor: pointer; font: inherit; font-size: 12.5px; color: #44445a;
+  }
+  .chips button:hover { background: #f0f0f6; }
+  .composer {
+    position: sticky; bottom: 0;
+    display: flex; gap: 10px;
+    padding: 12px 0 16px;
+    background: rgba(247, 247, 250, .85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .composer input {
+    flex: 1; padding: 11px 14px; border: 1px solid #d8d8e2; border-radius: 10px;
+    font: inherit; outline: none; background: #fff;
+  }
+  .composer input:focus { border-color: #2f2be5; }
+  .composer button {
+    padding: 0 18px; border: none; border-radius: 10px; background: #2f2be5;
+    color: #fff; font: inherit; font-weight: 500; cursor: pointer;
+  }
+  .composer button:disabled { background: #b9b9c9; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="chat">
+  <header>
+    <div class="avatar" id="headerLogo"></div>
+    <div>
+      <div class="brand">presentations.ai</div>
+      <div class="sub">chat prototype — loader as thinking indicator</div>
+    </div>
+    <div class="dot"></div>
+  </header>
+
+  <div id="feed"></div>
+
+  <div class="chips" id="chips">
+    <button>Create a deck about Q3 results</button>
+    <button>What's trending in AI design?</button>
+    <button>Summarize my last presentation</button>
+  </div>
+
+  <form class="composer" id="composer">
+    <input id="input" placeholder="Ask anything…" autocomplete="off">
+    <button id="send">Send</button>
+  </form>
+</div>
+
+<script>
+/* =====================================================================
+   createPaiLoader — embeddable logo/spinner loader (phase-driven).
+   Same component as loader-llm.html, plus:
+   - options.initialPhase: start directly in a phase (no morph on mount)
+   - phase value { state:'logo', still:true } -> static logo (no cascade)
+   ===================================================================== */
+let __paiUid = 0;
+function createPaiLoader(mount, options = {}) {
+  const N = 8, RADIUS = 29.25, DW = 19.5, DH = 15.6;
+  const LOGO = {
+    big:   { x: 21, y: 21,  w: 72, h: 54, o: 1 },
+    small: { x: 21, y: 69,  w: 45, h: 33, o: 1 },
+    enter: { x: 21, y: 101, w: 20, h: 15, o: 0 },
+  };
+  const ROLE = { small: 3, big: 4, enter: 5 };
+  const APPEAR_ORDER = [3, 4, 5, 6, 7, 0, 1, 2];
+  const STAGGER = 0.08, MORPH = 0.55;
+  const EXP = [41.4, 1], COL = [4, 0.8], NORM = [RADIUS, 1];
+  const VARIANTS = {
+    classic:        [NORM, NORM, NORM, NORM],
+    pulseOut:       [NORM, NORM, EXP,  EXP ],
+    pulseIn:        [NORM, NORM, COL,  COL ],
+    heartbeat:      [NORM, COL,  EXP,  COL ],
+    expandCollapse: [NORM, EXP,  EXP,  COL ],
+  };
+
+  const cfg = Object.assign({
+    speed: 1.8, hold: 31, slant: 25, radius: 2, scale: 1, spin: 40,
+    easing: 'cubic-bezier(0.45,0,0.2,1)', color: '#2f2be5', background: '#fff',
+  }, options.config);
+
+  const phases = Object.assign({
+    idle:       { state: 'logo' },
+    thinking:   { state: 'spinner', variant: 'random' },
+    searching:  { state: 'spinner', variant: 'random' },
+    reasoning:  { state: 'spinner', variant: 'random' },
+    generating: { state: 'spinner', variant: 'random' },
+    done:       { state: 'logo', still: true },
+  }, options.phases);
+
+  const ns = 'pai' + (++__paiUid);
+  const el = document.createElement('div');
+  el.className = `pai-loader ${ns}`;
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-label', 'Loading');
+  const ring = document.createElement('div');
+  ring.className = 'ring';
+  el.appendChild(ring);
+  mount.appendChild(el);
+  const dashes = [];
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'dash';
+    ring.appendChild(d);
+    dashes.push(d);
+  }
+  const styleStatic = document.head.appendChild(document.createElement('style'));
+  const styleKf = document.head.appendChild(document.createElement('style'));
+  const styleOrbit = document.head.appendChild(document.createElement('style'));
+  styleStatic.textContent = `
+    .${ns} { width:120px; height:120px; position:relative; overflow:hidden; transform-origin:center; }
+    .${ns} .ring { position:absolute; inset:0; transform-origin:50% 50%; }
+    .${ns} .ring.spin { animation:${ns}ringspin var(--speed) infinite; }
+    .${ns} .dash { position:absolute; left:0; top:0; background:var(--blue); border-radius:var(--radius); transform-origin:50% 50%; will-change:transform,opacity; }
+    .${ns} .dash.cascade { animation:${ns}cascade var(--speed) infinite; }
+    .${ns} .dash.orbit { animation-duration:var(--orbitDur); animation-iteration-count:infinite; }
+    .${ns}.morphing .dash { transition:transform var(--morph) var(--ease), width var(--morph) var(--ease), height var(--morph) var(--ease), opacity var(--morph) var(--ease); }
+    .${ns}.morphing .ring { transition:transform var(--morphTotal) var(--ease); }
+  `;
+
+  const sk = (w, h) => {
+    const sh = h * cfg.slant / 100;
+    return { h2: h - sh, dy: sh / 2, ang: -(Math.atan2(sh, w) * 180 / Math.PI) };
+  };
+  const slotPose = i => {
+    const a = i * 360 / N, r = a * Math.PI / 180, k = sk(DW, DH);
+    return {
+      t: `translate(${(60 + RADIUS * Math.cos(r) - DW / 2).toFixed(2)}px,${(60 + RADIUS * Math.sin(r) - k.h2 / 2).toFixed(2)}px) rotate(${a}deg) skewY(${k.ang.toFixed(2)}deg)`,
+      w: DW, h: k.h2,
+    };
+  };
+  const setStyle = (d, t, w, h, o) => { d.style.transform = t; d.style.width = w + 'px'; d.style.height = h + 'px'; d.style.opacity = o; };
+  const applyLogoPose = i => {
+    const role = Object.keys(ROLE).find(k => ROLE[k] === i);
+    if (role) {
+      const p = LOGO[role], k = sk(p.w, p.h);
+      setStyle(dashes[i], `translate(${p.x}px,${(p.y + k.dy).toFixed(2)}px) skewY(${k.ang.toFixed(2)}deg)`, p.w, k.h2, p.o);
+    } else { const s = slotPose(i); setStyle(dashes[i], s.t + ' scale(0.4)', s.w, s.h, 0); }
+  };
+  const applySpinnerPose = i => { const s = slotPose(i); setStyle(dashes[i], s.t, s.w, s.h, 1); };
+  const orbitT = (i, [r, sc]) => {
+    const a = i * 360 / N, rad = a * Math.PI / 180, k = sk(DW, DH);
+    return `translate(${(60 + r * Math.cos(rad) - DW / 2).toFixed(2)}px,${(60 + r * Math.sin(rad) - k.h2 / 2).toFixed(2)}px) rotate(${a}deg) scale(${sc}) skewY(${k.ang.toFixed(2)}deg)`;
+  };
+
+  function buildCSS() {
+    const ease = `animation-timing-function:${cfg.easing};`;
+    const seg3 = 100 / 3, arr3 = k => (k * seg3 + seg3 * (100 - cfg.hold) / 100).toFixed(2);
+    const cpose = (x, y, w, h, o) => {
+      const k = sk(w, h);
+      return `transform:translate(${x}px,${(y + k.dy).toFixed(2)}px) skewY(${k.ang.toFixed(2)}deg); width:${w}px; height:${k.h2.toFixed(2)}px; opacity:${o};`;
+    };
+    let css = `@keyframes ${ns}cascade {
+      0% { ${cpose(21, 101, 20, 15, 0)} ${ease} }
+      ${arr3(0)}%, 33.33% { ${cpose(21, 69, 45, 33, 1)} ${ease} }
+      ${arr3(1)}%, 66.67% { ${cpose(21, 21, 72, 54, 1)} ${ease} }
+      ${arr3(2)}%, 100% { ${cpose(21, 21, 16, 12, 0)} }
+    }\n`;
+    const SEGS = N + 1, seg = 100 / SEGS;
+    const at = k => (k * seg).toFixed(3), arr = k => (k * seg + seg * (100 - cfg.hold) / 100).toFixed(3);
+    css += `@keyframes ${ns}ringspin {\n`;
+    for (let k = 0; k < SEGS; k++) {
+      css += `${at(k)}% { transform: rotate(${k * cfg.spin}deg); ${ease} }\n`;
+      css += `${arr(k)}%${k === SEGS - 1 ? ', 100%' : ''} { transform: rotate(${(k + 1) * cfg.spin}deg); }\n`;
+    }
+    css += '}\n';
+    styleKf.textContent = css;
+  }
+  function buildOrbitCSS(v) {
+    const S = VARIANTS[v];
+    const ease = `animation-timing-function:${cfg.easing};`;
+    const seg = 25, arr = k => (k * seg + seg * (100 - cfg.hold) / 100).toFixed(2);
+    let css = '';
+    for (let i = 0; i < N; i++) {
+      css += `@keyframes ${ns}orbit${i} {\n`;
+      for (let k = 0; k < 4; k++) {
+        css += `${k * seg}% { transform: ${orbitT(i, S[k])}; ${ease} }\n`;
+        css += `${arr(k)}%${k === 3 ? ', 100%' : ''} { transform: ${orbitT(i, S[(k + 1) % 4])}; }\n`;
+      }
+      css += '}\n';
+    }
+    styleOrbit.textContent = css;
+  }
+
+  const startCascade = () => {
+    const delays = { [ROLE.enter]: 0, [ROLE.small]: -cfg.speed / 3, [ROLE.big]: -cfg.speed * 2 / 3 };
+    Object.entries(delays).forEach(([i, d]) => {
+      dashes[i].style.animationDelay = d + 's';
+      dashes[i].classList.add('cascade');
+    });
+  };
+  const stopCascade = () => [ROLE.enter, ROLE.small, ROLE.big].forEach(i => {
+    dashes[i].classList.remove('cascade'); dashes[i].style.animationDelay = '';
+  });
+  const startOrbit = () => dashes.forEach((d, i) => { d.style.animationName = `${ns}orbit${i}`; d.classList.add('orbit'); });
+  const stopOrbit = () => dashes.forEach(d => { d.classList.remove('orbit'); d.style.animationName = ''; });
+  const freezeDashes = () => dashes.forEach(d => {
+    const t = getComputedStyle(d).transform;
+    if (t && t !== 'none') d.style.transform = t;
+  });
+  const morphTotal = () => (MORPH + (N - 1) * STAGGER) * 1000 + 60;
+
+  let state = 'logo', phase = 'idle', variant = 'classic';
+  let busy = false, wantSpinner = false, pendingPhase = null;
+  const listeners = { phasechange: [] };
+  const emit = () => listeners.phasechange.forEach(fn => fn(phase, state === 'spinner' ? variant : null, state));
+  const drain = () => { if (pendingPhase) { const p = pendingPhase; pendingPhase = null; setPhase(p); } };
+  const isStill = () => !!(phases[phase] && phases[phase].still);
+
+  function enterSpinner() {
+    busy = true; wantSpinner = false;
+    buildOrbitCSS(variant);
+    stopCascade();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.classList.add('morphing');
+      ring.classList.add('spin');
+      APPEAR_ORDER.forEach((i, k) => dashes[i].style.transitionDelay = (k * STAGGER) + 's');
+      dashes.forEach((_, i) => applySpinnerPose(i));
+      setTimeout(() => {
+        el.classList.remove('morphing');
+        dashes.forEach(d => d.style.transitionDelay = '');
+        startOrbit();
+        state = 'spinner'; busy = false; emit(); drain();
+      }, morphTotal());
+    }));
+  }
+
+  function enterLogo() {
+    busy = true;
+    freezeDashes(); stopOrbit();
+    let angle = 0;
+    const tf = getComputedStyle(ring).transform;
+    if (tf && tf !== 'none') { const m = new DOMMatrix(tf); angle = (Math.atan2(m.b, m.a) * 180 / Math.PI + 360) % 360; }
+    ring.classList.remove('spin');
+    ring.style.transform = `rotate(${angle}deg)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.classList.add('morphing');
+      ring.style.transform = 'rotate(360deg)';
+      APPEAR_ORDER.slice().reverse().forEach((i, k) => dashes[i].style.transitionDelay = (k * STAGGER) + 's');
+      dashes.forEach((_, i) => applyLogoPose(i));
+      setTimeout(() => {
+        el.classList.remove('morphing');
+        ring.style.transform = '';
+        dashes.forEach(d => d.style.transitionDelay = '');
+        if (!isStill()) startCascade();   // still:true -> rest as the static logo
+        state = 'logo'; busy = false; emit(); drain();
+      }, morphTotal());
+    }));
+  }
+
+  function switchVariant() {
+    busy = true;
+    freezeDashes(); stopOrbit();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.classList.add('morphing');
+      dashes.forEach((_, i) => applySpinnerPose(i));
+      setTimeout(() => {
+        el.classList.remove('morphing');
+        buildOrbitCSS(variant);
+        startOrbit();
+        busy = false; emit(); drain();
+      }, MORPH * 1000 + 60);
+    }));
+  }
+
+  const pickRandom = () => {
+    const keys = Object.keys(VARIANTS);
+    let c;
+    do { c = keys[Math.random() * keys.length | 0]; } while (c === variant && keys.length > 1);
+    return c;
+  };
+
+  function setPhase(name) {
+    const ph = phases[name];
+    if (!ph) { console.warn('unknown phase:', name); return; }
+    if (busy) { pendingPhase = name; return; }
+    phase = name;
+    if (ph.state === 'logo') {
+      wantSpinner = false;
+      if (state === 'logo') {
+        const running = dashes[ROLE.enter].classList.contains('cascade');
+        if (ph.still && running) stopCascade();
+        if (!ph.still && !running) startCascade();
+        emit(); return;
+      }
+      enterLogo();
+    } else {
+      const v = (ph.variant || 'classic') === 'random' ? pickRandom() : ph.variant;
+      if (state === 'spinner') {
+        if (v === variant) { emit(); return; }
+        variant = v;
+        switchVariant();
+      } else {
+        variant = v;
+        wantSpinner = true;
+      }
+    }
+  }
+
+  dashes[ROLE.enter].addEventListener('animationiteration', e => {
+    if (e.target !== dashes[ROLE.enter] || state !== 'logo' || busy) return;
+    if (wantSpinner) enterSpinner();
+  });
+
+  function setConfig(partial) {
+    Object.assign(cfg, partial);
+    el.style.setProperty('--speed', cfg.speed + 's');
+    el.style.setProperty('--orbitDur', cfg.speed * 2 + 's');
+    el.style.setProperty('--morph', MORPH + 's');
+    el.style.setProperty('--morphTotal', (MORPH + (N - 1) * STAGGER) + 's');
+    el.style.setProperty('--ease', cfg.easing);
+    el.style.setProperty('--blue', cfg.color);
+    el.style.setProperty('--radius', cfg.radius + 'px');
+    el.style.background = cfg.background;
+    el.style.transform = `scale(${cfg.scale})`;
+    buildCSS();
+    if (!busy) {
+      if (state === 'logo') {
+        dashes.forEach((_, i) => applyLogoPose(i));
+        if (dashes[ROLE.enter].classList.contains('cascade')) { stopCascade(); void el.offsetWidth; startCascade(); }
+      } else {
+        dashes.forEach((_, i) => applySpinnerPose(i));
+        buildOrbitCSS(variant);
+        stopOrbit();
+        ring.classList.remove('spin'); void ring.offsetWidth;
+        ring.classList.add('spin'); startOrbit();
+      }
+    }
+  }
+
+  /* init */
+  dashes.forEach((_, i) => applyLogoPose(i));
+  setConfig({});
+  const init = options.initialPhase && phases[options.initialPhase];
+  if (init && init.state === 'spinner') {
+    phase = options.initialPhase;
+    variant = (init.variant || 'classic') === 'random' ? pickRandom() : init.variant;
+    buildOrbitCSS(variant);
+    dashes.forEach((_, i) => applySpinnerPose(i));
+    ring.classList.add('spin');
+    startOrbit();
+    state = 'spinner';
+  } else if (init && init.still) {
+    phase = options.initialPhase; // static logo
+  } else {
+    startCascade();
+  }
+
+  return {
+    el, phases,
+    setPhase, setConfig,
+    getPhase: () => phase,
+    getVariant: () => (state === 'spinner' ? variant : null),
+    getState: () => state,
+    getConfig: () => ({ ...cfg }),
+    on: (ev, fn) => { (listeners[ev] || (listeners[ev] = [])).push(fn); },
+  };
+}
+
+/* =====================================================================
+   Chat prototype
+   ===================================================================== */
+const feed = document.getElementById('feed');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const MINI = { scale: 20 / 120, speed: 1.5, easing: 'linear', hold: 0, background: 'transparent' };
+
+/* header logo: static */
+createPaiLoader(document.getElementById('headerLogo'), { config: MINI, initialPhase: 'done' });
+
+const RESPONSES = [
+  "Here's a structure I'd suggest for that:\n\n1. Open with the one number that matters most — lead with the outcome, not the process.\n2. Three supporting slides, one insight each. Keep every slide to a single message.\n3. Close with the decision you want from the room.\n\nWant me to draft the slides?",
+  "Based on what I found, the short answer is: yes, and there are three things worth knowing.\n\nFirst, the trend is accelerating faster than most teams expect. Second, the tooling has matured enough that you don't need a specialist anymore. Third, the early movers are already seeing compounding returns.\n\nHappy to go deeper on any of these.",
+  "I looked through it and here's the gist — your strongest material is in the middle and your opening undersells it.\n\nMy suggestion: move slide 7 to position 2, cut slides 3-4 into one, and end on the customer quote instead of the roadmap. That tightens it from 14 slides to 10 and leads with proof.",
+  "Good question. The honest answer is that it depends on one variable: how often your audience changes.\n\nIf it's the same room every week, optimize for continuity. If it's always new people, optimize for a self-explanatory narrative. Most decks fail by trying to do both.",
+];
+let respIdx = 0;
+
+const PHASE_LABELS = {
+  thinking: 'Thinking',
+  searching: 'Searching the web',
+  reasoning: 'Reasoning',
+  generating: 'Writing',
+};
+
+function addUser(text) {
+  const m = document.createElement('div');
+  m.className = 'msg user';
+  m.innerHTML = '<div class="bubble"></div>';
+  m.querySelector('.bubble').textContent = text;
+  feed.appendChild(m);
+  scrollBottom();
+}
+
+function addBot() {
+  const m = document.createElement('div');
+  m.className = 'msg bot';
+  m.innerHTML = `
+    <div class="phase"><span class="mini"></span><span class="phase-label">Thinking</span></div>
+    <div class="bubble" style="display:none"></div>`;
+  feed.appendChild(m);
+  scrollBottom();
+  // mount in the logo cascade (initial animation), then morph into the spinner
+  // at the first loop boundary
+  const loader = createPaiLoader(m.querySelector('.mini'), { config: MINI });
+  loader.setPhase('thinking');
+  return { m, loader, label: m.querySelector('.phase-label'), phaseRow: m.querySelector('.phase'), bubble: m.querySelector('.bubble') };
+}
+
+const scrollBottom = () => window.scrollTo({ top: document.documentElement.scrollHeight });
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const jitter = (base, spread) => base + Math.random() * spread;
+
+async function streamInto(bubble, text) {
+  bubble.style.display = '';
+  bubble.classList.add('caret');
+  const words = text.split(/(\s+)/);
+  for (const w of words) {
+    bubble.textContent += w;
+    scrollBottom();
+    if (w.trim()) await wait(jitter(18, 50));
+  }
+  bubble.classList.remove('caret');
+}
+
+let busy = false;
+async function respond(userText) {
+  busy = true; send.disabled = true;
+  addUser(userText);
+  await wait(350);
+
+  const t0 = Date.now();
+  const { loader, label, phaseRow, bubble } = addBot();
+  loader.on('phasechange', phase => {
+    if (PHASE_LABELS[phase]) label.textContent = PHASE_LABELS[phase];
+  });
+
+  // simulated lifecycle — phases randomize the spinner variant on each change
+  await wait(jitter(1400, 800));
+  if (/\?|what|how|trend|search|find|latest/i.test(userText) || Math.random() < .4) {
+    loader.setPhase('searching');
+    await wait(jitter(1800, 900));
+  }
+  loader.setPhase('reasoning');
+  await wait(jitter(1600, 900));
+  loader.setPhase('generating');
+  await wait(700);
+
+  const text = RESPONSES[respIdx++ % RESPONSES.length];
+  await streamInto(bubble, text);
+
+  // done: fade the loader out, collapse its space (incl. the 8px flex gap),
+  // and crossfade the label into the thought text — no layout jump
+  const mini = phaseRow.querySelector('.mini');
+  mini.style.transition = 'opacity .25s ease, width .35s ease .1s, flex-basis .35s ease .1s, margin-right .35s ease .1s';
+  mini.style.opacity = '0';
+  mini.style.width = '0px';
+  mini.style.flexBasis = '0px';
+  mini.style.marginRight = '-4px';   // matches the .phase flex gap
+  setTimeout(() => mini.remove(), 500);
+
+  label.style.transition = 'opacity .2s ease';
+  label.style.opacity = '0';
+  setTimeout(() => {
+    const secs = ((Date.now() - t0) / 1000).toFixed(0);
+    label.className = 'thought';
+    label.textContent = `Thought for ${secs}s`;
+    label.style.opacity = '1';
+  }, 220);
+
+  busy = false; send.disabled = false; input.focus();
+}
+
+document.getElementById('composer').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = input.value.trim();
+  if (!t || busy) return;
+  input.value = '';
+  respond(t);
+});
+document.getElementById('chips').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON' || busy) return;
+  respond(e.target.textContent);
+});
+
+/* greeting */
+(function greet() {
+  const m = document.createElement('div');
+  m.className = 'msg bot';
+  m.innerHTML = `<div class="bubble">Hi! Ask me anything — watch the loader think while I work.</div>`;
+  feed.appendChild(m);
+})();
+</script>
+</body>
+</html>

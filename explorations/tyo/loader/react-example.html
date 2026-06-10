@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pai Loader — React controlled example</title>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #f4f4f6;
+    color: #1a1a2e;
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 32px 16px;
+  }
+
+  .demo {
+    width: min(540px, 100%);
+    display: grid;
+    gap: 22px;
+    justify-items: center;
+  }
+
+  .loader-row {
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .label {
+    min-width: 154px;
+    color: #44445a;
+    font-weight: 450;
+  }
+
+  .status {
+    min-height: 20px;
+    color: #6b6b80;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .status b { color: #1a1a2e; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  button {
+    border: 1px solid #d8d8e2;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a2e;
+    cursor: pointer;
+    font: inherit;
+    padding: 7px 12px;
+  }
+
+  button:hover { background: #fafafc; }
+  button.active {
+    background: #2f2be5;
+    border-color: #2f2be5;
+    color: #fff;
+  }
+
+  .run {
+    background: #1a1a2e;
+    border-color: #1a1a2e;
+    color: #fff;
+    min-width: 118px;
+  }
+
+  .code {
+    width: 100%;
+    margin: 0;
+    border: 1px solid #e3e3ec;
+    border-radius: 8px;
+    background: #fff;
+    color: #44445a;
+    padding: 12px;
+    overflow-x: auto;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { PaiLoader } from './PaiLoader.react.mjs';
+
+const PHASES = ['idle', 'thinking', 'searching', 'reasoning', 'generating', 'done'];
+const LABELS = {
+  idle: 'Ready',
+  thinking: 'Thinking...',
+  searching: 'Searching...',
+  reasoning: 'Reasoning...',
+  generating: 'Generating...',
+  done: 'Done',
+};
+
+function App() {
+  const [phase, setPhase] = useState('idle');
+  const [status, setStatus] = useState({ phase: 'idle', variant: null, state: 'logo' });
+  const timers = useRef([]);
+
+  const config = useMemo(() => ({
+    color: '#2f2be5',
+    radius: 2,
+    speed: 1.5,
+    hold: 0,
+    easing: 'linear',
+    background: 'transparent',
+  }), []);
+
+  const phases = useMemo(() => ({
+    idle: { state: 'logo' },
+    thinking: { state: 'spinner', variant: 'random' },
+    searching: { state: 'spinner', variant: 'pulseOut' },
+    reasoning: { state: 'spinner', variant: 'heartbeat' },
+    generating: { state: 'spinner', variant: 'starburst' },
+    done: { state: 'logo' },
+  }), []);
+
+  const clearRun = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  };
+
+  const runSimulation = () => {
+    clearRun();
+    [
+      ['thinking', 0],
+      ['searching', 2200],
+      ['reasoning', 4400],
+      ['generating', 6600],
+      ['done', 9000],
+      ['idle', 10800],
+    ].forEach(([nextPhase, delay]) => {
+      timers.current.push(setTimeout(() => setPhase(nextPhase), delay));
+    });
+  };
+
+  useEffect(() => clearRun, []);
+
+  return React.createElement(
+    'main',
+    { className: 'demo' },
+    React.createElement(
+      'div',
+      { className: 'loader-row' },
+      React.createElement(PaiLoader, {
+        phase,
+        phases,
+        config,
+        size: 20,
+        onPhaseChange: (nextPhase, variant, state) => setStatus({ phase: nextPhase, variant, state }),
+      }),
+      React.createElement('span', { className: 'label' }, LABELS[phase]),
+    ),
+    React.createElement(
+      'div',
+      { className: 'status' },
+      'phase: ',
+      React.createElement('b', null, status.phase),
+      status.variant ? ` · variant: ${status.variant}` : '',
+      ` · state: ${status.state}`,
+    ),
+    React.createElement(
+      'div',
+      { className: 'controls' },
+      PHASES.map(item => React.createElement(
+        'button',
+        {
+          key: item,
+          className: item === phase ? 'active' : '',
+          onClick: () => {
+            clearRun();
+            setPhase(item);
+          },
+        },
+        item,
+      )),
+      React.createElement('button', { className: 'run', onClick: runSimulation }, 'Run'),
+    ),
+    React.createElement(
+      'pre',
+      { className: 'code' },
+      `const [phase, setPhase] = useState('${phase}');\n<PaiLoader phase={phase} size={20} phases={phases} config={config} />`,
+    ),
+  );
+}
+
+createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
