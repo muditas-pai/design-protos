@@ -55,6 +55,16 @@ The `.md` stays the single source of truth (the page renders it live; it shows a
 opened from `file://`, where browsers block fetch). Link the rendered page from the index, and give
 it the **Dev Ready** tag when the spec is ready for eng.
 
+**Spec vs. grounding — keep them in two docs.** A **spec** (`<name>-spec.md`) is *stable design
+intent* — what a prototype should be. It's the source of truth every proto in that problem **relates
+to**; keep it clean. A **grounding** doc (a sibling appendix, `<name>-grounding.md`) holds the
+volatile reference the spec shouldn't carry: how the feature maps to current `presentation-services`
+code, one-off prototype/demo decisions, and a running TODO. Grounding **ages with the code** — don't
+trust it as current. The spec links to its grounding once (a header pointer); prototypes relate to
+the **spec**, not the grounding. Grounding is **per-feature** (next to its spec), not one repo-wide
+dump — promote a fact to a shared doc only if it starts recurring. Reference pair:
+`explorations/mudita/brand-kit/` (`brand-kit-spec` ↔ `brand-kit-grounding`).
+
 ### Migrating an existing repo
 To import a designer's existing proto repo, drop its whole working tree under
 `explorations/<designer>/<problem>/` keeping the internal structure (so its relative asset paths
