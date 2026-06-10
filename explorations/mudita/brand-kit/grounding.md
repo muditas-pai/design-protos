@@ -1,11 +1,11 @@
-# Brand Kit — grounding & notes (appendix)
+# Brand Kit — grounding
 
-**Type:** Appendix — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 10 Jun 2026
+**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 10 Jun 2026
 
-Companion to the **[Brand Kit spec](brand-kit-spec.html)**. This holds the messy-but-useful context
-the spec shouldn't carry: how the feature maps to today's `presentation-services` code, one-off
-decisions made while prototyping, and a running TODO. It **ages with the code** — treat every claim
-here as "true when written," and verify before relying on it.
+The shared context for the Brand Kit work in this folder. Every spec and proto here can draw on it,
+but none should treat it as gospel: it covers how the feature maps to today's `presentation-services`
+code, one-off prototype decisions, and a running TODO. It **ages with the code** — true when
+written; verify before relying.
 
 ---
 
@@ -31,27 +31,27 @@ So the whole `payload` shape is ours to define, on a table that already reserved
 
 ## One-off decisions (prototype / demo choices)
 
-These are prototype and demo choices, **not** product decisions — they live here, not in the spec.
+These are prototype and demo choices, **not** product decisions — they live here, not in a spec.
 
 - **Demo framing:** workspace = **"Atlas Studio"** (a multi-brand / agency workspace) so several
   unrelated kits read coherently. Demo kits: **Coca-Cola** (default), **Patagonia**, **smartwater**
   (the no-logo / not-set-up case).
-- **Real logos** are vendored into the proto's `assets/` as single-path SVGs and recolored per
-  variant via CSS `mask` + `background-color` (Coca-Cola from Simple Icons; Patagonia from Wikimedia
-  Commons — apparel brands aren't in Simple Icons). Internal mock realism only, not official artwork.
+- **Real logos** are vendored into `assets/` as single-path SVGs and recolored per variant via CSS
+  `mask` + `background-color` (Coca-Cola from Simple Icons; Patagonia from Wikimedia Commons —
+  apparel brands aren't in Simple Icons). Internal mock realism only, not official artwork.
 - **Mood thumbnails** are real mini-slides drawn at 320×180 inside an SVG `<foreignObject>` and
   scaled by the viewBox. (First tried CSS container queries — `cqw` + `aspect-ratio` on a flex box
   collapsed the slide; `<foreignObject>` is the robust fix.)
 - **Asset thumbnails** are picsum photos with an `onerror` gradient fallback (picsum is flaky).
 - The manage surface **reuses the dashboard sidebar** as the kit nav (with "Back to Home") rather
-  than adding a second rail — see the spec's IA section.
+  than adding a second rail.
 
 ---
 
 ## TODO / open threads
 
 - [ ] Build the **zero state** (empty Brand Kits surface) and the **FTUE** (create-first-kit flow).
-- [ ] Resolve the spec's open questions (Voices data shape · Asset tag taxonomy · logo-variant
+- [ ] Resolve the spec's open questions (Voices shape · Asset tag taxonomy · logo-variant
       selection · re-theme scope on switch · kit opt-out).
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
 - [ ] Real brand-logo artwork (current marks are simplified Simple Icons / Wikimedia versions).

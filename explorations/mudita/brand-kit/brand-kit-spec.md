@@ -1,7 +1,7 @@
 # Brand Kit — spec
 
 **Status:** In progress · **Owner:** Mudita · **Updated:** 10 Jun 2026
-**Grounding, one-off decisions & todos →** [brand-kit-grounding](brand-kit-grounding.html)
+**Grounding, one-off decisions & todos →** [grounding](grounding.html)
 
 The design source of truth for the Brand Kit feature — what a kit is, where it surfaces, and the
 decisions every Brand Kit prototype should match. Code reality and prototype-only notes live in the
