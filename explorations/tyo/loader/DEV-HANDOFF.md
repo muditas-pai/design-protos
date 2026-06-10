@@ -9,21 +9,37 @@ swapping components.
 
 ---
 
+## Two components
+
+Pick based on how much control you want over the label text:
+
+| Component | What it renders | Use when |
+|---|---|---|
+| **`PaiLoader`** | The animated mark **only** — one square `<span>`, no text. | You want to lay out and style your own label (or need no label). **This is the primitive.** |
+| **`PaiLoaderLabel`** | `PaiLoader` + a phase-driven text label in an inline row. | You want the standard "spinner + status text" out of the box, with sensible defaults you can still restyle. |
+
+`PaiLoaderLabel` is a thin wrapper over `PaiLoader` — same engine, same phase model.
+Everything in §3–§9 below is about `PaiLoader`; the label wrapper is documented in §10.
+
+---
+
 ## 1. Install
 
-Copy two files into the app — no npm dependency, no build step required:
+Copy the files you need into the app — no npm dependency, no build step required:
 
 ```
-PaiLoader.jsx     ← the React component (uses JSX)
-pai-loader.mjs    ← the framework-free runtime it wraps (keep them side by side)
+pai-loader.mjs        ← framework-free runtime (always required)
+PaiLoader.jsx         ← the loader-only component
+PaiLoaderLabel.jsx    ← optional: loader + label wrapper (imports PaiLoader.jsx)
 ```
 
-`PaiLoader.jsx` imports `./pai-loader.mjs` relatively, so keep them in the same folder
-(or fix the import path). If your toolchain can't process `.jsx`, use the no-JSX twin
-`PaiLoader.react.mjs` instead — identical API.
+These import each other relatively, so keep them in the same folder (or fix the import
+paths). If your toolchain can't process `.jsx`, use the no-JSX twins
+`PaiLoader.react.mjs` / `PaiLoaderLabel.react.mjs` — identical APIs.
 
 ```jsx
 import { PaiLoader } from './PaiLoader.jsx';
+import { PaiLoaderLabel } from './PaiLoaderLabel.jsx';
 ```
 
 ---
@@ -234,10 +250,54 @@ is a spinner phase, it morphs from the logo at the first cascade boundary (there
 
 ---
 
-## 10. Cheatsheet
+## 10. `PaiLoaderLabel` (loader + label)
+
+The convenience wrapper for "spinner next to status text." It renders `PaiLoader` plus a
+phase-driven label in an inline-flex row, and forwards every loader prop (`phase`, `size`,
+`config`, `phases`, `onPhaseChange`, `ariaLabel`, ref) straight through.
 
 ```jsx
-import { useMemo, useState } from 'react';
+import { PaiLoaderLabel } from './PaiLoaderLabel.jsx';
+
+<PaiLoaderLabel phase={phase} size={24} />
+// idle → just the mark · thinking → mark + "Thinking" · done → just the mark
+```
+
+### Extra props (on top of all `PaiLoader` props)
+
+| Prop | Type | Default | Notes |
+|---|---|---|---|
+| `labels` | `object` | `DEFAULT_PAI_LOADER_LABELS` | Phase → text map. Empty string = no label for that phase (the default for `idle`/`done`). |
+| `label` | `string` | — | Explicit text; **overrides** the `labels` map for the current phase. |
+| `gap` | `number` | `8` | px between mark and text. |
+| `labelClassName` | `string` | — | Class on the label `<span>` — **style your own text here.** |
+| `labelStyle` | `object` | — | Inline style merged onto the label (overrides the soft defaults: `#44445a`, weight 450). |
+| `className` / `style` | — | — | Applied to the **wrapper row**, not the loader. |
+
+Default labels: `thinking → "Thinking"`, `searching → "Searching"`,
+`reasoning → "Reasoning"`, `generating → "Generating"`, `idle`/`done` → none.
+
+### Bring your own label styling
+
+```jsx
+<PaiLoaderLabel
+  phase={phase}
+  size={24}
+  labels={{ thinking: 'Working on it', generating: 'Writing…' }}
+  labelClassName="text-sm text-muted-foreground"   // your design-system classes
+/>
+```
+
+If you want full control over layout (label above, custom animation, tabular timer like
+"Thought for 4s"), skip this wrapper and compose the bare `PaiLoader` yourself — see §11.
+
+---
+
+## 11. Cheatsheet
+
+```jsx
+// Option A — primitive: you own the label
+import { useMemo } from 'react';
 import { PaiLoader } from './PaiLoader.jsx';
 
 export function Indicator({ phase }) {
@@ -245,9 +305,16 @@ export function Indicator({ phase }) {
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <PaiLoader phase={phase} size={24} config={config} ariaLabel="Working" />
-      <span>{phase === 'idle' ? '' : 'Thinking…'}</span>
+      <span className="your-label-classes">{phase === 'idle' ? '' : 'Thinking…'}</span>
     </span>
   );
+}
+
+// Option B — convenience: label handled for you
+import { PaiLoaderLabel } from './PaiLoaderLabel.jsx';
+
+export function Indicator({ phase }) {
+  return <PaiLoaderLabel phase={phase} size={24} labelClassName="your-label-classes" />;
 }
 ```
 

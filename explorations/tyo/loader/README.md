@@ -14,9 +14,11 @@ The HTML demos are self-contained — open them in a browser, no build step.
 | `loader-llm.html` | The loader as an embeddable component (`createPaiLoader`) driven by LLM lifecycle phases, with demo harness + full config panel (incl. corner radius). |
 | `chat-prototype.html` | Chat UI prototype: 20px loader + phase label ("Thinking...", "Reasoning...") above each streamed response; fades to "Thought for Xs" when done. |
 | `pai-loader.mjs` | Framework-free reusable loader runtime exported as an ES module. |
-| `PaiLoader.jsx` | React wrapper component with controlled `phase`, `size`, `config`, and `phases` props. |
-| `PaiLoader.react.mjs` | No-JSX React wrapper used by the browser-runnable demo. |
+| `PaiLoader.jsx` | **Loader-only** React component — the animated mark, no text. Controlled `phase`, `size`, `config`, `phases` props. |
+| `PaiLoaderLabel.jsx` | Convenience wrapper: `PaiLoader` + a phase-driven, restyleable text label in one row. |
+| `PaiLoader.react.mjs` / `PaiLoaderLabel.react.mjs` | No-JSX twins used by the browser-runnable demo. |
 | `react-example.html` | No-build React example with controlled phase buttons and simulated lifecycle. |
+| `DEV-HANDOFF.md` | Engineering handoff: both components, props, sizing, phase/state model, config, a11y, SSR. |
 
 ## Using the component
 
@@ -45,10 +47,16 @@ Spinner variants: `classic`, `pulseOut`, `pulseIn`, `heartbeat`, `expandCollapse
 
 ## React usage
 
-Copy `PaiLoader.jsx` and `pai-loader.mjs` into a React app, then control the loader
-with your app state. The component always mounts as the logo first; if the initial
-`phase` prop is already a spinner phase, it still morphs from the logo at the next
-cascade boundary.
+Two components (see `DEV-HANDOFF.md` for the full reference):
+
+- **`PaiLoader`** — the loader mark only, no text. Bring your own label styling.
+- **`PaiLoaderLabel`** — `PaiLoader` + a phase-driven label in a row, for the common
+  "spinner + status text" case; the label is restyleable via `labelClassName`/`labelStyle`.
+
+Copy `pai-loader.mjs` + `PaiLoader.jsx` (and `PaiLoaderLabel.jsx` if you want the
+labeled variant) into a React app, then control the loader with your app state. The
+component always mounts as the logo first; if the initial `phase` prop is already a
+spinner phase, it still morphs from the logo at the next cascade boundary.
 
 ```jsx
 import { PaiLoader } from './PaiLoader.jsx';
