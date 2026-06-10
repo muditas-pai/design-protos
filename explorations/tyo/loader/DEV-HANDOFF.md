@@ -260,7 +260,7 @@ phase-driven label in an inline-flex row, and forwards every loader prop (`phase
 import { PaiLoaderLabel } from './PaiLoaderLabel.jsx';
 
 <PaiLoaderLabel phase={phase} size={24} />
-// idle → just the mark · thinking → mark + "Thinking" · done → just the mark
+// idle → just the mark · thinking → mark + "Thinking" + animated … · done → just the mark
 ```
 
 ### Extra props (on top of all `PaiLoader` props)
@@ -269,6 +269,7 @@ import { PaiLoaderLabel } from './PaiLoaderLabel.jsx';
 |---|---|---|---|
 | `labels` | `object` | `DEFAULT_PAI_LOADER_LABELS` | Phase → text map. Empty string = no label for that phase (the default for `idle`/`done`). |
 | `label` | `string` | — | Explicit text; **overrides** the `labels` map for the current phase. |
+| `ellipsis` | `boolean` | `true` | Append an animated `…` after the label (CSS opacity wave, no layout shift, respects `prefers-reduced-motion`). Set `false` for static text. |
 | `gap` | `number` | `8` | px between mark and text. |
 | `labelClassName` | `string` | — | Class on the label `<span>` — **style your own text here.** |
 | `labelStyle` | `object` | — | Inline style merged onto the label (overrides the soft defaults: `#44445a`, weight 450). |
