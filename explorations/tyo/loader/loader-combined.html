@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Combined loader — tuner</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #f4f4f6;
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1a1a2e;
+  }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+
+  /* ============ Loader ============ */
+  .loader {
+    --blue: #2f2be5;
+    --speed: 1.8s;
+    --morph: .55s;
+    --morphTotal: 1.15s;
+    --orbitDur: 3.6s;
+    --ease: cubic-bezier(0.45,0,0.2,1);
+    width: 120px;
+    height: 120px;
+    position: relative;
+    background: #fff;
+    overflow: hidden;
+    transform-origin: center;
+  }
+  .ring { position: absolute; inset: 0; transform-origin: 50% 50%; }
+  .ring.spin { animation: ringspin var(--speed) infinite; }
+  .dash {
+    position: absolute;
+    left: 0; top: 0;
+    background: var(--blue);
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+  }
+  .dash.cascade { animation: cascade var(--speed) infinite; }
+  .dash.orbit { animation-duration: var(--orbitDur); animation-iteration-count: infinite; }
+  .loader.morphing .dash {
+    transition:
+      transform var(--morph) var(--ease),
+      width     var(--morph) var(--ease),
+      height    var(--morph) var(--ease),
+      opacity   var(--morph) var(--ease);
+  }
+  .loader.morphing .ring { transition: transform var(--morphTotal) var(--ease); }
+
+  /* ============ Config panel ============ */
+  .panel {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 4px 16px rgba(20, 20, 60, .08);
+    display: grid;
+    grid-template-columns: 110px 1fr 52px;
+    gap: 10px 12px;
+    align-items: center;
+    width: min(440px, 86vw);
+  }
+  .panel h2 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #6b6b80; }
+  .panel label { font-weight: 500; }
+  .panel output { text-align: right; font-variant-numeric: tabular-nums; color: #6b6b80; }
+  .panel input[type=range] { width: 100%; accent-color: #2f2be5; }
+  .panel .row-color { display: flex; gap: 8px; align-items: center; grid-column: 2 / -1; }
+  .panel input[type=color] { width: 36px; height: 24px; border: none; padding: 0; background: none; cursor: pointer; }
+  .panel select { grid-column: 2 / -1; padding: 5px 8px; border: 1px solid #d8d8e2; border-radius: 8px; background: #fafafc; font: inherit; }
+  .panel .modes { grid-column: 2 / -1; display: flex; gap: 6px; }
+  .panel .modes button {
+    flex: 1; padding: 6px 0; border: 1px solid #d8d8e2; border-radius: 8px;
+    background: #fafafc; cursor: pointer; font: inherit;
+  }
+  .panel .modes button.active { background: #2f2be5; border-color: #2f2be5; color: #fff; }
+  .panel #reset {
+    grid-column: 1 / -1; margin-top: 6px; padding: 7px 0;
+    border: 1px solid #d8d8e2; border-radius: 8px; background: #fafafc;
+    cursor: pointer; font: inherit;
+  }
+  .panel #reset:hover { background: #f0f0f6; }
+  .panel code { grid-column: 1 / -1; font-size: 11px; color: #9a9aae; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="loader" id="loader" role="status" aria-label="Loading">
+    <div class="ring" id="ring"></div>
+  </div>
+
+  <form class="panel" id="panel">
+    <h2>Loader config</h2>
+
+    <label>State</label>
+    <div class="modes" id="modes">
+      <button type="button" data-mode="auto" class="active">Auto cycle</button>
+      <button type="button" data-mode="logo">Logo</button>
+      <button type="button" data-mode="spinner">Spinner</button>
+    </div>
+
+    <label for="speed">Speed</label>
+    <input type="range" id="speed" min="0.9" max="4" step="0.1" value="1.8">
+    <output for="speed">1.8s</output>
+
+    <label for="dwell">Dwell / state</label>
+    <input type="range" id="dwell" min="1" max="8" step="0.5" value="3.6">
+    <output for="dwell">3.6s</output>
+
+    <label for="hold">Hold / pause</label>
+    <input type="range" id="hold" min="0" max="60" step="1" value="31">
+    <output for="hold">31%</output>
+
+    <label for="slant">Slant</label>
+    <input type="range" id="slant" min="0" max="40" step="1" value="25">
+    <output for="slant">25%</output>
+
+    <label for="scale">Size</label>
+    <input type="range" id="scale" min="0.5" max="3" step="0.1" value="1">
+    <output for="scale">120px</output>
+
+    <label for="spin">Spin / step</label>
+    <input type="range" id="spin" min="0" max="80" step="5" value="40">
+    <output for="spin">40&deg;</output>
+
+    <label for="variant">Spinner variant</label>
+    <select id="variant">
+      <option value="random" selected>Random (shuffle each cycle)</option>
+      <option value="classic">Classic spin</option>
+      <option value="pulseOut">Pulse out</option>
+      <option value="pulseIn">Pulse in (collapse)</option>
+      <option value="heartbeat">Heartbeat</option>
+      <option value="expandCollapse">Expand &amp; collapse</option>
+    </select>
+
+    <label for="easing">Easing</label>
+    <select id="easing">
+      <option value="cubic-bezier(0.45,0,0.2,1)" selected>Smooth (Figma-like)</option>
+      <option value="cubic-bezier(0.7,0,0.3,1)">Snappy</option>
+      <option value="cubic-bezier(0.34,1.56,0.64,1)">Overshoot / spring</option>
+      <option value="ease-in-out">Ease in-out</option>
+      <option value="ease-out">Ease out</option>
+      <option value="ease-in">Ease in</option>
+      <option value="ease">Ease</option>
+      <option value="linear">Linear</option>
+      <option value="steps(1,end)">Hard cut (steps)</option>
+    </select>
+
+    <label>Color</label>
+    <div class="row-color">
+      <input type="color" id="color" value="#2f2be5">
+      <span id="colorHex">#2f2be5</span>
+    </div>
+
+    <button type="button" id="reset">Reset to Figma defaults</button>
+    <code id="summary"></code>
+  </form>
+</div>
+
+<script>
+  /* ===== Geometry from the Figma prototype (120px tile) ===== */
+  const N = 8, RADIUS = 29.25, DW = 19.5, DH = 15.6;     // spinner ring (frames 27-34)
+  const LOGO = {                                          // logo pose (frame 26 / loader 1)
+    big:    { x: 21, y: 21,  w: 72, h: 54, o: 1 },
+    small:  { x: 21, y: 69,  w: 45, h: 33, o: 1 },
+    enter:  { x: 21, y: 101, w: 20, h: 15, o: 0 },
+  };
+  // Which dash element plays which logo role (slots chosen near their logo position)
+  const ROLE = { small: 3, big: 4, enter: 5 };
+  const APPEAR_ORDER = [3, 4, 5, 6, 7, 0, 1, 2];          // morph stagger order
+  const STAGGER = 0.08, MORPH = 0.55;
+
+  // Spinner variants (Components 1-4): each is a looping radius/scale sequence
+  // [radius, dashScale] x 4 steps. EXP = expanded ring, COL = collapsed center blob.
+  const EXP = [41.4, 1], COL = [4, 0.8], NORM = [RADIUS, 1];
+  const VARIANTS = {
+    classic:        [NORM, NORM, NORM, NORM],
+    pulseOut:       [NORM, NORM, EXP,  EXP ],   // Component 4 (frames 46-50)
+    pulseIn:        [NORM, NORM, COL,  COL ],   // Component 3 (frames 51-55)
+    heartbeat:      [NORM, COL,  EXP,  COL ],   // Component 2 (frames 56-60)
+    expandCollapse: [NORM, EXP,  EXP,  COL ],   // Component 1 (frames 62-66)
+  };
+
+  const loader = document.getElementById('loader');
+  const ring = document.getElementById('ring');
+  const dyn = document.head.appendChild(document.createElement('style'));
+  const $ = id => document.getElementById(id);
+  const inputs = { speed: $('speed'), dwell: $('dwell'), hold: $('hold'), slant: $('slant'), scale: $('scale'), spin: $('spin'), variant: $('variant'), easing: $('easing'), color: $('color') };
+  const DEFAULTS = { speed: 1.8, dwell: 3.6, hold: 31, slant: 25, scale: 1, spin: 40, variant: 'random', easing: 'cubic-bezier(0.45,0,0.2,1)', color: '#2f2be5' };
+  const dynOrbit = document.head.appendChild(document.createElement('style'));
+  let currentVariant = 'classic';
+
+  const dashes = [];
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'dash';
+    ring.appendChild(d);
+    dashes.push(d);
+  }
+
+  const slotPose = i => {
+    const a = i * 360 / N, r = a * Math.PI / 180;
+    const px = 60 + RADIUS * Math.cos(r) - DW / 2;
+    const py = 60 + RADIUS * Math.sin(r) - DH / 2;
+    return { t: `translate(${px.toFixed(2)}px,${py.toFixed(2)}px) rotate(${a}deg)`, w: DW, h: DH };
+  };
+  const setStyle = (el, t, w, h, o) => {
+    el.style.transform = t; el.style.width = w + 'px'; el.style.height = h + 'px'; el.style.opacity = o;
+  };
+  const applyLogoPose = i => {
+    const role = Object.keys(ROLE).find(k => ROLE[k] === i);
+    if (role) { const p = LOGO[role]; setStyle(dashes[i], `translate(${p.x}px,${p.y}px)`, p.w, p.h, p.o); }
+    else { const s = slotPose(i); setStyle(dashes[i], s.t + ' scale(0.4)', s.w, s.h, 0); }
+  };
+  const applySpinnerPose = i => { const s = slotPose(i); setStyle(dashes[i], s.t, s.w, s.h, 1); };
+
+  /* ===== Orbit (variant) animation ===== */
+  const orbitT = (i, [r, sc]) => {
+    const a = i * 360 / N, rad = a * Math.PI / 180;
+    const px = 60 + r * Math.cos(rad) - DW / 2;
+    const py = 60 + r * Math.sin(rad) - DH / 2;
+    return `translate(${px.toFixed(2)}px,${py.toFixed(2)}px) rotate(${a}deg) scale(${sc})`;
+  };
+  function buildOrbitCSS(v) {
+    const S = VARIANTS[v], hold = +inputs.hold.value;
+    const ease = `animation-timing-function:${inputs.easing.value};`;
+    const seg = 25, arrive = k => (k * seg + seg * (100 - hold) / 100).toFixed(2);
+    let css = '';
+    for (let i = 0; i < N; i++) {
+      css += `@keyframes orbit${i} {\n`;
+      for (let k = 0; k < 4; k++) {
+        css += `  ${k * seg}% { transform: ${orbitT(i, S[k])}; ${ease} }\n`;
+        css += `  ${arrive(k)}%${k === 3 ? ', 100%' : ''} { transform: ${orbitT(i, S[(k + 1) % 4])}; }\n`;
+      }
+      css += '}\n';
+    }
+    dynOrbit.textContent = css;
+  }
+  function startOrbit() {
+    dashes.forEach((d, i) => { d.style.animationName = 'orbit' + i; d.classList.add('orbit'); });
+  }
+  function stopOrbit() {
+    dashes.forEach(d => { d.classList.remove('orbit'); d.style.animationName = ''; });
+  }
+  function pickVariant() {
+    const v = inputs.variant.value;
+    if (v !== 'random') return v;
+    const keys = Object.keys(VARIANTS);
+    let c;
+    do { c = keys[Math.random() * keys.length | 0]; } while (c === currentVariant && keys.length > 1);
+    return c;
+  }
+
+  /* ===== Dynamic keyframes (rebuilt from sliders) ===== */
+  function buildCSS() {
+    const hold = +inputs.hold.value, slant = +inputs.slant.value, spin = +inputs.spin.value;
+    const ease = `animation-timing-function:${inputs.easing.value};`;
+
+    const seg3 = 100 / 3, arr3 = k => (k * seg3 + seg3 * (100 - hold) / 100).toFixed(2);
+    let css = `@keyframes cascade {
+      0% { transform:translate(21px,101px); width:20px; height:15px; opacity:0; ${ease} }
+      ${arr3(0)}%, 33.33% { transform:translate(21px,69px); width:45px; height:33px; opacity:1; ${ease} }
+      ${arr3(1)}%, 66.67% { transform:translate(21px,21px); width:72px; height:54px; opacity:1; ${ease} }
+      ${arr3(2)}%, 100% { transform:translate(21px,21px); width:16px; height:12px; opacity:0; }
+    }\n`;
+
+    const SEGS = N + 1, seg = 100 / SEGS;
+    const at = k => (k * seg).toFixed(3), arr = k => (k * seg + seg * (100 - hold) / 100).toFixed(3);
+    css += '@keyframes ringspin {\n';
+    for (let k = 0; k < SEGS; k++) {
+      css += `  ${at(k)}% { transform: rotate(${k * spin}deg); ${ease} }\n`;
+      css += `  ${arr(k)}%${k === SEGS - 1 ? ', 100%' : ''} { transform: rotate(${(k + 1) * spin}deg); }\n`;
+    }
+    css += '}\n';
+    css += `.dash { clip-path: polygon(0% ${slant}%, 100% 0%, 100% ${100 - slant}%, 0% 100%); }`;
+    dyn.textContent = css;
+  }
+
+  /* ===== State machine: logo <-> spinner ===== */
+  let state = 'logo', mode = 'auto', busy = false, pendingSpinner = false, iters = 0, autoTimer = null;
+  const speed = () => +inputs.speed.value;
+  const dwell = () => +inputs.dwell.value;
+  const morphTotal = () => (MORPH + (N - 1) * STAGGER) * 1000 + 60;
+
+  function startCascade() {
+    const delays = { [ROLE.enter]: 0, [ROLE.small]: -speed() / 3, [ROLE.big]: -speed() * 2 / 3 };
+    Object.entries(delays).forEach(([i, d]) => {
+      dashes[i].style.animationDelay = d + 's';
+      dashes[i].classList.add('cascade');
+    });
+  }
+  function stopCascade() {
+    [ROLE.enter, ROLE.small, ROLE.big].forEach(i => {
+      dashes[i].classList.remove('cascade');
+      dashes[i].style.animationDelay = '';
+    });
+  }
+
+  function enterSpinner() {
+    if (busy || state === 'spinner') return;
+    busy = true; pendingSpinner = false;
+    currentVariant = pickVariant();
+    buildOrbitCSS(currentVariant);
+    updateSummary();
+    stopCascade();                       // inline logo poses match the current frame
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      loader.classList.add('morphing');
+      ring.classList.add('spin');       // start rotating as the bars fly into orbit
+      APPEAR_ORDER.forEach((i, k) => dashes[i].style.transitionDelay = (k * STAGGER) + 's');
+      dashes.forEach((_, i) => applySpinnerPose(i));
+      setTimeout(() => {
+        loader.classList.remove('morphing');
+        dashes.forEach(d => d.style.transitionDelay = '');
+        startOrbit();                    // begin this variant's radius pattern
+        state = 'spinner'; busy = false;
+        if (mode === 'auto') autoTimer = setTimeout(enterLogo, dwell() * 1000);
+      }, morphTotal());
+    }));
+  }
+
+  function enterLogo() {
+    if (busy || state === 'logo') return;
+    busy = true; clearTimeout(autoTimer);
+    // Freeze each dash mid-pattern so the morph starts from what's on screen
+    dashes.forEach(d => {
+      const t = getComputedStyle(d).transform;
+      if (t && t !== 'none') d.style.transform = t;
+    });
+    stopOrbit();
+    // Freeze ring at its current angle, then unwind to a full turn
+    let angle = 0;
+    const tf = getComputedStyle(ring).transform;
+    if (tf && tf !== 'none') { const m = new DOMMatrix(tf); angle = (Math.atan2(m.b, m.a) * 180 / Math.PI + 360) % 360; }
+    ring.classList.remove('spin');
+    ring.style.transform = `rotate(${angle}deg)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      loader.classList.add('morphing');
+      ring.style.transform = 'rotate(360deg)';
+      APPEAR_ORDER.slice().reverse().forEach((i, k) => dashes[i].style.transitionDelay = (k * STAGGER) + 's');
+      dashes.forEach((_, i) => applyLogoPose(i));
+      setTimeout(() => {
+        loader.classList.remove('morphing');
+        ring.style.transform = '';
+        dashes.forEach(d => d.style.transitionDelay = '');
+        iters = 0;
+        startCascade();
+        state = 'logo'; busy = false;
+      }, morphTotal());
+    }));
+  }
+
+  // Leave the logo state only at a cascade loop boundary so the morph is seamless
+  dashes[ROLE.enter].addEventListener('animationiteration', e => {
+    if (e.target !== dashes[ROLE.enter] || state !== 'logo' || busy) return;
+    iters++;
+    const want = pendingSpinner || (mode === 'auto' && iters >= Math.max(1, Math.round(dwell() / speed())));
+    if (want) enterSpinner();
+  });
+
+  /* ===== Panel wiring ===== */
+  function render() {
+    if (inputs.variant.value !== 'random') currentVariant = inputs.variant.value;
+    buildCSS();
+    loader.style.setProperty('--speed', speed() + 's');
+    loader.style.setProperty('--blue', inputs.color.value);
+    loader.style.setProperty('--ease', inputs.easing.value);
+    loader.style.setProperty('--orbitDur', speed() * 2 + 's');
+    loader.style.transform = `scale(${inputs.scale.value})`;
+
+    document.querySelector('output[for=speed]').textContent = (+inputs.speed.value).toFixed(1) + 's';
+    document.querySelector('output[for=dwell]').textContent = (+inputs.dwell.value).toFixed(1) + 's';
+    document.querySelector('output[for=hold]').textContent = inputs.hold.value + '%';
+    document.querySelector('output[for=slant]').textContent = inputs.slant.value + '%';
+    document.querySelector('output[for=scale]').textContent = Math.round(120 * inputs.scale.value) + 'px';
+    document.querySelector('output[for=spin]').textContent = inputs.spin.value + '°';
+    $('colorHex').textContent = inputs.color.value;
+    updateSummary();
+
+    // restart current state's animation so new keyframes/speed apply
+    if (!busy) {
+      if (state === 'logo') {
+        stopCascade(); void loader.offsetWidth; startCascade();
+      } else if (ring.classList.contains('spin')) {
+        buildOrbitCSS(currentVariant);
+        stopOrbit();
+        ring.classList.remove('spin'); void ring.offsetWidth;
+        ring.classList.add('spin'); startOrbit();
+      }
+    }
+  }
+
+  function updateSummary() {
+    const v = inputs.variant.value === 'random' ? `random(${currentVariant})` : inputs.variant.value;
+    $('summary').textContent =
+      `speed:${inputs.speed.value}s dwell:${inputs.dwell.value}s hold:${inputs.hold.value}% slant:${inputs.slant.value}% ` +
+      `size:${Math.round(120 * inputs.scale.value)}px spin:${inputs.spin.value}deg variant:${v} ` +
+      `easing:${inputs.easing.value} color:${inputs.color.value}`;
+  }
+
+  document.getElementById('modes').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    mode = btn.dataset.mode;
+    document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('active', b === btn));
+    clearTimeout(autoTimer); pendingSpinner = false; iters = 0;
+    if (mode === 'spinner' && state === 'logo') pendingSpinner = true;       // switch at loop boundary
+    if (mode === 'logo' && state === 'spinner') enterLogo();
+    if (mode === 'auto') {
+      if (state === 'spinner') autoTimer = setTimeout(enterLogo, dwell() * 1000);
+      // logo state: iteration listener handles it
+    }
+  });
+
+  Object.values(inputs).forEach(el => el.addEventListener('input', render));
+  $('reset').addEventListener('click', () => {
+    Object.entries(DEFAULTS).forEach(([k, v]) => inputs[k].value = v);
+    render();
+  });
+
+  /* ===== Init ===== */
+  dashes.forEach((_, i) => applyLogoPose(i));
+  render();
+</script>
+</body>
+</html>
