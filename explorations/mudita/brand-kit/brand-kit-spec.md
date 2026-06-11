@@ -103,9 +103,10 @@ BRAND KITS   (the sidebar becomes the kit nav)
   logo yet.
 
 **Setting up a kit.** A kit can be **bootstrapped by import** — drop in past PowerPoint decks, a brand
-book / guidelines PDF, or just a website URL, and we extract fonts, colours, logos, voice and an org
-blurb to **pre-fill the modules**; the user then edits and tweaks. Building from scratch stays
-available. (A Phase 1 capability — see the [phasing spec](phasing-spec.html).)
+book / guidelines PDF, or just a website URL. We **scrape the whole site for images** (every page, not
+just the hero) to seed the asset collection, and extract fonts, colours, logos, voice and an org blurb
+to **pre-fill the modules**; the user then edits and tweaks. Building from scratch stays available.
+(A Phase 1 capability — see the [phasing spec](phasing-spec.html).)
 
 ---
 

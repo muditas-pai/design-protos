@@ -18,9 +18,11 @@ PHASE 1 — identity layer              PHASE 2 — creation layer
 
 ├─ Org info                           ├─ Mood       pick a starting mood + build CUSTOM moods
 ├─ Font pairing                       ├─ Templates  save-a-deck-as-template + refresh
-├─ Colour palette                     └─ Assets     upload library + auto-tagging
-├─ Logos
-└─ Voices
+├─ Colour palette                     └─ Assets     smart library: auto-tag + AI-retrieve
+├─ Logos                                            ↑ Phase 1 already scraped the images
+├─ Voices
+└─ Image collection                   (scraped whole-site on import — browse + insert;
+                                       the smart Assets library above is Phase 2)
 ```
 
 Every **Phase 1** component is essentially *fill-in-the-fields* — paste some text, pick two fonts,
@@ -47,7 +49,8 @@ mood the deck already uses. So a Phase-1 kit makes any deck look on-brand — ri
 logo, voice — without the kit picking or building a mood itself.
 
 **In the manage UI** (the built proto), Phase 1 = Org info · Look & feel *(fonts + colours only — no
-mood row)* · Logos · Voices. Templates and Assets are absent (or shown as "Phase 2").
+mood row)* · Logos · Voices · a basic **Images** collection (the scraped assets — browse + insert).
+The mood row, Templates, and the smart Assets library are Phase 2.
 
 ### Set up by import — extract & pre-fill
 
@@ -55,21 +58,25 @@ Filling five modules by hand is friction. So the **primary way to start a kit is
 the brand already has**, and we pre-fill from it:
 
 ```
-DROP IN WHAT YOU HAVE …            WE EXTRACT …                 PRE-FILLS (Phase 1)
-· Past PowerPoint decks (.pptx)    fonts · colours · logos      → Org info
-· A brand book / guidelines (PDF)  recurring imagery            → Font pairing
-· Your website (just a URL)        tone of copy · org blurb     → Colour palette
-                                                                → Logos · Voices
+DROP IN WHAT YOU HAVE …            WE EXTRACT …                  PRE-FILLS (Phase 1)
+· Past PowerPoint decks (.pptx)    fonts · colours · logos       → Org info
+· A brand book / guidelines (PDF)  tone of copy · org blurb      → Font pairing · Colour palette
+· Your website (just a URL)        every image, across every     → Logos · Voices
+                                   page — not just the hero      → Image collection (asset seed)
 ```
 
+- **Whole-site image scrape.** From a website we crawl **every page, not just the hero** — product
+  shots, lifestyle, team photos, UI screenshots — and pull them all into a **starter image
+  collection** (à la Mutiny). That collection is the Phase-1 seed of the asset library; the smart
+  parts — **auto-tagging + AI retrieval** — arrive in Phase 2.
 - **Best-effort, not magic.** We pre-fill what we're confident about and leave the rest blank.
 - **Provenance + always editable.** Each pre-filled value shows where it came from ("from your
   website") and can be confirmed or changed — extraction is a *head start*, never the final word.
 - **From scratch still works.** Import is the fast path, not the only one; a user can fill every
   module by hand.
 
-> When Phase 2 lands, the same import can also seed **assets** (images pulled from the deck/site) and
-> a **template** (a recurring deck layout) — but in Phase 1 it pre-fills only the five identity modules.
+> The scraped **image collection** lands in **Phase 1** (browse + insert). Turning it into the smart
+> **asset library** — auto-tagging, AI retrieval, uploading more — and adding **templates** are Phase 2.
 
 ---
 
@@ -82,8 +89,9 @@ Adds the heavier subsystems:
   single biggest piece. Once a kit owns a mood, "Look & feel" gains the mood row above fonts + colours.
 - **Templates.** Save any deck as a **template into the kit** (locked narrative + refresh-able
   slots), and refresh it per lead / industry — binding the app's existing refresh flow to the kit.
-- **Assets.** An **upload library** with one **auto-tagging** pass, so assets are AI-retrieved by
-  relevance and hand-inserted by the user.
+- **Assets.** The **smart library** on top of the Phase-1 image collection — one **auto-tagging** pass
+  + **AI retrieval** by relevance, plus uploading more and curating. (Phase 1 already scraped the
+  starter images; Phase 2 makes them generation-ready.)
 
 Each is deferred not because it's optional, but because it's a **build-something** system rather than
 a config field — more design, more engineering, more edge cases.
