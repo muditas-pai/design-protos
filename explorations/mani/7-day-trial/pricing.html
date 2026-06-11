@@ -1943,18 +1943,6 @@
       </div>
     </div>
 
-    <!-- Global billing-period toggle (drives both Pro + Gold cards) -->
-    <div class="absolute left-1/2 -translate-x-1/2 top-[112px]" aria-label="Billing period" data-bill-seg>
-      <div class="bill-toggle" data-bill-toggle data-period="monthly">
-        <span class="bill-label" data-bill-label="monthly">Monthly</span>
-        <button type="button" class="bill-switch" role="switch" aria-checked="false" data-bill-switch aria-label="Toggle annual billing">
-          <span class="bill-knob"></span>
-        </button>
-        <span class="bill-label" data-bill-label="annual">Annual</span>
-        <span class="bill-save">50% off</span>
-      </div>
-    </div>
-
     <!-- Plans row: positioned at left 76, top 156. Pro card floats up to 135. -->
     <div id="view-individual" class="absolute" style="left:76px; top:252px; width:1128px; height:624px;">
 
@@ -1967,6 +1955,10 @@
           <div class="flex flex-col gap-3" style="width:312px;">
             <div class="flex items-start justify-between">
               <div class="illus illus-pro" aria-hidden="true"></div>
+              <div class="plan-seg" role="tablist" aria-label="Billing period" data-pro-seg>
+                <button type="button" class="plan-seg-btn is-active" data-period="monthly" role="tab" aria-selected="true">Monthly</button>
+                <button type="button" class="plan-seg-btn" data-period="annual" role="tab" aria-selected="false">Annual</button>
+              </div>
             </div>
             <div class="flex items-baseline justify-between gap-2" style="width:312px;">
               <h3 class="text-[24px] font-bold text-ink-primary leading-none">Pro</h3>
@@ -2017,6 +2009,10 @@
           <div class="flex flex-col gap-3" >
             <div class="flex items-start justify-between">
               <div class="illus illus-gold" aria-hidden="true"></div>
+              <div class="plan-seg" role="tablist" aria-label="Billing period" data-gold-seg>
+                <button type="button" class="plan-seg-btn is-active" data-period="monthly" role="tab" aria-selected="true">Monthly</button>
+                <button type="button" class="plan-seg-btn" data-period="annual" role="tab" aria-selected="false">Annual</button>
+              </div>
             </div>
             <!-- Title + price on the right -->
             <div class="flex items-baseline justify-between gap-2" style="width:312px;">
@@ -2611,7 +2607,7 @@
       const card = document.getElementById('gold-card');
       const priceEl = card.querySelector('[data-gold-price]');
       const saveEl = card.querySelector('[data-gold-save]');
-      const goldSeg = document.querySelector('[data-bill-seg]');
+      const goldSeg = document.querySelector('[data-gold-seg]');
 
       function setGoldPeriod(period) {
         goldSeg.querySelectorAll('.plan-seg-btn').forEach(btn => {
@@ -2683,19 +2679,21 @@
       // Monthly never discounts — the hour bump only applies to yearly.
       const BUMP_MS = 60 * 60 * 1000; // 1 hour
       const proPriceEl   = document.querySelector('[data-pro-price]');
-      const proSeg       = document.querySelector('[data-bill-seg]');
+      const proSeg       = document.querySelector('[data-pro-seg]');
       const proChip      = document.getElementById('pro-discount-chip');
       const proHint      = document.getElementById('pro-hint');
 
+      // Linked card toggles: setting the period updates BOTH cards' segs.
       function setProPeriod(period) {
-        const sw = document.querySelector('[data-bill-switch]');
-        const tg = document.querySelector('[data-bill-toggle]');
-        if (sw) sw.setAttribute('aria-checked', period === 'annual' ? 'true' : 'false');
-        if (tg) tg.setAttribute('data-period', period);
+        document.querySelectorAll('[data-pro-seg] .plan-seg-btn, [data-gold-seg] .plan-seg-btn').forEach(btn => {
+          const active = btn.dataset.period === period;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-selected', String(active));
+        });
       }
       function getProPeriod() {
-        const sw = document.querySelector('[data-bill-switch]');
-        return sw && sw.getAttribute('aria-checked') === 'true' ? 'annual' : 'monthly';
+        const active = document.querySelector('[data-pro-seg] .plan-seg-btn.is-active');
+        return active ? active.dataset.period : 'monthly';
       }
       const closeBtn     = document.querySelector('[aria-label="Close"]');
       let bumpIntervalId = null;
@@ -2816,9 +2814,8 @@
         if (window.renderGoldIndividual) window.renderGoldIndividual(period);
       }
       window.setBillPeriod = setBillPeriod;
-      const billSwitchEl = document.querySelector('[data-bill-switch]');
-      if (billSwitchEl) billSwitchEl.addEventListener('click', () => {
-        setBillPeriod(getProPeriod() === 'annual' ? 'monthly' : 'annual');
+      document.querySelectorAll('[data-pro-seg] .plan-seg-btn, [data-gold-seg] .plan-seg-btn').forEach(btn => {
+        btn.addEventListener('click', () => setBillPeriod(btn.dataset.period));
       });
 
       function startBumpCountdown() {
