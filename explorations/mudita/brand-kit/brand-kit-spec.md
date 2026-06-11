@@ -161,7 +161,8 @@ Brand Kits surface (sidebar = kit nav · detail = the selected kit)
 
 ## Build order & status
 
-Not feature cuts (templates are in v1) — the order to design the surfaces so each de-risks the next:
+The order to *design the surfaces* so each de-risks the next. Which **components** ship when is a
+separate axis — see the [phasing spec](phasing-spec.html).
 
 ```
 1. Dashboard — manage a kit     ✓ filled state built  →  next: zero state + FTUE
