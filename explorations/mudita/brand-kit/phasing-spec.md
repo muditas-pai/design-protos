@@ -49,6 +49,28 @@ logo, voice — without the kit picking or building a mood itself.
 **In the manage UI** (the built proto), Phase 1 = Org info · Look & feel *(fonts + colours only — no
 mood row)* · Logos · Voices. Templates and Assets are absent (or shown as "Phase 2").
 
+### Set up by import — extract & pre-fill
+
+Filling five modules by hand is friction. So the **primary way to start a kit is to point us at what
+the brand already has**, and we pre-fill from it:
+
+```
+DROP IN WHAT YOU HAVE …            WE EXTRACT …                 PRE-FILLS (Phase 1)
+· Past PowerPoint decks (.pptx)    fonts · colours · logos      → Org info
+· A brand book / guidelines (PDF)  recurring imagery            → Font pairing
+· Your website (just a URL)        tone of copy · org blurb     → Colour palette
+                                                                → Logos · Voices
+```
+
+- **Best-effort, not magic.** We pre-fill what we're confident about and leave the rest blank.
+- **Provenance + always editable.** Each pre-filled value shows where it came from ("from your
+  website") and can be confirmed or changed — extraction is a *head start*, never the final word.
+- **From scratch still works.** Import is the fast path, not the only one; a user can fill every
+  module by hand.
+
+> When Phase 2 lands, the same import can also seed **assets** (images pulled from the deck/site) and
+> a **template** (a recurring deck layout) — but in Phase 1 it pre-fills only the five identity modules.
+
 ---
 
 ## Phase 2 — the creation layer (the complications)

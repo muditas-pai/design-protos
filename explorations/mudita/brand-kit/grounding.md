@@ -24,6 +24,9 @@ Mapped 9 Jun 2026 — verify against the repo before building.
   template work is the **binding** plus a **"save as template"** action.
 - **Moods** are a known product concept (~50). **Voice** today is a single free-text `creator_role`
   hint passed to the generator. **Fonts / colors / logos / assets are not modeled** — greenfield.
+- **Extraction infra partly exists.** `UploadedFile` stores uploads with extracted `raw_content`
+  (used today for doc-to-deck). The **set-up-by-import** flow (PPTX / PDF / website → pre-fill the
+  kit) can build on this rather than starting cold.
 
 So the whole `payload` shape is ours to define, on a table that already reserved the right place.
 
@@ -64,7 +67,8 @@ These are prototype and demo choices, **not** product decisions — they live he
 
 ## TODO / open threads
 
-- [ ] Build the **zero state** (empty Brand Kits surface) and the **FTUE** (create-first-kit flow).
+- [ ] Build the **zero state** (empty Brand Kits surface) and the **FTUE** — the create-first-kit
+      flow is the **import / extract** path (drop in decks · brand book · website → pre-fill modules).
 - [ ] Resolve the spec's open questions (Voices shape · Asset tag taxonomy · logo-variant
       selection · re-theme scope on switch · kit opt-out).
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
