@@ -12,7 +12,7 @@ come out on-brand, set up in seconds. **Phase 2** goes deeper — the heavier, b
 
 ```
 PHASE 1 — a thin slice of look & feel     PHASE 2 — go deeper
-· Org info                                · Mood       pick + build CUSTOM moods
+· Org info                                · Mood       pick a preset → brand font/colour
 · Fonts                                   · Templates  save-as-template + refresh
 · Colours                                 · Assets     smart library (tag + AI-retrieve)
 · Logos
@@ -20,8 +20,8 @@ PHASE 1 — a thin slice of look & feel     PHASE 2 — go deeper
 · Images  (scraped on setup)
 ```
 
-Phase 1 is fill-in-the-fields; Phase 2 is systems — a mood builder, a template engine, a tagged
-media library.
+Phase 1 is fill-in-the-fields; Phase 2 adds the heavier pieces — a template engine and a tagged
+media library. (Mood stays a simple preset pick — never a builder.)
 
 ---
 
@@ -39,7 +39,9 @@ building from scratch stays available.
 
 ## Phase 2 — go deeper
 
-- **Mood** — pick a starting mood, and build **custom moods** (the big one).
+- **Mood** — pick a default mood from the ~50 presets. A **"custom mood"** is just that preset with the
+  brand's font + colour applied and saved — **never** a builder for layouts, decorative elements or
+  image masks. (Those granular layers are ours; users never touch them.)
 - **Templates** — save any deck as a template into the kit + refresh per lead / industry.
 - **Assets** — the smart library on the Phase-1 image collection: auto-tag + AI-retrieve, upload more.
 
@@ -47,5 +49,5 @@ building from scratch stays available.
 
 ## Open question
 
-Does a Phase-1 kit **pin a default mood** (pick from the existing ~50), or stay fully mood-agnostic —
-reserving only *custom* moods for Phase 2?
+Does a Phase-1 kit **pin a default mood** (pick from the ~50 presets), or stay fully mood-agnostic —
+reserving mood selection for Phase 2?

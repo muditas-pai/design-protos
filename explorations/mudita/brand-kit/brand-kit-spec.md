@@ -54,6 +54,10 @@ MOOD  — 1 of ~50, built by us
 Because the overrides are mood-agnostic, a user can change the mood mid-deck and keep their brand
 intact.
 
+A **"custom mood"** is never built from scratch — it's just a preset with the kit's fonts + colours
+applied and saved. We never expose the granular layers (layouts, decorative elements, image masks);
+those stay ours.
+
 ### Component detail
 
 | Component | What it holds | How it's applied |
