@@ -1,7 +1,7 @@
 # Brand Kit — spec
 
-**Status:** In progress · **Owner:** Mudita · **Updated:** 10 Jun 2026
-**Grounding, one-off decisions & todos →** [grounding](grounding.html)
+**Status:** In progress · **Owner:** Mudita · **Updated:** 11 Jun 2026
+**Grounding, one-off decisions & todos →** [grounding](grounding.html) · **Phasing →** [phasing-spec](phasing-spec.html)
 
 The design source of truth for the Brand Kit feature — what a kit is, where it surfaces, and the
 decisions every Brand Kit prototype should match. Code reality and prototype-only notes live in the
@@ -14,7 +14,7 @@ grounding appendix (linked above), not here.
 Agencies and consultancies — McKinsey, Bain, MetaLab, Pentagram — run many clients, each with its
 own identity, so they need **many** brand kits in one workspace. Product companies — Duolingo,
 Coca-Cola — run **one**. Either way, a brand kit lets a workspace lock its identity once — org
-story, fonts, colors, logos, voice, templates, assets — so every generated deck comes out on-brand
+story, fonts, colours, logos, voice, templates, assets — so every generated deck comes out on-brand
 by default, instead of being re-styled by hand each time.
 
 ---
@@ -24,14 +24,14 @@ by default, instead of being re-styled by hand each time.
 ```
 BRAND KIT   (workspace-scoped · many per workspace · exactly one is default)
 │
-├─ Org info ....... text background on the org / product / service   → grounds AI copy
+├─ Org info ....... structured blocks (company · audiences · proof · team…) → grounds AI content
 ├─ Mood ........... a starting mood (1 of ~50)
 ├─ Font pairing ... title + body        ┐ override, on top of ANY mood
-├─ Color palette .. brand colors        ┘
-├─ Logos .......... light / dark / mono / full-color (multiple)
+├─ Colour palette . brand colours        ┘
+├─ Logos .......... full-colour / reversed / dark / mono (multiple)
 ├─ Voices ......... many (Exec · Marketing · Sales) — one per deck; kit has a default
 ├─ Templates ...... saved decks: locked narrative + refresh-able slots
-└─ Assets ......... uploaded images → auto-tagged → AI retrieves + user inserts
+└─ Assets ......... images → collection (P1) → smart library, AI-retrieved (P2)
                                                        (no icons — by design)
 ```
 
@@ -47,32 +47,115 @@ MOOD  — 1 of ~50, built by us
   ├─ default font  ───────┐
   └─ default palette ─────┤
                           ▼   the brand kit overrides ONLY these two
-      BRAND KIT:   font pairing   +   color palette
+      BRAND KIT:   font pairing   +   colour palette
       (mood-agnostic — they survive when the user swaps to a different mood)
 ```
 
 Because the overrides are mood-agnostic, a user can change the mood mid-deck and keep their brand
-intact.
-
-A **"custom mood"** is never built from scratch — it's just a preset with the kit's fonts + colours
-applied and saved. We never expose the granular layers (layouts, decorative elements, image masks);
-those stay ours.
-
-### Component detail
-
-| Component | What it holds | How it's applied |
-|---|---|---|
-| **Org info** | Plain-text background on what the org / product / service is | Grounds the AI's copy and voice |
-| **Mood** | A starting mood (1 of ~50) | The base design; the kit overrides only its font + palette |
-| **Font pairing** | Title font + body font | Overrides the active mood's fonts |
-| **Color palette** | The brand's colors | Overrides the active mood's palette |
-| **Logos** | Multiple variants — light / dark / mono / full-color | Placed on slides; the variant is chosen to suit the background |
-| **Voices** | Many (e.g. Exec · Marketing · Sales); the kit names one **default** | One voice is active per deck; it drives copy tone |
-| **Templates** | Saved decks — locked narrative + refresh-able slots | Saved into the kit from any deck; picked at creation and refreshed per lead / industry |
-| **Assets** | Uploaded images (photos, illustrations), auto-tagged on upload | AI retrieves by relevance + the user inserts manually |
+intact. A **"custom mood"** is never built from scratch — it's just a preset with the kit's fonts +
+colours applied and saved. We never expose the granular layers (layouts, decor, image masks).
 
 **No icons — deliberately.** A partial brand icon set mixed with our default set breaks visual
 consistency, so icons are out of scope.
+
+---
+
+## What each component holds
+
+The fields per component. **Phase 1** is the identity layer (org · fonts · colours · logos · voices +
+a scraped image collection); mood, templates and the smart asset library are **Phase 2** — see the
+[phasing spec](phasing-spec.html). Everything is **industry-agnostic** — the same fields serve a
+consultancy, an agency, a CPG brand or a non-profit.
+
+### Org info — *grounds the AI's content*
+
+| Block | Captures |
+|---|---|
+| **Company** | name + what you are (one line) |
+| **Field** | the sector you work in |
+| **Who you serve** | businesses · consumers · public · which sectors |
+| **Tagline** | the one verbatim line |
+| **What you offer** | products · services · practice areas |
+| **Audiences** | who you present *to* — clients · investors · partners · public |
+| **Positioning** | what you stand for / the core promise |
+| **Differentiators** | what sets you apart |
+| **Competitors / peers** | who you're measured against |
+| **Proof points** | key numbers · notable clients · case studies · awards · impact |
+| **Team / people** | names · roles · short bios · **headshots** |
+| **Mission / vision** | the north star |
+
+*Proof points and Audiences carry the most weight — they fill KPI / logo slides with real data and
+tune the whole deck to the room.*
+
+### Font pairing — *overrides the mood's fonts*
+
+| Field | Captures |
+|---|---|
+| **Title font** | family · weight · source |
+| **Body font** | family · weight · source |
+| *Display / accent (opt.)* | covers · big numbers |
+| **Source** | a Google font, **or upload a licensed / custom font** (.woff2 / .otf) |
+| **Fallback** | web-safe substitute |
+
+*Custom-font upload is essential — most brands run licensed or bespoke faces that aren't on Google.*
+
+### Colour palette — *light roles, not a flat list*
+
+| Role | Used for |
+|---|---|
+| **Primary** | hero brand colour — fills, key moments |
+| **Secondary** | supporting brand colour(s) |
+| **Accent** | highlights · callouts · CTAs |
+| **Ink** | body text (a dark) |
+| **Surface** | backgrounds (a light) |
+| **+ more** | the rest of the palette, untagged |
+
+Each colour = **hex · name · role**. Import **auto-assigns** the roles (most-used → Primary, text →
+Ink, page background → Surface). Gradients and contrast-pairing are computed / optional, not fields.
+
+### Logos — *a set of variants*
+
+| Variant | For |
+|---|---|
+| **Full colour** | primary, and the kit's identity mark *(required)* |
+| **Reversed / light** | dark backgrounds |
+| **Dark / mono** | light backgrounds / single-colour |
+| *Mark / icon-only (opt.)* | the symbol alone — corners · footers · favicons |
+
+Per logo: transparent file (SVG preferred). The system **auto-picks the variant by slide
+background** (override available). Clear-space / min-size use sensible defaults, not fields.
+
+### Voices — *flat; N per kit, one default*
+
+| Field | Captures |
+|---|---|
+| **Name** | the label — Exec · Marketing · Sales |
+| **Use it for** | the context — board · sales · social · client-facing |
+| **Traits** | 3–5 adjectives |
+| **How it sounds** | a short paragraph |
+| **Examples** | 2–3 real on-brand lines *(the anchor)* |
+| **Avoid** | banned words · off-brand phrases & claims |
+| **Dials** | Formality · Length · POV *(+ optional Claims)* |
+
+**Setup is extraction-first.** People can't describe their voice from a blank box — so we **draft
+each voice from the brand's imported site / decks**, inferring the dials and pulling their **real
+sentences as the examples**; the user reacts and tweaks. Fallbacks: a library of **role presets**
+(Exec · Marketing · Sales · Founder · Social · IR), and **calibrate-by-recognition** (dials with a
+live preview · "which sounds like you?" · trait chips) — never a "write your guidelines" field.
+
+### Images / Assets
+
+- **Phase 1** — a scraped **image collection**: per image = file / url · source (scraped page ·
+  uploaded). Browse + manually insert.
+- **Phase 2** — the smart library on top: one **auto-tagging** pass + **AI retrieval** by relevance,
+  plus uploads and curation.
+
+### Mood · Templates *(Phase 2)*
+
+- **Mood** — a selected preset (1 of ~50); fonts + colours come from the kit. A saved "custom mood"
+  = name + preset. No builder.
+- **Templates** — a saved deck bound to the kit: name · thumbnail · which blocks are locked narrative
+  vs. refresh slots.
 
 ---
 
@@ -90,7 +173,7 @@ BRAND KITS   (the sidebar becomes the kit nav)
 ┌ sidebar ─────────┬ detail (fills main) ────────────────┐
 │ workspace         │  [logo] Kit name          ★ Default │
 │ ← Back to Home    │  ▾ Org info                          │
-│ Brand Kits    [+] │  ▸ Look & feel  (mood · fonts · colors + live preview)
+│ Brand Kits    [+] │  ▸ Look & feel  (mood · fonts · colours + live preview)
 │ ▸ Kit A  ★        │  ▸ Logos                             │
 │   Kit B           │  ▸ Voices                            │
 │   Kit C (no logo) │  ▸ Templates                         │
@@ -101,15 +184,15 @@ BRAND KITS   (the sidebar becomes the kit nav)
 
 - **Within a kit: preview-rich accordions.** A collapsed header shows a summary/thumbnail of that
   section; expanding it reveals the editor. (Accordions over tabs/panes — better discovery.)
-- **Sections are flat**, with one exception: **mood + fonts + colors** are grouped into a single
+- **Sections are flat**, with one exception: **mood + fonts + colours** group into a single
   **"Look & feel"** section (they stack into the visual system) with a live preview slide.
 - **Kit identity = the colour logo**, with an **illustrated pictogram fallback** when a kit has no
   logo yet.
 
 **Setting up a kit.** A kit can be **bootstrapped by import** — drop in past PowerPoint decks, a brand
 book / guidelines PDF, or just a website URL. We **scrape the whole site for images** (every page, not
-just the hero) to seed the asset collection, and extract fonts, colours, logos, voice and an org blurb
-to **pre-fill the modules**; the user then edits and tweaks. Building from scratch stays available.
+just the hero) to seed the asset collection, and extract fonts, colours, logos, voice and the org
+blocks to **pre-fill the modules**; the user then edits. Building from scratch stays available.
 (A Phase 1 capability — see the [phasing spec](phasing-spec.html).)
 
 ---
@@ -123,7 +206,7 @@ Create a deck
   └─ pick a brand kit            (workspace default pre-selected)
        ├─ pick a voice           (kit's default voice pre-selected)
        ├─ optionally start from one of the kit's templates
-       └─ the kit primes generation: org info · mood · fonts · colors · logo · assets
+       └─ the kit primes generation: org info · mood · fonts · colours · logo · assets
 ```
 
 ### 2 · Editor — switch kit / voice mid-deck
@@ -143,7 +226,7 @@ In the editor
 Brand Kits surface (sidebar = kit nav · detail = the selected kit)
   └─ kits:  create · duplicate · set default · delete
        └─ edit a kit, section by section (accordions):
-            org info · look & feel (mood · fonts · colors) ·
+            org info · look & feel (mood · fonts · colours) ·
             logos · voices · templates · assets
 ```
 
@@ -151,19 +234,14 @@ Brand Kits surface (sidebar = kit nav · detail = the selected kit)
 
 ## Open questions
 
-- **Voices — data shape.** A voice = a **name + written guidelines + a few example phrases**?
-  Confirm each kit has a **default voice** (so generation always has one), switchable at creation
-  *and* in the editor; it supersedes today's free-text creator hint.
-- **Templates — binding.** "Save as template into a kit": which kit, what metadata (name,
-  thumbnail, intended use), and does it capture the deck's current voice/mood? Does a template
-  carry its own voice/mood binding or inherit the kit it's opened under?
-- **Assets — tagging.** Auto-tag taxonomy (likely **subject · type · orientation · dominant
-  color**), and the editor retrieval surface (a searchable brand-asset panel).
-- **Logos — variant selection.** Auto by slide-background luminance, or user picks per use?
-- **Re-theme scope.** Switching kit/voice in the editor re-applies to **existing** slides (full
+- **Mood in Phase 1.** Does a Phase-1 kit **pin a default mood** (pick from the ~50 presets), or stay
+  fully mood-agnostic — reserving mood selection for Phase 2?
+- **Re-theme scope.** Switching kit / voice in the editor re-applies to **existing** slides (full
   re-theme) or only to **new** ones generated afterward?
 - **Kit opt-out.** New decks start from the default kit — can a deck opt out entirely (pure mood,
   no brand)?
+- **Templates binding** *(Phase 2)*. Does a saved template carry its own voice / mood, or inherit the
+  kit it's opened under?
 - **Org → team.** The model has Workspace + Projects but no Team; team-scoped kits would need a
   `Team` entity first. Out of v1 — noted so we don't design it away.
 
