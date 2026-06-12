@@ -1,6 +1,6 @@
 # Brand Kit — grounding
 
-**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 10 Jun 2026
+**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 12 Jun 2026
 
 The shared context for the Brand Kit work in this folder. Every spec and proto here can draw on it,
 but none should treat it as gospel: it covers how the feature maps to today's `presentation-services`
@@ -27,6 +27,9 @@ Mapped 9 Jun 2026 — verify against the repo before building.
 - **Extraction infra partly exists.** `UploadedFile` stores uploads with extracted `raw_content`
   (used today for doc-to-deck). The **set-up-by-import** flow (PPTX / PDF / website → pre-fill the
   kit) can build on this rather than starting cold.
+- **Brand knowledge / RAG is greenfield.** No knowledge-graph or retrieval pipeline exists for brand
+  context yet — today's doc-to-deck just stuffs one file's `raw_content` into the prompt, not a
+  persistent per-company corpus. Brand knowledge is a **new system** (a Gold feature).
 
 So the whole `payload` shape is ours to define, on a table that already reserved the right place.
 
@@ -44,6 +47,11 @@ The settled product calls behind the spec — recorded here so the spec stays a 
 | **Assets** | Upload → one **auto-tagging** pass → assets are both **AI-retrieved** (by relevance) and **hand-inserted**. |
 | **Image scrape** | Set-up-by-import scrapes the **whole site** for images (every page, not just the hero) to seed the asset collection — inspired by **Mutiny**. The collection lands in **Phase 1**; tagging + AI retrieval are **Phase 2**. |
 | **Icons** | **Out of scope.** A partial brand icon set mixed with our default set breaks visual consistency. |
+| **Plans / gating** | A brand kit is a **Pro** feature. **Brand knowledge** (the doc corpus / RAG) is **Gold**. A custom, design-team-built kit is a separate **paid service**. |
+| **Custom kit** | "Request a custom kit" routes to a **pricing page** — the in-house presentations.ai design team builds the kit for the company (a done-for-you service, distinct from the plan tiers). |
+| **Voice scope** | **One voice per kit, for now.** Multiple voices by team (Exec / Marketing / Sales) is a later expansion. |
+| **Brand voice shape** | Two halves — **authentic voice** (traits · examples · avoid · dials) + **presentation levers** that drive how we write slide titles · section breaks · bodies · bullets. The levers bridge brand voice → on-slide copy. |
+| **Brand knowledge** | A **knowledge graph / RAG** from a user file dump, used in slide generation. User-facing name = "Brand knowledge," not "knowledge graph." One upload distils the structured **Org-info profile** (Pro) *and* builds the deep corpus (Gold) — same material, two depths. |
 
 ---
 
@@ -68,10 +76,13 @@ These are prototype and demo choices, **not** product decisions — they live he
 
 ## TODO / open threads
 
-- [ ] Build the **zero state** (empty Brand Kits surface) and the **FTUE** — the create-first-kit
-      flow is the **import / extract** path (drop in decks · brand book · website → pre-fill modules).
-- [ ] Resolve the spec's open questions (Voices shape · Asset tag taxonomy · logo-variant
-      selection · re-theme scope on switch · kit opt-out).
+- [x] **Zero state + FTUE built** (`brand-kit-ftue.html`) — zero → add sources → live reveal →
+      filled kit + auto sample deck.
+- [ ] Resolve the spec's open questions (mood-in-P1 · re-theme scope · kit opt-out · templates binding).
+- [ ] Prototype **"request a custom kit" → pricing** handoff (the done-for-you service).
+- [ ] Prototype the **Brand-knowledge** upload surface + the Pro/Gold gating UI.
+- [ ] Prototype the **brand-voice presentation levers** (title style · section breaks · body density
+      · bullet form controls).
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
 - [ ] Real brand-logo artwork (current marks are simplified Simple Icons / Wikimedia versions).
 - [ ] Define the **"save deck as template → kit"** metadata (name, thumbnail, captured voice/mood).

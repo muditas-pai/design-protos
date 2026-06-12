@@ -1,11 +1,15 @@
 # Brand Kit — spec
 
-**Status:** In progress · **Owner:** Mudita · **Updated:** 11 Jun 2026
+**Status:** In progress · **Owner:** Mudita · **Updated:** 12 Jun 2026
 **Grounding, one-off decisions & todos →** [grounding](grounding.html) · **Phasing →** [phasing-spec](phasing-spec.html)
 
 The design source of truth for the Brand Kit feature — what a kit is, where it surfaces, and the
 decisions every Brand Kit prototype should match. Code reality and prototype-only notes live in the
 grounding appendix (linked above), not here.
+
+**Plans.** A brand kit is a **Pro** feature. **Brand knowledge** — the company document corpus we use
+during generation — is a **Gold** feature. A custom, design-team-built kit is a separate **paid
+service** (see *Two ways to get a kit*).
 
 ---
 
@@ -22,17 +26,20 @@ by default, instead of being re-styled by hand each time.
 ## What a brand kit is made of
 
 ```
-BRAND KIT   (workspace-scoped · many per workspace · exactly one is default)
+BRAND KIT   (workspace-scoped · many per workspace · exactly one default · a Pro feature)
 │
-├─ Org info ....... structured blocks (company · audiences · proof · team…) → grounds AI content
+├─ Org info ....... structured profile blocks (company · audiences · proof · team…)
+├─ Brand voice .... authentic tone + presentation levers (one voice, for now)
 ├─ Mood ........... a starting mood (1 of ~50)
 ├─ Font pairing ... title + body        ┐ override, on top of ANY mood
 ├─ Colour palette . brand colours        ┘
 ├─ Logos .......... full-colour / reversed / dark / mono (multiple)
-├─ Voices ......... many (Exec · Marketing · Sales) — one per deck; kit has a default
 ├─ Templates ...... saved decks: locked narrative + refresh-able slots
 └─ Assets ......... images → collection (P1) → smart library, AI-retrieved (P2)
                                                        (no icons — by design)
+
+BRAND KNOWLEDGE  (Gold)  a corpus of the company's docs → retrieved during generation (RAG).
+                         Deeper than Org info; one upload feeds both — see below.
 ```
 
 ### The mood-override model
@@ -87,6 +94,20 @@ consultancy, an agency, a CPG brand or a non-profit.
 *Proof points and Audiences carry the most weight — they fill KPI / logo slides with real data and
 tune the whole deck to the room.*
 
+### Company knowledge — *profile vs. corpus*
+
+What the AI knows about you comes in **two depths**:
+
+- **Profile** = **Org info** (above) — the curated, structured gist: a dozen blocks the user confirms,
+  **always injected** into every deck. *(Pro.)*
+- **Brand knowledge** — the **deep corpus**: drop in your documents (reports, decks, product docs,
+  case studies) and we use them to inform generation, **retrieving what's relevant per slide**. To the
+  user it's "share what your company knows"; under the hood it's a knowledge graph / RAG. *(Gold.)*
+
+**They're the same material at two depths** — one job, not two: a single upload **distils into the
+Profile** (editable gist) *and* **builds the Brand-knowledge corpus** (retrieved depth). Profile is
+the always-on summary; Brand knowledge is everything, pulled in when relevant.
+
 ### Font pairing — *overrides the mood's fonts*
 
 | Field | Captures |
@@ -125,23 +146,38 @@ Ink, page background → Surface). Gradients and contrast-pairing are computed /
 Per logo: transparent file (SVG preferred). The system **auto-picks the variant by slide
 background** (override available). Clear-space / min-size use sensible defaults, not fields.
 
-### Voices — *flat; N per kit, one default*
+### Brand voice — *one voice per kit (for now)*
+
+A kit has **one brand voice for now** (multiple voices by team — Exec / Marketing / Sales — is a later
+expansion). The voice is two halves: **who you are**, and **how that shows up on a slide**.
+
+**Authentic voice** *(the personality)*
 
 | Field | Captures |
 |---|---|
-| **Name** | the label — Exec · Marketing · Sales |
-| **Use it for** | the context — board · sales · social · client-facing |
 | **Traits** | 3–5 adjectives |
-| **How it sounds** | a short paragraph |
 | **Examples** | 2–3 real on-brand lines *(the anchor)* |
 | **Avoid** | banned words · off-brand phrases & claims |
-| **Dials** | Formality · Length · POV *(+ optional Claims)* |
+| **Dials** | Formality · Length · POV · Claims (measured ↔ bold) |
 
-**Setup is extraction-first.** People can't describe their voice from a blank box — so we **draft
-each voice from the brand's imported site / decks**, inferring the dials and pulling their **real
-sentences as the examples**; the user reacts and tweaks. Fallbacks: a library of **role presets**
-(Exec · Marketing · Sales · Founder · Social · IR), and **calibrate-by-recognition** (dials with a
-live preview · "which sounds like you?" · trait chips) — never a "write your guidelines" field.
+**Presentation levers** *(how the voice actually writes a deck — the part that makes it feel on-brand)*
+
+| Surface | Lever | Options |
+|---|---|---|
+| **Slide titles** | Style | **Takeaway** sentence · **Topic** label · **Question** |
+| | Case | Title Case · Sentence case |
+| **Section breaks** | Style | Numbered ("01 — Market") · Editorial ("Where we're headed") · Minimal |
+| **Slide bodies** | Density | Sparse · Balanced · Detailed |
+| **Bullets** | Form | Fragments vs. full sentences |
+| | Lead-in | Verb-first · Metric-first · Free |
+
+The levers are the bridge: a brand can be "bold and plainspoken," but the deck only *feels* on-brand
+once that becomes **takeaway titles, sparse bodies, metric-first fragments**. We infer the levers from
+the authentic voice (bold → takeaway titles; measured → topic labels) and let the user adjust.
+
+**Setup is extraction-first** — we draft both halves from the brand's imported site / decks (the
+authentic voice from their copy; the levers inferred), with a live preview. Never a blank "describe
+your voice" box.
 
 ### Images / Assets
 
@@ -200,6 +236,10 @@ The **first-run flow** (FTUE): empty Brand Kits → **add sources** (URL / deck 
 filled kit**, every value provenance-tagged. The success state **auto-generates a short sample deck in
 the brand** — no button, just shown — as proof it works. Prototype:
 [brand-kit-ftue](brand-kit-ftue.html).
+
+**Two ways to get a kit.** *Build your own* — by import or from scratch (above). Or **request a custom
+kit** — our in-house presentations.ai design team builds it for you; this routes to a **pricing page**
+for the service. So the new-kit choice is **do-it-yourself vs. done-for-you**.
 
 ---
 
