@@ -195,6 +195,12 @@ just the hero) to seed the asset collection, and extract fonts, colours, logos, 
 blocks to **pre-fill the modules**; the user then edits. Building from scratch stays available.
 (A Phase 1 capability — see the [phasing spec](phasing-spec.html).)
 
+The **first-run flow** (FTUE): empty Brand Kits → **add sources** (URL / deck / brand book) → a
+**live reveal** of what we found (logo · palette · fonts · images · voices · profile) → **land in the
+filled kit**, every value provenance-tagged. The success state **auto-generates a short sample deck in
+the brand** — no button, just shown — as proof it works. Prototype:
+[brand-kit-ftue](brand-kit-ftue.html).
+
 ---
 
 ## The three touchpoints
@@ -253,7 +259,7 @@ The order to *design the surfaces* so each de-risks the next. Which **components
 separate axis — see the [phasing spec](phasing-spec.html).
 
 ```
-1. Dashboard — manage a kit     ✓ filled state built  →  next: zero state + FTUE
+1. Dashboard — manage a kit     ✓ filled state + FTUE built
 2. Creation flow — pick a kit + voice (+ template)
 3. Editor — switch kit / voice · save-as-template
 ```
