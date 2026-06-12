@@ -148,9 +148,9 @@ instant it repeats. Restraint is the whole point.
 presentations.ai reads as crafted and precise, not soft/consumer-bubbly — so
 corners stay on the **sharper** end. Anchor the radius scale tight:
 
-- **Cards / large surfaces:** ~12px (not 16–20).
-- **Mid surfaces** (inputs, tiles, preview frames): ~8–10px.
-- **Small chips / buttons / swatches:** ~6–8px.
+- **Cards / large surfaces:** ~10px (not 16–20).
+- **Mid surfaces** (inputs, tiles, preview frames): ~7–8px.
+- **Small chips / buttons / swatches:** ~5–6px.
 - **Pills** (tags, status badges) stay fully round (99px) — the contrast with
   tight rectangles is intentional, not a violation.
 - The concentric rule still holds (outer = inner + padding); just build it on
