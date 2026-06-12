@@ -25,7 +25,7 @@ Persona (role select)
 Dashboard
   · 1 existing presentation → click → editor reopens in deck-ready state
   · prompt field / Upload / Import / Try Pro → Pricing modal
-  · PRO-gated sidebar items (Create project, Invite new member) → Premium-features modal
+  · PRO-gated sidebar item (Create project) → Premium-features modal
       → Try Pro for Free → Checkout (in modal)
   · Hire an Expert (sidebar or prompt pill) → hire-an-expert page → close → back to Dashboard
 Pricing modal: Try for Free → Checkout swaps in the SAME modal
@@ -82,7 +82,8 @@ Checkout success → "Continue to your deck" → deck-ready editor
 - Premium-features modal ("Upgrade for premium features"): left feature list (Projects, Export
   presentations, Analytics, Invite team members, Font pair, Color palette, Assign slide) with
   active row showing its sub-line + preview swap on the right; CTA **Try Pro for Free** → checkout
-  in the modal. Sidebar triggers preselect their tab (Create project → Projects, Invite → Invite).
+  in the modal. Sidebar trigger preselects its tab (Create project → Projects).
+  "Invite new member" is hidden from the trial dashboard sidebar.
 
 ## Cross-frame messages (postMessage contract)
 
