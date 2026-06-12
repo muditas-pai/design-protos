@@ -50,7 +50,7 @@ The settled product calls behind the spec — recorded here so the spec stays a 
 | **Plans / gating** | A brand kit is a **Pro** feature. **Brand knowledge** (the doc corpus / RAG) is **Gold**. A custom, design-team-built kit is a separate **paid service**. |
 | **Custom kit** | "Request a custom kit" routes to a **pricing page** — the in-house presentations.ai design team builds the kit for the company (a done-for-you service, distinct from the plan tiers). |
 | **Voice scope** | **One voice per kit, for now.** Multiple voices by team (Exec / Marketing / Sales) is a later expansion. |
-| **Brand voice shape** | Two halves — **authentic voice** (traits · examples · avoid · dials) + **presentation levers** that drive how we write slide titles · section breaks · bodies · bullets. The levers bridge brand voice → on-slide copy. |
+| **Brand voice shape** | Two halves — **authentic voice** (traits · examples · avoid · dials) + **voice rules** that drive on-slide copy. **Rescoped 12 Jun 2026:** rules must be *type-independent phrasing guardrails* (active voice · fact-led · no gerund heads · case · POV · plain language), **not** per-slide content templates. Density (sparse/detailed) and bullet form (metric/verb/plain) are **context/mood-dependent**, so they live with the slide type + mood, not as kit voice levers. FTUE voice UI is authentic-voice + sample only; rules UI deferred until the model is confirmed. |
 | **Brand knowledge** | A **knowledge graph / RAG** from a user file dump, used in slide generation. User-facing name = "Brand knowledge," not "knowledge graph." One upload distils the structured **Org-info profile** (Pro) *and* builds the deep corpus (Gold) — same material, two depths. |
 | **FTUE — setup** | Build-it-yourself is the **default** — the first screen shows the inputs directly (**multiple URLs** + a **file drop** for brand book / decks / **company docs** — PRDs, internal docs). Company docs **seed Brand knowledge**. "Have us build it" is a **premium, visually-distinct card**, not an equal option. |
 | **FTUE — landing** | Leads with **"A sample deck in your brand"** (a **grid**, ~2 rows). **No** provenance banner; **no** big kit page-header (the sidebar identifies the kit). *Make a deck / Regenerate* are **secondary**. Section order: **Look & feel · Brand voice · Logos · Brand knowledge · Org info · Images**. |
@@ -84,8 +84,8 @@ These are prototype and demo choices, **not** product decisions — they live he
 - [ ] Resolve the spec's open questions (mood-in-P1 · re-theme scope · kit opt-out · templates binding).
 - [ ] Prototype **"request a custom kit" → pricing** handoff (the done-for-you service).
 - [ ] Prototype the **Brand-knowledge** upload surface + the Pro/Gold gating UI.
-- [ ] Prototype the **brand-voice presentation levers** (title style · section breaks · body density
-      · bullet form controls).
+- [ ] **Confirm the rescoped brand-voice rules model** (type-independent phrasing guardrails vs.
+      context-dependent density/form), then prototype the rules UI — checklist vs. dials TBD.
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
 - [ ] Real brand-logo artwork (current marks are simplified Simple Icons / Wikimedia versions).
 - [ ] Define the **"save deck as template → kit"** metadata (name, thumbnail, captured voice/mood).

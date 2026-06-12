@@ -29,7 +29,7 @@ by default, instead of being re-styled by hand each time.
 BRAND KIT   (workspace-scoped · many per workspace · exactly one default · a Pro feature)
 │
 ├─ Org info ....... structured profile blocks (company · audiences · proof · team…)
-├─ Brand voice .... authentic tone + presentation levers (one voice, for now)
+├─ Brand voice .... authentic tone + voice rules (one voice, for now)
 ├─ Mood ........... a starting mood (1 of ~50)
 ├─ Font pairing ... title + body        ┐ override, on top of ANY mood
 ├─ Colour palette . brand colours        ┘
@@ -160,24 +160,47 @@ expansion). The voice is two halves: **who you are**, and **how that shows up on
 | **Avoid** | banned words · off-brand phrases & claims |
 | **Dials** | Formality · Length · POV · Claims (measured ↔ bold) |
 
-**Presentation levers** *(how the voice actually writes a deck — the part that makes it feel on-brand)*
+**Voice rules** *(how the voice writes copy — the part that makes it feel on-brand)* — **⚠ being rescoped, see below**
 
-| Surface | Lever | Options |
+The bridge from "who you are" to on-slide copy. **The test for a voice rule: it must hold true on
+*every* slide, regardless of slide type.** That test is what the earlier draft got wrong (see the
+rescope note) — the rules below are the corrected, type-independent set.
+
+*Title rules* — generic constraints on how a title is phrased, **not** a fixed template:
+
+| Rule | What it enforces | Example |
 |---|---|---|
-| **Slide titles** | Style | **Takeaway** sentence · **Topic** label · **Question** |
-| | Case | Title Case · Sentence case |
-| **Section breaks** | Style | Numbered ("01 — Market") · Editorial ("Where we're headed") · Minimal |
-| **Slide bodies** | Density | Sparse · Balanced · Detailed |
-| **Bullets** | Form | Fragments vs. full sentences |
-| | Lead-in | Verb-first · Metric-first · Free |
+| **Active voice** | subject acts, not acted-upon | "We cut waste 30%" — not "Waste was cut by 30%" |
+| **Fact-led** | assert something, don't just name a topic | "Margin is up four points" — not "Margin overview" |
+| **No gerund heads** | don't open with an *-ing* verb | "Cut returns" — not "Reducing returns" |
+| **Case** | sentence case vs Title Case (a real house style) | Patagonia → sentence case |
+| **End punctuation** | period on titles, or none | Patagonia → none |
+| **Length** | a terseness ceiling (≈ N words) | ≤ 8 words |
 
-The levers are the bridge: a brand can be "bold and plainspoken," but the deck only *feels* on-brand
-once that becomes **takeaway titles, sparse bodies, metric-first fragments**. We infer the levers from
-the authentic voice (bold → takeaway titles; measured → topic labels) and let the user adjust.
+*Body / copy rules* — also type-independent:
 
-**Setup is extraction-first** — we draft both halves from the brand's imported site / decks (the
-authentic voice from their copy; the levers inferred), with a live preview. Never a blank "describe
-your voice" box.
+| Rule | What it enforces |
+|---|---|
+| **Person / POV** | first-person plural ("we"), second ("you"), or impersonal — held consistent |
+| **Contractions** | "we'll" vs "we will" (formality) |
+| **Plain language** | enforce the banned-word / jargon list from **Avoid**; cap sentence length |
+
+**What is *not* a voice rule** (this is the rescope's core point): **body density** (sparse vs
+detailed) and **bullet form** (fragments / metric-led / verb-led) are **context-dependent** — a vision
+slide wants prose, a data slide wants terse metrics. They depend on slide *type* and the active
+*mood / layout*, so they live there, **not** as fixed kit-level voice levers. Trying to pin them at the
+kit level fights the content.
+
+> **🔧 Rescope in progress (12 Jun 2026).** The first lever model (title = takeaway/topic/question,
+> body = sparse/supported, bullet = metric/verb/plain) was **too specific and per-slide** — it
+> templated content that varies by slide type. The corrected direction above models voice as
+> **always-true phrasing guardrails** (active voice, fact-led, no gerund heads, case, POV, plain
+> language) and pushes density/form down to mood + slide type. **The FTUE voice UI shows authentic
+> voice + a sample only; the rules UI is deferred** until this model is confirmed. Open: do rules read
+> better as **on/off house-rules (checklist)** or **dials**, and which belong to voice vs. mood.
+
+**Setup is extraction-first** — we draft the authentic voice from the brand's imported site / decks,
+infer the rules, and show a live preview. Never a blank "describe your voice" box.
 
 ### Images / Assets
 

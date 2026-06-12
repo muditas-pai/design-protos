@@ -127,6 +127,36 @@ ghost.
 
 When in doubt: **fewer high-emphasis buttons, more clarity.**
 
+### 7. Emoji are a rare accent, not decoration.
+
+An emoji can warm a single focal moment, but it stops being delightful the
+instant it repeats. Restraint is the whole point.
+
+- **At most one emoji per surface**, on the one spot that earns it. An upsell
+  card ("Prefer a designer to build it? 🧑‍🎨") earns one; the default
+  "Set up your brand kit" card next to it does **not** — two emoji side by
+  side flatten the hierarchy and read as clutter.
+- **Never decorate every section header / card with an emoji.** That's the
+  fastest way to make a polished surface look like a toy.
+- **Inside buttons and list items, keep Phosphor line icons.** Emoji are for
+  the occasional personable accent (an upsell, an empty state, a celebratory
+  moment), never functional affordances.
+- When unsure, **drop it** — the one you keep lands harder when it's alone.
+
+### 8. Corners are tight, not pillowy.
+
+presentations.ai reads as crafted and precise, not soft/consumer-bubbly — so
+corners stay on the **sharper** end. Anchor the radius scale tight:
+
+- **Cards / large surfaces:** ~12px (not 16–20).
+- **Mid surfaces** (inputs, tiles, preview frames): ~8–10px.
+- **Small chips / buttons / swatches:** ~6–8px.
+- **Pills** (tags, status badges) stay fully round (99px) — the contrast with
+  tight rectangles is intentional, not a violation.
+- The concentric rule still holds (outer = inner + padding); just build it on
+  this tighter base. If a surface feels "round and friendly," it's probably too
+  round for this product.
+
 ---
 
 ## App / interface register
@@ -271,6 +301,9 @@ Pricing-page feature-comparison matrices use:
 | Sterile, polished UI with no warmth | Add a softening element (illustration, greeting, casual aside) | Polished must not feel cold |
 | Dimensional illustrations inside product chrome | Phosphor line icons | Product chrome is restrained |
 | Orange accents scattered through product UI | Orange only at brand/upsell moments | Punctuation, not theme |
+| Emoji on every card / section header | One emoji on the single focal moment, none beside it | Repetition kills delight and flattens hierarchy |
+| Emoji as a button or list-item icon | Phosphor line icon; emoji only as a rare accent | Functional affordances stay in the icon set |
+| Soft 16–20px pillowy corners | Tighter ~12px cards, 8–10px surfaces, 6–8px chips | Reads crafted/precise, not consumer-bubbly |
 | Stock-photo people in marketing imagery | Real slide thumbnails, casually stacked | "Real product, not metaphors" applies to people too |
 
 ---
