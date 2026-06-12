@@ -24,10 +24,10 @@ Persona (role select)
         · Exit (top-right, inside pricing box) → Dashboard
 Dashboard
   · 1 existing presentation → click → editor reopens in deck-ready state
-  · prompt field / Upload / Import / Hire-an-Expert pill / Try Pro → Pricing modal
+  · prompt field / Upload / Import / Try Pro → Pricing modal
   · PRO-gated sidebar items (Create project, Invite new member) → Premium-features modal
       → Try Pro for Free → Checkout (in modal)
-  · sidebar Hire an Expert → hire-an-expert page → close → back to Dashboard
+  · Hire an Expert (sidebar or prompt pill) → hire-an-expert page → close → back to Dashboard
 Pricing modal: Try for Free → Checkout swaps in the SAME modal
 Checkout success → "Continue to your deck" → deck-ready editor
 ```
