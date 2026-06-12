@@ -62,7 +62,7 @@ Checkout success → "Continue to your deck" → deck-ready editor
   the modal supplies its own external ✕).
 - Left: "Add billing details for Pro", order rows (Pro Annual $240 / Subtotal $240 / Tax(10%) $24),
   timeline (blue dot "Due today" + green "7-day free trial" badge + $0; hollow dot "Due Jun 18, 2026"
-  $264.00, sub "7-day free trial ends"), then **What to expect**:
+  $264.00, sub "7-day free trial ends"), then green-check list (no heading, 12px rows):
   - Billing automatically starts after free trial ends
   - Cancel before Jun 18 to avoid getting billed
   - 1,000 AI credits per month.
