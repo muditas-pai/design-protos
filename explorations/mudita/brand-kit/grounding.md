@@ -52,6 +52,9 @@ The settled product calls behind the spec — recorded here so the spec stays a 
 | **Voice scope** | **One voice per kit, for now.** Multiple voices by team (Exec / Marketing / Sales) is a later expansion. |
 | **Brand voice shape** | Two halves — **authentic voice** (traits · examples · avoid · dials) + **presentation levers** that drive how we write slide titles · section breaks · bodies · bullets. The levers bridge brand voice → on-slide copy. |
 | **Brand knowledge** | A **knowledge graph / RAG** from a user file dump, used in slide generation. User-facing name = "Brand knowledge," not "knowledge graph." One upload distils the structured **Org-info profile** (Pro) *and* builds the deep corpus (Gold) — same material, two depths. |
+| **FTUE — setup** | Build-it-yourself is the **default** — the first screen shows the inputs directly (**multiple URLs** + a **file drop** for brand book / decks / **company docs** — PRDs, internal docs). Company docs **seed Brand knowledge**. "Have us build it" is a **premium, visually-distinct card**, not an equal option. |
+| **FTUE — landing** | Leads with **"A sample deck in your brand"** (a **grid**, ~2 rows). **No** provenance banner; **no** big kit page-header (the sidebar identifies the kit). *Make a deck / Regenerate* are **secondary**. Section order: **Look & feel · Brand voice · Logos · Brand knowledge · Org info · Images**. |
+| **Sample deck** | Slide types **adapt to company type / role** — agency → services; product co → sales/product; leadership → pitch. Keep to a few simple archetypes. |
 
 ---
 

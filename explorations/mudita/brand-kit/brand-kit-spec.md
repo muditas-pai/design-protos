@@ -225,21 +225,24 @@ BRAND KITS   (the sidebar becomes the kit nav)
 - **Kit identity = the colour logo**, with an **illustrated pictogram fallback** when a kit has no
   logo yet.
 
-**Setting up a kit.** A kit can be **bootstrapped by import** — drop in past PowerPoint decks, a brand
-book / guidelines PDF, or just a website URL. We **scrape the whole site for images** (every page, not
-just the hero) to seed the asset collection, and extract fonts, colours, logos, voice and the org
-blocks to **pre-fill the modules**; the user then edits. Building from scratch stays available.
+**Setting up a kit — build-it-yourself is the default.** The first screen shows the build-it-yourself
+inputs **directly**: one or more **website URLs** and a **file drop** — brand book, past decks, *and*
+company docs (PRDs, internal documentation). We scrape the whole site for images, extract fonts,
+colours, logos, voice and the org blocks to **pre-fill the modules**, and the company docs **seed
+Brand knowledge** (the corpus we keep pulling from). *Have us build it* — the in-house design-team
+service — is a **separate, premium-styled card**, not an equal option; it routes to a **pricing page**.
 (A Phase 1 capability — see the [phasing spec](phasing-spec.html).)
 
-The **first-run flow** (FTUE): empty Brand Kits → **add sources** (URL / deck / brand book) → a
-**live reveal** of what we found (logo · palette · fonts · images · voices · profile) → **land in the
-filled kit**, every value provenance-tagged. The success state **auto-generates a short sample deck in
-the brand** — no button, just shown — as proof it works. Prototype:
-[brand-kit-ftue](brand-kit-ftue.html).
+The **first-run flow** (FTUE): the setup screen → **Build my kit** → a **live reveal** of what we
+found → **land in the filled kit**. The landing **leads with "A sample deck in your brand"** — a
+**grid** of a few on-brand slides (~2 rows) — as the proof. No provenance banner, and **no big
+page-header** (the sidebar already identifies the kit); *Make a deck / Regenerate* are **secondary**.
+The sections then follow in order: **Look & feel · Brand voice · Logos · Brand knowledge · Org info ·
+Images**. Prototype: [brand-kit-ftue](brand-kit-ftue.html).
 
-**Two ways to get a kit.** *Build your own* — by import or from scratch (above). Or **request a custom
-kit** — our in-house presentations.ai design team builds it for you; this routes to a **pricing page**
-for the service. So the new-kit choice is **do-it-yourself vs. done-for-you**.
+**The sample deck adapts to the company.** Its slide types follow the **company type / user role** —
+an agency → a services overview; a product company → a sales / product deck; leadership → a pitch
+deck. Keep it to a few simple archetypes.
 
 ---
 
