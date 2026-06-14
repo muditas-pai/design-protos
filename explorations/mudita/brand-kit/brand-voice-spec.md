@@ -93,17 +93,18 @@ type nudges the realised level around it (a bold brand's research report still r
 measured brand's sales deck — the relative position holds). Same "kit sets the lean, slide-type
 modulates" pattern used for length.
 
-### The five stops
+### The four steps
 
-Each slider snaps to five positions, not a continuous track:
+Each slider snaps to four positions — **deliberately no neutral middle.** We want the brand to be
+opinionated about every dial; there's nowhere to sit on the fence.
 
 ```
-end ─── lean ─── ● neutral ─── lean ─── end
-strong   slight    balanced    slight   strong
+strong ─── lean ┊ lean ─── strong      (┊ is a gap, not a stop)
+  end                          end
 ```
 
-The preview slide rewrites at **every** stop — strongest phrasing at the ends, subtler at the leans,
-neutral in the middle — so each move is visible. Defaults are inferred from the personality chips.
+The preview slide rewrites at **every** step — strongest phrasing at the ends, softer at the inner
+leans — so each move is visible. Defaults are inferred from the personality chips, and are never neutral.
 
 ### Generic illustration (reusable, brand-agnostic)
 
@@ -124,19 +125,25 @@ slider (no per-brand regeneration needed). This is what the proto's live preview
 
 The word-level layer — the most literal thing the model consumes.
 
-- **Favour** — words and phrases the brand reaches for (seeds from the imported copy; editable list).
+- **Favour** — words and phrases the brand reaches for. Seeded from the imported copy, then **fully
+  editable** — add your own, rename, remove.
 - **Avoid** — banned words and off-brand claims. **This is what "plain language" actually was** — a
-  pointer at this list, not a separate rule. (e.g. *revolutionary · synergy · best-in-class*.)
-- **POV** — a **discrete** choice, not a slider, because there's no midpoint between "we" and "you":
+  pointer at this list, not a separate rule (e.g. *revolutionary · synergy · best-in-class*). Same
+  **add / rename / remove** editing as Favour.
+- **POV** — a **discrete** choice, not a slider (there's no midpoint between "we" and "you"):
 
-| POV | The same fact, three ways | Feels like |
-|---|---|---|
-| **We** (first person) | "We cut returns by a third." | the brand owns it — warm, confident |
-| **You** (second person) | "You'll cut returns by a third." | speaks to the audience — benefit-framed (sales / marketing) |
-| **Impersonal** (third person) | "Returns fell by a third." | neutral, report-like (research / board / analyst) |
+| POV | Same fact, three ways | Reads as | Natural home |
+|---|---|---|---|
+| **We** (first person) | "We cut returns by a third." | the brand owns it — confident, human | all-hands · investor pitch · brand marketing |
+| **You** (second person) | "You'll cut returns by a third." | speaks to the audience — benefit-framed | sales decks · product marketing · enablement |
+| **Impersonal** (third person) | "Returns fell by a third." | neutral, agentless, credible | research reports · board / project updates |
 
-POV mostly *follows* the Warmth lean (warm brands skew "we/you", composed skew impersonal) but is
-independently overridable.
+**POV leans tone, not pure voice.** The right answer shifts with the deck's *job* — a sales deck wants
+"you," a research report wants impersonal — which is why the "Natural home" column varies (it fails the
+voice-not-tone test the sliders pass). So we treat it like Conviction: the kit sets the brand's
+**default lean** (a customer-centric brand defaults to "you" everywhere; a research-led org to
+impersonal) and deck type overrides per deck. Whether it earns a place in the kit at all is an open
+question below.
 
 ---
 
@@ -165,8 +172,12 @@ Half the cleanup is removing things that were never voice:
 
 ## Open questions
 
-- **Five stops — enough, or too few?** Each slider snaps to five (end · lean · neutral · lean · end).
-  Worth testing whether the leans read as distinct from the ends, or whether three stops would do.
+- **Four steps, no neutral — does it force good choices or frustrate?** Sliders snap to four (no
+  middle) on purpose, to make the brand commit. Watch whether users miss a neutral on dials they
+  genuinely don't care about.
+- **Does POV belong in the kit?** It leans tone (set by deck job), so the options are: keep it as a
+  brand *default lean* (current), move it to a per-deck choice at generation time, or drop it and let
+  Warmth + deck type imply it. Leaning toward "default lean," but it's the least voice-like control here.
 - **Slider defaults from attributes.** The attribute→slider inference (which adjective nudges which
   track, how far) needs a real mapping table, not hand-waving — the next concrete task now the set is locked.
 - **POV vs Warmth overlap.** Both touch "how personal" — POV sets grammatical person (we/you/impersonal),

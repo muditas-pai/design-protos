@@ -389,9 +389,20 @@
     .vlex { display: flex; gap: 22px; flex-wrap: wrap; }
     .vlex-col { flex: 1; min-width: 150px; }
     .vlex-col .vsub { margin-bottom: 0; }
-    .vtoks { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
-    .vtok { font-size: 12px; padding: 3px 9px; border-radius: 6px; background: var(--surface-2); color: var(--vacc); font-weight: 500; }
-    .vtok.neg { background: rgba(154,59,42,0.09); color: #9a3b2a; text-decoration: line-through; text-decoration-thickness: 1px; }
+    .vtoks { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+    .vtok { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; padding: 3px 4px 3px 9px; border-radius: 6px;
+      background: var(--surface-2); color: var(--vacc); font-weight: 500; }
+    .vtok .ltext { outline: none; border-radius: 3px; min-width: 6px; }
+    .vtok .ltext:focus { box-shadow: 0 0 0 2px var(--vacc); }
+    .vtok .cx { color: inherit; opacity: 0.5; }
+    .vtok .cx:hover { opacity: 1; background: rgba(11,15,20,0.08); }
+    .vtok.neg { background: rgba(154,59,42,0.09); color: #9a3b2a; }
+    .vtok.neg .ltext { text-decoration: line-through; text-decoration-thickness: 1px; }
+    .vtok-add { border: 0; background: transparent; cursor: pointer; padding: 4px 9px; border-radius: 6px;
+      box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg-2); font: inherit; font-size: 12px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 3px; transition: color 120ms var(--ease), box-shadow 120ms var(--ease); }
+    .vtok-add:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-3); }
+    .vtok-add i { font-size: 10px; }
     .vpov { display: inline-flex; padding: 3px; border-radius: 9px; background: var(--surface-2); gap: 2px; margin-top: 8px; }
     .vpov button { border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 12px; font-weight: 500;
       color: var(--fg-2); padding: 5px 13px; border-radius: 6px; transition: background 140ms var(--ease), color 140ms var(--ease), box-shadow 140ms var(--ease); }
@@ -458,7 +469,7 @@
       voice: {
         traits: ["Plainspoken", "Principled", "Rugged"],          // A · personality (editable chips)
         notThis: ["Corporate", "Hype-y", "Ironic"],
-        dims: { evidence: 75, conviction: 50, warmth: 75, humor: 50, polish: 25 }, // B · 5-stop: 0·25·50·75·100 (left↔right)
+        dims: { evidence: 2, conviction: 1, warmth: 3, humor: 2, polish: 1 }, // B · 4 steps (0·1·2·3), no neutral — always a lean
         lexicon: {                                                // C
           favour: ["worn", "repair", "built to last", "our home planet"],
           avoid: ["revolutionary", "synergy", "best-in-class", "game-changing"],
@@ -505,43 +516,42 @@
       { key: "humor",      lo: "Serious",     hi: "Playful",   d: "Wit — earnest vs light" },
       { key: "polish",     lo: "Plainspoken", hi: "Refined",   d: "Craft — blunt vs elegant" }
     ];
-    function stop(v) { return Math.max(0, Math.min(4, Math.round(v / 25))); }   // 0 end · 1 lean · 2 neutral · 3 lean · 4 end
-    function trackBg(v) { return "linear-gradient(90deg, var(--vacc) " + v + "%, #e7e7e4 " + v + "%)"; }
+    function fillPct(v) { return (v / 3) * 100; }   // 4 steps 0·1·2·3 → 0 / 33 / 67 / 100 %
+    function trackBg(v) { var p = fillPct(v); return "linear-gradient(90deg, var(--vacc) " + p + "%, #e7e7e4 " + p + "%)"; }
 
     // live-preview slide — a generic product-update slide; each slider owns one line, graded over
-    // the five stops so every move visibly rewrites the slide. See brand-voice-spec.md.
+    // the four steps so every move visibly rewrites the slide. No neutral middle. See brand-voice-spec.md.
     var PREVIEW = {
-      conviction: [   // → the title (claim strength)
-        "Setup is a little quicker now", "Setup is noticeably quicker", "Setup is quicker and simpler",
+      conviction: [   // → the title (claim strength) · measured ▸ bold
+        "Setup is a little quicker now", "Setup is quicker and simpler",
         "Setup is dramatically quicker", "We halved setup time. Full stop."
       ],
-      evidence: [     // → bullet 1 (the proof: data ↔ story)
-        "Setup time fell 40% last quarter", "Setup time fell 40% across new signups",
-        "Most finish setup in under two minutes", "New users breeze through in one sitting",
-        "Done before the coffee’s gone cold"
+      evidence: [     // → bullet 1 (the proof) · data ▸ story
+        "Setup time fell 40% last quarter", "Most finish setup in under two minutes",
+        "New users breeze through in one sitting", "Done before the coffee’s gone cold"
       ],
-      warmth: [       // → bullet 2 (user impact: composed ↔ warm)
-        "Completed without a support ticket", "Less friction to first value",
-        "People get going on their own", "Guided every step of the way", "You’re up and running in no time"
+      warmth: [       // → bullet 2 (user impact) · composed ▸ warm
+        "Completed without a support ticket", "People get going on their own",
+        "Guided every step of the way", "You’re up and running in no time"
       ],
-      humor: [        // → bullet 3 (before / after: serious ↔ playful)
-        "Down from twelve steps to four", "Shorter than the old flow", "Much simpler than before",
+      humor: [        // → bullet 3 (before / after) · serious ▸ playful
+        "Down from twelve steps to four", "Much simpler than before",
         "The old setup tried our patience", "Setup used to drag. Not anymore."
       ],
-      polish: [       // → bullet 4 (what we did: plainspoken ↔ refined)
-        "We cut the clunky steps", "We removed the extra steps", "We simplified the steps",
+      polish: [       // → bullet 4 (what we did) · plainspoken ▸ refined
+        "We cut the clunky steps", "We simplified the steps",
         "We streamlined getting started", "We stripped out the friction"
       ]
     };
     function voicePreviewSlide() {
       var d = KIT.voice.dims;
       var bullets = ["evidence", "warmth", "humor", "polish"].map(function (k) {
-        return '<li>' + PREVIEW[k][stop(d[k])] + '</li>';
+        return '<li>' + PREVIEW[k][d[k]] + '</li>';
       }).join("");
       var st = "--vbrand:" + KIT.color + ";--vtf:" + KIT.fonts.title;
       return '<svg class="slide-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">' +
         '<foreignObject x="0" y="0" width="320" height="180"><div xmlns="http://www.w3.org/1999/xhtml" class="vp" style="' + st + '">' +
-        '<div class="eb">Product update</div><div class="ti">' + PREVIEW.conviction[stop(d.conviction)] + '</div>' +
+        '<div class="eb">Product update</div><div class="ti">' + PREVIEW.conviction[d.conviction] + '</div>' +
         '<ul>' + bullets + '</ul></div></foreignObject></svg>';
     }
 
@@ -558,28 +568,36 @@
     }
     function dimsHTML() {
       return '<div class="vdims">' + DIMS.map(function (m) {
-        var v = KIT.voice.dims[m.key], s = stop(v);
+        var v = KIT.voice.dims[m.key];
         return '<div class="vdim">' +
-          '<div class="vdim-ends"><span class="lo' + (s < 2 ? " on" : "") + '">' + m.lo + '</span>' +
-            '<span class="hi' + (s > 2 ? " on" : "") + '">' + m.hi + '</span></div>' +
+          '<div class="vdim-ends"><span class="lo' + (v < 2 ? " on" : "") + '">' + m.lo + '</span>' +
+            '<span class="hi' + (v >= 2 ? " on" : "") + '">' + m.hi + '</span></div>' +
           '<div class="vtrack">' +
             '<div class="vline" style="background:' + trackBg(v) + '"></div>' +
-            '<div class="vticks"><i></i><i></i><i></i><i></i><i></i></div>' +
-            '<input class="vrange" type="range" min="0" max="100" step="25" value="' + v + '" data-dim="' + m.key + '">' +
+            '<div class="vticks"><i></i><i></i><i></i><i></i></div>' +
+            '<input class="vrange" type="range" min="0" max="3" step="1" value="' + v + '" data-dim="' + m.key + '">' +
           '</div>' +
           '<div class="vdim-d">' + m.d + '</div></div>';
       }).join("") + '</div>';
     }
+    function lexTokens(kind) {
+      var arr = KIT.voice.lexicon[kind], neg = kind === "avoid";
+      return '<div class="vtoks" data-lex="' + kind + '">' +
+        arr.map(function (w, i) {
+          return '<span class="vtok' + (neg ? " neg" : "") + '">' +
+            '<span class="ltext" contenteditable="true" data-lex="' + kind + '" data-i="' + i + '">' + w + '</span>' +
+            '<span class="cx" data-dellex="' + kind + '" data-i="' + i + '"><i class="ph ph-x"></i></span></span>';
+        }).join("") +
+        '<button class="vtok-add" data-addlex="' + kind + '"><i class="ph ph-plus"></i>Add</button></div>';
+    }
     function lexHTML() {
       var lx = KIT.voice.lexicon;
-      var fav = lx.favour.map(function (w) { return '<span class="vtok">' + w + '</span>'; }).join("");
-      var avo = lx.avoid.map(function (w) { return '<span class="vtok neg">' + w + '</span>'; }).join("");
       var pov = [["we", "We"], ["you", "You"], ["impersonal", "Impersonal"]].map(function (p) {
         return '<button data-pov="' + p[0] + '"' + (lx.pov === p[0] ? ' class="on"' : "") + '>' + p[1] + '</button>';
       }).join("");
       return '<div class="vlex">' +
-          '<div class="vlex-col"><div class="vsub">Favour</div><div class="vtoks">' + fav + '</div></div>' +
-          '<div class="vlex-col"><div class="vsub">Avoid</div><div class="vtoks">' + avo + '</div></div>' +
+          '<div class="vlex-col"><div class="vsub">Favour</div>' + lexTokens("favour") + '</div>' +
+          '<div class="vlex-col"><div class="vsub">Avoid</div>' + lexTokens("avoid") + '</div>' +
         '</div>' +
         '<div style="margin-top:14px"><div class="vsub">Point of view</div><div class="vpov">' + pov + '</div></div>';
     }
@@ -600,7 +618,7 @@
         '</div>' +
         '<div class="bv-preview"><div class="cap">Your voice, on a slide</div>' +
           '<div class="frame" id="vpFrame">' + voicePreviewSlide() + '</div>' +
-          '<div class="bv-hint">Each slider snaps to five stops — the slide rewrites at every step.</div></div></div>';
+          '<div class="bv-hint">Four steps, no neutral — pick a side. The slide rewrites at every step.</div></div></div>';
     }
 
     // re-render the voice panel after a structural change (chip/example add or delete) ---------
@@ -609,9 +627,10 @@
       if (!root) return;
       root.innerHTML = renderVoiceBody();
       if (!focusNew) return;
-      var el = which === "ex"
-        ? root.querySelector(".vex-item:last-child .et")
-        : root.querySelector('.vchipset[data-set="' + which + '"] .vchip-e:last-child .ctext');
+      var list = which === "ex" ? root.querySelectorAll(".vex-item .et")
+        : which.indexOf("lex:") === 0 ? root.querySelectorAll('.vtoks[data-lex="' + which.slice(4) + '"] .ltext')
+        : root.querySelectorAll('.vchipset[data-set="' + which + '"] .ctext');
+      var el = list[list.length - 1];
       if (!el) return;
       el.focus();
       var rng = document.createRange(); rng.selectNodeContents(el); rng.collapse(false);
@@ -625,13 +644,13 @@
       root._wired = true;
       root.addEventListener("input", function (e) {
         var r = e.target.closest(".vrange"); if (!r) return;
-        var k = r.getAttribute("data-dim"), v = +r.value, s = stop(v);
+        var k = r.getAttribute("data-dim"), v = +r.value;
         KIT.voice.dims[k] = v;
         var vdim = r.closest(".vdim");
         vdim.querySelector(".vline").style.background = trackBg(v);
         var ends = vdim.querySelector(".vdim-ends");
-        ends.querySelector(".lo").classList.toggle("on", s < 2);
-        ends.querySelector(".hi").classList.toggle("on", s > 2);
+        ends.querySelector(".lo").classList.toggle("on", v < 2);
+        ends.querySelector(".hi").classList.toggle("on", v >= 2);
         document.getElementById("vpFrame").innerHTML = voicePreviewSlide();
       });
       root.addEventListener("click", function (e) {
@@ -649,7 +668,11 @@
         var delex = e.target.closest("[data-delex]");
         if (delex) { KIT.voice.examples.splice(+delex.getAttribute("data-delex"), 1); refreshVoice(); return; }
         var addex = e.target.closest("[data-addex]");
-        if (addex) { KIT.voice.examples.push(""); refreshVoice(true, "ex"); }
+        if (addex) { KIT.voice.examples.push(""); refreshVoice(true, "ex"); return; }
+        var dellex = e.target.closest("[data-dellex]");
+        if (dellex) { KIT.voice.lexicon[dellex.getAttribute("data-dellex")].splice(+dellex.getAttribute("data-i"), 1); refreshVoice(); return; }
+        var addlex = e.target.closest("[data-addlex]");
+        if (addlex) { var kind = addlex.getAttribute("data-addlex"); KIT.voice.lexicon[kind].push(""); refreshVoice(true, "lex:" + kind); }
       });
       root.addEventListener("blur", function (e) {
         var ct = e.target.closest(".ctext");
@@ -662,6 +685,12 @@
         if (et) {
           var j = +et.getAttribute("data-ex"), v = et.textContent.trim();
           if (!v) { KIT.voice.examples.splice(j, 1); refreshVoice(); } else { KIT.voice.examples[j] = v; }
+          return;
+        }
+        var lt = e.target.closest(".ltext");
+        if (lt) {
+          var kind = lt.getAttribute("data-lex"), li = +lt.getAttribute("data-i"), lv = lt.textContent.trim();
+          if (!lv) { KIT.voice.lexicon[kind].splice(li, 1); refreshVoice(); } else { KIT.voice.lexicon[kind][li] = lv; }
         }
       }, true);   // capture — blur doesn't bubble
       root.addEventListener("keydown", function (e) {
