@@ -27,11 +27,11 @@ UX field formalises tone (NN/g's dimensional model): **who the brand is** (const
 │    → frames everything below; slider defaults are INFERRED from here          │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ B · DIMENSIONS      how it sounds — gradient → SLIDERS (all the same kind)    │
-│    Formal     ●──────○───  Casual                                            │
-│    Reserved   ────●─────  Expressive    (matter-of-fact ↔ enthusiastic)      │
-│    Straight   ●─────────  Playful       (literal ↔ witty / figurative)       │
-│    Measured   ───●──────  Bold          (claim strength: "can" ↔ "will")     │
-│    Terse      ─────●────  Expansive     (length lean — clipped ↔ fuller)     │
+│    rhetoric    Data-led   ───●  Story-led     how you make the case          │
+│                Measured   ●───  Bold          claim strength                 │
+│    personality Composed   ──●─  Warm          temperature                    │
+│                Serious    ──●─  Playful       wit                            │
+│                Plainspoken ●──  Refined        craft                          │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ C · LEXICON         the words — concrete, machine-actionable                  │
 │    Favour  ▸ words / phrases we reach for                                     │
@@ -67,25 +67,56 @@ toward literal), which the user can then override.
 
 ## B · Dimensions (the sliders)
 
-Five spectrums, all the same kind of control, each genuinely gradient and each genuinely
+Five spectrums, all the same kind of control — **two from rhetoric** (how the brand argues) and
+**three from personality** (who the brand is). Each is genuinely gradient and genuinely
 brand-differentiating. Defaults inferred from the attributes; the user slides to adjust.
 
-| Slider | Left ↔ Right | What it actually changes in copy |
+| Slider | Poles | Lens | What changes in the copy |
+|---|---|---|---|
+| **Evidence** | Data-led ↔ Story-led | rhetoric | leads with the number vs leads with the scene |
+| **Conviction** | Measured ↔ Bold | rhetoric | claim strength — "can help" vs "beats it, every time" |
+| **Warmth** | Composed ↔ Warm | personality | poised & neutral vs personal, you-and-us |
+| **Humor** | Serious ↔ Playful | personality | earnest & focused vs witty, light |
+| **Polish** | Plainspoken ↔ Refined | personality | blunt & everyday vs crafted & elegant |
+
+**Both poles aspirational.** Every slider passes two tests: (1) *no negative end* — both poles are a
+voice a brand would proudly pick ("Measured," never "Hedged"); (2) *voice, not tone* — the answer
+doesn't flip by audience or deck type. That second test is why "Expert-to-you ↔ Peer" was cut (a
+brand slides that per situation — sales-to-enterprise vs founder-to-investor — so it's tone) and why
+these five survive.
+
+**Conviction is culture, not pitch.** The axis that looks pitch-specific isn't: it's the brand's
+*epistemic confidence* — how firmly it stands behind what it says — which shows up even in an internal
+project update or a research report. A declarative culture writes "Behind plan. Q3, locked."; a careful
+one writes "tracking behind; ~Q3, pending dependencies." The slider sets the brand's **baseline**; deck
+type nudges the realised level around it (a bold brand's research report still reads firmer than a
+measured brand's sales deck — the relative position holds). Same "kit sets the lean, slide-type
+modulates" pattern used for length.
+
+### The five stops
+
+Each slider snaps to five positions, not a continuous track:
+
+```
+end ─── lean ─── ● neutral ─── lean ─── end
+strong   slight    balanced    slight   strong
+```
+
+The preview slide rewrites at **every** stop — strongest phrasing at the ends, subtler at the leans,
+neutral in the middle — so each move is visible. Defaults are inferred from the personality chips.
+
+### Generic illustration (reusable, brand-agnostic)
+
+The same neutral fact — a new onboarding flow — across each dial, so each row isolates just that
+slider (no per-brand regeneration needed). This is what the proto's live preview is built from:
+
+| Slider | ◀ left pole | right pole ▶ |
 |---|---|---|
-| **Formal ↔ Casual** | register | contractions on/off, sentence complexity, vocabulary level |
-| **Reserved ↔ Expressive** | energy | flat statement vs emphatic phrasing, em-dash asides, punch |
-| **Straight ↔ Playful** | literal vs witty | metaphor and wordplay vs plain description |
-| **Measured ↔ Bold** | claim strength | "can lift margin" vs "will lift margin"; hedged vs asserted |
-| **Terse ↔ Expansive** | length lean | a **global** terseness bias for titles + copy |
-
-Two notes on the set:
-
-- **Measured↔Bold** and **Terse↔Expansive** are the presentation-specific additions to NN/g's four;
-  claim-strength and terseness are where decks visibly differ. **Respectful↔Irreverent** (NN/g's
-  fourth) is dropped — it rarely separates one business deck from another.
-- **Terse↔Expansive is only a *lean*.** It biases length globally, but per-slide **density** (a vision
-  slide wants prose, a KPI slide wants three words) is still owned by the **slide type + mood**, not
-  pinned here. The slider sets the default the slide type modulates around.
+| **Evidence** | "Setup time fell 40% this quarter." | "New users finish before their coffee's gone cold." |
+| **Conviction** | "This should cut setup time meaningfully." | "This halves setup time. Full stop." |
+| **Warmth** | "Users complete setup in under two minutes." | "You'll be up and running in two minutes flat." |
+| **Humor** | "Setup is now faster and simpler." | "Setup used to drag. Not anymore." |
+| **Polish** | "We cut the clunky setup steps." | "We stripped the friction out of getting started." |
 
 ---
 
@@ -104,8 +135,8 @@ The word-level layer — the most literal thing the model consumes.
 | **You** (second person) | "You'll cut returns by a third." | speaks to the audience — benefit-framed (sales / marketing) |
 | **Impersonal** (third person) | "Returns fell by a third." | neutral, report-like (research / board / analyst) |
 
-POV mostly *follows* the Formal↔Casual lean (casual brands skew "we/you", formal skew impersonal) but
-is independently overridable.
+POV mostly *follows* the Warmth lean (warm brands skew "we/you", composed skew impersonal) but is
+independently overridable.
 
 ---
 
@@ -126,18 +157,22 @@ Half the cleanup is removing things that were never voice:
 | Was a "rule" | Real home | Why |
 |---|---|---|
 | Sentence case · end punctuation | **Mood / theme** | typography — it *renders* text, doesn't author it |
-| Body density · bullet form per slide | **Slide type + mood** | content-dependent; a vision slide ≠ a KPI slide (Terse↔Expansive keeps only the global lean) |
+| Body density · bullet form · length per slide | **Slide type + mood** | content-dependent — a vision slide wants prose, a KPI slide wants three words; a fixed kit-level length fights the content |
+| Typographic case · register markers (contractions, etc.) | **Mood + house default** | rendering and mechanics, downstream of the voice — not a brand-distinguishing dial |
 | Active voice · fact-led · no gerund heads | **Product house default** | every brand wants these — they don't make Patagonia ≠ McKinsey, so the generator always applies them, not a per-kit knob |
 
 ---
 
 ## Open questions
 
-- **Gradient rules to sliders, confirmed — any to keep discrete?** Title-length and formality are
-  now sliders (right call). Worth checking none of the five reads better as a 3-stop segment than a
-  continuous track in testing.
+- **Five stops — enough, or too few?** Each slider snaps to five (end · lean · neutral · lean · end).
+  Worth testing whether the leans read as distinct from the ends, or whether three stops would do.
 - **Slider defaults from attributes.** The attribute→slider inference (which adjective nudges which
-  track, how far) needs a real mapping table, not hand-waving. Draft it once the set is locked.
+  track, how far) needs a real mapping table, not hand-waving — the next concrete task now the set is locked.
+- **POV vs Warmth overlap.** Both touch "how personal" — POV sets grammatical person (we/you/impersonal),
+  Warmth sets temperature. They mostly cooperate; confirm they don't feel redundant in the UI.
+- **Provocation folded into Conviction.** "Don't buy this jacket" lives at far-Bold rather than a
+  separate Edge slider — kept the set orthogonal, but revisit if brands need explicit provocation.
 - **Off-brand twins — required or optional?** Contrastive pairs are strongest, but asking every user
   to write the "wrong" version is friction. Auto-generate the ✗ twin and let them edit?
 - **One voice per kit.** Multiple voices by team (Exec / Marketing / Sales) stays a later expansion

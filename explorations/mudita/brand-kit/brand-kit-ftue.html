@@ -366,17 +366,24 @@
     .vchip-add:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-3); }
     .vchip-add i { font-size: 11px; }
 
-    /* B · dimension sliders */
+    /* B · dimension sliders — five-stop (end · lean · neutral · lean · end) */
     .vdims { display: flex; flex-direction: column; gap: 16px; }
-    .vdim-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-2); margin-bottom: 7px; }
+    .vdim-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-2); margin-bottom: 8px; }
     .vdim-ends .on { color: var(--vacc); font-weight: 600; }
-    .vrange { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 99px; outline: none; cursor: pointer; }
+    .vtrack { position: relative; height: 16px; display: flex; align-items: center; }
+    .vline { position: absolute; left: 0; right: 0; height: 4px; border-radius: 99px; background: #e7e7e4; }
+    .vticks { position: absolute; left: 8px; right: 8px; display: flex; justify-content: space-between; pointer-events: none; }
+    .vticks i { width: 2px; height: 9px; border-radius: 2px; background: #cfcfcb; }
+    .vrange { position: absolute; left: 0; right: 0; width: 100%; height: 16px; margin: 0;
+      -webkit-appearance: none; appearance: none; background: transparent; outline: none; cursor: pointer; }
+    .vrange::-webkit-slider-runnable-track { background: transparent; height: 16px; }
     .vrange::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
       background: var(--vacc); box-shadow: 0 1px 3px rgba(0,0,0,0.28), 0 0 0 3px #fff; cursor: grab; transition: transform 120ms var(--ease); }
     .vrange::-webkit-slider-thumb:active { transform: scale(1.14); cursor: grabbing; }
+    .vrange::-moz-range-track { background: transparent; height: 16px; }
     .vrange::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: var(--vacc);
       box-shadow: 0 1px 3px rgba(0,0,0,0.28), 0 0 0 3px #fff; }
-    .vdim-d { font-size: 11px; color: var(--fg-3); margin-top: 6px; }
+    .vdim-d { font-size: 11px; color: var(--fg-3); margin-top: 7px; }
 
     /* C · lexicon */
     .vlex { display: flex; gap: 22px; flex-wrap: wrap; }
@@ -451,7 +458,7 @@
       voice: {
         traits: ["Plainspoken", "Principled", "Rugged"],          // A · personality (editable chips)
         notThis: ["Corporate", "Hype-y", "Ironic"],
-        dims: { formal: 24, expressive: 58, playful: 28, bold: 42, expansive: 34 }, // B · 0 = left pole … 100 = right pole
+        dims: { evidence: 75, conviction: 50, warmth: 75, humor: 50, polish: 25 }, // B · 5-stop: 0·25·50·75·100 (left↔right)
         lexicon: {                                                // C
           favour: ["worn", "repair", "built to last", "our home planet"],
           avoid: ["revolutionary", "synergy", "best-in-class", "game-changing"],
@@ -490,52 +497,51 @@
     }
 
     // ── brand voice — four-layer model: personality · dimensions · lexicon+POV · examples ──
-    // The dimension sliders + POV drive the live-preview slide. See brand-voice-spec.md.
+    // Two rhetoric + three personality sliders, five-stop, driving the live-preview slide.
     var DIMS = [
-      { key: "formal",     lo: "Formal",   hi: "Casual",     d: "Register — buttoned-up vs conversational" },
-      { key: "expressive", lo: "Reserved", hi: "Expressive", d: "Energy — matter-of-fact vs emphatic" },
-      { key: "playful",    lo: "Straight", hi: "Playful",    d: "Literal vs a touch of wit" },
-      { key: "bold",       lo: "Measured", hi: "Bold",       d: "Claim strength — “can” vs “will”" },
-      { key: "expansive",  lo: "Terse",    hi: "Expansive",  d: "Length lean — clipped vs fuller" }
+      { key: "evidence",   lo: "Data-led",    hi: "Story-led", d: "How you make the case — proof vs narrative" },
+      { key: "conviction", lo: "Measured",    hi: "Bold",      d: "Claim strength — considered vs assertive" },
+      { key: "warmth",     lo: "Composed",    hi: "Warm",      d: "Temperature — poised vs personal" },
+      { key: "humor",      lo: "Serious",     hi: "Playful",   d: "Wit — earnest vs light" },
+      { key: "polish",     lo: "Plainspoken", hi: "Refined",   d: "Craft — blunt vs elegant" }
     ];
-    function lvl(v) { return v < 34 ? 0 : v > 66 ? 2 : 1; }   // low / mid / high
+    function stop(v) { return Math.max(0, Math.min(4, Math.round(v / 25))); }   // 0 end · 1 lean · 2 neutral · 3 lean · 4 end
     function trackBg(v) { return "linear-gradient(90deg, var(--vacc) " + v + "%, #e7e7e4 " + v + "%)"; }
 
-    // live-preview copy, rewritten from the dimensions + POV ----------------------------------
-    function vpTitle() {
-      var d = KIT.voice.dims, pov = KIT.voice.lexicon.pov;
-      var assert = lvl(d.bold) === 2, casual = lvl(d.formal) === 2;
-      var t;
-      if (pov === "we")       t = assert ? (casual ? "we’ll " : "we will ") + "lift margin four points" : "we can lift margin four points";
-      else if (pov === "you") t = (assert ? (casual ? "you’ll " : "you will ") : "you can ") + "lift your margin four points";
-      else                    t = assert ? "margin lifts four points" : "margin can lift four points";
-      if (lvl(d.expansive) !== 0) t += " by 2027";             // terse drops the horizon
-      if (lvl(d.playful) === 2) t = t.replace("lift margin", "nudge margin up").replace("margin lifts", "margin nudges up");
-      return t.charAt(0).toUpperCase() + t.slice(1);           // sentence case = house default
-    }
-    function vpBullets() {
-      var d = KIT.voice.dims, pov = KIT.voice.lexicon.pov;
-      var casual = lvl(d.formal) === 2, assert = lvl(d.bold) === 2;
-      var expansive = lvl(d.expansive) === 2, terse = lvl(d.expansive) === 0, expressive = lvl(d.expressive) === 2;
-      var we = pov === "we", you = pov === "you", subj = we ? "We" : "You";
-      var aux = assert ? (casual ? "’ll" : " will") : " can";
-      var b1, b2, b3;
-      if (we || you) { b1 = subj + aux + " hit payback in 18 months"; if (terse) b1 = subj + " — payback in 18 months"; }
-      else { b1 = "Payback arrives in 18 months"; if (terse) b1 = "Payback: 18 months"; }
-      b2 = (we || you) ? subj + " cut returns by a third" : "Returns fell by a third";   // plain language → no hype
-      if (expressive) b2 += " — a third less to landfill";
-      if (terse) b2 = "Returns down a third";
-      b3 = (we || you) ? subj + " add four points of margin" : "Margin gains four points";
-      if (expansive) b3 += ", and hold it through 2027";
-      if (terse) b3 = "+4 pts margin";
-      return [b1, b2, b3];
-    }
+    // live-preview slide — a generic product-update slide; each slider owns one line, graded over
+    // the five stops so every move visibly rewrites the slide. See brand-voice-spec.md.
+    var PREVIEW = {
+      conviction: [   // → the title (claim strength)
+        "Setup is a little quicker now", "Setup is noticeably quicker", "Setup is quicker and simpler",
+        "Setup is dramatically quicker", "We halved setup time. Full stop."
+      ],
+      evidence: [     // → bullet 1 (the proof: data ↔ story)
+        "Setup time fell 40% last quarter", "Setup time fell 40% across new signups",
+        "Most finish setup in under two minutes", "New users breeze through in one sitting",
+        "Done before the coffee’s gone cold"
+      ],
+      warmth: [       // → bullet 2 (user impact: composed ↔ warm)
+        "Completed without a support ticket", "Less friction to first value",
+        "People get going on their own", "Guided every step of the way", "You’re up and running in no time"
+      ],
+      humor: [        // → bullet 3 (before / after: serious ↔ playful)
+        "Down from twelve steps to four", "Shorter than the old flow", "Much simpler than before",
+        "The old setup tried our patience", "Setup used to drag. Not anymore."
+      ],
+      polish: [       // → bullet 4 (what we did: plainspoken ↔ refined)
+        "We cut the clunky steps", "We removed the extra steps", "We simplified the steps",
+        "We streamlined getting started", "We stripped out the friction"
+      ]
+    };
     function voicePreviewSlide() {
-      var bullets = vpBullets().map(function (b) { return '<li>' + b + '</li>'; }).join("");
+      var d = KIT.voice.dims;
+      var bullets = ["evidence", "warmth", "humor", "polish"].map(function (k) {
+        return '<li>' + PREVIEW[k][stop(d[k])] + '</li>';
+      }).join("");
       var st = "--vbrand:" + KIT.color + ";--vtf:" + KIT.fonts.title;
       return '<svg class="slide-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">' +
         '<foreignObject x="0" y="0" width="320" height="180"><div xmlns="http://www.w3.org/1999/xhtml" class="vp" style="' + st + '">' +
-        '<div class="eb">Strategy</div><div class="ti">' + vpTitle() + '</div>' +
+        '<div class="eb">Product update</div><div class="ti">' + PREVIEW.conviction[stop(d.conviction)] + '</div>' +
         '<ul>' + bullets + '</ul></div></foreignObject></svg>';
     }
 
@@ -552,11 +558,15 @@
     }
     function dimsHTML() {
       return '<div class="vdims">' + DIMS.map(function (m) {
-        var v = KIT.voice.dims[m.key], L = lvl(v);
+        var v = KIT.voice.dims[m.key], s = stop(v);
         return '<div class="vdim">' +
-          '<div class="vdim-ends"><span class="lo' + (L === 0 ? " on" : "") + '">' + m.lo + '</span>' +
-            '<span class="hi' + (L === 2 ? " on" : "") + '">' + m.hi + '</span></div>' +
-          '<input class="vrange" type="range" min="0" max="100" value="' + v + '" data-dim="' + m.key + '" style="background:' + trackBg(v) + '">' +
+          '<div class="vdim-ends"><span class="lo' + (s < 2 ? " on" : "") + '">' + m.lo + '</span>' +
+            '<span class="hi' + (s > 2 ? " on" : "") + '">' + m.hi + '</span></div>' +
+          '<div class="vtrack">' +
+            '<div class="vline" style="background:' + trackBg(v) + '"></div>' +
+            '<div class="vticks"><i></i><i></i><i></i><i></i><i></i></div>' +
+            '<input class="vrange" type="range" min="0" max="100" step="25" value="' + v + '" data-dim="' + m.key + '">' +
+          '</div>' +
           '<div class="vdim-d">' + m.d + '</div></div>';
       }).join("") + '</div>';
     }
@@ -590,7 +600,7 @@
         '</div>' +
         '<div class="bv-preview"><div class="cap">Your voice, on a slide</div>' +
           '<div class="frame" id="vpFrame">' + voicePreviewSlide() + '</div>' +
-          '<div class="bv-hint">Drag a slider or switch POV — the slide rewrites live.</div></div></div>';
+          '<div class="bv-hint">Each slider snaps to five stops — the slide rewrites at every step.</div></div></div>';
     }
 
     // re-render the voice panel after a structural change (chip/example add or delete) ---------
@@ -615,12 +625,13 @@
       root._wired = true;
       root.addEventListener("input", function (e) {
         var r = e.target.closest(".vrange"); if (!r) return;
-        var k = r.getAttribute("data-dim"), v = +r.value;
+        var k = r.getAttribute("data-dim"), v = +r.value, s = stop(v);
         KIT.voice.dims[k] = v;
-        r.style.background = trackBg(v);
-        var ends = r.parentNode.querySelector(".vdim-ends"), L = lvl(v);
-        ends.querySelector(".lo").classList.toggle("on", L === 0);
-        ends.querySelector(".hi").classList.toggle("on", L === 2);
+        var vdim = r.closest(".vdim");
+        vdim.querySelector(".vline").style.background = trackBg(v);
+        var ends = vdim.querySelector(".vdim-ends");
+        ends.querySelector(".lo").classList.toggle("on", s < 2);
+        ends.querySelector(".hi").classList.toggle("on", s > 2);
         document.getElementById("vpFrame").innerHTML = voicePreviewSlide();
       });
       root.addEventListener("click", function (e) {

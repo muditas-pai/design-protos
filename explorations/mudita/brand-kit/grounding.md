@@ -88,10 +88,13 @@ These are prototype and demo choices, **not** product decisions — they live he
       examples) — replaces the nine-rule checklist, which mixed abstraction levels. Full model +
       research basis in the [brand-voice spec](brand-voice-spec.html); voice panel rebuilt in
       `brand-kit-ftue.html`.
-- [x] **Gradient rules → sliders, resolved.** Title length, formality and the rest are now five
-      continuous dimension sliders (Formal · Reserved↔Expressive · Straight↔Playful · Measured↔Bold ·
-      Terse↔Expansive), not checkboxes. Open: confirm in testing none reads better as a 3-stop segment.
+- [x] **Dimension set reworked (blend of rhetoric + personality).** Five **five-stop** sliders:
+      Evidence (Data↔Story) · Conviction (Measured↔Bold) · Warmth (Composed↔Warm) · Humor
+      (Serious↔Playful) · Polish (Plainspoken↔Refined). Dropped the register/length-heavy set (it
+      collapsed to two axes); each slider now passes the no-negative-pole + voice-not-tone tests.
+      Conviction kept as *epistemic culture* (constant across deck types), not a pitch-only trait.
 - [ ] Draft the **attribute → slider-default** inference table (which adjective nudges which track, how far).
+- [ ] Decide whether the leans (stops 1 & 3) need distinct phrasing from the ends, or 3 stops suffice.
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
 - [ ] Real brand-logo artwork (current marks are simplified Simple Icons / Wikimedia versions).
 - [ ] Define the **"save deck as template → kit"** metadata (name, thumbnail, captured voice/mood).
