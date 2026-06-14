@@ -17,7 +17,7 @@ gets a list; a sample gets an example field.
 
 Two halves, following how brand teams actually document voice (a "brand voice chart") and how the
 UX field formalises tone (NN/g's dimensional model): **who the brand is** (constant personality) and
-**how that sounds on a slide** (the tunable part). For us it resolves into **four layers**:
+**how that sounds on a slide** (the tunable part). For us it resolves into **three layers**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
@@ -36,20 +36,22 @@ UX field formalises tone (NN/g's dimensional model): **who the brand is** (const
 │ C · LEXICON         the words — concrete, machine-actionable                  │
 │    Favour  ▸ words / phrases we reach for                                     │
 │    Avoid   ▸ banned words · off-brand claims   (this IS "plain language")    │
-├────────────────────────────────────────────────────────────────────────────┤
-│ D · EXAMPLES        the anchor — the strongest single signal to the model     │
-│    2–3 real on-brand lines, each optionally paired with an ✗ off-brand twin  │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Each layer maps to a different mechanism in the generation prompt, strongest at the bottom:
+Each layer maps to a different mechanism in the generation prompt:
 
 | Layer | Feeds the model as | Why it works |
 |---|---|---|
 | A · Personality | system framing | sets the frame; alone it's too vague to trust |
-| B · Dimensions | quantified directives | "formal 0.2 → contractions on, sentences ≤ 18 words" beats an adjective |
+| B · Dimensions | quantified directives | "lean bold + story-led, sentences short" beats a bare adjective |
 | C · Lexicon | hard constraints | literal favour / ban lists — the model pattern-matches words directly |
-| D · Examples | few-shot anchor | labelled ✅ / ✗ pairs out-perform every other input |
+
+> **On-brand examples (a former Layer D) were cut.** A few-shot example block is the single strongest
+> input to an LLM, so this is a real trade: we lose voice *fidelity* (the model reconstructs the voice
+> from dials rather than copying real lines) and some brand *distinctiveness* (two brands with the same
+> slider settings converge). It was cut to keep setup low-friction and the model simple. **Reversible** —
+> if generated copy reads generic, an auto-filled, optional example block is the first lever to add back.
 
 ---
 
@@ -137,16 +139,6 @@ Warmth already carries the "personal vs poised" signal; the rest is the deck's c
 
 ---
 
-## D · Examples
-
-Two to three **real on-brand lines** — the anchor, and the single biggest lever on model output.
-**Drafted automatically from the brand's imported site / decks**, then **editable** (rewrite, replace,
-add). Each line can optionally carry an **✗ off-brand twin** (the same point said wrong) — contrastive
-pairs teach the model far more than either line alone. Never a blank "describe your voice" box: setup
-is always extraction-first — draft, show, let the user correct.
-
----
-
 ## What is *not* brand voice (evicted, with a home)
 
 Half the cleanup is removing things that were never voice:
@@ -169,8 +161,9 @@ Half the cleanup is removing things that were never voice:
   track, how far) needs a real mapping table, not hand-waving — the next concrete task now the set is locked.
 - **Provocation folded into Conviction.** "Don't buy this jacket" lives at far-Bold rather than a
   separate Edge slider — kept the set orthogonal, but revisit if brands need explicit provocation.
-- **Off-brand twins — required or optional?** Contrastive pairs are strongest, but asking every user
-  to write the "wrong" version is friction. Auto-generate the ✗ twin and let them edit?
+- **Does generated copy read generic without examples?** The example block was cut (it was the
+  strongest LLM signal). If output across brands starts converging onto presets, an auto-filled,
+  optional example block is the first lever to add back — watch for it in real generations.
 - **Where POV lands.** Cut from the kit as tone; needs a home as a **per-deck** choice at generation
   time (default inferable from the deck type). Out of the voice kit, but not nowhere.
 - **One voice per kit.** Multiple voices by team (Exec / Marketing / Sales) stays a later expansion
@@ -184,20 +177,24 @@ Why the framework looks the way it does — the field, condensed.
 
 **How brand teams define voice (the "brand voice chart").** Near-universal structure: 3–5 **attribute
 adjectives**, a **"we are X, not Y"** anti-definition, **do/don't** guidance, a **lexicon**
-(words we use / never use), and **on-tone / off-tone examples**. → became Layers A, C, D.
+(words we use / never use), and **on-tone / off-tone examples**. → became Layers A and C (the
+examples piece was weighed as a Layer D and cut — see the note under the layer diagram).
 
 **How UX formalises tone (NN/g).** Tone analysed on **four spectrums** — Formal↔Casual,
-Serious↔Funny, Respectful↔Irreverent, Matter-of-fact↔Enthusiastic — each a slider with a neutral
-midpoint. **Voice is constant; tone varies by context.** → became Layer B (adapted: dropped
-Respectful↔Irreverent, added Measured↔Bold and Terse↔Expansive for decks).
+Serious↔Funny, Respectful↔Irreverent, Matter-of-fact↔Enthusiastic — each a slider. **Voice is
+constant; tone varies by context.** → seeded Layer B, then reworked into the rhetoric + personality
+blend (Evidence · Conviction · Warmth · Humor · Polish) when the NN/g-style register/length set
+collapsed onto ~two axes.
 
 **What actually moves an LLM** (the deciding input for our controls):
 
 - **Adjectives alone fail** — "our voice is conversational" yields bland, cliché-ridden output. They
-  need behavioural definitions attached. → why Layer A can't stand alone; B/C/D do the work.
+  need behavioural definitions attached. → why Layer A can't stand alone; B/C do the work.
 - **Explicit lexicon wins** — "say *helps you*, not *enables you to*" pattern-matches directly. → Layer C.
 - **Quantifiable params** — average sentence length, contractions on/off — beat vague directives. → Layer B.
-- **Contrastive ✅ / ✗ example pairs out-perform everything else.** → Layer D, the anchor.
+- **Contrastive ✅ / ✗ example pairs out-perform everything else** — which is exactly why dropping the
+  example block is this framework's main known compromise; the dials carry the load instead. → see the
+  cut note under the layer diagram.
 
 **Sources:**
 [NN/g — Four Dimensions of Tone of Voice](https://www.nngroup.com/articles/tone-of-voice-dimensions/) ·

@@ -404,16 +404,6 @@
     .vtok-add:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-3); }
     .vtok-add i { font-size: 10px; }
 
-    /* D · examples (editable) */
-    .vex-list { display: flex; flex-direction: column; gap: 7px; }
-    .vex-item { display: flex; align-items: flex-start; gap: 6px; padding: 9px 9px 9px 12px; border-radius: 8px; background: var(--surface-2); }
-    .vex-item .q { color: var(--fg-3); font-size: 15px; line-height: 1.2; }
-    .vex-item .et { flex: 1; font-size: 13.5px; font-style: italic; color: var(--fg); line-height: 1.45; outline: none; border-radius: 4px; }
-    .vex-item .et:focus { box-shadow: 0 0 0 2px var(--vacc); background: var(--surface); }
-    .vex-add { border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 12px; font-weight: 500; color: var(--fg-2);
-      display: inline-flex; align-items: center; gap: 5px; padding: 6px 2px; transition: color 120ms var(--ease); }
-    .vex-add:hover { color: var(--fg); }
-    .vex-add i { font-size: 12px; }
     .bv-hint { font-size: 11px; color: var(--fg-3); margin-top: 9px; }
     .bv-preview { width: 320px; flex-shrink: 0; }
     .bv-preview .cap { font-size: 11px; color: var(--fg-3); margin-bottom: 8px; }
@@ -469,11 +459,7 @@
         lexicon: {                                                // C
           favour: ["worn", "repair", "built to last", "our home planet"],
           avoid: ["revolutionary", "synergy", "best-in-class", "game-changing"]
-        },
-        examples: [                                               // D · the anchor (drafted, then editable)
-          "The cleanest shirt is the one you already own.",
-          "Repair what you have. Reuse what you can."
-        ]
+        }
       },
       assetCount: 47
     };
@@ -502,7 +488,7 @@
         '<foreignObject x="0" y="0" width="320" height="180"><div xmlns="http://www.w3.org/1999/xhtml">' + inner + '</div></foreignObject></svg>';
     }
 
-    // ── brand voice — four-layer model: personality · dimensions · lexicon · examples ──
+    // ── brand voice — three-layer model: personality · dimensions · lexicon ──
     // Two rhetoric + three personality sliders, five-stop, driving the live-preview slide.
     var DIMS = [
       { key: "evidence",   lo: "Data-led",    hi: "Story-led", d: "How you make the case — proof vs narrative" },
@@ -591,34 +577,25 @@
           '<div class="vlex-col"><div class="vsub">Avoid</div>' + lexTokens("avoid") + '</div>' +
         '</div>';
     }
-    function examplesHTML() {
-      return '<div class="vex-list">' + KIT.voice.examples.map(function (e, i) {
-        return '<div class="vex-item"><span class="q">“</span>' +
-          '<span class="et" contenteditable="true" data-ex="' + i + '">' + e + '</span>' +
-          '<span class="cx" data-delex="' + i + '"><i class="ph ph-x"></i></span></div>';
-      }).join("") + '</div><button class="vex-add" data-addex="1"><i class="ph ph-plus"></i>Add an on-brand line</button>';
-    }
     function renderVoiceBody() {
       return '<div class="bv"><div class="bv-controls">' +
           '<div class="vrow"><div class="vsub">Personality</div>' + chipset("traits") + '</div>' +
           '<div class="vrow"><div class="vsub">Not this</div>' + chipset("notThis") + '</div>' +
           '<div class="vrow"><div class="vsub">How it sounds</div>' + dimsHTML() + '</div>' +
           '<div class="vrow"><div class="vsub" style="margin-bottom:0">Words</div>' + lexHTML() + '</div>' +
-          '<div class="vrow"><div class="vsub">On-brand examples</div>' + examplesHTML() + '</div>' +
         '</div>' +
         '<div class="bv-preview"><div class="cap">Your voice, on a slide</div>' +
           '<div class="frame" id="vpFrame">' + voicePreviewSlide() + '</div>' +
           '<div class="bv-hint">Four steps, no neutral — pick a side. The slide rewrites at every step.</div></div></div>';
     }
 
-    // re-render the voice panel after a structural change (chip/example add or delete) ---------
+    // re-render the voice panel after a structural change (chip / word add or delete) -----------
     function refreshVoice(focusNew, which) {
       var root = document.getElementById("voiceBody");
       if (!root) return;
       root.innerHTML = renderVoiceBody();
       if (!focusNew) return;
-      var list = which === "ex" ? root.querySelectorAll(".vex-item .et")
-        : which.indexOf("lex:") === 0 ? root.querySelectorAll('.vtoks[data-lex="' + which.slice(4) + '"] .ltext')
+      var list = which.indexOf("lex:") === 0 ? root.querySelectorAll('.vtoks[data-lex="' + which.slice(4) + '"] .ltext')
         : root.querySelectorAll('.vchipset[data-set="' + which + '"] .ctext');
       var el = list[list.length - 1];
       if (!el) return;
@@ -648,10 +625,6 @@
         if (del) { KIT.voice[del.getAttribute("data-del")].splice(+del.getAttribute("data-i"), 1); refreshVoice(); return; }
         var add = e.target.closest("[data-add]");
         if (add) { var s = add.getAttribute("data-add"); KIT.voice[s].push(""); refreshVoice(true, s); return; }
-        var delex = e.target.closest("[data-delex]");
-        if (delex) { KIT.voice.examples.splice(+delex.getAttribute("data-delex"), 1); refreshVoice(); return; }
-        var addex = e.target.closest("[data-addex]");
-        if (addex) { KIT.voice.examples.push(""); refreshVoice(true, "ex"); return; }
         var dellex = e.target.closest("[data-dellex]");
         if (dellex) { KIT.voice.lexicon[dellex.getAttribute("data-dellex")].splice(+dellex.getAttribute("data-i"), 1); refreshVoice(); return; }
         var addlex = e.target.closest("[data-addlex]");
@@ -662,12 +635,6 @@
         if (ct) {
           var set = ct.getAttribute("data-set"), i = +ct.getAttribute("data-i"), val = ct.textContent.trim();
           if (!val) { KIT.voice[set].splice(i, 1); refreshVoice(); } else { KIT.voice[set][i] = val; }
-          return;
-        }
-        var et = e.target.closest(".et");
-        if (et) {
-          var j = +et.getAttribute("data-ex"), v = et.textContent.trim();
-          if (!v) { KIT.voice.examples.splice(j, 1); refreshVoice(); } else { KIT.voice.examples[j] = v; }
           return;
         }
         var lt = e.target.closest(".ltext");
@@ -853,7 +820,7 @@
         return '<div class="logo-tile" style="background:' + v.bg + '"><span class="lm" style="background:' + v.fg + '"></span><span class="cap" style="color:' + v.cc + '">' + v.cap + '</span></div>';
       }).join("") + '</div>';
 
-      // brand voice — four-layer model (personality · dimension sliders · lexicon · examples),
+      // brand voice — three-layer model (personality · dimension sliders · lexicon),
       // driving a live preview slide that rewrites on every change. See brand-voice-spec.md.
       var voices = '<div id="voiceBody" style="--vacc:' + KIT.color + '">' + renderVoiceBody() + '</div>';
 
