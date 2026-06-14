@@ -36,7 +36,6 @@ UX field formalises tone (NN/g's dimensional model): **who the brand is** (const
 │ C · LEXICON         the words — concrete, machine-actionable                  │
 │    Favour  ▸ words / phrases we reach for                                     │
 │    Avoid   ▸ banned words · off-brand claims   (this IS "plain language")    │
-│    POV     ▸ ◉ we   ○ you   ○ impersonal       (discrete, not a slider)      │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ D · EXAMPLES        the anchor — the strongest single signal to the model     │
 │    2–3 real on-brand lines, each optionally paired with an ✗ off-brand twin  │
@@ -130,20 +129,11 @@ The word-level layer — the most literal thing the model consumes.
 - **Avoid** — banned words and off-brand claims. **This is what "plain language" actually was** — a
   pointer at this list, not a separate rule (e.g. *revolutionary · synergy · best-in-class*). Same
   **add / rename / remove** editing as Favour.
-- **POV** — a **discrete** choice, not a slider (there's no midpoint between "we" and "you"):
 
-| POV | Same fact, three ways | Reads as | Natural home |
-|---|---|---|---|
-| **We** (first person) | "We cut returns by a third." | the brand owns it — confident, human | all-hands · investor pitch · brand marketing |
-| **You** (second person) | "You'll cut returns by a third." | speaks to the audience — benefit-framed | sales decks · product marketing · enablement |
-| **Impersonal** (third person) | "Returns fell by a third." | neutral, agentless, credible | research reports · board / project updates |
-
-**POV leans tone, not pure voice.** The right answer shifts with the deck's *job* — a sales deck wants
-"you," a research report wants impersonal — which is why the "Natural home" column varies (it fails the
-voice-not-tone test the sliders pass). So we treat it like Conviction: the kit sets the brand's
-**default lean** (a customer-centric brand defaults to "you" everywhere; a research-led org to
-impersonal) and deck type overrides per deck. Whether it earns a place in the kit at all is an open
-question below.
+**Point of view (we / you / impersonal) was considered here and cut.** It failed the voice-not-tone
+test: the right person shifts with the deck's *job* — a sales deck wants "you," a research report wants
+impersonal — so it's tone, decided per deck at generation time, not a brand-constant kit setting.
+Warmth already carries the "personal vs poised" signal; the rest is the deck's call.
 
 ---
 
@@ -175,19 +165,16 @@ Half the cleanup is removing things that were never voice:
 - **Four steps, no neutral — does it force good choices or frustrate?** Sliders snap to four (no
   middle) on purpose, to make the brand commit. Watch whether users miss a neutral on dials they
   genuinely don't care about.
-- **Does POV belong in the kit?** It leans tone (set by deck job), so the options are: keep it as a
-  brand *default lean* (current), move it to a per-deck choice at generation time, or drop it and let
-  Warmth + deck type imply it. Leaning toward "default lean," but it's the least voice-like control here.
 - **Slider defaults from attributes.** The attribute→slider inference (which adjective nudges which
   track, how far) needs a real mapping table, not hand-waving — the next concrete task now the set is locked.
-- **POV vs Warmth overlap.** Both touch "how personal" — POV sets grammatical person (we/you/impersonal),
-  Warmth sets temperature. They mostly cooperate; confirm they don't feel redundant in the UI.
 - **Provocation folded into Conviction.** "Don't buy this jacket" lives at far-Bold rather than a
   separate Edge slider — kept the set orthogonal, but revisit if brands need explicit provocation.
 - **Off-brand twins — required or optional?** Contrastive pairs are strongest, but asking every user
   to write the "wrong" version is friction. Auto-generate the ✗ twin and let them edit?
+- **Where POV lands.** Cut from the kit as tone; needs a home as a **per-deck** choice at generation
+  time (default inferable from the deck type). Out of the voice kit, but not nowhere.
 - **One voice per kit.** Multiple voices by team (Exec / Marketing / Sales) stays a later expansion
-  (see grounding). The POV choice covers much of that need for now.
+  (see grounding).
 
 ---
 

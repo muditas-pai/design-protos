@@ -84,7 +84,7 @@ These are prototype and demo choices, **not** product decisions — they live he
 - [ ] Resolve the spec's open questions (mood-in-P1 · re-theme scope · kit opt-out · templates binding).
 - [ ] Prototype **"request a custom kit" → pricing** handoff (the done-for-you service).
 - [ ] Prototype the **Brand-knowledge** upload surface + the Pro/Gold gating UI.
-- [x] **Reframed brand voice into a four-layer model** (personality · dimension sliders · lexicon+POV ·
+- [x] **Reframed brand voice into a four-layer model** (personality · dimension sliders · lexicon ·
       examples) — replaces the nine-rule checklist, which mixed abstraction levels. Full model +
       research basis in the [brand-voice spec](brand-voice-spec.html); voice panel rebuilt in
       `brand-kit-ftue.html`.
