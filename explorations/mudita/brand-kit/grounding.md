@@ -84,9 +84,14 @@ These are prototype and demo choices, **not** product decisions — they live he
 - [ ] Resolve the spec's open questions (mood-in-P1 · re-theme scope · kit opt-out · templates binding).
 - [ ] Prototype **"request a custom kit" → pricing** handoff (the done-for-you service).
 - [ ] Prototype the **Brand-knowledge** upload surface + the Pro/Gold gating UI.
-- [x] **Rescoped brand-voice rules** (type-independent phrasing guardrails) + prototyped the rules UI
-      as an **on/off checklist** (Titles / Copy) driving a live preview — `brand-kit-ftue.html`.
-- [ ] Decide whether the gradient rules (title length · formality) graduate from checkbox → slider.
+- [x] **Reframed brand voice into a four-layer model** (personality · dimension sliders · lexicon+POV ·
+      examples) — replaces the nine-rule checklist, which mixed abstraction levels. Full model +
+      research basis in the [brand-voice spec](brand-voice-spec.html); voice panel rebuilt in
+      `brand-kit-ftue.html`.
+- [x] **Gradient rules → sliders, resolved.** Title length, formality and the rest are now five
+      continuous dimension sliders (Formal · Reserved↔Expressive · Straight↔Playful · Measured↔Bold ·
+      Terse↔Expansive), not checkboxes. Open: confirm in testing none reads better as a 3-stop segment.
+- [ ] Draft the **attribute → slider-default** inference table (which adjective nudges which track, how far).
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
 - [ ] Real brand-logo artwork (current marks are simplified Simple Icons / Wikimedia versions).
 - [ ] Define the **"save deck as template → kit"** metadata (name, thumbnail, captured voice/mood).

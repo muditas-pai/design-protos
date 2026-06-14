@@ -160,7 +160,14 @@ expansion). The voice is two halves: **who you are**, and **how that shows up on
 | **Avoid** | banned words · off-brand phrases & claims |
 | **Dials** | Formality · Length · POV · Claims (measured ↔ bold) |
 
-**Voice rules** *(how the voice writes copy — the part that makes it feel on-brand)* — **⚠ being rescoped, see below**
+> **↗ Superseded (14 Jun 2026).** The "voice rules" below were reframed into a clean **four-layer
+> model** — Personality · Dimension sliders · Lexicon+POV · Examples — in the dedicated
+> **[brand-voice spec](brand-voice-spec.html)** (the source of truth for voice). The nine-rule
+> checklist mixed abstraction levels (a grammar guardrail, a typographic nitpick, a banned-word
+> policy and a length preference as sibling toggles); the new model gives each kind of thing its own
+> kind of control. The text below is kept for history.
+
+**Voice rules** *(how the voice writes copy — the part that makes it feel on-brand)* — **⚠ superseded, see the note above**
 
 The bridge from "who you are" to on-slide copy. **The test for a voice rule: it must hold true on
 *every* slide, regardless of slide type.** That test is what the earlier draft got wrong (see the
