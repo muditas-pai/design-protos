@@ -84,8 +84,9 @@ These are prototype and demo choices, **not** product decisions — they live he
 - [ ] Resolve the spec's open questions (mood-in-P1 · re-theme scope · kit opt-out · templates binding).
 - [ ] Prototype **"request a custom kit" → pricing** handoff (the done-for-you service).
 - [ ] Prototype the **Brand-knowledge** upload surface + the Pro/Gold gating UI.
-- [ ] **Confirm the rescoped brand-voice rules model** (type-independent phrasing guardrails vs.
-      context-dependent density/form), then prototype the rules UI — checklist vs. dials TBD.
+- [x] **Rescoped brand-voice rules** (type-independent phrasing guardrails) + prototyped the rules UI
+      as an **on/off checklist** (Titles / Copy) driving a live preview — `brand-kit-ftue.html`.
+- [ ] Decide whether the gradient rules (title length · formality) graduate from checkbox → slider.
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
 - [ ] Real brand-logo artwork (current marks are simplified Simple Icons / Wikimedia versions).
 - [ ] Define the **"save deck as template → kit"** metadata (name, thumbnail, captured voice/mood).

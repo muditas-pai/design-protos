@@ -354,11 +354,21 @@
     .vavoid { color: var(--fg-2); font-size: 12.5px; margin-top: 8px; }
     .vavoid b { color: var(--fg-3); font-weight: 600; }
     .vsub { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
-    .lever-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
-    .lever-row .ll { width: 96px; font-size: 12px; color: var(--fg-2); font-weight: 500; flex-shrink: 0; }
-    .seg { display: inline-flex; background: var(--surface-2); border-radius: 6px; padding: 2px; gap: 2px; }
-    .seg button { border: 0; background: none; padding: 5px 11px; border-radius: 6px; font: 500 12px "Inter"; color: var(--fg-2); cursor: pointer; }
-    .seg button.on { background: var(--surface); color: var(--fg); box-shadow: var(--sh-btn); }
+    .vrules { display: flex; flex-direction: column; gap: 14px; }
+    .vrgroup { display: flex; flex-direction: column; gap: 1px; }
+    .vrgroup .vsub { margin-bottom: 6px; }
+    .vrule { display: flex; align-items: flex-start; gap: 10px; padding: 6px 8px; margin: 0 -8px; border-radius: 6px; cursor: pointer; transition: background 120ms var(--ease); }
+    .vrule:hover { background: var(--surface-2); }
+    .vrule input { position: absolute; opacity: 0; pointer-events: none; }
+    .vr-box { width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--line-strong); display: grid; place-items: center; flex-shrink: 0; margin-top: 1px;
+      transition: background 130ms var(--ease), box-shadow 130ms var(--ease); }
+    .vr-box i { color: #fff; font-size: 11px; opacity: 0; transform: scale(0.5); transition: opacity 130ms var(--ease), transform 130ms var(--ease); }
+    .vrule input:checked + .vr-box { background: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+    .vrule input:checked + .vr-box i { opacity: 1; transform: scale(1); }
+    .vr-text { display: flex; flex-direction: column; gap: 1px; }
+    .vr-t { font-size: 13px; font-weight: 500; color: var(--fg); }
+    .vr-d { font-size: 11.5px; color: var(--fg-3); line-height: 1.35; }
+    .bv-hint { font-size: 11px; color: var(--fg-3); margin-top: 9px; }
     .bv-preview { width: 320px; flex-shrink: 0; }
     .bv-preview .cap { font-size: 11px; color: var(--fg-3); margin-bottom: 8px; }
     .bv-preview .frame { border-radius: 7px; overflow: hidden; box-shadow: var(--sh-card); }
@@ -409,7 +419,11 @@
         traits: ["Plainspoken", "Principled", "Rugged"],
         example: "“The cleanest shirt is the one you already own.”",
         avoid: "hype · greenwashing · superlatives",
-        levers: { title: "topic", case: "sentence", section: "minimal", body: "sparse", bullet: "fragments", lead: "metric" }
+        // type-independent phrasing rules (hold on every slide) — on/off house style
+        rules: {
+          activeVoice: true, factLed: true, noGerund: true, sentenceCase: true,
+          noPeriod: true, shortTitles: true, firstPerson: true, contractions: true, plainLanguage: true
+        }
       },
       assetCount: 47
     };
@@ -439,39 +453,61 @@
     }
 
     // ── brand-voice live preview: a content slide rewritten from the levers ──
-    var VP_BASE = [
-      { metric: "+4 pts", verb: "Raise", topic: "gross margin", sentence: "Raise gross margin by four points." },
-      { metric: "$12M", verb: "Capture", topic: "pricing upside", sentence: "Capture $12M through pricing." },
-      { metric: "18 mo", verb: "Reach", topic: "payback", sentence: "Reach payback within 18 months." }
+    // The 9 voice rules, grouped — each drives the live preview below.
+    var VOICE_RULES = [
+      { group: "Titles", items: [
+        { key: "activeVoice", t: "Active voice", d: "“We cut waste 30%” — not “Waste was cut”" },
+        { key: "factLed", t: "Fact-led", d: "Assert a point, don’t just name the topic" },
+        { key: "noGerund", t: "No gerund openers", d: "Don’t start a title with an “–ing” verb" },
+        { key: "sentenceCase", t: "Sentence case", d: "“Our worn wear program” — not Title Case" },
+        { key: "noPeriod", t: "No end punctuation", d: "Drop the period on titles" },
+        { key: "shortTitles", t: "Keep titles short", d: "Aim for eight words or fewer" }
+      ]},
+      { group: "Copy", items: [
+        { key: "firstPerson", t: "First person (“we”)", d: "Speak as the brand, not in third person" },
+        { key: "contractions", t: "Contractions", d: "“we’ll”, “you’re” — warmer, less stiff" },
+        { key: "plainLanguage", t: "Plain language", d: "No hype, jargon or superlatives (your Avoid list)" }
+      ]}
     ];
-    function vpTitle(lv) {
-      var t = lv.title === "takeaway" ? "We can lift margin four points by 2027"
-            : lv.title === "question" ? "Where's the margin?" : "Margin opportunity";
-      return lv.case === "title" ? t.replace(/\b\w/g, function (c) { return c.toUpperCase(); }) : t;
+    function titleCase(s) { return s.replace(/\b([a-z])/g, function (m, c) { return c.toUpperCase(); }); }
+    function sentenceCase(s) { return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); }
+    function vpTitle(r) {
+      var t;
+      if (!r.factLed) t = "margin opportunity";                       // topic label, not a claim
+      else if (!r.noGerund) t = "lifting margin four points by 2027"; // gerund opener (rule off)
+      else t = r.activeVoice ? "we can lift margin four points by 2027"
+                             : "margin can be lifted four points by 2027";
+      if (r.shortTitles) t = t.replace(" by 2027", "");
+      t = r.sentenceCase ? sentenceCase(t) : titleCase(t);
+      if (!r.noPeriod && r.factLed) t += ".";
+      return t;
     }
-    function vpBullet(b, lv) {
-      if (lv.bullet === "sentences") return b.sentence;
-      if (lv.lead === "metric") return b.metric + " " + b.topic;
-      if (lv.lead === "verb") return b.verb + " " + b.topic;
-      return b.topic.charAt(0).toUpperCase() + b.topic.slice(1) + " · " + b.metric;
-    }
-    function vpEyebrow(lv) {
-      return lv.section === "numbered" ? "01 — Strategy" : lv.section === "editorial" ? "Where the margin is" : "Strategy";
+    function vpBullets(r) {
+      return [
+        r.firstPerson ? (r.contractions ? "We’ll hit payback in 18 months" : "We will hit payback in 18 months")
+                      : "Payback arrives in 18 months",
+        r.plainLanguage ? "We cut returns by a third" : "We drove a step-change reduction in returns",
+        r.firstPerson ? "We add four points of margin" : "Margin gains four points"
+      ];
     }
     function voicePreviewSlide() {
-      var lv = KIT.voice.levers;
-      var sub = lv.body === "sparse" ? "" : '<div class="st">Three moves to a four-point gain.</div>';
-      var bullets = VP_BASE.map(function (b) { return '<li>' + vpBullet(b, lv) + '</li>'; }).join("");
+      var r = KIT.voice.rules;
+      var bullets = vpBullets(r).map(function (b) { return '<li>' + b + '</li>'; }).join("");
       var st = "--vbrand:" + KIT.color + ";--vtf:" + KIT.fonts.title;
       return '<svg class="slide-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">' +
         '<foreignObject x="0" y="0" width="320" height="180"><div xmlns="http://www.w3.org/1999/xhtml" class="vp" style="' + st + '">' +
-        '<div class="eb">' + vpEyebrow(lv) + '</div><div class="ti">' + vpTitle(lv) + '</div>' + sub +
+        '<div class="eb">Strategy</div><div class="ti">' + vpTitle(r) + '</div>' +
         '<ul>' + bullets + '</ul></div></foreignObject></svg>';
     }
-    function seg(lv, key, opts) {
-      return '<div class="seg" data-lever="' + key + '">' + opts.map(function (o) {
-        return '<button data-val="' + o[0] + '"' + (lv[key] === o[0] ? ' class="on"' : '') + '>' + o[1] + '</button>';
-      }).join("") + '</div>';
+    function voiceChecklist() {
+      var r = KIT.voice.rules;
+      return VOICE_RULES.map(function (g) {
+        return '<div class="vrgroup"><div class="vsub">' + g.group + '</div>' + g.items.map(function (it) {
+          return '<label class="vrule"><input type="checkbox" data-rule="' + it.key + '"' + (r[it.key] ? " checked" : "") + '>' +
+            '<span class="vr-box"><i class="ph-fill ph-check"></i></span>' +
+            '<span class="vr-text"><span class="vr-t">' + it.t + '</span><span class="vr-d">' + it.d + '</span></span></label>';
+        }).join("") + '</div>';
+      }).join("");
     }
 
     // ── sidebar ─────────────────────────────────────────────────────────────
@@ -646,15 +682,17 @@
         return '<div class="logo-tile" style="background:' + v.bg + '"><span class="lm" style="background:' + v.fg + '"></span><span class="cap" style="color:' + v.cc + '">' + v.cap + '</span></div>';
       }).join("") + '</div>';
 
-      // brand voice — authentic voice (traits · example · avoid) + a sample of the voice on a slide.
-      // NOTE: presentation "levers" are being rescoped (see brand-kit-spec.md) — UI deferred until the model is right.
+      // brand voice — authentic voice + the rescoped voice rules (type-independent phrasing
+      // guardrails) as a checklist, driving a live preview slide. See brand-kit-spec.md.
       var voices = '<div class="bv"><div class="bv-controls">' +
           '<div><div class="vsub">Authentic voice</div>' +
             '<div class="vchips">' + KIT.voice.traits.map(function (t) { return '<span class="vchip2">' + t + '</span>'; }).join("") + '</div>' +
             '<div class="vex2">' + KIT.voice.example + '</div>' +
-            '<div class="vavoid"><b>Avoid</b> &nbsp;' + KIT.voice.avoid + '</div></div></div>' +
+            '<div class="vavoid"><b>Avoid</b> &nbsp;' + KIT.voice.avoid + '</div></div>' +
+          '<div class="vrules">' + voiceChecklist() + '</div></div>' +
         '<div class="bv-preview"><div class="cap">Your voice, on a slide</div>' +
-          '<div class="frame">' + voicePreviewSlide() + '</div></div></div>';
+          '<div class="frame" id="vpFrame">' + voicePreviewSlide() + '</div>' +
+          '<div class="bv-hint">Toggle a rule to see it rewrite.</div></div></div>';
 
       // assets
       var assets = '<div class="asset-grid">' + [1,2,3,4,5,6,7,8,9,10].map(function (n) {
@@ -681,8 +719,14 @@
           acc("Images " + prov, "47 scraped", assets, false) +
         '</div></div>';
 
-      stage.querySelector(".accs").addEventListener("click", function (e) {
+      var accsEl = stage.querySelector(".accs");
+      accsEl.addEventListener("click", function (e) {
         var h = e.target.closest(".acc-head"); if (h) h.parentNode.classList.toggle("open");
+      });
+      accsEl.addEventListener("change", function (e) {
+        var cb = e.target.closest("input[data-rule]"); if (!cb) return;
+        KIT.voice.rules[cb.getAttribute("data-rule")] = cb.checked;
+        document.getElementById("vpFrame").innerHTML = voicePreviewSlide();
       });
     }
 

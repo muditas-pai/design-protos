@@ -191,13 +191,17 @@ slide wants prose, a data slide wants terse metrics. They depend on slide *type*
 *mood / layout*, so they live there, **not** as fixed kit-level voice levers. Trying to pin them at the
 kit level fights the content.
 
-> **🔧 Rescope in progress (12 Jun 2026).** The first lever model (title = takeaway/topic/question,
-> body = sparse/supported, bullet = metric/verb/plain) was **too specific and per-slide** — it
-> templated content that varies by slide type. The corrected direction above models voice as
+> **🔧 Rescoped (12 Jun 2026 · checklist confirmed 14 Jun 2026).** The first lever model (title =
+> takeaway/topic/question, body = sparse/supported, bullet = metric/verb/plain) was **too specific and
+> per-slide** — it templated content that varies by slide type. The corrected model above is
 > **always-true phrasing guardrails** (active voice, fact-led, no gerund heads, case, POV, plain
-> language) and pushes density/form down to mood + slide type. **The FTUE voice UI shows authentic
-> voice + a sample only; the rules UI is deferred** until this model is confirmed. Open: do rules read
-> better as **on/off house-rules (checklist)** or **dials**, and which belong to voice vs. mood.
+> language), with density/form pushed down to mood + slide type. **UI = an on/off checklist** (resolved
+> over dials), grouped **Titles / Copy**, each rule a checkbox with a one-line example, driving a
+> **live preview slide** that rewrites on toggle — prototyped in `brand-kit-ftue.html` (landed →
+> Brand voice). The nine rules: *active voice · fact-led · no gerund openers · sentence case · no end
+> punctuation · keep titles short* (Titles); *first person · contractions · plain language* (Copy).
+> Defaults are inferred from the authentic voice. Open: the couple of genuinely gradient rules (title
+> length, formality) may later want a slider rather than a binary box.
 
 **Setup is extraction-first** — we draft the authentic voice from the brand's imported site / decks,
 infer the rules, and show a live preview. Never a blank "describe your voice" box.
