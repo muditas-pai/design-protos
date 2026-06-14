@@ -906,9 +906,9 @@
       setTimeout(next, 450);
     }
 
-    function acc(label, sum, body, open) {
+    function acc(label, sum, body, open, sumId) {
       return '<section class="acc' + (open ? " open" : "") + '"><button class="acc-head"><i class="ph ph-caret-right acc-caret"></i>' +
-        '<span class="acc-label">' + label + '</span><span class="acc-sum">' + sum + '</span></button>' +
+        '<span class="acc-label">' + label + '</span><span class="acc-sum"' + (sumId ? ' data-sum="' + sumId + '"' : '') + '>' + sum + '</span></button>' +
         '<div class="acc-body"><div class="inner"><div class="acc-content">' + body + '</div></div></div></section>';
     }
 
@@ -992,6 +992,18 @@
     var ACT2MOD = { colour: "colours", doc: "docs", org: "org", image: "images", logo: "logos", typo: "typo" };
     var MODB = { typo: renderTypo, colours: renderColours, logos: renderLogos, docs: renderDocs, org: renderOrg, images: renderImages };
     function refreshMod(id) { var el = document.getElementById("mod-" + id); if (el) el.innerHTML = MODB[id](); }
+    // collapsed-header summaries that recompute live as a module changes
+    var ACT2SUM = { colour: "look", typo: "look", logo: "logos", doc: "docs", org: "org", image: "images" };
+    function moodDots() { return '<span class="dots">' + KIT.colors.slice(0, 5).map(function (c) { return '<i style="background:' + c + '"></i>'; }).join("") + '</span>'; }
+    function modSum(id) {
+      if (id === "look") return '<span class="moodbit"></span>Editorial · ' + (KIT.fonts.title || KIT.fonts.body || "No fonts") + ' ' + moodDots();
+      if (id === "logos") return KIT.hasLogo ? "4 variants" : "No logo";
+      if (id === "docs") return DOCS.length + (DOCS.length === 1 ? " document" : " documents");
+      if (id === "org") return KIT.org.length + (KIT.org.length === 1 ? " field" : " fields");
+      if (id === "images") return KIT.images.length + (KIT.images.length === 1 ? " image" : " images");
+      return "";
+    }
+    function updateSum(id) { var el = document.querySelector('[data-sum="' + id + '"]'); if (el) el.innerHTML = modSum(id); }
     function kitAdd(a) {
       var p = a.split(":"), k = p[0];
       if (k === "colour") KIT.colors.push("#8A8F98");
@@ -1004,7 +1016,7 @@
         else if (p[1] === "body") KIT.fonts.body = DEFAULT_FONTS.body;
         else { KIT.fonts.title = DEFAULT_FONTS.title; KIT.fonts.body = DEFAULT_FONTS.body; }
       } else return;
-      refreshMod(ACT2MOD[k]);
+      refreshMod(ACT2MOD[k]); updateSum(ACT2SUM[k]);
     }
     function kitDel(a) {
       var p = a.split(":"), k = p[0], id = p[1];
@@ -1015,7 +1027,7 @@
       else if (k === "logo") KIT.hasLogo = false;
       else if (k === "typo") { if (id === "title") KIT.fonts.title = ""; else if (id === "body") KIT.fonts.body = ""; }
       else return;
-      refreshMod(ACT2MOD[k]);
+      refreshMod(ACT2MOD[k]); updateSum(ACT2SUM[k]);
     }
 
     function renderLanded() {
@@ -1029,18 +1041,17 @@
         '<div class="lf-deck"><div class="sub">A sample deck in this mood</div><div class="deck">' + deck + '</div></div></div>';
 
       var voices = '<div id="voiceBody" style="--vacc:' + KIT.color + '">' + renderVoiceBody() + '</div>';
-      var dots = '<span class="dots">' + KIT.colors.slice(0,5).map(function (c) { return '<i style="background:' + c + '"></i>'; }).join("") + '</span>';
 
       stage.innerHTML = '<div class="landed">' +
         '<div class="lhead"><div><h1 class="lh-title">Your brand kit is ready</h1>' +
           '<div class="lh-sub">Built from your site — here’s the look &amp; feel, voice, logos and more.</div></div></div>' +
         '<div class="accs">' +
-          acc("Look &amp; feel", '<span class="moodbit"></span>Editorial · Fraunces ' + dots, lf, true) +
+          acc("Look &amp; feel", modSum("look"), lf, true, "look") +
           acc("Brand voice", "Plainspoken · Principled · Rugged", voices, false) +
-          acc("Logos", "4 variants", '<div id="mod-logos">' + renderLogos() + '</div>', false) +
-          acc('Brand knowledge <span class="tag-gold"><i class="ph-fill ph-crown-simple"></i>Gold</span>', DOCS.length + ' documents', '<div id="mod-docs">' + renderDocs() + '</div>', false) +
-          acc("Org info", "Company · positioning · proof…", '<div id="mod-org">' + renderOrg() + '</div>', false) +
-          acc("Images", KIT.images.length + ' images', '<div id="mod-images">' + renderImages() + '</div>', false) +
+          acc("Logos", modSum("logos"), '<div id="mod-logos">' + renderLogos() + '</div>', false, "logos") +
+          acc('Brand knowledge <span class="tag-gold"><i class="ph-fill ph-crown-simple"></i>Gold</span>', modSum("docs"), '<div id="mod-docs">' + renderDocs() + '</div>', false, "docs") +
+          acc("Org info", modSum("org"), '<div id="mod-org">' + renderOrg() + '</div>', false, "org") +
+          acc("Images", modSum("images"), '<div id="mod-images">' + renderImages() + '</div>', false, "images") +
         '</div></div>';
 
       var accsEl = stage.querySelector(".accs");
