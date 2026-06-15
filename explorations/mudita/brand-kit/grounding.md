@@ -43,9 +43,9 @@ The settled product calls behind the spec — recorded here so the spec stays a 
 |---|---|
 | **Scope** | Workspace-level. Every kit is visible to everyone in the workspace and selectable on any deck. |
 | **Mood coupling** | A kit overrides only **font pairing + color palette** on top of the active mood. Every other mood property — layout, padding, corners, SVG decor, image masks, animation — is **never** overridden. The kit's mood is a *starting point*, not a lock. **No mood builder** — a *custom mood* = a preset + the kit's font/colour, saved; users never edit the granular layers. |
-| **Templates — phase** | **Deferred to Phase 2** (a creation subsystem, with custom moods + assets); was earlier slated for v1. They already exist in the app; the work is the brand-kit binding + a "save as template" action. See the [phasing spec](phasing-spec.html). |
+| **Templates** | In scope now (no longer deferred). Templates already exist in the app; the work is the brand-kit **binding** + a "save as template" action. FTUE just adds manual + import-from-deck. |
 | **Assets** | Upload → one **auto-tagging** pass → assets are both **AI-retrieved** (by relevance) and **hand-inserted**. |
-| **Image scrape** | Set-up-by-import scrapes the **whole site** for images (every page, not just the hero) to seed the asset collection — inspired by **Mutiny**. The collection lands in **Phase 1**; tagging + AI retrieval are **Phase 2**. |
+| **Image scrape** | Set-up-by-import scrapes the **whole site** for images (every page, not just the hero) to seed the asset collection — inspired by **Mutiny**. The collection is in scope; **tagging + AI retrieval** are still stubbed. |
 | **Icons** | **Out of scope.** A partial brand icon set mixed with our default set breaks visual consistency. |
 | **Plans / gating** | A brand kit is a **Pro** feature. **Brand knowledge** (the doc corpus / RAG) is **Gold**. A custom, design-team-built kit is a separate **paid service**. |
 | **Custom kit** | "Request a custom kit" routes to a **pricing page** — the in-house presentations.ai design team builds the kit for the company (a done-for-you service, distinct from the plan tiers). |
