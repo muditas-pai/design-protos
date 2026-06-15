@@ -103,6 +103,18 @@ Checkout success → "Continue to your deck" → deck-ready editor
 - Every paid action opens the single `checkout.html` in a modal (`ctx=modal`); success →
   `trial-open-deck` → editor `?state=ready`.
 
+### 5b. Settings — trial-activated user (`settings-trial-active.html`)
+
+Same shell as 5, post-checkout (full Pro) differences:
+- Top bar has **no** Upgrade button and no trial pill — identical to a paid Pro user.
+  Sidebar workspace chip shows a "Pro Trial" tag.
+- **Members**: "Invite to workspace" box is **visible and working** (Pro includes team invites).
+- **Billing**: header "Pro Trial · Trial ends Jun 18, 2026", Upgrade button (converts to paid now).
+  Credits "1,000 credits left". "Need more credits?" shows **Gold only** (already on Pro path).
+  Trial & billing card: timeline ("Paid today $0" + 7-day badge → "Due Jun 18, 2026 $264.00,
+  billing starts automatically"), payment method on file (VISA ···· 4242), "Cancel trial" link.
+- General and Profile identical to 5.
+
 ## Cross-frame messages (postMessage contract)
 
 | Message | Sent by | Handled by |
@@ -130,5 +142,6 @@ Checkout success → "Continue to your deck" → deck-ready editor
 | `pricing.html` | Trial pricing (duplicate of pricing key screen, trimmed) |
 | `checkout.html` | Checkout + success modal (single source for all contexts) |
 | `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
-| `settings-trial.html` | Settings (General / Members / Billing / Profile) for the free/trial user |
+| `settings-trial.html` | Settings for the free / pre-checkout user (invite hidden, Free billing) |
+| `settings-trial-active.html` | Settings for the trial-activated user (invite visible, Pro Trial billing) |
 | `assets/` | Vendored logos, trust badges, feature previews |
