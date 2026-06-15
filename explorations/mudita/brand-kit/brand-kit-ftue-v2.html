@@ -721,6 +721,35 @@
     .img-group:last-of-type { margin-bottom: 0; }
     .img-grp-l { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
     .img-grp-n { color: var(--fg-3); font-weight: 500; }
+    .asset-wrap .asset { cursor: pointer; transition: opacity 120ms var(--ease); }
+    .asset-wrap:hover .asset { opacity: 0.9; }
+    /* image detail modal */
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 20px; border-top: 1px solid var(--line); }
+    .imbtn { border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 7px;
+      transition: box-shadow 120ms var(--ease), filter 120ms var(--ease); }
+    .im-cancel { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg); }
+    .im-cancel:hover { box-shadow: inset 0 0 0 1px var(--fg-3); }
+    .imbtn-primary { background: var(--ink); color: #fff; }
+    .imbtn-primary:hover { filter: brightness(1.25); }
+    .imdet { display: flex; gap: 20px; flex-wrap: wrap; }
+    .imdet-img { flex: 0 0 200px; }
+    .imdet-img img { width: 100%; border-radius: 8px; display: block; box-shadow: inset 0 0 0 1px var(--line); }
+    .imdet-fields { flex: 1; min-width: 240px; }
+    .imdet-l { font-size: 11px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--fg-3); margin: 0 0 6px; }
+    .imdet-l:not(:first-child) { margin-top: 16px; }
+    .imdet-sel { width: 100%; height: 34px; border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); border-radius: 7px; padding: 0 10px;
+      font: inherit; font-size: 13px; background: var(--surface); color: var(--fg); cursor: pointer; }
+    .imdet-desc { font-size: 13.5px; color: var(--fg); line-height: 1.5; outline: none; box-shadow: inset 0 0 0 1px var(--line-strong);
+      border-radius: 7px; padding: 9px 11px; min-height: 48px; }
+    .imdet-desc:focus { box-shadow: inset 0 0 0 2px var(--ink); }
+    .imdet-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .imtag { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; padding: 3px 4px 3px 9px; border-radius: 6px; background: var(--surface-2); color: var(--fg); font-weight: 500; }
+    .imtag-t { outline: none; border-radius: 3px; min-width: 6px; }
+    .imtag-t:focus { box-shadow: 0 0 0 2px var(--ink); }
+    .imtag-add { border: 0; background: transparent; cursor: pointer; padding: 4px 9px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line-strong);
+      color: var(--fg-2); font: inherit; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 3px; transition: color 120ms var(--ease), box-shadow 120ms var(--ease); }
+    .imtag-add:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-3); }
+    .imtag-add i { font-size: 10px; }
     .spin { animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     /* templates — entry-point cards */
@@ -1247,11 +1276,63 @@
         if (!items.length) return "";
         return '<div class="img-group"><div class="img-grp-l">' + c.label + ' <span class="img-grp-n">' + items.length + '</span></div>' +
           '<div class="asset-grid">' + items.map(function (x) {
-            return '<span class="tile-wrap asset-wrap"><img class="asset" loading="lazy" alt="" src="https://picsum.photos/seed/' + x.im.seed + '/200" onerror="this.style.opacity=.4;this.removeAttribute(\'src\')">' +
+            return '<span class="tile-wrap asset-wrap"><img class="asset" loading="lazy" alt="" data-imgview="' + x.i + '" title="View details" src="https://picsum.photos/seed/' + x.im.seed + '/200" onerror="this.style.opacity=.4;this.removeAttribute(\'src\')">' +
               '<button class="tile-x" type="button" data-del="image:' + x.i + '" title="Remove"><i class="ph ph-x"></i></button></span>';
           }).join("") + '</div></div>';
       }).join("");
       return bar + groups + '<button class="mod-add" type="button" data-add="image"><i class="ph ph-plus"></i>Add images</button>';
+    }
+    // image detail — view + edit the auto-generated description + tags
+    function imgDefaults(cat) {
+      var d = {
+        people: { desc: "A team member on location, shot outdoors.", tags: ["person", "team", "outdoor"] },
+        product: { desc: "A product shot of brand gear on a clean background.", tags: ["product", "gear", "apparel"] },
+        background: { desc: "A landscape backdrop with open sky.", tags: ["landscape", "nature", "backdrop"] }
+      };
+      return d[cat] || { desc: "", tags: [] };
+    }
+    function openImageDetail(idx) {
+      var im = KIT.images[idx], def = imgDefaults(im.cat || "");
+      var work = { cat: im.cat || "", desc: im.desc != null ? im.desc : def.desc, tags: (im.tags ? im.tags.slice() : def.tags.slice()) };
+      var CATS = [["people", "People"], ["product", "Product"], ["background", "Backgrounds"], ["", "Uncategorised"]];
+      function tagsHTML() {
+        return '<div class="imdet-tags" id="imdetTags">' + work.tags.map(function (t, i) {
+          return '<span class="imtag"><span class="imtag-t" contenteditable="true" data-imtag="' + i + '">' + t + '</span><button class="cx" type="button" data-imtagdel="' + i + '"><i class="ph ph-x"></i></button></span>';
+        }).join("") + '<button class="imtag-add" type="button" data-imtagadd="1"><i class="ph ph-plus"></i>Add tag</button></div>';
+      }
+      var ov = document.createElement("div");
+      ov.className = "modal-ov";
+      ov.innerHTML = '<div class="modal modal-wide"><div class="modal-head"><h2>Image details</h2><button class="modal-x" type="button"><i class="ph ph-x"></i></button></div>' +
+        '<div class="modal-body"><div class="imdet"><div class="imdet-img"><img src="https://picsum.photos/seed/' + im.seed + '/420" alt="" onerror="this.style.opacity=.4"></div>' +
+          '<div class="imdet-fields" id="imBody">' +
+            '<div class="imdet-l">Category</div><select class="imdet-sel" data-imcat>' + CATS.map(function (c) { return '<option value="' + c[0] + '"' + (c[0] === work.cat ? " selected" : "") + '>' + c[1] + '</option>'; }).join("") + '</select>' +
+            '<div class="imdet-l">Description</div><div class="imdet-desc" contenteditable="true" data-imdesc>' + work.desc + '</div>' +
+            '<div class="imdet-l">Tags</div>' + tagsHTML() +
+          '</div></div></div>' +
+        '<div class="modal-foot"><button class="imbtn im-cancel" type="button">Cancel</button><button class="imbtn imbtn-primary im-save" type="button">Save</button></div></div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add("on"); });
+      function close() { ov.classList.remove("on"); document.removeEventListener("keydown", onKey); setTimeout(function () { ov.remove(); }, 200); }
+      function onKey(e) { if (e.key === "Escape") close(); }
+      var fb = ov.querySelector("#imBody");
+      ov.querySelector(".modal-x").onclick = close;
+      ov.querySelector(".im-cancel").onclick = close;
+      ov.querySelector(".im-save").onclick = function () {
+        KIT.images[idx].cat = fb.querySelector("[data-imcat]").value;
+        KIT.images[idx].desc = fb.querySelector("[data-imdesc]").textContent.trim();
+        KIT.images[idx].tags = work.tags.slice();
+        refreshMod("images"); close();
+      };
+      ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
+      fb.addEventListener("click", function (e) {
+        var del = e.target.closest("[data-imtagdel]"); if (del) { work.tags.splice(+del.getAttribute("data-imtagdel"), 1); fb.querySelector("#imdetTags").outerHTML = tagsHTML(); return; }
+        var add = e.target.closest("[data-imtagadd]"); if (add) { work.tags.push(""); fb.querySelector("#imdetTags").outerHTML = tagsHTML(); var ts = fb.querySelectorAll(".imtag-t"); var last = ts[ts.length - 1]; if (last) last.focus(); }
+      });
+      fb.addEventListener("blur", function (e) {
+        var t = e.target.closest("[data-imtag]"); if (t) { var i = +t.getAttribute("data-imtag"), v = t.textContent.trim(); if (!v) { work.tags.splice(i, 1); fb.querySelector("#imdetTags").outerHTML = tagsHTML(); } else { work.tags[i] = v; } }
+      }, true);
+      fb.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.isContentEditable) { e.preventDefault(); e.target.blur(); } });
+      document.addEventListener("keydown", onKey);
     }
     // mood — a preset layout/decor style the kit's fonts + colours ride on top of (greyscale to judge structure)
     var MOODS = [
@@ -1393,6 +1474,8 @@
 
       var accsEl = stage.querySelector(".accs");
       accsEl.addEventListener("click", function (e) {
+        var iv = e.target.closest("[data-imgview]");    // open an image's detail (desc + tags)
+        if (iv) { e.stopPropagation(); openImageDetail(+iv.getAttribute("data-imgview")); return; }
         var ti = e.target.closest("[data-teamimg]");   // team photo upload (fake)
         if (ti) { e.stopPropagation(); var k = +ti.getAttribute("data-teamimg"); KIT.team[k].img = 5 + k; refreshMod("org"); return; }
         var rt = e.target.closest("[data-retag]");      // re-run categorisation (costs credits)

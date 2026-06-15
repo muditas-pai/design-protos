@@ -97,11 +97,12 @@ Everything is **edit-in-place** with full create / update / delete and an inviti
 | **Templates** | saved / imported decks | add via library · existing deck · prompt · import · remove |
 | **Brand knowledge** | documents (Gold) | add docs · the **graph itself is Gold** (locked until upgrade) |
 | **Org info** | company fields **+ team** (name · role · **photo**) | edit · add · remove · upload a member photo |
-| **Images** | media library | add · remove · **re-run categorisation** (costs credits) |
+| **Images** | media library | add · remove · **open an image to edit its description + tags** · re-run categorisation (credits) |
 
 > **Images run one default categorisation pass** into **people · product · backgrounds**, pulled from
 > each asset's **alt / meta tags and the surrounding HTML** in the artifact it was extracted from. New
 > uploads land **Uncategorised** until the next run; **re-run categorisation** costs credits.
+> **Click any image** to view and edit its auto-generated **description + tags** (and re-assign its category).
 
 ---
 
