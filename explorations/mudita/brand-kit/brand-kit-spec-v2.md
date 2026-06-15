@@ -45,9 +45,27 @@
 |---|---|---|
 | **Dashboard** | manage the kit (the accordion) | ✅ prototyped |
 | **Creation flow** | pick a kit (+ a mood for the deck) before generating | ▢ to design |
-| **Editor** | switch kit / voice mid-deck · save deck as template | ▢ to design |
+| **Editor** | kit values (colour · fonts · logos) tagged in the right panel · switch kit / voice · save deck as template | ▢ to design |
 
-> **Mood** is no longer a kit property — it's chosen per deck at **creation time**, not stored on the kit.
+> **Editor — the kit surfaces in the right panel.** Colour palette, font pairing and logos **already live**
+> in the editor's right-side panel. The V2 work is to **tag** which of those come from the brand kit — so
+> the user sees a "from your kit" marker and can snap any value back to a kit value in one tap.
+
+---
+
+## Mood (V2)
+
+Mood is **not stored on the kit** — it's resolved per deck, and it **drives the palette**.
+
+```
+company industry      ┐
+positioning           ├─►  system AUTO-PICKS a mood  ─►  COLOUR PALETTE generated to fit it
+content type          ┘    (1 of ~50 presets)            (# of colours · light vs dark theme)
+```
+
+1. The system **auto-picks a mood** from the company's **industry** (+ positioning, content type) — e.g. an agency leans bold, finance leans restrained.
+2. The kit's **colour palette is generated to fit that mood** — moods differ in **how many colours** they need and whether they're **light- or dark-themed**.
+3. Both stay editable: the user can recolour the palette (a kit module) and change the mood per deck.
 
 ---
 
