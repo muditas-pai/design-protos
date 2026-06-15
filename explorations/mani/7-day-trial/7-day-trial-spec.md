@@ -28,6 +28,7 @@ Dashboard
   · PRO-gated sidebar item (Create project) → Premium-features modal
       → Try Pro for Free → Checkout (in modal)
   · Hire an Expert (sidebar or prompt pill) → hire-an-expert page → close → back to Dashboard
+  · sidebar Workspace settings → Settings page (General / Members / Billing / Profile)
 Pricing modal: Try for Free → Checkout swaps in the SAME modal
 Checkout success → "Continue to your deck" → deck-ready editor
 ```
@@ -85,6 +86,23 @@ Checkout success → "Continue to your deck" → deck-ready editor
   in the modal. Sidebar trigger preselects its tab (Create project → Projects).
   "Invite new member" is hidden from the trial dashboard sidebar.
 
+### 5. Settings (`settings-trial.html`) — free / pre-checkout user
+
+- Sidebar: Workspace Settings (General, Members, Billing) + Profile Settings (Profile).
+  Groups and Developer Console hidden for trial users.
+- Top bar: "Upgrade" button (opens checkout in a modal); no trial pill or countdown.
+- **General**: workspace avatar (camera upload) + Workspace Name field. Nothing gated.
+- **Members**: "Invite to workspace" box hidden. "Workspace members · 1 Member · 0 Guests",
+  owner row only (Owner role), Guests tab shows "No guests". No role/remove actions.
+- **Billing**: header "Free · 1 Editor · 100 Credits", Upgrade button, credits card
+  ("100 credits left" + View credit history). "Need more credits?" rows: Pro $40 and Gold $200
+  per user/month only (no Basic), green "7-day free trial" badge, each row opens checkout.
+  No payment-method section, no invoice history.
+- **Profile**: photo, first/last name, email (read-only), change password, role (read-only),
+  language select, Delete Account.
+- Every paid action opens the single `checkout.html` in a modal (`ctx=modal`); success →
+  `trial-open-deck` → editor `?state=ready`.
+
 ## Cross-frame messages (postMessage contract)
 
 | Message | Sent by | Handled by |
@@ -112,4 +130,5 @@ Checkout success → "Continue to your deck" → deck-ready editor
 | `pricing.html` | Trial pricing (duplicate of pricing key screen, trimmed) |
 | `checkout.html` | Checkout + success modal (single source for all contexts) |
 | `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
+| `settings-trial.html` | Settings (General / Members / Billing / Profile) for the free/trial user |
 | `assets/` | Vendored logos, trust badges, feature previews |
