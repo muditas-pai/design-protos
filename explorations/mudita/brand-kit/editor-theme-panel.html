@@ -1180,6 +1180,22 @@
 
       /* toolbar Theme button — lit while its panel is open */
       #btn-theme.is-on { background:#F5F5F5; color:#171717; }
+
+      /* top "⋯" overflow menu */
+      .ov-menu { position:fixed; top:54px; right:12px; width:286px; background:#fff; border-radius:10px; padding:6px; z-index:50;
+        box-shadow:0 1px 2px rgba(11,15,20,0.10), 0 12px 30px -8px rgba(11,15,20,0.24), 0 0 0 1px rgba(11,15,20,0.06); }
+      .ov-menu.hidden { display:none; }
+      .menu-item { display:flex; align-items:center; gap:11px; width:100%; padding:8px 10px; border:0; background:none; border-radius:7px; cursor:pointer; text-align:left; color:#171717; font-size:14px; transition:background 110ms; }
+      .menu-item:hover { background:#F5F5F5; }
+      .menu-item > i { font-size:18px; color:#525252; flex-shrink:0; }
+      .mi-label { flex:1; min-width:0; }
+      .mi-sub { display:block; font-size:11px; color:#737373; line-height:1.35; margin-top:2px; }
+      .menu-item.is-danger { color:#DC2626; }
+      .menu-item.is-danger > i { color:#DC2626; }
+      .menu-sep { height:1px; background:rgba(11,15,20,0.07); margin:6px 8px; }
+      .badge { padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; letter-spacing:0.03em; flex-shrink:0; }
+      .badge-pro { background:#E6EFFF; color:#0049CC; }
+      .badge-gold { background:#FBEFD0; color:#B7791F; }
     </style>
 
     <!-- ─────────────────────────  THEME PANEL  ───────────────────────── -->
@@ -1305,6 +1321,30 @@
       </div>
     </aside>
 
+    <!-- ───────────  TOP "⋯" OVERFLOW MENU  ─────────── -->
+    <!-- Opens from the top-right ⋯; "Presentation settings" opens the panel above. -->
+    <div id="overflow-menu" class="ov-menu hidden">
+      <button class="menu-item" id="mi-settings" style="align-items:flex-start;">
+        <i class="ph ph-sliders-horizontal" style="margin-top:1px;"></i>
+        <span class="mi-label">Presentation settings<span class="mi-sub">Logo, animations and footer settings</span></span>
+      </button>
+      <div class="menu-sep"></div>
+      <button class="menu-item"><i class="ph ph-arrows-clockwise"></i><span class="mi-label">Refresh Data</span><span class="badge badge-gold">GOLD</span></button>
+      <button class="menu-item"><i class="ph ph-chart-line-up"></i><span class="mi-label">Analytics</span><span class="badge badge-pro">PRO</span></button>
+      <button class="menu-item"><i class="ph ph-chat-circle"></i><span class="mi-label">Comments</span><span class="badge badge-pro">PRO</span></button>
+      <div class="menu-sep"></div>
+      <button class="menu-item"><i class="ph ph-globe-simple"></i><span class="mi-label">Publish</span></button>
+      <button class="menu-item"><i class="ph ph-browser"></i><span class="mi-label">Landing page</span></button>
+      <div class="menu-sep"></div>
+      <button class="menu-item"><i class="ph ph-user-circle"></i><span class="mi-label">Meet and present</span><span class="badge badge-pro">PRO</span></button>
+      <button class="menu-item"><i class="ph ph-pencil-simple"></i><span class="mi-label">Meet and edit</span><span class="badge badge-pro">PRO</span></button>
+      <button class="menu-item"><i class="ph ph-copy"></i><span class="mi-label">Duplicate presentation</span></button>
+      <button class="menu-item"><i class="ph ph-star"></i><span class="mi-label">Add to favourites</span></button>
+      <button class="menu-item"><i class="ph ph-folder"></i><span class="mi-label">Move to project</span></button>
+      <div class="menu-sep"></div>
+      <button class="menu-item is-danger"><i class="ph ph-trash"></i><span class="mi-label">Delete presentation</span></button>
+    </div>
+
   </div>
   <!-- /editor body -->
 
@@ -1367,9 +1407,18 @@
       requestAnimationFrame(updateSlideScale);
     }
     btnTheme && (btnTheme.onclick = () => openPanel(themePanel.classList.contains("hidden") ? "theme" : null));
-    const btnSettings = document.getElementById("btn-settings");
-    btnSettings && (btnSettings.onclick = () => openPanel(settingsPanel.classList.contains("hidden") ? "settings" : null));
     document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => openPanel(null)));
+
+    // top "⋯" overflow menu — "Presentation settings" opens the panel.
+    const btnSettings = document.getElementById("btn-settings");
+    const overflowMenu = document.getElementById("overflow-menu");
+    const toggleMenu = (show) => overflowMenu.classList.toggle("hidden", show === undefined ? !overflowMenu.classList.contains("hidden") : !show);
+    btnSettings && (btnSettings.onclick = (e) => { e.stopPropagation(); toggleMenu(); });
+    overflowMenu.addEventListener("click", () => toggleMenu(false)); // any item dismisses the menu
+    document.getElementById("mi-settings").onclick = () => openPanel("settings");
+    document.addEventListener("click", (e) => {
+      if (!overflowMenu.contains(e.target) && !(btnSettings && btnSettings.contains(e.target))) toggleMenu(false);
+    });
 
     // tabs
     document.querySelectorAll(".theme-tab").forEach((tab) => {
@@ -1430,6 +1479,9 @@
     const hash = (location.hash || "").replace("#", "");
     if (hash === "settings") {
       openPanel("settings");
+    } else if (hash === "menu") {
+      openPanel(null);
+      toggleMenu(true);
     } else {
       openPanel("theme");
       if (hash === "colors" || hash === "font") {
