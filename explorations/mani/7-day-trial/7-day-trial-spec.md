@@ -103,30 +103,20 @@ Checkout success → "Continue to your deck" → deck-ready editor
 - Every paid action opens the single `checkout.html` in a modal (`ctx=modal`); success →
   `trial-open-deck` → editor `?state=ready`.
 
-### 5b. Settings — trial-activated user (`settings-trial-active.html`)
-
-Same shell as 5, post-checkout (full Pro) differences:
-- Top bar has **no** Upgrade button and no trial pill — identical to a paid Pro user.
-  Sidebar workspace chip shows a "Pro Trial" tag.
-- **Members**: "Invite to workspace" box is **visible and working** (Pro includes team invites).
-- **Billing**: header "Pro Trial · Trial ends Jun 18, 2026", Upgrade button (converts to paid now).
-  Credits "1,000 credits left". "Need more credits?" shows **Gold only** (already on Pro path).
-  Trial & billing card: timeline ("Paid today $0" + 7-day badge → "Due Jun 18, 2026 $264.00,
-  billing starts automatically"), payment method on file (VISA ···· 4242), "Cancel trial" link.
-- General and Profile identical to 5.
-- Avatar opens a profile dropdown: name + email, "1,000 credits left", Your Account (→ Profile),
+- Avatar opens a profile dropdown: name + email, "100 credits left", Your Account (→ Profile),
   Language, Sign out.
 
-### 5c. Settings — paid subscriber (`settings-active.html`)
+### 5b. Settings — active user (`settings-active.html`)
 
-Post-conversion Gold subscriber (no trial):
-- Sidebar workspace chip shows a "Gold" tag. Top bar clean (no trial chip), avatar profile
-  dropdown shows "250.2k credits left".
+The settings for any user with an active plan (in-trial or paid use the same Gold subscriber view):
+- Sidebar workspace chip shows a "Gold" tag. Top bar clean (no trial chip, no Upgrade); avatar
+  profile dropdown shows "250.2k credits left". "Back to Home" is a non-navigating placeholder.
+- **Members**: "Invite to workspace" box hidden for now; count + owner row stay.
 - **Billing**: header "Gold · $6,000/year · 5 seats · 250,000 Credits", Upgrade button.
   - Invoice card: "$6,000 paid Jun 8, 2026", upcoming "$6,000 on June 8, 2027", View all invoices.
   - Subscription Renewal card: "Next billing date June 8, 2027" + Cancel renewal.
   - Credits card: "250.2k credits left", credit packs (2,500 → $24, 5,000 → $36).
-- Members / General / Profile same as 5b.
+- General and Profile identical to 5.
 
 ## Cross-frame messages (postMessage contract)
 
@@ -156,6 +146,5 @@ Post-conversion Gold subscriber (no trial):
 | `checkout.html` | Checkout + success modal (single source for all contexts) |
 | `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
 | `settings-trial.html` | Settings for the free / pre-checkout user (invite hidden, Free billing) |
-| `settings-trial-active.html` | Settings for the trial-activated user (invite visible, Pro Trial billing) |
-| `settings-active.html` | Settings for the paid Gold subscriber (invoices, renewal, credit packs) |
+| `settings-active.html` | Settings for the active user (Gold: invoices, renewal, credit packs) |
 | `assets/` | Vendored logos, trust badges, feature previews |
