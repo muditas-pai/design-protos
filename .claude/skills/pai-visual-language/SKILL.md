@@ -1,6 +1,6 @@
 ---
 name: pai-visual-language
-description: Stylistic conventions and brand voice for presentations.ai UI work — color emphasis (navy/orange), copy voice, density, illustration style, hierarchy patterns. Invoke when designing or implementing UI surfaces (app interface, marketing pages, pricing, upgrade modals) or writing product copy for the pai-branded codebase. Use alongside the design system, not as a replacement.
+description: Stylistic conventions and brand voice for presentations.ai UI work — color emphasis (navy = action / orange = brand / Brand Blue = growth), copy voice, density, illustration style, hierarchy patterns. Invoke when designing or implementing UI surfaces (app interface, marketing pages, pricing, upgrade modals) or writing product copy for the pai-branded codebase. Use alongside the design system, not as a replacement.
 ---
 
 # presentations.ai visual language
@@ -24,22 +24,25 @@ Most principles below apply to both. Where they differ, the rule is marked.
 
 ## Core principles (apply everywhere)
 
-### 1. Navy is the action color. Orange is for brand identity and upsell.
+### 1. Three heroes: navy = action · orange = brand · Brand Blue = growth.
 
-The brand has two heroes: **orange `#FF5500`** for brand identity, and
-**navy `#0A1925`** (with companions `#1C3550`, `#284B71`) for action.
+The app is **monochrome** by default (navy / grey / white). Three accent colours
+each own exactly one job — that restraint is *why* each one stands out:
 
-- **Primary CTAs are navy**, not orange. "Export as PPT,"
-  "Save changes," — all navy-filled.
-- **Orange is reserved for**: the logo, the PRO badge, upgrade prompts,
-  plan callouts (Basic / Pro / Gold), offer banners, "COMING SOON" tags,
-  seat-count selectors during purchase, in-app upsells, and any surface
-  trying to catch attention for monetization.
-- **Outside those moments the app is monochrome** (navy / grey / white).
-  That restraint is *why* the orange moments stand out when they appear.
+- **Navy `#0A1925`** (companions `#1C3550`, `#284B71`) — **action**. Primary CTAs
+  ("Export as PPT," "Save changes") are navy-filled.
+- **Orange `#FF5500`** — **brand identity**. The logo, brand-voice moments,
+  "COMING SOON / NEW" attention tags. *Brand, not monetization.*
+- **Brand Blue `#005EFF`** (companions `#0055ED`, `#0043B8`; tint `#E6EFFF`) —
+  **growth & monetization**. *Every growth feature / intervention uses a Brand Blue
+  theme on its buttons, backgrounds and accents:* Upgrade to Pro / Gold, Hire an
+  Expert, paywalls, upsell cards & banners, plan callouts, the PRO / GOLD plan
+  badges, seat-count / credit purchase — any surface driving a paid action.
 
-A primary button on the dashboard? Navy. The "Upgrade to Pro" button in a
-free-tier modal? Orange. The PRO badge next to the workspace name? Orange.
+Quick test:
+- Primary button on the dashboard → **navy**.
+- "Upgrade to Pro" button · a Gold-feature upsell card · the PRO badge → **Brand Blue**.
+- The logo / brand mark → **orange**.
 
 ### 2. Confidence + warmth — never cold, never corporate-stiff.
 
@@ -116,8 +119,8 @@ imagery, when present, is the product.
 ### 6. One emphatic action per surface.
 
 Each surface should have exactly one primary CTA. That CTA is navy-filled
-(or orange-filled if it's an upsell). Everything else is white-outlined or
-ghost.
+(or **Brand Blue** if it's a growth / upsell action). Everything else is
+white-outlined or ghost.
 
 - Slide editor: "Export as PPT" is navy-filled; "Share" and "Present" are
   outlined.
@@ -188,7 +191,7 @@ What this means in practice:
 Headers, sidebars, toolbars, panels: monochrome (navy / dark grey / light
 grey / white). Color enters only:
 
-- Brand orange for the logo and PRO badge.
+- Brand orange for the logo; Brand Blue for the PRO / GOLD plan badge.
 - The single primary CTA per surface (navy-filled).
 - The user's content (which can be any color the user wants — it's their
   presentation, not yours).
@@ -242,20 +245,18 @@ The principle isn't "marketing = lots of whitespace." It's "marketing
 surfaces have *more visual energy* than the app, in whatever density the
 surface's job requires."
 
-### M3. Orange does the work in growth surfaces.
+### M3. Brand Blue does the work in growth surfaces.
 
-This is where orange shines. Use it confidently:
+Growth and monetization is where **Brand Blue `#005EFF`** shines. Use it confidently
+on the buttons, backgrounds and accents of:
 
-- Plan tier callouts ("Most Popular" — though navy works too here for
-  emphasis-via-action-color)
-- Seat-count or quantity selectors during purchase
-- "COMING SOON," "NEW," "LIMITED" tags on features
-- Upgrade prompts and paywall CTAs
-- Offer banners ("Get 30% off," "Last chance")
-- The PRO / GOLD plan badges
-- Plan-comparison "premium" highlights
+- Upgrade prompts, paywall CTAs, "Hire an Expert"
+- Plan tier callouts ("Most Popular") and the PRO / GOLD plan badges
+- Seat-count / quantity / credit selectors during purchase
+- Offer banners ("Get 30% off," "Last chance") and plan-comparison "premium" highlights
 
-The app-wide restraint (rule 1) makes these orange moments feel like
+Orange stays on pure brand moments only (logo, "COMING SOON / NEW / LIMITED" tags).
+The app-wide restraint (rule 1) makes these Brand Blue moments feel like
 punctuation, not decoration.
 
 ### M4. Use small dimensional illustrations.
@@ -291,7 +292,7 @@ Pricing-page feature-comparison matrices use:
 
 | ❌ Don't | ✅ Do | Why |
 |---|---|---|
-| Use orange for default primary CTAs | Use navy for primary CTAs; orange for upsells | Orange = brand / monetization, not "the action color" |
+| Orange for primary CTAs or growth surfaces | Navy for primary CTAs · Brand Blue for growth/upsells · orange for the brand mark | Three heroes, one job each |
 | Stack three equal-emphasis buttons | One primary, others outlined / ghost | One emphatic action per surface |
 | Make the app airy / Canva-like | Calm restraint; comfortable not airy | Chrome recedes around user content |
 | Glowing-brain or AI-circuit imagery | Real slide thumbnails / actual product | Show product, not metaphors |
@@ -300,7 +301,7 @@ Pricing-page feature-comparison matrices use:
 | Two equally-large headline tiers | Lighter setup + darker bolder payoff | Hierarchy through color, not just size |
 | Sterile, polished UI with no warmth | Add a softening element (illustration, greeting, casual aside) | Polished must not feel cold |
 | Dimensional illustrations inside product chrome | Phosphor line icons | Product chrome is restrained |
-| Orange accents scattered through product UI | Orange only at brand/upsell moments | Punctuation, not theme |
+| Orange / Brand Blue accents scattered through product UI | Orange at brand moments · Brand Blue at growth moments | Punctuation, not theme |
 | Emoji on every card / section header | One emoji on the single focal moment, none beside it | Repetition kills delight and flattens hierarchy |
 | Emoji as a button or list-item icon | Phosphor line icon; emoji only as a rare accent | Functional affordances stay in the icon set |
 | Soft 16–20px pillowy corners | Tighter ~12px cards, 8–10px surfaces, 6–8px chips | Reads crafted/precise, not consumer-bubbly |
@@ -314,11 +315,11 @@ Pricing-page feature-comparison matrices use:
 |---|---|---|---|
 | Landing page hero | Marketing | Airy | Restrained, orange brand mark |
 | Landing page features / sections | Marketing | Medium | Light/dark rhythm |
-| Pricing page | Marketing | **Dense** | Navy CTAs; orange on tags / "COMING SOON" / seat selectors |
-| Upgrade-to-Pro modal | Growth | Tight | **Orange CTA** + navy supporting |
+| Pricing page | Marketing | **Dense** | Navy CTAs; **Brand Blue** on plan tags / upgrade / seat selectors; orange "COMING SOON" |
+| Upgrade-to-Pro modal | Growth | Tight | **Brand Blue CTA** + navy supporting |
 | Plan-comparison table | Marketing-in-app | Dense | Mostly grayscale; green checks |
-| Offer banner | Growth | Tight | **Orange** |
-| Dashboard | App | Comfortable | Grayscale + navy CTA + orange PRO badge |
+| Offer banner | Growth | Tight | **Brand Blue** |
+| Dashboard | App | Comfortable | Grayscale + navy CTA + **Brand Blue** PRO badge |
 | Slide editor | App | Comfortable | Grayscale chrome + navy CTA only |
 | Settings, account, integrations | App | Comfortable | Pure grayscale + navy CTA |
 | Empty states | App | Calm | Grayscale + small illustration if onboarding-adjacent |
