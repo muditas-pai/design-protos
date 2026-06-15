@@ -24,7 +24,7 @@
 | **Templates** | manual add + import | **4 ways in** (library · existing deck · prompt · import) |
 | **Brand knowledge** | editable doc list | **greyed/locked docs + Gold knowledge-graph upsell** |
 | **Org info** | fields + team (name · role) | + **team photos** |
-| **Images** | library | + **default categorisation** (people · product · backgrounds) + re-run (credits) |
+| **Images** | library | + **default categorisation** (people · product · backgrounds) · **per-image description + tags editing** · re-run (credits) |
 
 ---
 
