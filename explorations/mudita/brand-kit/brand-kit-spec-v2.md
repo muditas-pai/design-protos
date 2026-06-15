@@ -24,7 +24,7 @@
 | **Templates** | manual add + import | **4 ways in** (library · existing deck · prompt · import) |
 | **Brand knowledge** | editable doc list | **greyed/locked docs + Gold knowledge-graph upsell** |
 | **Org info** | fields + team (name · role) | + **team photos** |
-| **Images** | library | + **default categorisation** (people · product · backgrounds) · **per-image description + tags editing** · re-run (credits) |
+| **Images** | library | + **default categorisation** (people · product · backgrounds) with **category filters** (default All) · **per-image description + tags editing** · re-run (credits) |
 
 ---
 
@@ -79,7 +79,7 @@ BRAND KIT
 ├─ Templates ───── library · existing deck · prompt · import
 ├─ Brand knowledge  (Gold) ── documents → knowledge graph
 ├─ Org info ─────── company details + team (with photos)
-└─ Images ──────── library, auto-categorised (people · product · backgrounds)
+└─ Images ──────── library, auto-categorised (people · product · backgrounds) · filter on top (default All)
 ```
 
 ---
@@ -102,6 +102,8 @@ Everything is **edit-in-place** with full create / update / delete and an inviti
 > **Images run one default categorisation pass** into **people · product · backgrounds**, pulled from
 > each asset's **alt / meta tags and the surrounding HTML** in the artifact it was extracted from. New
 > uploads land **Uncategorised** until the next run; **re-run categorisation** costs credits.
+> Categories are **filters on top** (All · People · Product · Backgrounds · Uncategorised, each with a
+> count) — **All is the default**; the library shows one grid, filtered in place.
 > **Click any image** to view and edit its auto-generated **description + tags** (and re-assign its category).
 
 ---

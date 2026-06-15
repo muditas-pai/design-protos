@@ -708,19 +708,23 @@
     .team-row2 .tv:empty::before { content: attr(data-ph); color: var(--fg-3); }
     .team-row2 .tv:focus { box-shadow: 0 0 0 2px var(--ink); background: var(--surface); }
     /* images — re-tag bar */
-    .img-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; max-width: 700px; flex-wrap: wrap; }
-    .img-bar-l { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-2); }
-    .img-bar-l i { font-size: 14px; color: var(--fg-3); }
+    .img-top { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .img-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .img-filter { display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer; background: transparent;
+      box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg-2); font: inherit; font-size: 12.5px; font-weight: 500; padding: 5px 12px; border-radius: 99px;
+      transition: color 120ms var(--ease), box-shadow 120ms var(--ease), background 120ms var(--ease); }
+    .img-filter:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-3); }
+    .img-filter .ifn { font-size: 11px; color: var(--fg-3); font-weight: 600; }
+    .img-filter.on { background: var(--ink); color: #fff; box-shadow: none; }
+    .img-filter.on .ifn { color: rgba(255, 255, 255, 0.72); }
     .img-retag { display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer; background: transparent;
       box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg-2); font: inherit; font-size: 12px; font-weight: 500; padding: 6px 11px; border-radius: 7px;
       transition: color 120ms var(--ease), box-shadow 120ms var(--ease); }
     .img-retag:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-3); }
     .img-retag i { font-size: 13px; }
     .img-retag .cr { font-size: 11px; color: var(--gold); font-weight: 600; }
-    .img-group { margin-bottom: 16px; }
-    .img-group:last-of-type { margin-bottom: 0; }
-    .img-grp-l { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
-    .img-grp-n { color: var(--fg-3); font-weight: 500; }
+    .img-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-3); margin-bottom: 14px; }
+    .img-note i { font-size: 14px; }
     .asset-wrap .asset { cursor: pointer; transition: opacity 120ms var(--ease); }
     .asset-wrap:hover .asset { opacity: 0.9; }
     /* image detail modal */
@@ -1264,23 +1268,29 @@
         "Add details like positioning and proof points — plus the people on your team — to ground the AI’s content.", "Add a field", 'data-add="org"');
       return orgFieldsHTML() + teamHTML();
     }
-    // V2 images — one default categorisation pass (people · product · backgrounds) from alt/meta + page context
+    // V2 images — one default categorisation pass (people · product · backgrounds); category filters on top
     var IMG_CATS = [{ key: "people", label: "People" }, { key: "product", label: "Product" }, { key: "background", label: "Backgrounds" }, { key: "", label: "Uncategorised" }];
+    var imgFilter = "all";   // module-level filter state (default: All)
     function renderImages() {
       if (!KIT.images.length) return emptyState("ph-images", "No images yet",
         "Upload brand photography, or scrape your site to build an image library.", "Add images", 'data-add="image"');
-      var bar = '<div class="img-bar"><span class="img-bar-l"><i class="ph ph-tag"></i>Auto-categorised from alt text &amp; surrounding page context</span>' +
-        '<button class="img-retag" type="button" data-retag="1"><i class="ph ph-arrows-clockwise"></i>Re-run categorisation <span class="cr">20 credits</span></button></div>';
-      var groups = IMG_CATS.map(function (c) {
-        var items = KIT.images.map(function (im, i) { return { im: im, i: i }; }).filter(function (x) { return (x.im.cat || "") === c.key; });
-        if (!items.length) return "";
-        return '<div class="img-group"><div class="img-grp-l">' + c.label + ' <span class="img-grp-n">' + items.length + '</span></div>' +
-          '<div class="asset-grid">' + items.map(function (x) {
-            return '<span class="tile-wrap asset-wrap"><img class="asset" loading="lazy" alt="" data-imgview="' + x.i + '" title="View details" src="https://picsum.photos/seed/' + x.im.seed + '/200" onerror="this.style.opacity=.4;this.removeAttribute(\'src\')">' +
-              '<button class="tile-x" type="button" data-del="image:' + x.i + '" title="Remove"><i class="ph ph-x"></i></button></span>';
-          }).join("") + '</div></div>';
+      var counts = {};
+      KIT.images.forEach(function (im) { var c = im.cat || ""; counts[c] = (counts[c] || 0) + 1; });
+      if (imgFilter !== "all" && !counts[imgFilter]) imgFilter = "all";   // reset if the active filter emptied
+      var defs = [["all", "All"]].concat(IMG_CATS.filter(function (c) { return counts[c.key]; }).map(function (c) { return [c.key, c.label]; }));
+      var chips = defs.map(function (f) {
+        var key = f[0], n = key === "all" ? KIT.images.length : (counts[key] || 0);
+        return '<button class="img-filter' + (imgFilter === key ? " on" : "") + '" type="button" data-imgfilter="' + key + '">' + f[1] + ' <span class="ifn">' + n + '</span></button>';
       }).join("");
-      return bar + groups + '<button class="mod-add" type="button" data-add="image"><i class="ph ph-plus"></i>Add images</button>';
+      var shown = KIT.images.map(function (im, i) { return { im: im, i: i }; }).filter(function (x) { return imgFilter === "all" || (x.im.cat || "") === imgFilter; });
+      var grid = '<div class="asset-grid">' + shown.map(function (x) {
+        return '<span class="tile-wrap asset-wrap"><img class="asset" loading="lazy" alt="" data-imgview="' + x.i + '" title="View details" src="https://picsum.photos/seed/' + x.im.seed + '/200" onerror="this.style.opacity=.4;this.removeAttribute(\'src\')">' +
+          '<button class="tile-x" type="button" data-del="image:' + x.i + '" title="Remove"><i class="ph ph-x"></i></button></span>';
+      }).join("") + '</div>';
+      return '<div class="img-top"><div class="img-filters">' + chips + '</div>' +
+          '<button class="img-retag" type="button" data-retag="1"><i class="ph ph-arrows-clockwise"></i>Re-run categorisation <span class="cr">20 credits</span></button></div>' +
+        '<div class="img-note"><i class="ph ph-tag"></i>Auto-categorised from alt text &amp; surrounding page context</div>' +
+        grid + '<button class="mod-add" type="button" data-add="image"><i class="ph ph-plus"></i>Add images</button>';
     }
     // image detail — view + edit the auto-generated description + tags
     function imgDefaults(cat) {
@@ -1474,6 +1484,8 @@
 
       var accsEl = stage.querySelector(".accs");
       accsEl.addEventListener("click", function (e) {
+        var imf = e.target.closest("[data-imgfilter]"); // switch the image category filter
+        if (imf) { e.stopPropagation(); imgFilter = imf.getAttribute("data-imgfilter"); refreshMod("images"); return; }
         var iv = e.target.closest("[data-imgview]");    // open an image's detail (desc + tags)
         if (iv) { e.stopPropagation(); openImageDetail(+iv.getAttribute("data-imgview")); return; }
         var ti = e.target.closest("[data-teamimg]");   // team photo upload (fake)
