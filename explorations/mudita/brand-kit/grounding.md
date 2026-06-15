@@ -82,9 +82,12 @@ These are prototype and demo choices, **not** product decisions — they live he
 - [x] **Zero state + FTUE built** (`brand-kit-ftue.html`) — zero → add sources → live reveal →
       filled kit + auto sample deck.
 - [ ] Resolve the spec's open questions (mood-in-P1 · re-theme scope · kit opt-out · templates binding).
-- [x] **Mood switcher built into the FTUE Look & feel** — pick a preset layout/decor while keeping your
-      own colours + fonts (the spec's override model). Thumbnails are **greyscale + 3 descriptor words**
-      so users judge structure, not colour. (Pulled forward from Phase 2 per design call.)
+- [x] **Mood switcher built into the FTUE Look & feel** — shows only the current mood + a **Change**
+      button → a picker modal of greyscale thumbnails (**+ 3 descriptor words**) so users judge
+      structure, not colour. Selecting a mood **re-themes the sample deck live** (6 slides re-style to
+      the mood's layout/decor while the kit's own colours + fonts carry over — the spec's override
+      model). Slide styling is CSS-var-driven (`--bc/--bc2/--bc3/--bink/--bf/--bfb` from the kit).
+      (Pulled forward from Phase 2 per design call.)
 - [x] **Templates section added (manual + import).** No auto-generation from the site — empty state with
       "Add a template" + import-from-PowerPoint/Google-Slides/PDF. Library view still a stub.
 - [x] **Team members in Org info** — a Team sub-section (name + designation), separate from the k/v
