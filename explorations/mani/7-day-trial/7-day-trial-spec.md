@@ -114,6 +114,19 @@ Same shell as 5, post-checkout (full Pro) differences:
   Trial & billing card: timeline ("Paid today $0" + 7-day badge → "Due Jun 18, 2026 $264.00,
   billing starts automatically"), payment method on file (VISA ···· 4242), "Cancel trial" link.
 - General and Profile identical to 5.
+- Avatar opens a profile dropdown: name + email, "1,000 credits left", Your Account (→ Profile),
+  Language, Sign out.
+
+### 5c. Settings — paid subscriber (`settings-active.html`)
+
+Post-conversion Gold subscriber (no trial):
+- Sidebar workspace chip shows a "Gold" tag. Top bar clean (no trial chip), avatar profile
+  dropdown shows "250.2k credits left".
+- **Billing**: header "Gold · $6,000/year · 5 seats · 250,000 Credits", Upgrade button.
+  - Invoice card: "$6,000 paid Jun 8, 2026", upcoming "$6,000 on June 8, 2027", View all invoices.
+  - Subscription Renewal card: "Next billing date June 8, 2027" + Cancel renewal.
+  - Credits card: "250.2k credits left", credit packs (2,500 → $24, 5,000 → $36).
+- Members / General / Profile same as 5b.
 
 ## Cross-frame messages (postMessage contract)
 
@@ -144,4 +157,5 @@ Same shell as 5, post-checkout (full Pro) differences:
 | `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
 | `settings-trial.html` | Settings for the free / pre-checkout user (invite hidden, Free billing) |
 | `settings-trial-active.html` | Settings for the trial-activated user (invite visible, Pro Trial billing) |
+| `settings-active.html` | Settings for the paid Gold subscriber (invoices, renewal, credit packs) |
 | `assets/` | Vendored logos, trust badges, feature previews |

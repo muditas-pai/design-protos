@@ -130,7 +130,9 @@ Two user states:
 
 ### After trial converts (day 8, payment succeeds)
 1. Nothing changes in the top bar (already clean).
-2. Billing flips to active Pro: next renewal date shown, invoice history starts.
+2. Billing flips to the active paid subscriber view (`settings-active.html`): plan header with seats
+   and annual total, Invoice card (last paid + upcoming), Subscription Renewal with next billing date
+   and Cancel renewal, Credits card with one-off credit packs. Sidebar chip shows the plan name (e.g. Gold).
 
 ---
 
