@@ -82,6 +82,13 @@ These are prototype and demo choices, **not** product decisions — they live he
 - [x] **Zero state + FTUE built** (`brand-kit-ftue.html`) — zero → add sources → live reveal →
       filled kit + auto sample deck.
 - [ ] Resolve the spec's open questions (mood-in-P1 · re-theme scope · kit opt-out · templates binding).
+- [x] **Mood switcher built into the FTUE Look & feel** — pick a preset layout/decor while keeping your
+      own colours + fonts (the spec's override model). Thumbnails are **greyscale + 3 descriptor words**
+      so users judge structure, not colour. (Pulled forward from Phase 2 per design call.)
+- [x] **Templates section added (manual + import).** No auto-generation from the site — empty state with
+      "Add a template" + import-from-PowerPoint/Google-Slides/PDF. Library view still a stub.
+- [x] **Team members in Org info** — a Team sub-section (name + designation), separate from the k/v
+      company-details fields.
 - [ ] Prototype **"request a custom kit" → pricing** handoff (the done-for-you service).
 - [ ] Prototype the **Brand-knowledge** upload surface + the Pro/Gold gating UI.
 - [x] **Reframed brand voice into a three-layer model** (personality · dimension sliders · lexicon) —
