@@ -717,6 +717,10 @@
     .img-retag:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-3); }
     .img-retag i { font-size: 13px; }
     .img-retag .cr { font-size: 11px; color: var(--gold); font-weight: 600; }
+    .img-group { margin-bottom: 16px; }
+    .img-group:last-of-type { margin-bottom: 0; }
+    .img-grp-l { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
+    .img-grp-n { color: var(--fg-3); font-weight: 500; }
     .spin { animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     /* templates — entry-point cards */
@@ -794,7 +798,12 @@
         { type: "Wordmark only", ctx: "On dark", have: false, dark: true, word: true },
         { type: "Wordmark only", ctx: "Monochrome", have: false, mono: true, word: true }
       ],
-      images: ["pata1", "pata2", "pata3", "pata4", "pata5", "pata6", "pata7", "pata8", "pata9", "pata10"]
+      images: [
+        { seed: "pata1", cat: "product" }, { seed: "pata2", cat: "people" }, { seed: "pata3", cat: "product" },
+        { seed: "pata4", cat: "background" }, { seed: "pata5", cat: "people" }, { seed: "pata6", cat: "background" },
+        { seed: "pata7", cat: "product" }, { seed: "pata8", cat: "background" }, { seed: "pata9", cat: "people" },
+        { seed: "pata10", cat: "product" }
+      ]
     };
 
     // company docs the user dropped in during setup → seed Brand knowledge
@@ -1226,16 +1235,23 @@
         "Add details like positioning and proof points — plus the people on your team — to ground the AI’s content.", "Add a field", 'data-add="org"');
       return orgFieldsHTML() + teamHTML();
     }
+    // V2 images — one default categorisation pass (people · product · backgrounds) from alt/meta + page context
+    var IMG_CATS = [{ key: "people", label: "People" }, { key: "product", label: "Product" }, { key: "background", label: "Backgrounds" }, { key: "", label: "Uncategorised" }];
     function renderImages() {
       if (!KIT.images.length) return emptyState("ph-images", "No images yet",
         "Upload brand photography, or scrape your site to build an image library.", "Add images", 'data-add="image"');
-      return '<div class="img-bar"><span class="img-bar-l"><i class="ph ph-tag"></i>Auto-tagged for AI retrieval</span>' +
-          '<button class="img-retag" type="button" data-retag="1"><i class="ph ph-arrows-clockwise"></i>Re-run auto-tagging <span class="cr">20 credits</span></button></div>' +
-        '<div class="asset-grid">' + KIT.images.map(function (seed, i) {
-          return '<span class="tile-wrap asset-wrap"><img class="asset" loading="lazy" alt="" src="https://picsum.photos/seed/' + seed + '/200" onerror="this.style.opacity=.4;this.removeAttribute(\'src\')">' +
-            '<button class="tile-x" type="button" data-del="image:' + i + '" title="Remove"><i class="ph ph-x"></i></button></span>';
-        }).join("") + '</div>' +
-        '<button class="mod-add" type="button" data-add="image"><i class="ph ph-plus"></i>Add images</button>';
+      var bar = '<div class="img-bar"><span class="img-bar-l"><i class="ph ph-tag"></i>Auto-categorised from alt text &amp; surrounding page context</span>' +
+        '<button class="img-retag" type="button" data-retag="1"><i class="ph ph-arrows-clockwise"></i>Re-run categorisation <span class="cr">20 credits</span></button></div>';
+      var groups = IMG_CATS.map(function (c) {
+        var items = KIT.images.map(function (im, i) { return { im: im, i: i }; }).filter(function (x) { return (x.im.cat || "") === c.key; });
+        if (!items.length) return "";
+        return '<div class="img-group"><div class="img-grp-l">' + c.label + ' <span class="img-grp-n">' + items.length + '</span></div>' +
+          '<div class="asset-grid">' + items.map(function (x) {
+            return '<span class="tile-wrap asset-wrap"><img class="asset" loading="lazy" alt="" src="https://picsum.photos/seed/' + x.im.seed + '/200" onerror="this.style.opacity=.4;this.removeAttribute(\'src\')">' +
+              '<button class="tile-x" type="button" data-del="image:' + x.i + '" title="Remove"><i class="ph ph-x"></i></button></span>';
+          }).join("") + '</div></div>';
+      }).join("");
+      return bar + groups + '<button class="mod-add" type="button" data-add="image"><i class="ph ph-plus"></i>Add images</button>';
     }
     // mood — a preset layout/decor style the kit's fonts + colours ride on top of (greyscale to judge structure)
     var MOODS = [
@@ -1327,7 +1343,7 @@
       var p = a.split(":"), k = p[0];
       if (k === "colour") KIT.colors.push("#8A8F98");
       else if (k === "doc") DOCS.push("New document.pdf");
-      else if (k === "image") KIT.images.push("add" + (KIT.images.length + 1) + "x" + KIT.colors.length);
+      else if (k === "image") KIT.images.push({ seed: "add" + (KIT.images.length + 1) + "x" + KIT.colors.length, cat: "" });
       else if (k === "logoslot") KIT.logos[+p[1]].have = true;
       else if (k === "org") KIT.org.push({ k: "New field", v: "" });
       else if (k === "team") KIT.team.push({ name: "", role: "" });
@@ -1379,13 +1395,17 @@
       accsEl.addEventListener("click", function (e) {
         var ti = e.target.closest("[data-teamimg]");   // team photo upload (fake)
         if (ti) { e.stopPropagation(); var k = +ti.getAttribute("data-teamimg"); KIT.team[k].img = 5 + k; refreshMod("org"); return; }
-        var rt = e.target.closest("[data-retag]");      // re-run auto-tagging (costs credits)
+        var rt = e.target.closest("[data-retag]");      // re-run categorisation (costs credits)
         if (rt) {
           e.stopPropagation();
           if (rt.dataset.busy) return;
           rt.dataset.busy = "1";
-          rt.innerHTML = '<i class="ph ph-arrows-clockwise spin"></i>Re-tagging…';
-          setTimeout(function () { rt.innerHTML = '<i class="ph ph-check"></i>Re-tagged · 20 credits used'; }, 1200);
+          rt.innerHTML = '<i class="ph ph-arrows-clockwise spin"></i>Categorising…';
+          setTimeout(function () {
+            var cats = ["people", "product", "background"];
+            KIT.images.forEach(function (im, i) { if (!im.cat) im.cat = cats[i % 3]; });   // sort the uncategorised
+            refreshMod("images");
+          }, 1200);
           return;
         }
         var crud = e.target.closest("[data-add],[data-del]");

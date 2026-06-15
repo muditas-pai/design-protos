@@ -24,7 +24,7 @@
 | **Templates** | manual add + import | **4 ways in** (library · existing deck · prompt · import) |
 | **Brand knowledge** | editable doc list | **greyed/locked docs + Gold knowledge-graph upsell** |
 | **Org info** | fields + team (name · role) | + **team photos** |
-| **Images** | library | + **re-run auto-tagging** (costs credits) |
+| **Images** | library | + **default categorisation** (people · product · backgrounds) + re-run (credits) |
 
 ---
 
@@ -79,7 +79,7 @@ BRAND KIT
 ├─ Templates ───── library · existing deck · prompt · import
 ├─ Brand knowledge  (Gold) ── documents → knowledge graph
 ├─ Org info ─────── company details + team (with photos)
-└─ Images ──────── library + auto-tagging
+└─ Images ──────── library, auto-categorised (people · product · backgrounds)
 ```
 
 ---
@@ -97,7 +97,11 @@ Everything is **edit-in-place** with full create / update / delete and an inviti
 | **Templates** | saved / imported decks | add via library · existing deck · prompt · import · remove |
 | **Brand knowledge** | documents (Gold) | add docs · the **graph itself is Gold** (locked until upgrade) |
 | **Org info** | company fields **+ team** (name · role · **photo**) | edit · add · remove · upload a member photo |
-| **Images** | media library | add · remove · **re-run auto-tagging** (costs credits) |
+| **Images** | media library | add · remove · **re-run categorisation** (costs credits) |
+
+> **Images run one default categorisation pass** into **people · product · backgrounds**, pulled from
+> each asset's **alt / meta tags and the surrounding HTML** in the artifact it was extracted from. New
+> uploads land **Uncategorised** until the next run; **re-run categorisation** costs credits.
 
 ---
 
