@@ -233,6 +233,35 @@
     .pay-method .visa { font-weight: 800; color: #1a1f71; letter-spacing: -0.5px; }
     .cancel-link { display: inline-block; margin-top: 16px; color: var(--fg-2); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-size: 13px; }
     .cancel-link:hover { color: #b91c1c; }
+    .tb-row { padding-bottom: 4px; }
+
+    /* ── cancel trial confirm modal (improved design) ── */
+    .confirm-modal { position: fixed; inset: 0; z-index: 90; display: none; align-items: center; justify-content: center;
+      background: rgba(11,15,20,0.45); backdrop-filter: blur(2px); }
+    .confirm-modal.is-open { display: flex; }
+    .confirm-modal.is-open .confirm-card { animation: cm-pop .34s cubic-bezier(.34,1.4,.64,1) both; }
+    @keyframes cm-pop { from { opacity:0; transform: translateY(14px) scale(.96); } to { opacity:1; transform:none; } }
+    .confirm-card { width: 470px; background: var(--surface); border-radius: 12px; box-shadow: 0 24px 64px rgba(0,0,0,.30);
+      font-family: "Inter", system-ui, sans-serif; }
+    .confirm-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+    .confirm-head .ttl { font-size: 16px; font-weight: 600; }
+    .confirm-head .x2 { width: 28px; height: 28px; border-radius: 999px; border: 0; background: var(--surface-2);
+      display: grid; place-items: center; cursor: pointer; color: var(--fg-2); font-size: 15px; }
+    .confirm-body { padding: 22px 24px 24px; }
+    .confirm-lead { font-size: 17px; font-weight: 600; color: var(--fg); margin: 0 0 10px; }
+    .confirm-p { font-size: 13px; color: var(--fg-2); line-height: 1.5; margin: 0 0 22px; }
+    .confirm-foot { display: flex; gap: 12px; }
+    .confirm-foot button { flex: 1; height: 44px; border-radius: 8px; font: 500 14px "Inter", sans-serif; cursor: pointer; }
+    .btn-keep { border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); }
+    .btn-keep:hover { background: var(--surface-2); }
+    .btn-end { border: 0; background: #b91c1c; color: #fff; }
+    .btn-end:hover { filter: brightness(1.08); }
+    .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+      background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 13px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.3); opacity: 0; pointer-events: none;
+      transition: opacity .24s var(--ease), transform .24s var(--ease); z-index: 200; display: flex; align-items: center; gap: 8px; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast i { color: #34d399; font-size: 16px; }
 
     /* ── checkout modal (reuses dashboard pattern) ── */
     .cmodal { position: fixed; inset: 0; z-index: 80; display: none; align-items: center; justify-content: center;
@@ -382,18 +411,11 @@
 
           <div class="trial-card">
             <div class="cc-head"><span class="ttl">Trial &amp; billing</span></div>
-            <div class="tl">
-              <div class="tl-row now">
-                <div><div class="tl-main">Paid today <span class="badge-trial"><i class="ph-fill ph-check-circle"></i>7-day free trial</span></div><div class="tl-sub">Pro Annual · 1 seat</div></div>
-                <div class="tl-amt">$0</div>
-              </div>
-              <div class="tl-row future">
-                <div><div class="tl-main">Due Jun 18, 2026</div><div class="tl-sub">Billing starts automatically</div></div>
-                <div class="tl-amt">$264.00</div>
-              </div>
+            <div class="tb-row">
+              <div><div class="tl-main">Pro Annual · 1 seat <span class="badge-trial"><i class="ph-fill ph-check-circle"></i>7-day free trial</span></div><div class="tl-sub">Billing starts automatically when your trial ends.</div></div>
             </div>
             <div class="pay-method"><span class="visa">VISA</span> Card ending ···· 4242</div>
-            <span class="cancel-link">Cancel trial</span>
+            <span class="cancel-link" data-cancel-open>Cancel trial</span>
           </div>
         </section>
 
@@ -440,6 +462,26 @@
     </main>
   </div>
 
+  <!-- ── Cancel trial confirm modal ── -->
+  <div class="confirm-modal" id="cancelModal">
+    <div class="confirm-card">
+      <div class="confirm-head">
+        <span class="ttl">Cancel trial?</span>
+        <button class="x2" data-cancel-close aria-label="Close"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="confirm-body">
+        <p class="confirm-lead">If you cancel now, your trial ends and you won't be charged.</p>
+        <p class="confirm-p">Your workspace drops to Free when the trial ends and your credits reset to 0. You can restart anytime to get your plan's credits back.</p>
+        <div class="confirm-foot">
+          <button class="btn-keep" data-cancel-close>Keep my trial</button>
+          <button class="btn-end" data-cancel-confirm>Cancel trial</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><i class="ph-fill ph-check-circle"></i><span id="toastMsg"></span></div>
+
   <!-- ── Checkout modal ── -->
   <div class="cmodal" id="cmodal">
     <div class="cmodal-wrap">
@@ -479,6 +521,21 @@
     pmenu.querySelector('[data-go-profile]').addEventListener('click', function () {
       pmenu.classList.remove('is-open');
       document.querySelector('a.nav-item[data-tab="profile"]').click();
+    });
+
+    // ── cancel trial confirm modal ──
+    var cancelModal = document.getElementById('cancelModal');
+    document.querySelector('[data-cancel-open]').addEventListener('click', function () { cancelModal.classList.add('is-open'); });
+    document.querySelectorAll('[data-cancel-close]').forEach(function (el) {
+      el.addEventListener('click', function () { cancelModal.classList.remove('is-open'); });
+    });
+    cancelModal.addEventListener('click', function (e) { if (e.target === cancelModal) cancelModal.classList.remove('is-open'); });
+    document.querySelector('[data-cancel-confirm]').addEventListener('click', function () {
+      cancelModal.classList.remove('is-open');
+      var t = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = 'Trial cancelled. Pro access stays until your trial ends.';
+      t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 3200);
     });
 
     // ── checkout modal ──
