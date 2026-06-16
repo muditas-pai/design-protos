@@ -86,6 +86,19 @@ Checkout success → "Continue to your deck" → deck-ready editor
   in the modal. Sidebar trigger preselects its tab (Create project → Projects).
   "Invite new member" is hidden from the trial dashboard sidebar.
 
+### 4b. Dashboard — active trial user (`dashboard-active-trial.html`)
+
+Unlocked full-Pro dashboard for the in-trial user.
+- Sidebar workspace chip "Pro"; sidebar foot has **Workspace settings** + **Invite new members**.
+- Topbar: "Unlock project knowledge" pill + "Upgrade to Gold" button (no trial countdown / no badges).
+- **Invite new members** → "Invite members" popup (emails + Invite + Copy invite link).
+- Invite → **Add more seats** modal: "Add 1 seat to invite a new member", "Billed on day 7
+  (Jun 18, 2026): $240.00", "$0 due today" note, agree checkbox ("…charged $240.00 on day 7 with
+  your billing"), Cancel / Confirm Payment. Seats are billed on the day-7 date, not today (Case 2).
+- Leaving the seats modal (X or Cancel) → **Exit checkout?** confirm ("upgrade will be cancelled"),
+  Leave Page (discard) / Complete Purchase (back to seats). Confirm Payment → toast "1 seat added,
+  billed day 7".
+
 ### 5. Settings (`settings-trial.html`) — free / pre-checkout user
 
 - Sidebar: Workspace Settings (General, Members, Billing) + Profile Settings (Profile).
@@ -155,7 +168,8 @@ The active subscriber view (Gold):
 | `editor-trial.html` | Generation screen (clone of Mudita's editor-to-present + trial overrides) |
 | `pricing.html` | Trial pricing (duplicate of pricing key screen, trimmed) |
 | `checkout.html` | Checkout + success modal (single source for all contexts) |
-| `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
+| `dashboard-trial.html` | Trial dashboard (free / locked — duplicate of dashboard key screen + modals) |
+| `dashboard-active-trial.html` | Active trial dashboard (unlocked full Pro; invite → add-seat (billed day 7) → exit-checkout) |
 | `settings-trial.html` | Settings for the free / pre-checkout user (invite hidden, Free billing) |
 | `settings-trial-active.html` | Settings for the in-trial user (Pro Trial: invite visible, trial timeline, Cancel trial) |
 | `settings-active.html` | Settings for the trial active user (Gold: invoices, renewal, credit packs) |
