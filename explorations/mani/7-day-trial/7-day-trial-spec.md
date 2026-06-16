@@ -117,9 +117,9 @@ After checkout, during days 1–7 (full Pro access):
   - Trial & billing card: "$0 paid today · $264.00 due Jun 18, 2026", VISA ····4242, "Cancel trial" link.
 - General and Profile identical to 5.
 
-### 5c. Settings — paid user (`settings-active.html`)
+### 5c. Settings — trial active user (`settings-active.html`)
 
-The post-conversion / paid subscriber view (Gold):
+The active subscriber view (Gold):
 - Sidebar workspace chip shows a "Gold" tag. Top bar clean (no trial chip, no Upgrade); avatar
   profile dropdown shows "250.2k credits left". "Back to Home" is a non-navigating placeholder.
 - **Members**: "Invite to workspace" box hidden for now; count + owner row stay.
@@ -158,5 +158,5 @@ The post-conversion / paid subscriber view (Gold):
 | `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
 | `settings-trial.html` | Settings for the free / pre-checkout user (invite hidden, Free billing) |
 | `settings-trial-active.html` | Settings for the in-trial user (Pro Trial: invite visible, trial timeline, Cancel trial) |
-| `settings-active.html` | Settings for the paid user (Gold: invoices, renewal, credit packs) |
+| `settings-active.html` | Settings for the trial active user (Gold: invoices, renewal, credit packs) |
 | `assets/` | Vendored logos, trust badges, feature previews |
