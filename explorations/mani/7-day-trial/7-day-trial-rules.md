@@ -91,7 +91,7 @@ Two user states:
 
 ### Dashboard (`dashboard-active-trial.html`)
 1. Unlocked full-Pro dashboard. All presentations open; prompt / Upload / Import / pills work, no pricing modal.
-2. Top bar: "Unlock project knowledge" pill + "Upgrade to Gold" button. No trial countdown, no badges.
+2. Top bar: search, help, notifications, avatar only. No Gold upsell (trial users are not upsold to Gold here), no trial countdown, no badges.
 3. Sidebar foot: Workspace settings + Invite new members.
 4. In the proto, only Workspace settings and Invite new members are clickable; every other item is inert (demo focus).
 5. Workspace settings → `settings-trial-active.html`. (Settings "Back to Home" returns here.)
