@@ -119,15 +119,17 @@ Unlocked full-Pro dashboard for the in-trial user.
 - Avatar opens a profile dropdown: name + email, "100 credits left", Your Account (→ Profile),
   Language, Sign out.
 
-### 5b. Settings — in-trial user (`settings-trial-active.html`)
+### 5b. Settings — active trial user (`settings-trial-active.html`)
 
-After checkout, during days 1–7 (full Pro access):
-- Sidebar workspace chip shows "Pro Trial". Top bar clean (no trial chip, no Upgrade button);
-  avatar profile dropdown shows "1,000 credits left". "Back to Home" is a non-navigating placeholder.
+Active Pro user (post-checkout, full Pro access):
+- Sidebar workspace chip "Pro". Top bar clean (no trial chip, no Upgrade button);
+  avatar profile dropdown shows "5,000 credits left". "Back to Home" is a non-navigating placeholder.
 - **Members**: "Invite to workspace" box visible and working (Pro includes team invites).
-- **Billing**: header "Pro Trial · Trial ends Jun 18, 2026", Upgrade button (converts trial to paid now).
-  - Credits card "1,000 credits left", Gold shown as the "Need more credits?" upsell row.
-  - Trial & billing card: "$0 paid today · $264.00 due Jun 18, 2026", VISA ····4242, "Cancel trial" link.
+- **Billing** (Gold-style card layout, $): header "Pro · $240/year · 1 seat · 5,000 Credits", Upgrade button.
+  - Invoice card: "$240 paid Jun 16, 2026", upcoming "$240.00 on June 16, 2027", View all invoices.
+  - Subscription Renewal card: "Next billing date June 16, 2027" + "Cancel renewal" → confirm modal.
+  - Credits card: "5,000 credits left", credit packs (2,500 → $24, 5,000 → $36) + Get Gold
+    (50,000 credits, $100/user/month, $1,200 billed annually).
 - General and Profile identical to 5.
 
 ### 5c. Settings — trial active user (`settings-active.html`)
