@@ -72,13 +72,13 @@
     background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
     animation:shimmer 2.1s linear infinite}
   @keyframes shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
-  .status.waiting .status-msg .t{background:none;-webkit-background-clip:initial;background-clip:initial;color:var(--text-primary);animation:none}
+  .status.waiting .status-msg{font-weight:400}
+  .status.waiting .status-msg .t{background:none;-webkit-background-clip:initial;background-clip:initial;color:var(--text-secondary);animation:none}
   .status-msg{transition:opacity .35s ease,transform .35s ease}
   .status-msg.swap{opacity:0;transform:translateY(4px)}
 
   /* ---------- bottom dock (shared) ---------- */
-  .dock{display:none;flex:0 0 auto;padding:10px 24px 0;opacity:0;transform:translateY(16px);transition:opacity .4s ease,transform .45s cubic-bezier(.22,1,.36,1);pointer-events:none}
-  .dock:last-child{padding-bottom:26px}
+  .dock{display:none;flex:0 0 auto;padding:10px 24px 26px;opacity:0;transform:translateY(16px);transition:opacity .4s ease,transform .45s cubic-bezier(.22,1,.36,1);pointer-events:none}
   .dock.prep{display:block}
   .dock.show{opacity:1;transform:none;pointer-events:auto}
   .dock.gone{opacity:0;transform:translateY(-14px);pointer-events:none}     /* moves up */
@@ -184,7 +184,6 @@
           <div class="step on" data-step="1">
             <div class="dock-head">
               <div class="dock-title">While we build your deck, tell us a bit about you</div>
-              <div class="counter"><button class="cprev" disabled><i class="ph ph-caret-left"></i></button><span class="cnum">1 of 3</span><button class="cnext" disabled><i class="ph ph-caret-right"></i></button></div>
             </div>
             <div class="q-field icn-wrap" id="emailWrap">
               <i class="ph ph-building-office"></i>
@@ -199,8 +198,7 @@
           <!-- STEP 2 — designation -->
           <div class="step" data-step="2">
             <div class="dock-head">
-              <div class="dock-title">While we build your deck, tell us a bit about you</div>
-              <div class="counter"><button class="cprev"><i class="ph ph-caret-left"></i></button><span class="cnum">2 of 3</span><button class="cnext" disabled><i class="ph ph-caret-right"></i></button></div>
+              <div class="dock-title">And what's your role?</div>
             </div>
             <div class="q-field sel">
               <select class="pai-input pai-input--lg" id="designation">
@@ -219,16 +217,12 @@
 
           <!-- STEP 3 — notification -->
           <div class="step" data-step="3">
-            <div class="dock-head">
-              <div class="dock-title">While we build your deck, tell us a bit about you</div>
-              <div class="counter"><button class="cprev"><i class="ph ph-caret-left"></i></button><span class="cnum">3 of 3</span><button class="cnext" disabled><i class="ph ph-caret-right"></i></button></div>
-            </div>
             <div class="notify-card">
               <div class="bell"><i class="ph-fill ph-bell-ringing"></i></div>
-              <div class="ntext"><b>Turn on notifications</b><small>One ping when your deck is ready.</small></div>
+              <div class="ntext"><b>Want a ping when it's done?</b></div>
               <div class="nbtns">
                 <button class="button-style button-medium button-secondary" data-skip="3">Skip</button>
-                <button class="button-style button-medium button-primary" id="notifyBtn">Notify me</button>
+                <button class="button-style button-medium button-primary" id="notifyBtn">Yes, notify me</button>
               </div>
             </div>
           </div>
@@ -264,7 +258,8 @@
   const screens = document.querySelectorAll('.screen');
   function go(name){ screens.forEach(s => s.classList.toggle('is-active', s.dataset.screen===name)); }
 
-  const READY_MS = 10000;   // backend ready — flips to "waiting" + paste box
+  const READY_MS = 10000;   // backend ready — paste box arms behind the questions
+  const AWAIT_DELAY = 2500; // after backend ready, wait before showing "Awaiting your response"
 
   const compose = $('#compose');
   setTimeout(()=> compose.classList.remove('show-greet'), 1600);
@@ -309,14 +304,14 @@
     clearTimeout(readyT);
     readyT=setTimeout(onBackendReady, READY_MS);   // backend ready after 10s
   }
-  let seqT, readyT, pasteShown=false, interacted=false;
+  let seqT, readyT, pasteShown=false, interacted=false, pendingReady=false;
 
   /* ---- step flow ---- */
   const steps = document.querySelectorAll('#qDock .step');
   function showStep(n){ steps.forEach(s => s.classList.toggle('on', +s.dataset.step===n)); }
   function reset(){
     showStep(1);
-    pasteShown=false; interacted=false;
+    pasteShown=false; interacted=false; pendingReady=false;
     $('#qDock').classList.remove('show','gone','prep');
     $('#pasteDock').classList.remove('show','gone','prep');
     clearTimeout(readyT);
@@ -377,19 +372,22 @@
     b.addEventListener('click', ()=>{ const cur=+b.closest('.step').dataset.step; if(cur>1) showStep(cur-1); });
   });
 
-  /* user starts answering (typing email / picking role) -> paste box comes up below,
-     question dock stays so they can finish. cancels the auto-advance timer. */
+  /* user starts answering (typing email / picking role) -> just cancel the backend-ready
+     auto-advance so we don't interrupt. Paste box waits until ALL steps are completed. */
   function onInteract(){
     if(interacted) return;
     interacted=true;
     clearTimeout(readyT);
-    showPasteBox();
   }
   /* all 3 answered -> dock moves up/out, paste box stays/shows (scenario 1) */
   function questionsDone(){ showPasteBox(); hideDock(); }
-  /* backend ready with no interaction -> dock STAYS, chat says "Awaiting your response",
-     paste box comes up below so they can paste while still able to finish the questions */
-  function onBackendReady(){ showAwaiting(); showPasteBox(true); }
+  /* backend ready with no interaction -> deck is built and paste box is ready BEHIND, but
+     we don't interrupt: dock STAYS (one card only), and a few seconds later the chat swaps
+     to "Awaiting your response". Paste box stays hidden until the user skips the questions. */
+  function onBackendReady(){
+    pendingReady=true;
+    setTimeout(()=>{ if(!pasteShown) showAwaiting(); }, AWAIT_DELAY);
+  }
 
   /* swap rotating shimmer for a solid "Awaiting your response" line, keep status visible */
   function showAwaiting(){
@@ -399,10 +397,10 @@
     $('#statusTxt').textContent='Awaiting your response';
   }
 
-  function showPasteBox(keepStatus){
+  function showPasteBox(){
     if(pasteShown) return;
     pasteShown=true;
-    if(!keepStatus) hideStatus();                  // loader gone
+    hideStatus();                                  // loader / awaiting gone
     const pd=$('#pasteDock');
     pd.classList.add('prep');
     requestAnimationFrame(()=>requestAnimationFrame(()=>pd.classList.add('show')));
