@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+<title>deck.in — Create flow + Company onboarding · v2</title>
+
+<!-- Fonts + icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+<!-- Design system -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="../../../design-system/pai.tailwind.js"></script>
+<link rel="stylesheet" href="../../../design-system/pai.css" />
+
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{overflow:hidden;background:var(--bg-primary)}
+
+  .nav-btn{position:fixed;top:22px;z-index:40}
+  #backBtn{left:22px}
+  #closeBtn{right:22px;display:none}
+  .nav-btn.icon-only{width:40px;height:40px;border-radius:999px}
+
+  .stage{position:relative;height:100%;width:100%}
+  .screen{position:absolute;inset:0;display:none}
+  .screen.is-active{display:block}
+
+  /* ---------- compose ---------- */
+  .compose{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  .compose-inner{width:100%;max-width:540px}
+  .greet{text-align:center;color:var(--text-tertiary);height:0;overflow:hidden;transition:.5s;margin:0}
+  .compose.show-greet .greet{height:auto;margin-bottom:6px}
+  .compose-title{text-align:center;margin-bottom:28px;white-space:nowrap}
+  .ctrl-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .ctrl-row .spacer{flex:1}
+  .ctrl-row .button-style{gap:7px}
+  .ctrl-row .button-style i:first-child{color:var(--text-secondary)}
+  .ctrl-row .caret{font-size:12px;color:var(--text-tertiary)}
+  .composer{position:relative;border:1.5px dashed var(--border-primary);border-radius:12px;background:var(--bg-primary);transition:.2s}
+  .composer:focus-within{border-style:solid;border-color:var(--border-secondary)}
+  .composer textarea{width:100%;min-height:200px;border:0;outline:0;resize:none;padding:20px;font-family:inherit;font-size:15px;color:var(--text-primary);background:transparent;line-height:1.55}
+  .composer-ph{position:absolute;top:20px;left:20px;display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text-tertiary);pointer-events:none}
+  .composer-ph .drop{color:var(--text-secondary);text-decoration:underline;text-underline-offset:3px}
+  .composer.has-text .composer-ph{display:none}
+  .create-wrap{display:flex;justify-content:center;margin-top:28px}
+  #createBtn{gap:10px;opacity:0;transform:translateY(6px);pointer-events:none;transition:.25s}
+  .composer.has-text ~ .create-wrap #createBtn{opacity:1;transform:none;pointer-events:auto}
+
+  /* ---------- chat ---------- */
+  .chat{height:100%;display:flex;flex-direction:column;position:relative}
+  .chat-scroll{flex:1;overflow-y:auto;padding:80px 24px 0}
+  .chat-col{max-width:1180px;margin:0 auto;width:100%;position:relative;min-height:60vh}
+  .bubble-user{margin-left:auto;max-width:560px;background:var(--bg-tertiary);border-radius:16px;padding:16px 20px;font-size:15px;color:var(--text-primary);line-height:1.5}
+
+  /* animated logo + shimmer status */
+  .status{display:flex;align-items:center;gap:13px;margin:34px 0 8px}
+  .logo{width:24px;height:24px;flex:0 0 auto;border-radius:50%;border:2.5px solid var(--bg-quaternary);border-top-color:#2f6bff;box-sizing:border-box;animation:logospin .7s linear infinite}
+  @keyframes logospin{to{transform:rotate(360deg)}}
+
+  .status-msg{position:relative;font-size:16px;font-weight:600;line-height:1.3}
+  .status-msg .t{
+    background:linear-gradient(100deg,#aab2bd 0%,#aab2bd 38%,#1b2733 50%,#aab2bd 62%,#aab2bd 100%);
+    background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:shimmer 2.1s linear infinite}
+  @keyframes shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
+  .status-msg{transition:opacity .35s ease,transform .35s ease}
+  .status-msg.swap{opacity:0;transform:translateY(4px)}
+
+  .ai-msg{max-width:680px;margin:18px 0 0;opacity:0;transform:translateY(8px);transition:.4s}
+  .ai-msg.show{opacity:1;transform:none}
+
+  /* ---------- bottom step dock ---------- */
+  .dock{display:none;position:sticky;bottom:0;padding:18px 24px 26px;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,var(--bg-primary) 34%);opacity:0;transform:translateY(16px);transition:opacity .4s ease,transform .4s ease;pointer-events:none}
+  .dock.prep{display:block}
+  .dock.show{opacity:1;transform:none;pointer-events:auto}
+  .dock-card{max-width:720px;margin:0 auto;border-radius:18px;padding:20px 20px 16px;position:relative;overflow:hidden}
+
+  .step{display:none}
+  .step.on{display:block;animation:stepIn .4s cubic-bezier(.22,1,.36,1)}
+  @keyframes stepIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .dock-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .dock-title{font-size:16px;font-weight:700;color:var(--text-primary)}
+  .dock-sub{margin:3px 0 0;font-size:13px;color:var(--text-secondary)}
+  .dots-prog{display:flex;gap:6px}
+  .dots-prog span{width:7px;height:7px;border-radius:50%;background:var(--bg-quaternary);transition:.25s}
+  .dots-prog span.on{background:var(--bg-primary-inverted);width:18px;border-radius:5px}
+
+  .lbl{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  @media(max-width:620px){.two{grid-template-columns:1fr}}
+  .icn-wrap{position:relative}
+  .icn-wrap > i{position:absolute;left:14px;top:22px;transform:translateY(-50%);font-size:18px;color:var(--text-tertiary);pointer-events:none}
+  .icn-wrap input{padding-left:42px}
+  .fld-err{display:none;align-items:center;gap:5px;font-size:11.5px;color:var(--text-danger-primary);margin-top:6px}
+  .fld-err i{font-size:13px}
+  .icn-wrap.error .fld-err{display:flex}
+  .sel{position:relative}
+  .sel select{appearance:none;-webkit-appearance:none;padding-right:38px;cursor:pointer;width:100%}
+  .sel::after{content:'\e136';font-family:'Phosphor';position:absolute;right:14px;top:22px;transform:translateY(-50%);font-size:14px;color:var(--text-tertiary);pointer-events:none}
+  .field-block{display:flex;flex-direction:column}
+
+  .dock-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:16px}
+  .dock-actions .spacer{flex:1}
+  #sendBtn{gap:8px;display:none}
+  #sendBtn.show{display:inline-flex}
+  #company-continue{gap:8px;display:none}
+  #company-continue.show{display:inline-flex}
+
+  /* notify step */
+  .notify-vis{display:flex;align-items:center;gap:14px;margin-top:14px;padding:16px;border-radius:14px;background:var(--bg-tertiary)}
+  .notify-vis .bell{width:46px;height:46px;border-radius:13px;background:var(--bg-primary-inverted);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto}
+  .notify-vis b{font-size:14px;color:var(--text-primary)}
+  .notify-vis small{display:block;font-size:12.5px;color:var(--text-secondary);margin-top:2px}
+
+  .dock-card textarea{min-height:120px}
+
+  .restart{position:fixed;bottom:18px;left:18px;z-index:50;border-radius:999px;gap:7px}
+  .toast{position:fixed;left:50%;bottom:30px;translate:-50% 20px;background:var(--bg-blackout);color:#fff;padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:9px;opacity:0;pointer-events:none;transition:.3s;z-index:60}
+  .toast.show{opacity:1;translate:-50% 0}
+  .toast i{font-size:16px;color:#7ee2b0}
+</style>
+</head>
+<body class="pai">
+
+<button class="button-style button-secondary nav-btn icon-only" id="backBtn" title="Back"><i class="ph ph-arrow-left"></i></button>
+<button class="button-style button-secondary nav-btn icon-only" id="closeBtn" title="Close"><i class="ph ph-x"></i></button>
+
+<div class="stage">
+
+  <!-- ============ COMPOSE ============ -->
+  <section class="screen is-active" data-screen="compose">
+    <div class="compose show-greet" id="compose">
+      <div class="compose-inner">
+        <p class="greet text-heading-2xl" id="greet">Manivasakan, let's create your first presentation</p>
+        <h1 class="compose-title text-heading-4xl text-text-primary">Describe your deck, or upload a file</h1>
+        <div class="ctrl-row">
+          <button class="button-style button-medium button-secondary"><i class="ph ph-stack"></i>Upload Files<i class="ph ph-caret-down caret"></i></button>
+          <span class="spacer"></span>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-squares-four"></i>Slide Count<i class="ph ph-caret-down caret"></i></button>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-sparkle"></i>AI Model<i class="ph ph-caret-down caret"></i></button>
+          <button class="button-style button-medium button-secondary icon-only"><i class="ph ph-sliders-horizontal"></i></button>
+        </div>
+        <div class="composer" id="composer">
+          <div class="composer-ph"><i class="ph ph-pencil-simple"></i>Type here or <span class="drop"><i class="ph ph-upload-simple"></i> drop in a file</span></div>
+          <textarea id="deckInput" spellcheck="false"></textarea>
+        </div>
+        <div class="create-wrap">
+          <button class="button-style button-large button-primary" id="createBtn">Create Presentation <i class="ph ph-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOADING + CHAT ============ -->
+  <section class="screen" data-screen="chat">
+    <div class="chat">
+      <div class="chat-scroll">
+        <div class="chat-col">
+
+          <div class="bubble-user" id="echoBubble"></div>
+
+          <div class="status" id="status">
+            <div class="logo" id="logo"></div>
+            <div class="status-msg" id="statusMsg"><span class="t" id="statusTxt">On the right track…</span></div>
+          </div>
+
+          <div class="ai-msg text-body-lg-regular text-text-primary" id="aiMsg">
+            Do you have any board materials, notes, or metrics you'd like to include? If you skip, I'll build the deck using publicly available information.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== bottom step dock ===== -->
+      <div class="dock" id="dock">
+        <div class="dock-card bg-bg-elevated shadow-elevation-02">
+
+          <!-- STEP 1 — company -->
+          <div class="step on" data-step="1">
+            <div class="dock-head">
+              <div>
+                <div class="dock-title">While we build your deck</div>
+                <p class="dock-sub">This helps us tailor your presentation. Totally optional.</p>
+              </div>
+              <div class="dots-prog"><span class="on"></span><span></span></div>
+            </div>
+            <div class="two">
+              <div class="field-block">
+                <span class="lbl">Work email</span>
+                <div class="icn-wrap" id="emailWrap">
+                  <i class="ph ph-building-office"></i>
+                  <input type="email" class="pai-input pai-input--lg" id="companyEmail" placeholder="Enter your work email" autocomplete="off">
+                  <span class="fld-err" id="emailErr"><i class="ph-fill ph-warning-circle"></i><span id="emailErrTxt">Enter a valid email</span></span>
+                </div>
+              </div>
+              <div class="field-block">
+                <span class="lbl">Your designation</span>
+                <div class="sel">
+                  <select class="pai-input pai-input--lg" id="designation">
+                    <option value="" selected disabled>Select your designation</option>
+                    <option>Founder / Co-Founder</option><option>CEO</option><option>President</option>
+                    <option>Chairperson / Board Member</option><option>CFO</option><option>CTO</option>
+                    <option>COO</option><option>CMO</option><option>Other C-Suite (CXO)</option>
+                    <option>EVP / SVP</option><option>Vice President</option><option>Director</option>
+                    <option>Head of Department</option><option>General Manager</option><option>Managing Partner</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="dock-actions">
+              <button class="button-style button-medium button-secondary" data-skip="1">Skip</button>
+              <button class="button-style button-medium button-primary" id="company-continue">Continue <i class="ph ph-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- STEP 2 — notification -->
+          <div class="step" data-step="2">
+            <div class="dock-head">
+              <div>
+                <div class="dock-title">Want a ping when it's done?</div>
+                <p class="dock-sub">We'll notify you the moment your deck is ready.</p>
+              </div>
+              <div class="dots-prog"><span></span><span class="on"></span></div>
+            </div>
+            <div class="notify-vis">
+              <div class="bell"><i class="ph-fill ph-bell-ringing"></i></div>
+              <div><b>Enable notifications</b><small>One ping when the deck is ready. No spam, ever.</small></div>
+            </div>
+            <div class="dock-actions">
+              <button class="button-style button-medium button-secondary" data-skip="2">Skip</button>
+              <button class="button-style button-medium button-primary" id="notifyBtn"><i class="ph-bold ph-bell-ringing"></i>Yes, notify me</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== paste dock — renders AFTER the 2 questions ===== -->
+      <div class="dock" id="pasteDock">
+        <div class="dock-card bg-bg-elevated shadow-elevation-02">
+          <div class="dock-title">Paste your content, notes, or data</div>
+          <textarea class="pai-textarea" id="pasteInput" placeholder="Type here…" spellcheck="false" style="margin-top:12px"></textarea>
+          <div class="dock-actions">
+            <button class="button-style button-medium button-secondary" id="pasteSkip">Skip</button>
+            <button class="button-style button-medium button-primary" id="sendBtn">Continue <i class="ph ph-arrow-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<button class="button-style button-small button-secondary restart" id="restart"><i class="ph ph-arrow-counter-clockwise"></i>Restart demo</button>
+<div class="toast" id="toast"><i class="ph-fill ph-check-circle"></i><span id="toastTxt">Notifications enabled</span></div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const screens = document.querySelectorAll('.screen');
+  function go(name){ screens.forEach(s => s.classList.toggle('is-active', s.dataset.screen===name)); }
+
+  const compose = $('#compose');
+  setTimeout(()=> compose.classList.remove('show-greet'), 1600);
+
+  const input = $('#deckInput'), composer = $('#composer');
+  input.addEventListener('input', ()=> composer.classList.toggle('has-text', input.value.trim().length>0));
+
+  let toastT;
+  function toast(msg){ const t=$('#toast'); $('#toastTxt').textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+  /* ---- rotating shimmer status ---- */
+  const MSGS = ["On the right track…","Planning your deck…","Pieces are clicking…","Sorting through what fits best…",
+    "Letting it simmer…","Working the angles…","Mapping it out…","Thinking it over…","Mulling over a few directions…"];
+  let msgI=0, msgT=null;
+  function rotate(){
+    const box=$('#statusMsg'), txt=$('#statusTxt');
+    box.classList.add('swap');
+    setTimeout(()=>{ msgI=(msgI+1)%MSGS.length; txt.textContent=MSGS[msgI]; box.classList.remove('swap'); }, 360);
+  }
+  function startRotate(){ stopRotate(); msgI=0; $('#statusTxt').textContent=MSGS[0]; msgT=setInterval(rotate,2200); }
+  function stopRotate(){ if(msgT){clearInterval(msgT); msgT=null;} }
+
+  /* ---- create ---- */
+  $('#createBtn').addEventListener('click', startCreate);
+  function startCreate(){
+    const txt = input.value.trim();
+    if(!txt) return;
+    $('#echoBubble').textContent = txt;
+    $('#closeBtn').style.display='inline-flex';
+    go('chat');
+    const dock=$('#dock');
+    dock.classList.remove('show','prep');
+    $('#status').style.display=''; $('#aiMsg').classList.remove('show');
+    resetSteps();
+    startRotate();
+    clearTimeout(seqT);
+    seqT=setTimeout(()=>{
+      dock.classList.add('prep');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>dock.classList.add('show')));
+    }, 900);
+  }
+  let seqT;
+
+  /* ---- step flow ---- */
+  const steps = document.querySelectorAll('.step');
+  function showStep(n){
+    steps.forEach(s => s.classList.toggle('on', +s.dataset.step===n));
+  }
+  function resetSteps(){
+    showStep(1);
+    $('#pasteDock').classList.remove('show','prep'); clearTimeout(pasteT);
+    $('#companyEmail').value=''; $('#designation').selectedIndex=0;
+    paintEmail({state:'empty'});
+    $('#company-continue').classList.remove('show');
+    $('#pasteInput').value=''; $('#sendBtn').classList.remove('show');
+  }
+
+  /* email validation */
+  const email=$('#companyEmail');
+  const FREE=['gmail.com','googlemail.com','yahoo.com','yahoo.co.in','yahoo.co.uk','ymail.com','outlook.com','hotmail.com',
+    'hotmail.co.uk','live.com','msn.com','icloud.com','me.com','mac.com','aol.com','proton.me','protonmail.com','pm.me',
+    'gmx.com','gmx.net','mail.com','zoho.com','yandex.com','yandex.ru','tutanota.com','hey.com','fastmail.com','rediffmail.com'];
+  function emailState(){
+    const v=email.value.trim().toLowerCase();
+    if(!v) return {state:'empty'};
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return {state:'invalid', msg:'Enter a valid email'};
+    if(FREE.includes(v.split('@')[1])) return {state:'personal', msg:'Use your work email, not a personal one'};
+    return {state:'ok'};
+  }
+  function paintEmail(s){
+    const w=$('#emailWrap');
+    if(s.state==='ok'||s.state==='empty'){ w.classList.remove('error'); email.classList.remove('is-error'); }
+    else { w.classList.add('error'); email.classList.add('is-error'); $('#emailErrTxt').textContent=s.msg; }
+  }
+  function syncContinue(){
+    const has = email.value.trim().length>0 || !!$('#designation').value;
+    $('#company-continue').classList.toggle('show', has);
+  }
+  email.addEventListener('input', ()=>{ const s=emailState(); if(s.state==='ok'||s.state==='empty') paintEmail(s); syncContinue(); });
+  email.addEventListener('blur', ()=>{ paintEmail(emailState()); });
+  $('#designation').addEventListener('change', syncContinue);
+
+  /* step 1 -> step 2 */
+  $('#company-continue').addEventListener('click', ()=>{
+    const s=emailState();
+    if(email.value.trim() && s.state!=='ok'){ paintEmail(s); email.focus(); return; }  // only block if they typed a bad one
+    showStep(2);
+  });
+  /* step 2 done -> dismiss questions, render, then paste dock */
+  let pasteT;
+  function toPaste(){
+    $('#dock').classList.remove('show','prep');            // questions answered, dismiss them
+    clearTimeout(pasteT);
+    pasteT=setTimeout(()=>{                                 // after a beat of "rendering"
+      stopRotate();                                         // loader done — swap to AI message
+      $('#status').style.display='none';
+      $('#aiMsg').classList.add('show');
+      const pd=$('#pasteDock');
+      pd.classList.add('prep');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>pd.classList.add('show')));
+      setTimeout(()=>$('#pasteInput').focus(), 300);
+    }, 1100);
+  }
+  $('#notifyBtn').addEventListener('click', function(){
+    toast('Notifications enabled. We\'ll ping you when the deck is ready.');
+    toPaste();
+  });
+  /* paste -> finish */
+  function finishFlow(){
+    $('#pasteDock').classList.remove('show','prep');
+    toast('Generating your presentation…');
+    $('#statusTxt').textContent='Building your deck…';
+  }
+  $('#sendBtn').addEventListener('click', finishFlow);
+  $('#pasteSkip').addEventListener('click', finishFlow);
+  $('#pasteInput').addEventListener('input', e=>{ $('#sendBtn').classList.toggle('show', e.target.value.trim().length>0); });
+  $('#pasteInput').addEventListener('keydown', e=>{ if(e.key==='Enter' && (e.metaKey||e.ctrlKey)) finishFlow(); });
+
+  /* skip buttons (in-question) */
+  document.querySelectorAll('[data-skip]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const n=+b.dataset.skip;
+      if(n<2) showStep(n+1);    // step 1 skip -> step 2
+      else toPaste();           // step 2 skip -> render -> paste
+    });
+  });
+
+  /* nav */
+  function toCompose(){ clearTimeout(seqT); stopRotate(); $('#closeBtn').style.display='none'; go('compose'); }
+  $('#backBtn').addEventListener('click', ()=>{ if($('.screen.is-active').dataset.screen==='chat') toCompose(); });
+  $('#closeBtn').addEventListener('click', toCompose);
+  $('#restart').addEventListener('click', ()=>{
+    clearTimeout(seqT); stopRotate();
+    input.value='Board update for deck.in for Q4 covering revenue performance vs target OKR progress and 2026 strategic priorities for a 10-person executive team';
+    composer.classList.add('has-text'); compose.classList.remove('show-greet'); toCompose();
+  });
+
+  input.value='Board update for deck.in for Q4 covering revenue performance vs target OKR progress and 2026 strategic priorities for a 10-person executive team';
+  composer.classList.add('has-text');
+})();
+</script>
+
+<!-- Agentation -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body>
+</html>
