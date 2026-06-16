@@ -90,14 +90,16 @@ Checkout success → "Continue to your deck" → deck-ready editor
 
 Unlocked full-Pro dashboard for the in-trial user.
 - Sidebar workspace chip "Pro"; sidebar foot has **Workspace settings** + **Invite new members**.
+  Only those two are clickable in the proto; all other items are inert. Workspace settings →
+  `settings-trial-active.html` (which links back here via "Back to Home").
 - Topbar: "Unlock project knowledge" pill + "Upgrade to Gold" button (no trial countdown / no badges).
 - **Invite new members** → "Invite members" popup (emails + Invite + Copy invite link).
 - Invite → **Add more seats** modal: "Add 1 seat to invite a new member", "Billed on day 7
   (Jun 18, 2026): $240.00", "$0 due today" note, agree checkbox ("…charged $240.00 on day 7 with
   your billing"), Cancel / Confirm Payment. Seats are billed on the day-7 date, not today (Case 2).
-- Leaving the seats modal (X or Cancel) → **Exit checkout?** confirm ("upgrade will be cancelled"),
-  Leave Page (discard) / Complete Purchase (back to seats). Confirm Payment → toast "1 seat added,
-  billed day 7".
+- Leaving the seats modal (X or Cancel) → **Exit checkout?** confirm: cancelling means the seat is
+  not added, so you cannot invite this new member. Leave Page (discard) / Complete Purchase (back to
+  seats). Confirm Payment → toast "1 seat added, billed day 7".
 
 ### 5. Settings (`settings-trial.html`) — free / pre-checkout user
 

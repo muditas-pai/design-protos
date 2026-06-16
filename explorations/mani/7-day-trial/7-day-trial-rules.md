@@ -89,25 +89,29 @@ Two user states:
 2. Filmstrip thumbs click through to slides normally.
 3. All Pro features active: export, analytics, font pairs, color palettes, assign slide.
 
-### Dashboard
-1. All presentations open normally.
-2. Prompt field, Upload, Import, pills: all work, no pricing modal.
-3. No "Start your trial for $0" topbar text.
-4. No premium features modal gates: Create project and other Pro items just work.
-5. Hire an Expert opens the hire page, same as before.
+### Dashboard (`dashboard-active-trial.html`)
+1. Unlocked full-Pro dashboard. All presentations open; prompt / Upload / Import / pills work, no pricing modal.
+2. Top bar: "Unlock project knowledge" pill + "Upgrade to Gold" button. No trial countdown, no badges.
+3. Sidebar foot: Workspace settings + Invite new members.
+4. In the proto, only Workspace settings and Invite new members are clickable; every other item is inert (demo focus).
+5. Workspace settings → `settings-trial-active.html`. (Settings "Back to Home" returns here.)
 
-### Settings panel — in-trial user (`settings-trial-active.html`)
+### Invite a new member (adds a seat — see Billing Case 2)
+1. Sidebar "Invite new members" → "Invite members" popup: emails field, Invite button, "Copy invite link".
+2. Invite → "Add more seats" modal: "Add 1 seat to invite a new member", "Billed on day 7 (Jun 18, 2026): $240.00", "$0 due today" note, agree checkbox ("charged $240.00 on day 7 with your billing"), Cancel / Confirm Payment.
+3. Confirm Payment → seat added and billed on the day-7 date (not today). Toast confirms it bills on day 7.
+4. Leaving the seats modal (X or Cancel) → "Exit checkout?" confirm. Cancelling means the seat is not added, so you cannot invite this new member. Leave Page discards; Complete Purchase returns to the seat modal.
+
+### Settings panel — active user (`settings-trial-active.html`)
 
 **Sidebar**
-1. Workspace Settings: General, Members, Billing.
-2. Profile Settings: Profile.
-3. Hidden: Groups, Developer Console.
-4. Workspace switcher chip shows "Pro Trial".
-5. "Back to Home" is a non-navigating placeholder in the proto (in product it returns to the unlocked dashboard).
+1. Workspace Settings: General, Members, Billing. Profile Settings: Profile. Hidden: Groups, Developer Console.
+2. Workspace chip shows "Pro".
+3. "Back to Home" → the active dashboard (`dashboard-active-trial.html`).
 
 **Top bar (every settings page)**
-1. No badges, no countdown pill, no Upgrade button in the top bar. Identical to a paid Pro user.
-2. Avatar opens a profile dropdown: name + email, credits left, Your Account (→ Profile), Language, Sign out.
+1. No badges, no countdown pill, no Upgrade button in the top bar.
+2. Avatar opens a profile dropdown: name + email, "5,000 credits left", Your Account (→ Profile), Language, Sign out.
 
 **General**
 1. Workspace avatar with camera button to upload a logo. Editable.
@@ -117,20 +121,17 @@ Two user states:
 1. "Invite to workspace" box visible and working (Pro includes team invites).
 2. Owner row shows in the Members list. Guests tab shows "No guests" until someone is invited.
 
-**Billing**
-1. Plan header: Pro Trial, sub line "Trial ends Jun 18, 2026".
-2. "Upgrade" button (top right) converts the trial to paid now (opens checkout in paid mode).
-3. Credits card: "1,000 credits left" (or the plan's allowance), progress bar, "View credit history" link.
-4. "Need more credits?" shows Gold as the upsell row (user already on the Pro path).
-5. Trial & billing card: "$0 paid today · $264.00 due Jun 18, 2026", payment method on file (card ending ····4242).
-6. "Cancel trial" plain link below the card. Cancel before Jun 18, nothing charged.
+**Billing** (Gold-style card layout, $)
+1. Plan header: "Pro · $240/year · 1 seat · 5,000 Credits", Upgrade button (top right).
+2. Invoice card: "$240 paid Jun 16, 2026", upcoming "$240.00 on June 16, 2027", "View all invoices".
+3. Subscription Renewal card: "Next billing date June 16, 2027" + "Cancel renewal" → confirm modal ("Cancel renewal?": keeps Pro access until the period end, then drops to Free and credits reset to 0).
+4. Credits card: "5,000 credits left", progress bar, "View credit history". "Need more credits?" packs: 2,500 → $24, 5,000 → $36, and Get Gold (50,000 credits, $100/user/month, $1,200 billed annually).
 
 **Profile**
-1. Same as State A: photo, first/last name, email (read only), change password, role (read only), language, Delete Account. Deleting during trial cancels it, nothing charged.
+1. Same as State A: photo, first/last name, email (read only), change password, role (read only), language, Delete Account.
 
-### After trial converts (day 8, payment succeeds)
-1. Nothing changes in the top bar (already clean).
-2. Billing flips to active paid: next renewal date shown, invoice history starts (Gold subscriber view in `settings-active.html`).
+### Gold subscriber variant
+The Gold paid subscriber uses the same card layout with Gold values in `settings-active.html` (invoices, subscription renewal, one-off credit packs).
 
 ---
 
