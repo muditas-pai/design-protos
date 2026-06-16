@@ -1424,7 +1424,7 @@
             <i class="ph-fill ph-sparkle"></i>
             <div class="hf-body">
               <div class="hf-title">New brand kit started</div>
-              <div class="hf-sub">This palette is set as its theme. Finish naming it and adding fonts &amp; logos in your dashboard.</div>
+              <div class="hf-sub">This palette is its theme. Finish its logos &amp; voice in your dashboard.</div>
               <a class="hf-go" href="../brand-kit-manager.html#new">Go to dashboard<i class="ph ph-arrow-right"></i></a>
             </div>
             <button class="hf-x" title="Dismiss"><i class="ph ph-x"></i></button>
@@ -1442,7 +1442,7 @@
             <i class="ph-fill ph-sparkle"></i>
             <div class="hf-body">
               <div class="hf-title">New brand kit started</div>
-              <div class="hf-sub">This font pairing is set as its theme. Finish naming it and adding colors &amp; logos in your dashboard.</div>
+              <div class="hf-sub">This font pairing is its theme. Finish its logos &amp; voice in your dashboard.</div>
               <a class="hf-go" href="../brand-kit-manager.html#new">Go to dashboard<i class="ph ph-arrow-right"></i></a>
             </div>
             <button class="hf-x" title="Dismiss"><i class="ph ph-x"></i></button>
@@ -1826,31 +1826,47 @@
       t._timer = setTimeout(() => t.classList.remove("show"), 2800);
     }
 
-    // a theme saved into a kit inherits the kit's name — no separate name needed, so we lock the field
-    function setName(modal, kit) {
+    // The single name field does triple duty, because a kit and its one theme share a name:
+    //   standalone → name the theme · existing kit → locked to the kit's name
+    //   new kit    → name the NEW kit here (the theme inherits it)
+    function setNameState(modal, mode, kit) {
+      const kind = modal._kind;
       const input = modal.querySelector(".fld-input");
+      const label = input.previousElementSibling; // the name field's label
       const note = modal.querySelector(".name-note");
-      if (kit) {
+      const themeLabel = (kind === "color" ? "Color theme name" : "Font theme name") + ' <span class="req">*</span>';
+      const themePh = kind === "color" ? "Enter theme name" : "Enter font name";
+      const asset = kind === "color" ? "palette" : "font pairing";
+      if (mode === "existing") {
+        label.innerHTML = themeLabel;
         if (!input.disabled) input.dataset.prev = input.value;
-        input.value = kit.name;
-        input.disabled = true;
-        if (note) { note.textContent = "Takes the " + kit.name + " brand kit's name."; note.classList.remove("hidden"); }
-      } else {
+        input.value = kit.name; input.disabled = true; input.placeholder = themePh;
+        note.textContent = "Takes the " + kit.name + " brand kit's name."; note.classList.remove("hidden");
+      } else if (mode === "new") {
+        label.innerHTML = 'Brand kit name <span class="req">*</span>';
+        if (input.disabled) input.value = ""; // arriving from a locked existing-kit
+        input.disabled = false; input.placeholder = "Name your new brand kit";
+        note.textContent = "This " + asset + " becomes the new kit's theme — add logos & voice in your dashboard.";
+        note.classList.remove("hidden");
+        setTimeout(() => input.focus(), 20);
+      } else { // standalone
+        label.innerHTML = themeLabel;
         if (input.disabled) input.value = input.dataset.prev || "";
-        input.disabled = false;
-        if (note) note.classList.add("hidden");
+        input.disabled = false; input.placeholder = themePh;
+        note.classList.add("hidden");
       }
     }
-    // reset the picker back to no kit (standalone theme) and unlock the name field
+    // reset the picker back to no kit (standalone theme) and relabel the name field
     function clearKit(modal) {
       modal._sel = { val: "none" };
       modal.querySelector(".mk-dd-btn").classList.add("is-placeholder");
       modal.querySelector(".mk-dd-val").textContent = "Choose a brand kit";
       modal.querySelector(".mk-dd-clear").classList.add("hidden");
-      setName(modal, null);
+      setNameState(modal, "standalone");
     }
     // build a modal's kit picker. Reading order: New brand kit · selectable kits · kits already taken (greyed)
     function buildKitPicker(modal, kind) {
+      modal._kind = kind;
       const slot = kind === "color" ? "hasPalette" : "hasFont";
       const tag = kind === "color" ? "has a palette" : "has a pairing";
       const menu = modal.querySelector(".mk-dd-menu");
@@ -1885,11 +1901,11 @@
             const k = BRAND_KITS.find((x) => x.id === b.dataset.kit);
             modal._sel = { val: "kit", kit: k };
             valEl.innerHTML = '<span class="kdot" style="background:' + k.dot + ';"></span>' + k.name;
-            setName(modal, k); // theme takes the kit's name
+            setNameState(modal, "existing", k); // theme takes the kit's name
           } else if (b.dataset.val === "new") {
             modal._sel = { val: "new" };
             valEl.innerHTML = '<i class="ph ph-plus-circle" style="color:var(--bk-blue);"></i>New brand kit…';
-            setName(modal, null);
+            setNameState(modal, "new"); // name the new kit here
           }
         };
       });
@@ -1911,7 +1927,7 @@
       const sel = modal._sel || { val: "none" };
       let name = (modal.querySelector(".fld-input").value || "").trim();
       if (sel.val === "kit") name = sel.kit.name; // inherits the kit name
-      if (!name) name = (kind === "color" ? "Untitled palette" : "Sora");
+      if (!name) name = sel.val === "new" ? "Untitled brand kit" : (kind === "color" ? "Untitled palette" : "Sora");
       closeModal(modal);
       const card = document.createElement("div");
       card.className = "opt-card " + (kind === "color" ? "pal-card" : "font-card");
@@ -1932,8 +1948,11 @@
         document.getElementById(kind === "color" ? "colors-kit" : "font-kit").insertAdjacentHTML("beforeend", kitCard);
         toast("Added to " + sel.kit.name + " brand kit");
       } else if (sel.val === "new") {
-        document.getElementById(kind === "color" ? "colors-handoff" : "font-handoff").classList.remove("hidden");
-        toast("New brand kit started — finish it in your dashboard");
+        const hb = document.getElementById(kind === "color" ? "colors-handoff" : "font-handoff");
+        hb.querySelector(".hf-title").textContent = "“" + name + "” brand kit started";
+        hb.querySelector(".hf-sub").textContent = "This " + (kind === "color" ? "palette" : "font pairing") + " is its theme. Finish its logos & voice in your dashboard.";
+        hb.classList.remove("hidden");
+        toast("“" + name + "” brand kit created — finish it in your dashboard");
       } else {
         toast((kind === "color" ? "Color theme" : "Font pair") + ' "' + name + '" saved');
       }
