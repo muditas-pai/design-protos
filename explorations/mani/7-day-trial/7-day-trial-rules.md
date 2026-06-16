@@ -168,3 +168,4 @@ The Gold paid subscriber uses the same card layout with Gold values in `settings
 3. One currency everywhere: $.
 4. Copy voice: "Start your free trial to view your slides" (generation title + thumb tooltip), "7-day free trial" (badge), "Try for Free" / "Get your free trial" / "Try Pro for Free" / "Upgrade" (CTAs).
 5. Closing or backing out never loses the generated deck. It stays as the one locked presentation on the dashboard.
+6. No Gold upsell in the app chrome for trial users: no "Upgrade to Gold" / "Unlock" pills in the top bar. Gold appears only inside Settings → Billing, as an optional credit-pack / plan row ("Get Gold · 50,000 credits").
