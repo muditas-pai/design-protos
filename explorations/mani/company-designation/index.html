@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+<title>deck.in — Create flow + Company onboarding</title>
+
+<!-- Fonts + icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+<!-- Design system -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="../../../design-system/pai.tailwind.js"></script>
+<link rel="stylesheet" href="../../../design-system/pai.css" />
+
+<style>
+  /* Layout + motion only — all element styling comes from the design system (pai.css) */
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{overflow:hidden;background:var(--bg-primary)}
+
+  /* top chrome */
+  .nav-btn{position:fixed;top:22px;z-index:40}
+  #backBtn{left:22px}
+  #closeBtn{right:22px;display:none}
+  .nav-btn.icon-only{width:40px;height:40px;border-radius:999px}
+
+  /* app stage */
+  .stage{position:relative;height:100%;width:100%}
+  .screen{position:absolute;inset:0;display:none}
+  .screen.is-active{display:block}
+
+  /* ---------- compose ---------- */
+  .compose{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  .compose-inner{width:100%;max-width:540px}
+  .greet{text-align:center;color:var(--text-tertiary);height:0;overflow:hidden;transition:.5s;margin:0}
+  .compose.show-greet .greet{height:auto;margin-bottom:6px}
+  .compose-title{text-align:center;margin-bottom:28px;white-space:nowrap}
+
+  .ctrl-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .ctrl-row .spacer{flex:1}
+  .ctrl-row .button-style{gap:7px}
+  .ctrl-row .button-style i:first-child{color:var(--text-secondary)}
+  .ctrl-row .caret{font-size:12px;color:var(--text-tertiary)}
+
+  .composer{position:relative;border:1.5px dashed var(--border-primary);border-radius:12px;background:var(--bg-primary);transition:.2s}
+  .composer:focus-within{border-style:solid;border-color:var(--border-secondary)}
+  .composer textarea{width:100%;min-height:200px;border:0;outline:0;resize:none;padding:20px;font-family:inherit;font-size:15px;color:var(--text-primary);background:transparent;line-height:1.55}
+  .composer-ph{position:absolute;top:20px;left:20px;display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text-tertiary);pointer-events:none}
+  .composer-ph .drop{color:var(--text-secondary);text-decoration:underline;text-underline-offset:3px}
+  .composer.has-text .composer-ph{display:none}
+
+  .create-wrap{display:flex;justify-content:center;margin-top:28px}
+  #createBtn{gap:10px;opacity:0;transform:translateY(6px);pointer-events:none;transition:.25s}
+  .composer.has-text ~ .create-wrap #createBtn{opacity:1;transform:none;pointer-events:auto}
+
+  /* ---------- loading + chat ---------- */
+  .chat{height:100%;display:flex;flex-direction:column;position:relative}
+  .chat-scroll{flex:1;overflow-y:auto;padding:80px 24px 0}
+  .chat-col{max-width:1180px;margin:0 auto;width:100%;position:relative;min-height:60vh}
+
+  .bubble-user{margin-left:auto;max-width:560px;background:var(--bg-tertiary);border-radius:16px;padding:16px 20px;font-size:15px;color:var(--text-primary);line-height:1.5}
+
+  .status{display:flex;align-items:center;gap:12px;margin:30px 0 8px}
+  .logo{width:24px;height:24px;flex:0 0 auto;border-radius:50%;border:2.5px solid var(--bg-quaternary);border-top-color:#2f6bff;box-sizing:border-box}
+  .logo.spin{animation:logospin .7s linear infinite}
+  .logo.done{border-color:#2f6bff}
+  @keyframes logospin{to{transform:rotate(360deg)}}
+  .status-txt .dots::after{content:'';animation:dots 1.4s steps(4,end) infinite}
+  @keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+
+  .ai-msg{max-width:620px;margin:18px 0 0;opacity:0;transform:translateY(8px);transition:.4s}
+  .ai-msg.show{opacity:1;transform:none}
+
+  /* company card — inline in chat flow, left-aligned, non-blocking */
+  .company-card{margin:18px 0 0;width:100%;max-width:420px;border-radius:16px;height:0;padding:0;overflow:hidden;opacity:0;transform:translateY(72px);
+    transition:transform .55s cubic-bezier(.16,.84,.3,1),opacity .35s ease,height .4s cubic-bezier(.2,.7,.3,1),padding .4s cubic-bezier(.2,.7,.3,1),margin .4s cubic-bezier(.2,.7,.3,1);pointer-events:none}
+  .company-card.show{height:auto;padding:20px 20px 18px;opacity:1;transform:translateY(0);pointer-events:auto;overflow:visible}
+  .company-card.dismissed{height:0;margin:0;padding:0;opacity:0;transform:translateY(24px);pointer-events:none;overflow:hidden}
+  .cc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:2px}
+  .cc-sub{margin-bottom:16px}
+  .cc-x.icon-only{width:28px;height:28px;border-radius:8px;flex:0 0 auto}
+
+  .fld{margin-bottom:12px}
+  .fld label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+  .fld-err{display:none;align-items:center;gap:5px;font-size:11.5px;color:var(--text-danger-primary);margin-top:6px}
+  .fld-err i{font-size:13px}
+  .fld.error .fld-err{display:flex}
+  .fld.select-wrap{position:relative}
+  .fld.select-wrap select{appearance:none;-webkit-appearance:none;padding-left:34px;padding-right:34px;text-align:center;text-align-last:center;cursor:pointer}
+  .fld.select-wrap select option{text-align:center}
+  .fld.select-wrap::after{content:'\e136';font-family:'Phosphor';position:absolute;right:13px;bottom:15px;font-size:14px;color:var(--text-tertiary);pointer-events:none}
+
+  .notify{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border-secondary)}
+  .notify-txt{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text-primary);white-space:nowrap;flex-shrink:0}
+  .notify-txt i{font-size:16px;color:var(--text-secondary)}
+  #notifyBtn{gap:6px;white-space:nowrap;padding:0 14px}
+  #notifyBtn.done{color:var(--text-success-primary);background:#E7F6EE;cursor:default}
+  #notifyBtn.done i{color:var(--bg-success)}
+
+  .cc-later{margin-top:14px;text-align:center}
+  .cc-saved{font-size:12.5px;color:var(--text-success-primary);font-weight:600;display:none;align-items:center;gap:6px;margin-top:14px;justify-content:center}
+  .cc-saved i{font-size:14px}
+  .company-card.saved .cc-saved{display:flex}
+  .company-card.saved .notify,.company-card.saved .cc-later,.company-card.saved .fld{opacity:.55}
+
+  /* paste dock */
+  .dock{position:sticky;bottom:0;padding:18px 24px 26px;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,var(--bg-primary) 32%);opacity:0;transform:translateY(14px);transition:.4s;pointer-events:none}
+  .dock.show{opacity:1;transform:none;pointer-events:auto}
+  .dock-card{max-width:680px;margin:0 auto;border-radius:16px;padding:18px 18px 14px}
+  .dock-title{margin-bottom:12px}
+  .dock-card textarea{min-height:120px}
+  .dock-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px}
+  #sendBtn.icon-only{width:40px}
+
+  /* restart */
+  .restart{position:fixed;bottom:18px;left:18px;z-index:50;border-radius:999px;gap:7px}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:30px;translate:-50% 20px;background:var(--bg-blackout);color:#fff;padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:9px;opacity:0;pointer-events:none;transition:.3s;z-index:60}
+  .toast.show{opacity:1;translate:-50% 0}
+  .toast i{font-size:16px;color:#7ee2b0}
+
+  @media (max-width:920px){
+    .company-card{max-width:560px;margin:24px auto 0}
+    .chat-col{min-height:auto}
+  }
+</style>
+</head>
+<body class="pai">
+
+<button class="button-style button-secondary nav-btn icon-only" id="backBtn" title="Back"><i class="ph ph-arrow-left"></i></button>
+<button class="button-style button-secondary nav-btn icon-only" id="closeBtn" title="Close"><i class="ph ph-x"></i></button>
+
+<div class="stage">
+
+  <!-- ============ COMPOSE ============ -->
+  <section class="screen is-active" data-screen="compose">
+    <div class="compose show-greet" id="compose">
+      <div class="compose-inner">
+        <p class="greet text-heading-2xl" id="greet">Manivasakan, let's create your first presentation</p>
+        <h1 class="compose-title text-heading-4xl text-text-primary">Describe your deck, or upload a file</h1>
+
+        <div class="ctrl-row">
+          <button class="button-style button-medium button-secondary"><i class="ph ph-stack"></i>Upload Files<i class="ph ph-caret-down caret"></i></button>
+          <span class="spacer"></span>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-squares-four"></i>Slide Count<i class="ph ph-caret-down caret"></i></button>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-sparkle"></i>AI Model<i class="ph ph-caret-down caret"></i></button>
+          <button class="button-style button-medium button-secondary icon-only"><i class="ph ph-sliders-horizontal"></i></button>
+        </div>
+
+        <div class="composer" id="composer">
+          <div class="composer-ph"><i class="ph ph-pencil-simple"></i>Type here or <span class="drop"><i class="ph ph-upload-simple"></i> drop in a file</span></div>
+          <textarea id="deckInput" spellcheck="false"></textarea>
+        </div>
+
+        <div class="create-wrap">
+          <button class="button-style button-large button-primary" id="createBtn">Create Presentation <i class="ph ph-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOADING + CHAT ============ -->
+  <section class="screen" data-screen="chat">
+    <div class="chat">
+      <div class="chat-scroll">
+        <div class="chat-col">
+
+          <div class="bubble-user" id="echoBubble"></div>
+
+          <div class="status">
+            <div class="logo spin" id="logo"></div>
+            <div class="status-txt text-body-lg-semibold text-text-primary" id="statusTxt">Lining things up<span class="dots"></span></div>
+          </div>
+
+          <!-- COMPANY + DESIGNATION + NOTIFY (inline, non-blocking) -->
+          <div class="company-card bg-bg-elevated shadow-elevation-02" id="companyCard">
+            <div class="cc-head">
+              <div class="text-body-lg-semibold text-text-primary">While we build your deck</div>
+              <button class="button-style button-ghost cc-x icon-only" id="ccDismiss" title="Maybe later"><i class="ph ph-x"></i></button>
+            </div>
+            <p class="cc-sub text-body-sm-regular text-text-secondary">Tell us about your company and role. Totally optional.</p>
+
+            <div class="fld" id="fldEmail">
+              <label>Company email</label>
+              <input type="email" class="pai-input pai-input--lg" id="companyEmail" placeholder="you@company.com" autocomplete="off" />
+              <span class="fld-err" id="emailErr"><i class="ph-fill ph-warning-circle"></i><span id="emailErrTxt">Enter a valid email</span></span>
+            </div>
+
+            <div class="fld select-wrap" id="fldRole">
+              <label>Your designation</label>
+              <select class="pai-input pai-input--lg" id="designation">
+                <option value="" selected disabled>Select your designation</option>
+                <option>Founder / Co-Founder</option>
+                <option>CEO</option>
+                <option>President</option>
+                <option>Chairperson / Board Member</option>
+                <option>CFO</option>
+                <option>CTO</option>
+                <option>COO</option>
+                <option>CMO</option>
+                <option>Other C-Suite (CXO)</option>
+                <option>EVP / SVP</option>
+                <option>Vice President</option>
+                <option>Director</option>
+                <option>Head of Department</option>
+                <option>General Manager</option>
+                <option>Managing Partner</option>
+              </select>
+            </div>
+
+            <div class="notify">
+              <span class="notify-txt"><i class="ph ph-bell"></i>Want a ping when it's done?</span>
+              <button class="button-style button-medium button-primary" id="notifyBtn"><i class="ph-bold ph-bell-ringing"></i>Yes, notify me</button>
+            </div>
+
+            <div class="cc-later">
+              <button class="button-style button-small button-ghost text-text-tertiary" id="ccLater">Maybe later</button>
+            </div>
+
+            <div class="cc-saved"><i class="ph-fill ph-check-circle"></i>Saved. Thanks!</div>
+          </div>
+
+          <div class="ai-msg text-body-lg-regular text-text-primary" id="aiMsg">
+            To build a precise board update, please share your Q4 revenue figures (actual vs. target), key OKR outcomes, and your top 2026 strategic priorities. If you skip, I'll provide a high-quality template with placeholder data for you to fill in.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- paste dock -->
+      <div class="dock" id="dock">
+        <div class="dock-card bg-bg-elevated shadow-elevation-02">
+          <div class="dock-title text-body-base-semibold text-text-primary">Paste your content, notes, or data</div>
+          <textarea class="pai-textarea" id="pasteInput" placeholder="Type here..." spellcheck="false"></textarea>
+          <div class="dock-actions">
+            <button class="button-style button-medium button-secondary" id="skipBtn">Skip</button>
+            <button class="button-style button-medium button-primary icon-only" id="sendBtn" title="Send"><i class="ph ph-arrow-up"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<button class="button-style button-small button-secondary restart" id="restart"><i class="ph ph-arrow-counter-clockwise"></i>Restart demo</button>
+<div class="toast" id="toast"><i class="ph-fill ph-check-circle"></i><span id="toastTxt">Notifications enabled</span></div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const screens = document.querySelectorAll('.screen');
+  function go(name){ screens.forEach(s => s.classList.toggle('is-active', s.dataset.screen===name)); }
+
+  const compose = $('#compose');
+  setTimeout(()=> compose.classList.remove('show-greet'), 1600);
+
+  const input = $('#deckInput'), composer = $('#composer');
+  input.addEventListener('input', ()=> composer.classList.toggle('has-text', input.value.trim().length>0));
+
+  let toastT;
+  function toast(msg){ const t=$('#toast'); $('#toastTxt').textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+  let seq=[];
+  function clearSeq(){ seq.forEach(clearTimeout); seq=[]; }
+
+  $('#createBtn').addEventListener('click', startCreate);
+  function startCreate(){
+    const txt = input.value.trim();
+    if(!txt) return;
+    $('#echoBubble').textContent = txt;
+    $('#closeBtn').style.display='inline-flex';
+    go('chat');
+    const card=$('#companyCard'), dock=$('#dock'), ai=$('#aiMsg'), logo=$('#logo'), st=$('#statusTxt');
+    card.className='company-card bg-bg-elevated shadow-elevation-02'; dock.classList.remove('show'); ai.classList.remove('show');
+    logo.classList.remove('done'); logo.classList.add('spin'); st.innerHTML='Lining things up<span class="dots"></span>';
+    resetCard();
+    clearSeq();
+    seq.push(setTimeout(()=> card.classList.add('show'), 700));
+    seq.push(setTimeout(()=>{
+      logo.classList.remove('spin'); logo.classList.add('done');
+      st.innerHTML='Here’s what I need';
+      ai.classList.add('show');
+      dock.classList.add('show');
+    }, 10000));
+  }
+
+  const card=$('#companyCard');
+  const email=$('#companyEmail'), role=$('#designation');
+  let saveT;
+
+  // free / personal mail providers — a company email must NOT be one of these
+  const FREE=['gmail.com','googlemail.com','yahoo.com','yahoo.co.in','yahoo.co.uk','ymail.com',
+    'outlook.com','hotmail.com','hotmail.co.uk','live.com','msn.com','icloud.com','me.com','mac.com',
+    'aol.com','proton.me','protonmail.com','pm.me','gmx.com','gmx.net','mail.com','zoho.com',
+    'yandex.com','yandex.ru','tutanota.com','hey.com','fastmail.com','rediffmail.com'];
+
+  function emailState(){
+    const v=email.value.trim().toLowerCase();
+    if(!v) return {state:'empty'};
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return {state:'invalid', msg:'Enter a valid email'};
+    if(FREE.includes(v.split('@')[1])) return {state:'personal', msg:'Use your company email, not a personal one'};
+    return {state:'ok'};
+  }
+  function paintEmail(s){
+    const f=$('#fldEmail');
+    if(s.state==='ok'||s.state==='empty'){ f.classList.remove('error'); email.classList.remove('is-error'); }
+    else { f.classList.add('error'); email.classList.add('is-error'); $('#emailErrTxt').textContent=s.msg; }
+  }
+
+  function resetCard(){
+    clearTimeout(saveT);
+    email.value=''; role.selectedIndex=0;
+    paintEmail({state:'empty'});
+    const nb=$('#notifyBtn'); nb.classList.remove('done'); nb.innerHTML='<i class="ph-bold ph-bell-ringing"></i>Yes, notify me';
+  }
+
+  // live-clear error while typing; full check on blur
+  email.addEventListener('input', ()=>{ const s=emailState(); if(s.state==='ok'||s.state==='empty') paintEmail(s); maybeSaved(); });
+  email.addEventListener('blur', ()=>{ paintEmail(emailState()); maybeSaved(); });
+  role.addEventListener('change', maybeSaved);
+
+  $('#notifyBtn').addEventListener('click', function(){
+    if(this.classList.contains('done')) return;
+    this.classList.add('done');
+    this.innerHTML='<i class="ph-fill ph-check-circle"></i>You’ll be notified';
+    toast('Notifications enabled. We’ll ping you when the deck is ready.');
+    maybeSaved();
+  });
+
+  // once email (company), designation, and notify choice are all done -> save + auto-dismiss
+  function maybeSaved(){
+    const ok = emailState().state==='ok';
+    const notified = $('#notifyBtn').classList.contains('done');
+    if(ok && role.value && notified){
+      card.classList.add('saved');
+      clearTimeout(saveT);
+      saveT=setTimeout(()=> card.classList.add('dismissed'), 1100);
+    }
+  }
+
+  function dismissCard(){ card.classList.add('dismissed'); }
+  $('#ccDismiss').addEventListener('click', dismissCard);
+  $('#ccLater').addEventListener('click', dismissCard);
+
+  function finishFlow(){
+    clearSeq();
+    $('#statusTxt').innerHTML='Building your deck<span class="dots"></span>';
+    $('#logo').classList.remove('done'); $('#logo').classList.add('spin');
+    $('#aiMsg').classList.remove('show');
+    $('#dock').classList.remove('show');
+    toast('Generating your presentation…');
+  }
+  $('#skipBtn').addEventListener('click', finishFlow);
+  $('#sendBtn').addEventListener('click', finishFlow);
+  $('#pasteInput').addEventListener('keydown', e=>{ if(e.key==='Enter' && (e.metaKey||e.ctrlKey)) finishFlow(); });
+
+  function toCompose(){ clearSeq(); $('#closeBtn').style.display='none'; go('compose'); }
+  $('#backBtn').addEventListener('click', ()=>{ if($('.screen.is-active').dataset.screen==='chat') toCompose(); });
+  $('#closeBtn').addEventListener('click', toCompose);
+  $('#restart').addEventListener('click', ()=>{
+    clearSeq(); input.value='Board update for deck.in for Q4 covering revenue performance vs target OKR progress and 2026 strategic priorities for a 10-person executive team';
+    composer.classList.add('has-text'); compose.classList.remove('show-greet'); toCompose();
+  });
+
+  input.value='Board update for deck.in for Q4 covering revenue performance vs target OKR progress and 2026 strategic priorities for a 10-person executive team';
+  composer.classList.add('has-text');
+})();
+</script>
+
+<!-- Agentation -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body>
+</html>

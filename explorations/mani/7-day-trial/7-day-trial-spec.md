@@ -86,6 +86,19 @@ Checkout success → "Continue to your deck" → deck-ready editor
   in the modal. Sidebar trigger preselects its tab (Create project → Projects).
   "Invite new member" is hidden from the trial dashboard sidebar.
 
+### 4b. Dashboard — active trial user (`dashboard-active-trial.html`)
+
+Unlocked full-Pro dashboard for the in-trial user.
+- Sidebar workspace chip "Pro"; sidebar foot has **Workspace settings** + **Invite new members**.
+- Topbar: "Unlock project knowledge" pill + "Upgrade to Gold" button (no trial countdown / no badges).
+- **Invite new members** → "Invite members" popup (emails + Invite + Copy invite link).
+- Invite → **Add more seats** modal: "Add 1 seat to invite a new member", "Billed on day 7
+  (Jun 18, 2026): $240.00", "$0 due today" note, agree checkbox ("…charged $240.00 on day 7 with
+  your billing"), Cancel / Confirm Payment. Seats are billed on the day-7 date, not today (Case 2).
+- Leaving the seats modal (X or Cancel) → **Exit checkout?** confirm ("upgrade will be cancelled"),
+  Leave Page (discard) / Complete Purchase (back to seats). Confirm Payment → toast "1 seat added,
+  billed day 7".
+
 ### 5. Settings (`settings-trial.html`) — free / pre-checkout user
 
 - Sidebar: Workspace Settings (General, Members, Billing) + Profile Settings (Profile).
@@ -106,9 +119,22 @@ Checkout success → "Continue to your deck" → deck-ready editor
 - Avatar opens a profile dropdown: name + email, "100 credits left", Your Account (→ Profile),
   Language, Sign out.
 
-### 5b. Settings — active user (`settings-active.html`)
+### 5b. Settings — active trial user (`settings-trial-active.html`)
 
-The settings for any user with an active plan (in-trial or paid use the same Gold subscriber view):
+Active Pro user (post-checkout, full Pro access):
+- Sidebar workspace chip "Pro". Top bar clean (no trial chip, no Upgrade button);
+  avatar profile dropdown shows "5,000 credits left". "Back to Home" is a non-navigating placeholder.
+- **Members**: "Invite to workspace" box visible and working (Pro includes team invites).
+- **Billing** (Gold-style card layout, $): header "Pro · $240/year · 1 seat · 5,000 Credits", Upgrade button.
+  - Invoice card: "$240 paid Jun 16, 2026", upcoming "$240.00 on June 16, 2027", View all invoices.
+  - Subscription Renewal card: "Next billing date June 16, 2027" + "Cancel renewal" → confirm modal.
+  - Credits card: "5,000 credits left", credit packs (2,500 → $24, 5,000 → $36) + Get Gold
+    (50,000 credits, $100/user/month, $1,200 billed annually).
+- General and Profile identical to 5.
+
+### 5c. Settings — trial active user (`settings-active.html`)
+
+The active subscriber view (Gold):
 - Sidebar workspace chip shows a "Gold" tag. Top bar clean (no trial chip, no Upgrade); avatar
   profile dropdown shows "250.2k credits left". "Back to Home" is a non-navigating placeholder.
 - **Members**: "Invite to workspace" box hidden for now; count + owner row stay.
@@ -144,7 +170,9 @@ The settings for any user with an active plan (in-trial or paid use the same Gol
 | `editor-trial.html` | Generation screen (clone of Mudita's editor-to-present + trial overrides) |
 | `pricing.html` | Trial pricing (duplicate of pricing key screen, trimmed) |
 | `checkout.html` | Checkout + success modal (single source for all contexts) |
-| `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
+| `dashboard-trial.html` | Trial dashboard (free / locked — duplicate of dashboard key screen + modals) |
+| `dashboard-active-trial.html` | Active trial dashboard (unlocked full Pro; invite → add-seat (billed day 7) → exit-checkout) |
 | `settings-trial.html` | Settings for the free / pre-checkout user (invite hidden, Free billing) |
-| `settings-active.html` | Settings for the active user (Gold: invoices, renewal, credit packs) |
+| `settings-trial-active.html` | Settings for the in-trial user (Pro Trial: invite visible, trial timeline, Cancel trial) |
+| `settings-active.html` | Settings for the trial active user (Gold: invoices, renewal, credit packs) |
 | `assets/` | Vendored logos, trust badges, feature previews |
