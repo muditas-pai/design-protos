@@ -92,7 +92,7 @@ Unlocked full-Pro dashboard for the in-trial user.
 - Sidebar workspace chip "Pro"; sidebar foot has **Workspace settings** + **Invite new members**.
   Only those two are clickable in the proto; all other items are inert. Workspace settings →
   `settings-trial-active.html` (which links back here via "Back to Home").
-- Topbar: "Unlock project knowledge" pill + "Upgrade to Gold" button (no trial countdown / no badges).
+- Topbar: search / help / notifications / avatar only. No Gold upsell for trial users (no trial countdown / no badges).
 - **Invite new members** → "Invite members" popup (emails + Invite + Copy invite link).
 - Invite → **Add more seats** modal: "Add 1 seat to invite a new member", "Billed on day 7
   (Jun 18, 2026): $240.00", "$0 due today" note, agree checkbox ("…charged $240.00 on day 7 with

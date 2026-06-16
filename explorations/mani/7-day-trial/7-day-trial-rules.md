@@ -91,7 +91,7 @@ Two user states:
 
 ### Dashboard (`dashboard-active-trial.html`)
 1. Unlocked full-Pro dashboard. All presentations open; prompt / Upload / Import / pills work, no pricing modal.
-2. Top bar: "Unlock project knowledge" pill + "Upgrade to Gold" button. No trial countdown, no badges.
+2. Top bar: search, help, notifications, avatar only. No Gold upsell (trial users are not upsold to Gold here), no trial countdown, no badges.
 3. Sidebar foot: Workspace settings + Invite new members.
 4. In the proto, only Workspace settings and Invite new members are clickable; every other item is inert (demo focus).
 5. Workspace settings → `settings-trial-active.html`. (Settings "Back to Home" returns here.)
@@ -168,3 +168,4 @@ The Gold paid subscriber uses the same card layout with Gold values in `settings
 3. One currency everywhere: $.
 4. Copy voice: "Start your free trial to view your slides" (generation title + thumb tooltip), "7-day free trial" (badge), "Try for Free" / "Get your free trial" / "Try Pro for Free" / "Upgrade" (CTAs).
 5. Closing or backing out never loses the generated deck. It stays as the one locked presentation on the dashboard.
+6. No Gold upsell in the app chrome for trial users: no "Upgrade to Gold" / "Unlock" pills in the top bar. Gold appears only inside Settings → Billing, as an optional credit-pack / plan row ("Get Gold · 50,000 credits").
