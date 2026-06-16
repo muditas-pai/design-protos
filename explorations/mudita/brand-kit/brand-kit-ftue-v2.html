@@ -768,6 +768,33 @@
     .tw-t { font-size: 13px; font-weight: 600; color: var(--fg); }
     .tw-d { font-size: 11.5px; color: var(--fg-3); line-height: 1.35; }
 
+    /* ── SLIDE PREFERENCES ─────────────────────────────────── */
+    .sp { display: flex; flex-direction: column; }
+    .sp-row, .sp-tog { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px;
+      padding: 15px 2px; border-bottom: 1px solid var(--line); }
+    .sp-tog { align-items: center; }
+    .sp:last-child .sp-tog:last-child { border-bottom: 0; }
+    .sp-lab { min-width: 0; }
+    .sp-t { font-weight: 500; }
+    .sp-d { color: var(--fg-2); font-size: 12.5px; margin-top: 2px; line-height: 1.45; }
+    .sp-eg { margin-top: 8px; font-size: 12px; color: var(--fg-3); }
+    .sp-eg b { color: var(--pata); font-weight: 600; }
+    /* segmented control */
+    .sp-seg { display: inline-flex; flex-shrink: 0; background: var(--surface-2); border-radius: 9px;
+      padding: 3px; box-shadow: inset 0 0 0 1px var(--line); }
+    .sp-seg button { border: 0; background: none; padding: 6px 14px; border-radius: 7px; cursor: pointer;
+      font: 500 13px "Inter"; color: var(--fg-2); white-space: nowrap; transition: color 150ms var(--ease); }
+    .sp-seg button:hover { color: var(--fg); }
+    .sp-seg button.on { color: var(--fg); background: var(--surface);
+      box-shadow: 0 1px 2px var(--d1), 0 0 0 1px var(--d2); }
+    /* toggle switch */
+    .sp-sw { width: 38px; height: 22px; flex-shrink: 0; padding: 0; border: 0; cursor: pointer;
+      border-radius: 99px; background: var(--line-strong); position: relative; transition: background 180ms var(--ease); }
+    .sp-sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+      border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: transform 180ms var(--ease); }
+    .sp-sw.on { background: var(--pata); }
+    .sp-sw.on::after { transform: translateX(16px); }
+
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
 </head>
@@ -836,7 +863,9 @@
         { seed: "pata4", cat: "background" }, { seed: "pata5", cat: "people" }, { seed: "pata6", cat: "background" },
         { seed: "pata7", cat: "product" }, { seed: "pata8", cat: "background" }, { seed: "pata9", cat: "people" },
         { seed: "pata10", cat: "product" }
-      ]
+      ],
+      // slide preferences — output defaults every generated deck follows
+      slides: { density: "balanced", titleStyle: "insight", footer: true, pagination: true, cite: true }
     };
 
     // company docs the user dropped in during setup → seed Brand knowledge
@@ -1414,8 +1443,36 @@
           '<button class="tile-x" type="button" data-del="template:' + i + '" title="Remove"><i class="ph ph-x"></i></button></div>';
       }).join("") + '</div><div class="tpl-add-l">Add another</div>' + tplEntries();
     }
+    // slide preferences — output defaults the generator follows for every deck
+    function renderSlides() {
+      var s = KIT.slides;
+      function seg(key, opts) {
+        return '<div class="sp-seg" data-seg="' + key + '">' + opts.map(function (o) {
+          return '<button type="button" data-opt="' + o[0] + '"' + (s[key] === o[0] ? ' class="on"' : '') + '>' + o[1] + '</button>';
+        }).join("") + '</div>';
+      }
+      function tog(key, t, d) {
+        return '<div class="sp-tog"><div class="sp-lab"><div class="sp-t">' + t + '</div><div class="sp-d">' + d + '</div></div>' +
+          '<button type="button" role="switch" aria-checked="' + (!!s[key]) + '" class="sp-sw' + (s[key] ? " on" : "") + '" data-tog="' + key + '"></button></div>';
+      }
+      var eg = s.titleStyle === "insight"
+        ? 'e.g. <b>“Recycled materials now lead the line”</b>'
+        : 'e.g. <b>“Materials”</b>';
+      return '<div class="sp">' +
+        '<div class="sp-row"><div class="sp-lab"><div class="sp-t">Content density</div>' +
+          '<div class="sp-d">How much text and detail lands on each slide.</div></div>' +
+          seg("density", [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"]]) + '</div>' +
+        '<div class="sp-row"><div class="sp-lab"><div class="sp-t">Slide titles</div>' +
+          '<div class="sp-d">Insight states the takeaway as a sentence; Topic is a short label.</div>' +
+          '<div class="sp-eg">' + eg + '</div></div>' +
+          seg("titleStyle", [["insight", "Insight"], ["topic", "Topic"]]) + '</div>' +
+        tog("footer", "Footer", "Show a footer line across slides.") +
+        tog("pagination", "Page numbers", "Number every slide.") +
+        tog("cite", "Cite references", "Always show sources for facts and figures.") +
+      '</div>';
+    }
     var ACT2MOD = { colour: "colours", doc: "docs", org: "org", team: "org", image: "images", logoslot: "logos", typo: "typo", template: "templates" };
-    var MODB = { typo: renderTypo, colours: renderColours, logos: renderLogos, docs: renderDocs, org: renderOrg, images: renderImages, mood: renderMood, templates: renderTemplates };
+    var MODB = { typo: renderTypo, colours: renderColours, logos: renderLogos, docs: renderDocs, org: renderOrg, images: renderImages, mood: renderMood, templates: renderTemplates, slides: renderSlides };
     function refreshMod(id) { var el = document.getElementById("mod-" + id); if (el) el.innerHTML = MODB[id](); }
     // collapsed-header summaries that recompute live as a module changes
     var ACT2SUM = { colour: "look", typo: "look", logoslot: "logos", doc: "docs", org: "org", team: "org", image: "images", template: "templates" };
@@ -1427,6 +1484,10 @@
       if (id === "org") return KIT.org.length + (KIT.org.length === 1 ? " field" : " fields") + " · " + KIT.team.length + " team";
       if (id === "images") return KIT.images.length + (KIT.images.length === 1 ? " image" : " images");
       if (id === "templates") return KIT.templates.length ? KIT.templates.length + (KIT.templates.length === 1 ? " template" : " templates") : "Add your own";
+      if (id === "slides") {
+        var dl = { concise: "Concise", balanced: "Balanced", detailed: "Detailed" }[KIT.slides.density];
+        return dl + " · " + (KIT.slides.titleStyle === "insight" ? "Insight titles" : "Topic titles");
+      }
       return "";
     }
     function updateSum(id) { var el = document.querySelector('[data-sum="' + id + '"]'); if (el) el.innerHTML = modSum(id); }
@@ -1475,6 +1536,7 @@
         '<div class="accs">' +
           acc("Look &amp; feel", modSum("look"), lf, true, "look") +
           acc("Brand voice", "Plainspoken · Principled · Rugged", voices, false) +
+          acc("Slide preferences", modSum("slides"), '<div id="mod-slides">' + renderSlides() + '</div>', false, "slides") +
           acc("Logos", modSum("logos"), '<div id="mod-logos">' + renderLogos() + '</div>', false, "logos") +
           acc("Templates", modSum("templates"), '<div id="mod-templates">' + renderTemplates() + '</div>', false, "templates") +
           acc('Brand knowledge <span class="tag-gold"><i class="ph-fill ph-crown-simple"></i>Gold</span>', modSum("docs"), '<div id="mod-docs">' + renderDocs() + '</div>', false, "docs") +
@@ -1502,6 +1564,18 @@
             refreshMod("images");
           }, 1200);
           return;
+        }
+        var opt = e.target.closest("[data-opt]");        // slide prefs — segmented choice (density · title style)
+        if (opt) {
+          e.stopPropagation();
+          KIT.slides[opt.closest("[data-seg]").getAttribute("data-seg")] = opt.getAttribute("data-opt");
+          refreshMod("slides"); updateSum("slides"); return;
+        }
+        var tog = e.target.closest("[data-tog]");        // slide prefs — toggle (footer · pages · citations)
+        if (tog) {
+          e.stopPropagation();
+          var tk = tog.getAttribute("data-tog"); KIT.slides[tk] = !KIT.slides[tk];
+          refreshMod("slides"); updateSum("slides"); return;
         }
         var crud = e.target.closest("[data-add],[data-del]");
         if (crud && !crud.closest("#voiceBody")) {     // kit CRUD — voice panel handles its own
