@@ -106,9 +106,20 @@ Checkout success → "Continue to your deck" → deck-ready editor
 - Avatar opens a profile dropdown: name + email, "100 credits left", Your Account (→ Profile),
   Language, Sign out.
 
-### 5b. Settings — active user (`settings-active.html`)
+### 5b. Settings — in-trial user (`settings-trial-active.html`)
 
-The settings for any user with an active plan (in-trial or paid use the same Gold subscriber view):
+After checkout, during days 1–7 (full Pro access):
+- Sidebar workspace chip shows "Pro Trial". Top bar clean (no trial chip, no Upgrade button);
+  avatar profile dropdown shows "1,000 credits left". "Back to Home" is a non-navigating placeholder.
+- **Members**: "Invite to workspace" box visible and working (Pro includes team invites).
+- **Billing**: header "Pro Trial · Trial ends Jun 18, 2026", Upgrade button (converts trial to paid now).
+  - Credits card "1,000 credits left", Gold shown as the "Need more credits?" upsell row.
+  - Trial & billing card: "$0 paid today · $264.00 due Jun 18, 2026", VISA ····4242, "Cancel trial" link.
+- General and Profile identical to 5.
+
+### 5c. Settings — paid user (`settings-active.html`)
+
+The post-conversion / paid subscriber view (Gold):
 - Sidebar workspace chip shows a "Gold" tag. Top bar clean (no trial chip, no Upgrade); avatar
   profile dropdown shows "250.2k credits left". "Back to Home" is a non-navigating placeholder.
 - **Members**: "Invite to workspace" box hidden for now; count + owner row stay.
@@ -146,5 +157,6 @@ The settings for any user with an active plan (in-trial or paid use the same Gol
 | `checkout.html` | Checkout + success modal (single source for all contexts) |
 | `dashboard-trial.html` | Trial dashboard (duplicate of dashboard key screen + modals) |
 | `settings-trial.html` | Settings for the free / pre-checkout user (invite hidden, Free billing) |
-| `settings-active.html` | Settings for the active user (Gold: invoices, renewal, credit packs) |
+| `settings-trial-active.html` | Settings for the in-trial user (Pro Trial: invite visible, trial timeline, Cancel trial) |
+| `settings-active.html` | Settings for the paid user (Gold: invoices, renewal, credit packs) |
 | `assets/` | Vendored logos, trust badges, feature previews |
