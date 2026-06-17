@@ -7,7 +7,8 @@ Demoed in [editor-theme-panel](editor-theme-panel.html).
 
 ## Rules
 
-- One "Applied" thumbnail, always present at the top, always live.
+- One "Applied" thumbnail, always present at the top — it always reflects the visual style
+  currently applied to the presentation.
 - Update the **colour palette** → the new colours show up in the "Applied" thumbnail.
 - Update the **font** → the new font shows up in the "Applied" thumbnail.
 - Once the palette or font is overridden, the title reads `<mood> (modified)`.
