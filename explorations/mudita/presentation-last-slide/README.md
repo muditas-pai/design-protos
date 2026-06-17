@@ -12,3 +12,9 @@ Releases, P0).
 
 Notes (now resolved in the protos): a "Your presentation is ready · Start editing" toast that the
 user can dismiss; the Exit control renamed to **Go to Editor**.
+
+**Wrap-up segment.** The progress bar carries one extra segment beyond the real slides, so the deck
+reads as *N+1* (e.g. `3/4`). It looks like one more slide, so the user naturally hits → / Next from
+the last slide and lands on the end screen instead of being surprised by a modal. The extra segment
+fills the normal current-slide blue on arrival. Going back off it returns to the last real slide and
+clears the end UI.

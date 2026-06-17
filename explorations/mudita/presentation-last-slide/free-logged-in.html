@@ -1610,7 +1610,8 @@
     </div>
 
     <script>
-      const TOTAL = 3;
+      const TOTAL = 3;             // real content slides
+      const END_STEP = TOTAL + 1;  // phantom "wrap-up" step — the end screen lives here
       let current = 1;
 
       const track = document.getElementById("progressTrack");
@@ -1628,20 +1629,23 @@
       const toastStart = document.getElementById("toastStart");
 
       function renderSlides() {
+        // on the wrap-up step keep the last real slide visible behind the scrim
+        const activeSlide = Math.min(current, TOTAL);
         slides.forEach((s) => {
-          s.classList.toggle("is-active", Number(s.dataset.slide) === current);
+          s.classList.toggle("is-active", Number(s.dataset.slide) === activeSlide);
         });
       }
       function renderProgress() {
         track.innerHTML = "";
-        for (let i = 1; i <= TOTAL; i++) {
+        for (let i = 1; i <= END_STEP; i++) {
           const seg = document.createElement("div");
           seg.className = "progress-seg";
+          if (i === END_STEP) seg.classList.add("is-end");   // the extra wrap-up segment
           if (i < current) seg.classList.add("viewed");
           if (i === current) seg.classList.add("current");
           track.appendChild(seg);
         }
-        counter.textContent = `${current}/${TOTAL}`;
+        counter.textContent = `${current}/${END_STEP}`;
         renderSlides();
       }
       renderProgress();
@@ -1655,23 +1659,21 @@
       function clearState() { setState(null); }
       function restart() {
         current = 1;
-        renderProgress();
         clearState();
+        renderProgress();
       }
 
       function goNext() {
-        if (current < TOTAL) {
-          current += 1;
-          renderProgress();
-        } else {
-          // First time landing on end: show the modal
-          showModal();
-        }
+        if (current >= END_STEP) return;        // already on the wrap-up step
+        current += 1;
+        renderProgress();
+        if (current === END_STEP) showModal();  // landed on the wrap-up → reveal the end UI
       }
       function goPrev() {
-        if (document.body.classList.contains("state-modal") ||
-            document.body.classList.contains("state-options")) {
+        if (current === END_STEP) {             // step back off the wrap-up to the last slide
+          current = TOTAL;
           clearState();
+          renderProgress();
           return;
         }
         if (current > 1) {
