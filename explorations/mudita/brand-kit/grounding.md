@@ -30,6 +30,11 @@ Mapped 9 Jun 2026 — verify against the repo before building.
 - **Brand knowledge / RAG is greenfield.** No knowledge-graph or retrieval pipeline exists for brand
   context yet — today's doc-to-deck just stuffs one file's `raw_content` into the prompt, not a
   persistent per-company corpus. Brand knowledge is a **new system** (a Gold feature).
+- **Brand Fetch drives the auto-theme — new external dependency.** On generation, if the prompt **names a
+  company**, we call the external **Brand Fetch** service for its **logo + colour palette**, pair it with an
+  auto-picked **mood blueprint**, and show the result as an **applied theme** atop the editor — *whether or
+  not a brand kit is selected*. The user can **save that auto-theme as a brand kit**. The fetch → auto-theme
+  → save-as-kit pipeline is greenfield. (Spec: *Auto-theme from the prompt (Brand Fetch)*.)
 
 So the whole `payload` shape is ours to define, on a table that already reserved the right place.
 

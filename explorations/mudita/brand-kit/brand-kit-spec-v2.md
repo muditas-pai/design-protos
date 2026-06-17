@@ -44,12 +44,40 @@
 | Touchpoint | Job | Status |
 |---|---|---|
 | **Dashboard** | manage the kit (the accordion) | ✅ prototyped |
-| **Creation flow** | pick a kit (+ a mood for the deck) before generating | ▢ to design |
-| **Editor** | kit values (colour · fonts · logos) tagged in the right panel · switch kit / voice · save deck as template | ▢ to design |
+| **Creation flow** | pick a kit — **switch kits or create a new one** — (+ a mood) before generating | ✅ prototyped |
+| **Editor** | kit values (colour · fonts · logos) tagged in the right panel · switch kit / voice · save deck as template · **save an auto-theme as a kit** | ▢ to design |
+
+> **Creation flow — pick, switch, or create.** The prompt carries the active kit as a pale, kit-coloured
+> band on the prompt box (see `brand-kit-creation-prompt.html`). From there the user must be able to
+> **switch to any other workspace kit** *or* **create a new brand kit** — "New brand kit" hands off to the
+> set-up / FTUE flow. Both paths are required, not just selection.
 
 > **Editor — the kit surfaces in the right panel.** Colour palette, font pairing and logos **already live**
 > in the editor's right-side panel. The V2 work is to **tag** which of those come from the brand kit — so
 > the user sees a "from your kit" marker and can snap any value back to a kit value in one tap.
+
+---
+
+## Auto-theme from the prompt (Brand Fetch)
+
+Every deck lands on an **applied theme — kit or no kit.** Independent of whether a brand kit is selected, at
+generation we read the **prompt**: if it **names a company**, we call **Brand Fetch** (external service) for
+that company's **logo + colour palette**, then auto-pick a **mood blueprint** (1 of ~50) to fit. That's a
+**custom theme**, assembled on the fly.
+
+```
+prompt names a company ─► Brand Fetch ── logo + colour palette ──┐
+                                                                 ├─► applied theme ─► shown atop the editor
+mood blueprint (auto-picked, 1 of ~50) ──────────────────────────┘    (their brand colour · logo · mood)
+```
+
+- In the editor the user sees this as the **applied theme** at the top — brand colour, logo and mood already in place.
+- They can **edit it, add to it, and save it as a brand kit** — promoting the one-off auto-theme into a persistent, reusable kit (same shape as any other kit).
+- So a brand kit can be **born in the editor** from an auto-theme, not only set up up-front via FTUE.
+
+> **Same theme model both ways.** A kit applied up-front and a Brand-Fetch auto-theme produce the same thing
+> on the deck — kit colour / fonts / logo over an auto-picked mood. The only difference is **persistence**:
+> a kit is saved and reusable; an auto-theme is a one-off until the user saves it.
 
 ---
 
