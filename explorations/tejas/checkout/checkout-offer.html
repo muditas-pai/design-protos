@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Checkout · offer + timer · design-protos</title>
+
+  <!-- Fonts + icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+  <!-- Design system -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    body { margin: 0; background: var(--bg-secondary); }
+    .checkout-shell { max-width: 1080px; margin: 0 auto; padding: 48px 24px 80px; }
+    .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    .pane {
+      background: var(--bg-elevated); border-radius: 16px;
+      box-shadow: var(--shadow-elevation-02); padding: 28px 28px 32px;
+    }
+    .rule { height: 1px; background: var(--border-secondary); border: 0; margin: 20px 0; }
+    .link-quiet { display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
+      color: var(--text-brand); transition: opacity 150ms var(--ease-out-strong); }
+    .link-quiet:hover { opacity: 0.7; }
+
+    /* ── countdown popup hanging off the Annual switch (overflow is fine) ────── */
+    .offer-pop { position: absolute; left: calc(100% + 16px); top: 50%; transform: translateY(-50%);
+      display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; z-index: 6;
+      padding: 8px 11px 8px 12px; border-radius: 12px; color: #fff;
+      background: linear-gradient(135deg, #3D8BFF 0%, #005EFF 100%);
+      box-shadow: 0 12px 26px -10px rgba(0,94,255,0.75), inset 0 0 0 1px rgba(255,255,255,0.18);
+      animation: poppulse 2.4s var(--ease-out-strong) infinite;
+      transition: background 240ms var(--ease-out-strong); }
+    /* arrow pointing back at the Annual switch */
+    .offer-pop::before { content: ""; position: absolute; left: -5px; top: 50%; transform: translateY(-50%) rotate(45deg);
+      width: 12px; height: 12px; background: #2f7dff; border-radius: 2px; }
+    .offer-pop i { font-size: 15px; }
+    .offer-pop .lbl { font-size: 12.5px; font-weight: 600; }
+    .offer-pop .t { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 13px; letter-spacing: 0.5px;
+      min-width: 52px; text-align: center; padding: 3px 9px; border-radius: 999px;
+      background: rgba(0,0,0,0.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); }
+    @keyframes poppulse {
+      0%,100% { box-shadow: 0 12px 26px -10px rgba(0,94,255,0.75), inset 0 0 0 1px rgba(255,255,255,0.18); }
+      50%     { box-shadow: 0 12px 32px -8px rgba(0,94,255,0.98),  inset 0 0 0 1px rgba(255,255,255,0.24); }
+    }
+    /* final minute — escalate to danger red */
+    .offer-pop.hot { background: linear-gradient(135deg, #F87171 0%, #DC2626 100%); animation: none; }
+    .offer-pop.hot::before { background: #ef6363; }
+    .offer-pop.hot .t { animation: tblink 1s steps(1, end) infinite; }
+    @keyframes tblink { 50% { opacity: 0.4; } }
+    /* expired — quiet neutral chip */
+    .offer-pop.expired { background: var(--bg-tertiary); color: var(--text-secondary);
+      box-shadow: inset 0 0 0 1px var(--border-secondary); animation: none; }
+    .offer-pop.expired::before { background: var(--bg-tertiary); }
+    .offer-pop.expired .t { display: none; }
+    @media (prefers-reduced-motion: reduce) { .offer-pop { animation: none !important; } }
+    /* on a stacked layout, drop it inline below the switch instead of overflowing off-screen */
+    @media (max-width: 860px) {
+      .offer-pop { position: static; transform: none; margin-top: 12px; }
+      .offer-pop::before { display: none; }
+    }
+
+    /* segmented monthly / annual */
+    .segment { position: relative; display: inline-flex; padding: 3px; gap: 3px; border-radius: 8px;
+      background: var(--bg-tertiary); box-shadow: inset 0 0 0 1px var(--border-secondary); }
+    .segment button { appearance: none; border: 0; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 16px;
+      border-radius: 6px; background: transparent; color: var(--text-secondary);
+      font-size: 14px; font-weight: 500; transition: all 180ms var(--ease-out-strong); }
+    .segment button[aria-selected="true"] { background: var(--bg-elevated);
+      color: var(--text-primary); box-shadow: var(--shadow-elevation-button); }
+
+    /* plan radio cards */
+    .plan-card { position: relative; display: flex; align-items: center; gap: 14px;
+      width: 100%; text-align: left; cursor: pointer; padding: 18px 20px; border-radius: 12px;
+      background: var(--bg-elevated); border: 1.5px solid var(--border-secondary);
+      transition: border-color 180ms var(--ease-out-strong), background-color 180ms var(--ease-out-strong), box-shadow 180ms var(--ease-out-strong);
+    }
+    .plan-card + .plan-card { margin-top: 12px; }
+    .plan-card:hover { border-color: var(--border-primary); }
+    .plan-card[data-selected="true"] { border-color: var(--border-brand); background: var(--bg-brand-selected); }
+    .plan-card.gold[data-selected="true"] { border-color: var(--bg-warning); background: rgba(240,177,0,0.08); }
+    .plan-card .meta { flex: 1; min-width: 0; }
+    .plan-card .price { text-align: right; white-space: nowrap; }
+    .ribbon { position: absolute; top: 0; right: 0; transform: translateY(-50%);
+      background: var(--bg-warning); color: #3a2c00; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.3px; padding: 3px 9px; border-radius: 999px; }
+    .strike { text-decoration: line-through; color: var(--text-tertiary); }
+
+    /* payment method tabs */
+    .tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--border-secondary); margin-top: 18px; }
+    .tab { appearance: none; border: 0; background: transparent; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 8px; padding: 0 0 12px; margin-bottom: -1px;
+      color: var(--text-tertiary); font-size: 14px; font-weight: 500; border-bottom: 2px solid transparent;
+      transition: color 160ms var(--ease-out-strong); }
+    .tab[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--text-primary); }
+    .tab:hover { color: var(--text-secondary); }
+
+    .field-label { display: block; margin-bottom: 7px; }
+    .card-box { border: 1px solid var(--border-secondary); border-radius: 12px; padding: 18px; margin-top: 18px; }
+    .input-wrap { position: relative; }
+    .input-wrap .glyphs { position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      display: inline-flex; gap: 6px; align-items: center; pointer-events: none; }
+    .input-wrap .glyphs i { color: var(--text-tertiary); font-size: 18px; }
+    select.pai-input { -webkit-appearance: none; appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23a3a3a3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; color: var(--text-tertiary); }
+    select.pai-input.has-value { color: var(--text-primary); }
+
+    .pay-cta { width: 100%; margin-top: 20px; }
+    .footnote a { color: var(--text-secondary); text-decoration: none; }
+    .footnote a:hover { color: var(--text-primary); }
+
+    .upi-qr { width: 168px; height: 168px; border-radius: 12px; background: var(--bg-tertiary);
+      display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--border-secondary); }
+
+    .deco-bar { height: 44px; background: var(--text-primary); }
+
+    .rise { opacity: 0; animation: rise 480ms var(--ease-out-strong) forwards; }
+    .rise.d2 { animation-delay: 90ms; }
+    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .rise { animation: none; opacity: 1; } .pulse { animation: none; } }
+
+    @media (max-width: 860px) {
+      .panes { grid-template-columns: 1fr; }
+      .checkout-shell { padding: 28px 16px 56px; }
+    }
+  </style>
+</head>
+
+<body class="pai">
+  <main class="checkout-shell">
+    <div class="panes">
+
+      <!-- ───────── LEFT · order summary ───────── -->
+      <section class="pane rise" aria-label="Choose your plan">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+          <h2 class="text-heading-xl text-text-primary" style="margin:0; font-weight:600;">Choose your plan</h2>
+          <a class="link-quiet text-body-base-medium" href="#">Compare Plans <i class="ph ph-arrow-right" style="font-size:15px;"></i></a>
+        </div>
+
+        <!-- billing cycle -->
+        <div class="segment" role="tablist" aria-label="Billing cycle" style="margin-top:18px;">
+          <button id="cycleMonthly" role="tab" aria-selected="false" onclick="setCycle('monthly')">Monthly</button>
+          <button id="cycleAnnual" role="tab" aria-selected="true" onclick="setCycle('annual')">
+            Annual <span class="pai-badge" id="saleTag" style="background:var(--bg-success);color:#fff;">Discount</span>
+          </button>
+
+          <!-- countdown popup hanging off the Annual switch -->
+          <div class="offer-pop" id="offerPill" role="status" aria-live="polite">
+            <i class="ph-fill ph-timer"></i>
+            <span class="lbl" id="pillLabel">Discounts end in</span>
+            <span class="t" id="pillClock">60:00</span>
+          </div>
+        </div>
+
+        <!-- plan cards -->
+        <div style="margin-top:20px;">
+          <div class="plan-card pro" id="planPro" data-selected="true" role="radio" aria-checked="true" tabindex="0" onclick="setPlan('pro')">
+            <input type="radio" class="pai-radio" name="plan" checked tabindex="-1" aria-hidden="true" />
+            <div class="meta">
+              <div class="text-body-lg-semibold text-text-primary">Pro Plan</div>
+              <div class="text-body-base-medium" id="proSub" style="color:var(--text-success-primary); margin-top:2px;">Save $60</div>
+            </div>
+            <div class="price">
+              <span class="text-heading-lg text-text-primary" id="proPrice" style="font-weight:600;">$180</span><span class="text-body-base-regular text-text-tertiary" id="proUnit">/yr</span>
+            </div>
+          </div>
+
+          <div class="plan-card gold" id="planGold" data-selected="false" role="radio" aria-checked="false" tabindex="0" onclick="setPlan('gold')">
+            <span class="ribbon" id="goldRibbon">50% OFF</span>
+            <input type="radio" class="pai-radio" name="plan" tabindex="-1" aria-hidden="true" />
+            <div class="meta">
+              <div class="text-body-lg-semibold text-text-primary">Gold Plan</div>
+              <div class="text-body-base-regular strike" id="goldSub" style="margin-top:2px;">$1200</div>
+            </div>
+            <div class="price">
+              <span class="text-heading-lg text-text-primary" id="goldPrice" style="font-weight:600;">$600</span><span class="text-body-base-regular text-text-tertiary" id="goldUnit">/yr</span>
+            </div>
+          </div>
+        </div>
+
+        <hr class="rule" />
+
+        <!-- line items -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="text-body-lg-regular text-text-primary" id="liName">Pro Plan</span>
+          <span class="text-body-lg-regular text-text-primary" id="liList">$240</span>
+        </div>
+        <div id="discountRow" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; color:var(--text-success-primary);">
+          <span class="text-body-base-medium" id="liDiscountLabel">Discount ($60 off applied)</span>
+          <span class="text-body-base-medium" id="liDiscount">-$60</span>
+        </div>
+
+        <hr class="rule" />
+
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span class="text-heading-lg text-text-primary" style="font-weight:600;">Total due today</span>
+          <span class="text-heading-lg text-text-primary" id="liTotal" style="font-weight:700;">$180</span>
+        </div>
+      </section>
+
+      <!-- ───────── RIGHT · payment method ───────── -->
+      <section class="pane rise d2" aria-label="Payment method">
+        <h2 class="text-heading-xl text-text-primary" style="margin:0; font-weight:600;">Payment method</h2>
+
+        <div class="tabs" role="tablist" aria-label="Payment method">
+          <button class="tab" id="tabCard" role="tab" aria-selected="true" onclick="setMethod('card')">
+            <i class="ph ph-credit-card" style="font-size:18px;"></i> Credit/Debit card
+          </button>
+          <button class="tab" id="tabUpi" role="tab" aria-selected="false" onclick="setMethod('upi')">
+            <span style="color:var(--bg-warning); font-weight:800; font-style:italic;">UPI</span> UPI/QR Code
+          </button>
+        </div>
+
+        <!-- card panel -->
+        <div id="panelCard">
+          <div class="card-box">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+              <i class="ph-fill ph-credit-card" style="color:var(--text-brand); font-size:20px;"></i>
+              <span class="text-body-base-semibold text-text-brand">Card</span>
+            </div>
+
+            <label class="field-label text-body-base-medium text-text-secondary" for="cardNumber">Card number</label>
+            <div class="input-wrap">
+              <input class="pai-input pai-input--lg" id="cardNumber" inputmode="numeric" placeholder="1234 1234 1234 1234" />
+              <span class="glyphs"><i class="ph-fill ph-cards"></i><i class="ph ph-credit-card"></i></span>
+            </div>
+
+            <div style="display:flex; gap:14px; margin-top:16px;">
+              <div style="flex:1;">
+                <label class="field-label text-body-base-medium text-text-secondary" for="cardExpiry">Expiry date</label>
+                <input class="pai-input pai-input--lg" id="cardExpiry" placeholder="MM / YY" />
+              </div>
+              <div style="flex:1;">
+                <label class="field-label text-body-base-medium text-text-secondary" for="cardCvc">Security code</label>
+                <div class="input-wrap">
+                  <input class="pai-input pai-input--lg" id="cardCvc" inputmode="numeric" placeholder="CVC" />
+                  <span class="glyphs"><i class="ph ph-credit-card"></i></span>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:16px;">
+              <label class="field-label text-body-base-medium text-text-secondary" for="cardCountry">Country/Territory</label>
+              <select class="pai-input pai-input--lg" id="cardCountry" onchange="this.classList.toggle('has-value', !!this.value)">
+                <option value="" disabled selected></option>
+                <option value="in">India</option>
+                <option value="us">United States</option>
+                <option value="sg">Singapore</option>
+                <option value="gb">United Kingdom</option>
+                <option value="ae">United Arab Emirates</option>
+                <option value="au">Australia</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- upi panel -->
+        <div id="panelUpi" style="display:none;">
+          <div class="card-box" style="display:flex; align-items:center; gap:20px;">
+            <div class="upi-qr"><i class="ph ph-qr-code" style="font-size:84px; color:var(--text-tertiary);"></i></div>
+            <div>
+              <div class="text-body-lg-semibold text-text-primary">Scan to pay</div>
+              <div class="text-body-base-regular text-text-secondary" style="margin-top:4px; max-width:30ch; text-wrap:pretty;">
+                Open any UPI app and scan the code, or enter your UPI ID below.
+              </div>
+              <input class="pai-input pai-input--lg" placeholder="yourname@bank" style="margin-top:12px;" />
+            </div>
+          </div>
+        </div>
+
+        <p class="text-body-base-regular text-text-secondary footnote" style="margin-top:18px; text-wrap:pretty;">
+          By subscribing, you authorise <strong style="color:var(--text-primary); font-weight:600;">PRESENTATIONS AI PTE. LTD</strong> to charge you according to the terms until you cancel.
+        </p>
+
+        <button class="button-style button-large button-dark pay-cta" onclick="payClick(this)">
+          <i class="ph-fill ph-lock-simple" style="font-size:16px;"></i>
+          <span class="button-label">Proceed to Secure Payment</span>
+        </button>
+
+        <div class="footnote" style="display:flex; align-items:center; justify-content:center; gap:18px; margin-top:18px;">
+          <span class="text-body-sm-regular text-text-tertiary">Powered by <strong style="color:var(--text-secondary); font-weight:700;">stripe</strong></span>
+          <a class="text-body-sm-regular" href="#">Terms</a>
+          <a class="text-body-sm-regular" href="#">Privacy</a>
+        </div>
+      </section>
+
+    </div>
+  </main>
+  <div class="deco-bar"></div>
+
+  <script>
+    // ── pricing model ────────────────────────────────────────────────────────
+    // each cycle carries its own list / discounted price / saving, so the offer
+    // is visible whether the user picks monthly or annual.
+    // the offer applies to ANNUAL plans only — monthly is always plain priced.
+    var PLANS = {
+      pro:  { name: 'Pro Plan',
+              monthly: { price: 20,  unit: '/mo' },
+              annual:  { list: 240,  price: 180, save: 60,  unit: '/yr' } },
+      gold: { name: 'Gold Plan', ribbon: '50% OFF',
+              monthly: { price: 200, unit: '/mo' },
+              annual:  { list: 1200, price: 600, save: 600, unit: '/yr' } }
+    };
+    var state = { cycle: 'annual', plan: 'pro', offer: true };
+    var money = function (n) { return '$' + n.toLocaleString('en-US'); };
+
+    function renderCards() {
+      var offerAnnual = state.offer && state.cycle === 'annual';
+      ['pro', 'gold'].forEach(function (key) {
+        var p = PLANS[key], slot = p[state.cycle];
+        var price = document.getElementById(key + 'Price');
+        var unit  = document.getElementById(key + 'Unit');
+        var sub   = document.getElementById(key + 'Sub');
+        unit.textContent = slot.unit;
+        if (offerAnnual) {
+          price.textContent = money(slot.price);
+          if (key === 'pro') { sub.className = 'text-body-base-medium'; sub.style.color = 'var(--text-success-primary)'; sub.textContent = 'Save ' + money(slot.save); }
+          else { sub.className = 'text-body-base-regular strike'; sub.style.color = ''; sub.textContent = money(slot.list); }
+        } else {
+          price.textContent = money(state.cycle === 'annual' ? slot.list : slot.price);
+          sub.className = 'text-body-base-regular'; sub.style.color = 'var(--text-secondary)';
+          sub.textContent = state.cycle === 'annual' ? 'Billed annually' : 'Billed monthly';
+        }
+      });
+      document.getElementById('goldRibbon').textContent = PLANS.gold.ribbon;
+      document.getElementById('goldRibbon').style.display = offerAnnual ? '' : 'none';
+      document.getElementById('saleTag').style.display = state.offer ? '' : 'none';   // entice toward annual even from monthly
+    }
+
+    function renderSummary() {
+      var p = PLANS[state.plan], slot = p[state.cycle];
+      var offerAnnual = state.offer && state.cycle === 'annual';
+      document.getElementById('liName').textContent = p.name;
+      var discountRow = document.getElementById('discountRow');
+      if (state.cycle === 'annual') {
+        document.getElementById('liList').textContent = money(slot.list);
+        if (offerAnnual) {
+          document.getElementById('liDiscount').textContent = '-' + money(slot.save);
+          document.getElementById('liDiscountLabel').textContent = 'Discount (' + money(slot.save) + ' off applied)';
+          document.getElementById('liTotal').textContent = money(slot.price);
+          discountRow.style.display = '';
+        } else {
+          document.getElementById('liTotal').textContent = money(slot.list);
+          discountRow.style.display = 'none';
+        }
+      } else {
+        document.getElementById('liList').textContent = money(slot.price);
+        document.getElementById('liTotal').textContent = money(slot.price);
+        discountRow.style.display = 'none';
+      }
+    }
+
+    function setCycle(c) {
+      state.cycle = c;
+      document.getElementById('cycleMonthly').setAttribute('aria-selected', c === 'monthly');
+      document.getElementById('cycleAnnual').setAttribute('aria-selected', c === 'annual');
+      renderCards(); renderSummary();
+    }
+
+    function setPlan(key) {
+      state.plan = key;
+      ['pro', 'gold'].forEach(function (k) {
+        var card = document.getElementById('plan' + k.charAt(0).toUpperCase() + k.slice(1));
+        var on = (k === key);
+        card.dataset.selected = on;
+        card.setAttribute('aria-checked', on);
+        card.querySelector('input[type=radio]').checked = on;
+      });
+      renderSummary();
+    }
+
+    function setMethod(m) {
+      var card = m === 'card';
+      document.getElementById('tabCard').setAttribute('aria-selected', card);
+      document.getElementById('tabUpi').setAttribute('aria-selected', !card);
+      document.getElementById('panelCard').style.display = card ? '' : 'none';
+      document.getElementById('panelUpi').style.display = card ? 'none' : '';
+    }
+
+    ['planPro', 'planGold'].forEach(function (id) {
+      document.getElementById(id).addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault(); setPlan(state.plan === 'pro' ? 'gold' : 'pro');
+          document.getElementById(state.plan === 'pro' ? 'planPro' : 'planGold').focus();
+        }
+      });
+    });
+
+    function payClick(btn) {
+      var label = btn.querySelector('.button-label');
+      var prev = label.textContent;
+      label.textContent = 'Redirecting to Stripe…';
+      btn.classList.add('button-disabled', 'button-disabled-40');
+      setTimeout(function () { label.textContent = prev; btn.classList.remove('button-disabled', 'button-disabled-40'); }, 1600);
+    }
+
+    // ── 1-hour offer countdown ────────────────────────────────────────────────
+    var OFFER_SECONDS = 60 * 60;          // 1 hour
+    var remaining = OFFER_SECONDS;
+    var pillEl = document.getElementById('offerPill');
+    var clockEl = document.getElementById('pillClock');
+    var labelEl = document.getElementById('pillLabel');
+
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var fmt = function (s) { return pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
+
+    function tick() {
+      if (remaining <= 0) { expireOffer(); return; }
+      remaining--;
+      clockEl.textContent = fmt(remaining);
+      if (remaining <= 60) pillEl.classList.add('hot');   // final-minute escalation
+    }
+    function expireOffer() {
+      clearInterval(timer);
+      state.offer = false;
+      pillEl.classList.remove('hot');
+      pillEl.classList.add('expired');
+      pillEl.querySelector('i').className = 'ph-fill ph-clock-countdown';
+      labelEl.textContent = 'Discounts ended';
+      renderCards(); renderSummary();
+    }
+
+    clockEl.textContent = fmt(remaining);
+    var timer = setInterval(tick, 1000);
+
+    renderCards(); renderSummary();
+  </script>
+</body>
+</html>
