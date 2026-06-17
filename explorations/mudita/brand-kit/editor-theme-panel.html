@@ -1257,19 +1257,12 @@
       .theme-card:hover { box-shadow:0 0 0 1px rgba(11,15,20,0.16), 0 10px 22px -12px rgba(11,15,20,0.3); transform:translateY(-1px); }
       .tc-pad { position:absolute; inset:0; padding:16px; display:flex; flex-direction:column; }
 
-      /* CURRENT mood card — live mirror of the deck's applied palette + typography.
-         Background, title font, accent rule and swatches are all set inline by
-         renderCurrentCard(); these rules are the static chrome around them. */
+      /* CURRENTLY-APPLIED card — the live mood, drawn on the same blueprint as a
+         kit card (.tc-pad + .applied-pill). Its gradient/name/font are set inline
+         by renderCurrentCard(); it carries a navy ring so it reads as the live one
+         and isn't itself clickable. */
       .current-mood-card { cursor:default; box-shadow:0 0 0 1.5px #0A1925; }
       .current-mood-card:hover { transform:none; box-shadow:0 0 0 1.5px #0A1925; }
-      .cmc-pill { position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:4px; padding:3px 9px 3px 7px; border-radius:999px; background:rgba(255,255,255,0.94); color:#0A1925; font-size:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.2); }
-      .cmc-pill i { font-size:12px; }
-      .cmc-swatches { position:absolute; top:12px; right:12px; display:flex; gap:4px; }
-      .cmc-swatches span { width:13px; height:13px; border-radius:4px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.28); }
-      .cmc-body { position:absolute; left:16px; right:16px; bottom:15px; }
-      .cmc-title { font-size:22px; font-weight:600; line-height:1.08; }
-      .cmc-rule { width:34px; height:3px; border-radius:2px; margin:9px 0 8px; }
-      .cmc-meta { font-size:10px; font-weight:500; letter-spacing:0.04em; }
 
       /* toggles */
       .tg { appearance:none; -webkit-appearance:none; width:38px; height:22px; border-radius:999px; background:#D4D4D4; position:relative; cursor:pointer; flex-shrink:0; transition:background 160ms; margin-top:1px; }
@@ -1327,8 +1320,6 @@
       .theme-card.kit-card:hover { box-shadow:0 0 0 1.5px #1F4A38, 0 10px 22px -12px rgba(31,74,56,0.45); }
       .applied-pill { position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:4px; padding:3px 9px 3px 7px; border-radius:999px; background:rgba(255,255,255,0.94); color:#0A1925; font-size:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.18); }
       .applied-pill i { font-size:11px; }
-      /* lineage = "edited": this kit seeded the colour OR the font, but the other was swapped */
-      .applied-pill.is-edited { background:rgba(255,255,255,0.86); color:#525252; }
 
       /* ── logos ── */
       .ls-label { font-size:13px; font-weight:600; color:#171717; }
@@ -1379,11 +1370,11 @@
 
         <!-- DESIGN -->
         <div id="tab-design" class="theme-pane">
-          <!-- CURRENT — a live mini-slide mirroring whatever palette + typography is
-               applied to the deck. Re-rendered by renderCurrentCard() on every theme
-               change (palette/font picked in the other tabs, or a kit applied here). -->
-          <div class="section-cap" style="margin-top:4px;">Current</div>
-          <div class="theme-card current-mood-card" id="current-mood-card"></div>
+          <!-- CURRENTLY APPLIED — the live mood. Same blueprint as a kit card
+               (gradient bg + name + descriptor, pill top-left); re-rendered by
+               renderCurrentCard() on every theme change. Shows the applied kit's
+               name when the theme matches a kit, or "Custom theme" once diverged. -->
+          <div class="theme-card current-mood-card" id="current-mood-card" style="margin-top:4px;"></div>
 
           <div class="section-cap">Your brand kits</div>
           <!-- Each kit has exactly one theme (its mood + type + palette).
@@ -1836,40 +1827,31 @@
       [...l.children].forEach((el, i) => { if (!isCurFont(FONTS[i])) el.onclick = () => applyFont(FONTS[i]); });
     }
 
-    // how the live theme relates to a saved kit:
-    //   "applied" — both palette + font are the kit's (untouched)
-    //   "edited"  — one of the two is the kit's, the other was swapped
-    //   null      — neither came from this kit
-    function kitState(name) {
-      const p = KIT_PALETTES.find((x) => x.name === name), f = KIT_FONTS.find((x) => x.kit === name);
-      const pm = THEME.pal === p, fm = THEME.font === f;
-      return (pm && fm) ? "applied" : (pm || fm) ? "edited" : null;
+    // descriptor shown under a kit's name (mirrors the kit cards' own sub-line)
+    const KIT_DESC = { Patagonia: "Editorial mood", Tessera: "Mosaic grid" };
+    // the saved kit the live theme exactly matches (same palette AND font), or null
+    function appliedKit() {
+      return ["Patagonia", "Tessera"].find((name) => {
+        const p = KIT_PALETTES.find((x) => x.name === name), f = KIT_FONTS.find((x) => x.kit === name);
+        return THEME.pal === p && THEME.font === f;
+      }) || null;
     }
-    // the live mini-slide at the top of the Design tab
+    // the "Currently applied" card — same blueprint as a kit card. Shows the
+    // applied kit's name + descriptor while the theme matches it; "Custom theme"
+    // + the live palette·font once you've diverged.
     function renderCurrentCard(r) {
       const el = document.getElementById("current-mood-card");
       if (!el) return;
-      el.style.background = "radial-gradient(120% 120% at 82% 0%, " + mix(r.bg, r.accent, 0.4) + " 0%, " + r.bg + " 56%, " + mix(r.bg, "#000000", 0.22) + " 100%)";
+      const kit = appliedKit();
+      const name = kit || "Custom theme";
+      const sub = kit ? KIT_DESC[kit] : (THEME.pal.name + " · " + THEME.font.name);
+      el.style.background = "radial-gradient(125% 95% at 82% 2%, " + mix(r.bg, r.accent, 0.6) + " 0%, " + mix(r.bg, r.accent, 0.24) + " 24%, " + r.bg + " 62%, " + mix(r.bg, "#000000", 0.25) + " 100%)";
       el.innerHTML =
-        '<span class="cmc-pill"><i class="ph-fill ph-circle-half-tilt"></i>Current</span>' +
-        '<div class="cmc-swatches">' + THEME.pal.cols.map((c) => '<span style="background:' + c + '"></span>').join("") + "</div>" +
-        '<div class="cmc-body">' +
-          '<div class="cmc-title" style="font-family:' + THEME.font.css + ';color:' + r.fg + ';">Series A Pitch</div>' +
-          '<div class="cmc-rule" style="background:' + r.accent + ';"></div>' +
-          '<div class="cmc-meta" style="color:' + rgba(r.fg, 0.66) + ';">' + THEME.pal.name + " · " + THEME.font.name + "</div>" +
+        '<span class="applied-pill"><i class="ph-fill ph-check-circle"></i>Currently applied</span>' +
+        '<div class="tc-pad" style="justify-content:flex-end;">' +
+          '<span style="font-family:' + THEME.font.css + ';color:' + r.fg + ';font-size:21px;font-weight:600;line-height:1.1;">' + name + "</span>" +
+          '<span style="color:' + rgba(r.fg, 0.7) + ';font-size:10px;margin-top:5px;letter-spacing:0.04em;">' + sub + "</span>" +
         "</div>";
-    }
-    // toggle the lineage pill (Applied / Edited) on the Design-tab kit cards
-    function updateKitPills() {
-      ["Patagonia", "Tessera"].forEach((name) => {
-        const card = document.getElementById("kitcard-" + name);
-        if (!card) return;
-        const existing = card.querySelector(".applied-pill");
-        if (existing) existing.remove();
-        const st = kitState(name);
-        if (st === "applied") card.insertAdjacentHTML("afterbegin", '<span class="applied-pill"><i class="ph-fill ph-check-circle"></i>Applied</span>');
-        else if (st === "edited") card.insertAdjacentHTML("afterbegin", '<span class="applied-pill is-edited"><i class="ph ph-pencil-simple"></i>Edited</span>');
-      });
     }
 
     // ── the one function that paints everything from THEME ──
@@ -1896,7 +1878,6 @@
       renderCurrentCard(r);
       renderColors();
       renderFonts();
-      updateKitPills();
     }
     function applyPalette(p) { THEME.pal = p; applyTheme(); }
     function applyFont(f) { THEME.font = f; applyTheme(); }
