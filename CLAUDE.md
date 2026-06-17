@@ -179,16 +179,23 @@ Source of truth: `muditas-pai/pai-design-skills`. These are **copies** — if a 
 re-vendor it into `.claude/skills/<name>/SKILL.md`.
 
 ### Using crazy8s in this repo
-crazy8s is the throwaway *divergence engine* — it rewrites one rolling `crazy8s.html` each round
-and discards old rounds. It doesn't know our conventions, so steer it:
+crazy8s is our *divergence engine* — it rewrites one rolling `crazy8s.html` each round, branching
+off the picked variant. It doesn't know our conventions, so steer it:
 
-- **Seed the baseline from `design-system/template.html`** so all 8 variations inherit the design
-  system (crazy8s preserves the baseline's stack but won't add ours on its own).
+- **Seed the baseline from `design-system/template.html`** (or a faithful copy of the screen you're
+  iterating on) so all 8 variations inherit the design system — crazy8s preserves the baseline's
+  stack but won't add ours on its own.
 - **Run it inside the designer's `explorations/<you>/<problem>/` folder** so `crazy8s.html` lands
-  there, not at the repo root. Treat `crazy8s.html` as a **scratchpad — don't link it in any index.**
+  there, not at the repo root.
+- **Keep the rounds — crazy8s files are not throwaway scratchpads.** Commit and push `crazy8s.html`;
+  looking back at the iteration history is valuable. Because the rolling file overwrites each round,
+  **snapshot a round to `crazy8s-round-<N>.html` before branching the next** so prior rounds stay
+  browsable on Pages (git history alone is too buried for a designer). Link the current `crazy8s.html`
+  from the designer's index as an *iterations* entry — it doesn't get the Dev Ready tag.
 - On **"freeze it"**, save the picked variant as a clean, named `.html` in that same problem folder
-  (strip the gallery scaffolding) and add *that* file to the designer's index. The 8–10 keepers in
-  a problem folder are the frozen picks, not the rolling file.
+  (strip the gallery scaffolding) and add *that* file to the designer's index — that's the keeper /
+  Dev Ready candidate, distinct from the round snapshots. The 8–10 keepers in a problem folder are
+  the frozen picks; the `crazy8s*.html` files are the iteration trail behind them.
 - Iterating on **someone else's** frame? Duplicate it into your own folder first, then run crazy8s
   on the copy — never let it overwrite another designer's file.
 
