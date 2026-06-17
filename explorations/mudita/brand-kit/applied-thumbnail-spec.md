@@ -16,27 +16,6 @@ applied thumbnail is the one place that's always true.
 
 - **Pill** — `Currently applied` (adapts: light pill on dark moods, dark pill on light).
 - **Title** — the applied mood name.
-- **Descriptor** — the mood's one-liner (*Editorial · high contrast*), or the live `palette · font`
-  once modified.
-- **Motif** — the card uses the mood's *layout blueprint*, not a generic swatch.
-
-## A mood is a blueprint
-
-Each mood carries a motif that the thumbnail adopts and re-skins from the live theme:
-
-| Mood | Motif |
-|---|---|
-| Monochrome News | radial gradient |
-| Pastel Glass | light, centred name + accent underline |
-| Split Pastel | half-and-half vertical block + text |
-| Mosaic Grid | colour tiles + name |
-
-## State = motif · palette · font
-
-- **Apply a mood** → sets all three (adopts the blueprint).
-- **Override the palette** → only colours change; the motif stays (Split's block recolours, tiles
-  recolour). Same for **font**.
-- The thumbnail, the focused slide, and every other slide thumbnail repaint together.
 
 ## Title states
 
