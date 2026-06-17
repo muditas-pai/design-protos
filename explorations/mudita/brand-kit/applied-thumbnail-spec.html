@@ -19,6 +19,12 @@
     .meta { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; flex-wrap: wrap; }
     .meta a { color: var(--text-brand); text-decoration: none; }
     .meta a:hover { text-decoration: underline; }
+    /* Copy-as-MD — sits in the meta row, styled like the links but with a copied state */
+    .copy-md { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 0;
+      cursor: pointer; color: var(--text-brand); font-family: inherit; transition: color 150ms var(--ease-out-strong); }
+    .copy-md:hover { color: var(--text-primary); }
+    .copy-md i { font-size: 14px; }
+    .copy-md.is-copied { color: #15803D; cursor: default; }
     /* neutral status pill — this is a scoping doc, not eng-ready */
     .tag-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
       line-height: 1; color: #475569; background: rgba(71,85,105,0.12); padding: 3px 8px; border-radius: 999px; }
@@ -56,6 +62,7 @@
       <span class="tag-status"><i class="ph ph-compass"></i>Spec</span>
       <a class="text-body-sm-medium" href="editor-theme-panel.html">Proto ↗</a>
       <a class="text-body-sm-medium" href="applied-thumbnail-spec.md">Raw .md ↗</a>
+      <button class="copy-md text-body-sm-medium" id="copyMd"><i class="ph ph-copy"></i><span>Copy as MD</span></button>
     </div>
     <div class="doc"><div class="md-body" id="md">Loading spec…</div></div>
   </main>
@@ -64,9 +71,11 @@
     // Renders the sibling markdown so the .md stays the single source of truth.
     var DOC = "./applied-thumbnail-spec.md";
     var el = document.getElementById("md");
+    var rawMd = "";
     fetch(DOC)
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (t) {
+        rawMd = t;
         el.innerHTML = marked.parse(t);
         var h1 = el.querySelector("h1");
         if (h1) document.title = h1.textContent + " · design-protos";
@@ -76,6 +85,41 @@
           'View this page on <a href="https://muditas-pai.github.io/design-protos/">GitHub Pages</a>, ' +
           'or open <a href="' + DOC + '">the raw .md</a>.</p>';
       });
+
+    // Copy as MD — copies the raw markdown (the same text we render). Uses the
+    // async Clipboard API when available (https), else a legacy execCommand
+    // fallback so it still works over http / file://.
+    var copyBtn = document.getElementById("copyMd");
+    var copyLabel = copyBtn.querySelector("span");
+    function writeClip(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+      return new Promise(function (resolve, reject) {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text; ta.setAttribute("readonly", "");
+          ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+          document.body.appendChild(ta); ta.select();
+          var ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          ok ? resolve() : reject();
+        } catch (e) { reject(e); }
+      });
+    }
+    copyBtn.addEventListener("click", function () {
+      (rawMd ? Promise.resolve(rawMd) : fetch(DOC).then(function (r) { return r.text(); }))
+        .then(writeClip)
+        .then(function () {
+          copyBtn.classList.add("is-copied");
+          copyBtn.querySelector("i").className = "ph ph-check";
+          copyLabel.textContent = "Copied";
+          setTimeout(function () {
+            copyBtn.classList.remove("is-copied");
+            copyBtn.querySelector("i").className = "ph ph-copy";
+            copyLabel.textContent = "Copy as MD";
+          }, 1800);
+        })
+        .catch(function () { copyLabel.textContent = "Copy failed"; });
+    });
   </script>
 </body>
 </html>
