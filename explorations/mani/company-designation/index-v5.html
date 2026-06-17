@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟪</text></svg>" />
+<title>deck.in — Create flow + Company onboarding · v5</title>
+
+<!-- Fonts + icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+<!-- Design system -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="../../../design-system/pai.tailwind.js"></script>
+<link rel="stylesheet" href="../../../design-system/pai.css" />
+
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{overflow:hidden;background:var(--bg-primary)}
+
+  .nav-btn{position:fixed;top:22px;z-index:40}
+  #backBtn{left:22px}
+  #closeBtn{right:22px;display:none}
+  .nav-btn.icon-only{width:40px;height:40px;border-radius:999px}
+
+  .stage{position:relative;height:100%;width:100%}
+  .screen{position:absolute;inset:0;display:none}
+  .screen.is-active{display:block}
+
+  /* ---------- compose ---------- */
+  .compose{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  .compose-inner{width:100%;max-width:540px}
+  .greet{text-align:center;color:var(--text-tertiary);height:0;overflow:hidden;transition:.5s;margin:0}
+  .compose.show-greet .greet{height:auto;margin-bottom:6px}
+  .compose-title{text-align:center;margin-bottom:28px;white-space:nowrap}
+  .ctrl-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .ctrl-row .spacer{flex:1}
+  .ctrl-row .button-style{gap:7px}
+  .ctrl-row .button-style i:first-child{color:var(--text-secondary)}
+  .ctrl-row .caret{font-size:12px;color:var(--text-tertiary)}
+  .composer{position:relative;border:1.5px dashed var(--border-primary);border-radius:12px;background:var(--bg-primary);transition:.2s}
+  .composer:focus-within{border-style:solid;border-color:var(--border-secondary)}
+  .composer textarea{width:100%;min-height:200px;border:0;outline:0;resize:none;padding:20px;font-family:inherit;font-size:15px;color:var(--text-primary);background:transparent;line-height:1.55}
+  .composer-ph{position:absolute;top:20px;left:20px;display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text-tertiary);pointer-events:none}
+  .composer-ph .drop{color:var(--text-secondary);text-decoration:underline;text-underline-offset:3px}
+  .composer.has-text .composer-ph{display:none}
+  .create-wrap{display:flex;justify-content:center;margin-top:28px}
+  #createBtn{gap:10px;opacity:0;transform:translateY(6px);pointer-events:none;transition:.25s}
+  .composer.has-text ~ .create-wrap #createBtn{opacity:1;transform:none;pointer-events:auto}
+
+  /* ---------- chat ---------- */
+  .chat{height:100%;display:flex;flex-direction:column;position:relative}
+  .chat-scroll{flex:1;overflow-y:auto;padding:80px 24px 0}
+  .chat-col{max-width:1180px;margin:0 auto;width:100%;position:relative;min-height:60vh}
+  .bubble-user{margin-left:auto;max-width:560px;background:var(--bg-tertiary);border-radius:16px;padding:16px 20px;font-size:15px;color:var(--text-primary);line-height:1.5}
+
+  /* animated logo + shimmer status */
+  .status{display:flex;align-items:center;gap:11px;margin:34px 0 8px}
+  .logo{width:22px;height:22px;flex:0 0 auto;border-radius:50%;border:2.5px solid var(--bg-quaternary);border-top-color:#2f6bff;box-sizing:border-box;animation:logospin .7s linear infinite}
+  @keyframes logospin{to{transform:rotate(360deg)}}
+  .status.waiting .logo{display:none}
+
+  .status-msg{position:relative;font-size:15px;font-weight:600;line-height:1.3}
+  .status-msg .t{
+    background:linear-gradient(100deg,#aab2bd 0%,#aab2bd 38%,#1b2733 50%,#aab2bd 62%,#aab2bd 100%);
+    background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:shimmer 2.1s linear infinite}
+  @keyframes shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
+  .status.waiting .status-msg{font-weight:400;font-size:13px}
+  .status.waiting .status-msg .t{background:none;-webkit-background-clip:initial;background-clip:initial;color:var(--text-tertiary);animation:none}
+  .status-msg{transition:opacity .35s ease,transform .35s ease}
+  .status-msg.swap{opacity:0;transform:translateY(4px)}
+
+  /* ---------- bottom dock (shared) ---------- */
+  .dock{display:none;flex:0 0 auto;padding:10px 24px 26px;opacity:0;transform:translateY(16px);transition:opacity .4s ease,transform .45s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .dock.prep{display:block}
+  .dock.show{opacity:1;transform:none;pointer-events:auto}
+  .dock.gone{opacity:0;transform:translateY(-14px);pointer-events:none}     /* moves up */
+  .dock-card{max-width:720px;margin:0 auto;border-radius:8px;border:1px solid var(--border-secondary);padding:18px 20px;background:var(--bg-elevated);position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04),0 6px 20px rgba(16,24,40,.07)}
+
+  /* shimmer status sits on top of the box */
+  #qDock .status{max-width:720px;margin:0 auto 18px}
+
+  .dock-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .dock-title{font-size:16px;font-weight:500;color:var(--text-secondary);line-height:1.4}
+  .counter{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-tertiary);flex:0 0 auto}
+  .counter button{background:none;border:0;color:var(--text-tertiary);cursor:pointer;font-size:14px;line-height:1;padding:2px;display:inline-flex}
+  .counter button:disabled{opacity:.3;cursor:default}
+  .counter button:not(:disabled):hover{color:var(--text-primary)}
+
+  .step{display:none}
+  .step.on{display:block;animation:stepIn .35s cubic-bezier(.22,1,.36,1)}
+  @keyframes stepIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .q-field{position:relative;margin-top:14px}
+  .q-field input,.q-field select{width:100%;font-size:14px;height:40px;padding-top:0;padding-bottom:0}
+  .icn-wrap > i{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--text-tertiary);pointer-events:none;z-index:1}
+  .icn-wrap input{padding-left:40px}
+  .sel select{appearance:none;-webkit-appearance:none;padding-right:34px;cursor:pointer}
+  .sel::after{content:'\e136';font-family:'Phosphor';position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text-tertiary);pointer-events:none}
+  .fld-err{display:none;align-items:center;gap:5px;font-size:11px;color:var(--text-danger-primary);margin-top:7px}
+  .fld-err i{font-size:13px}
+  .icn-wrap.error .fld-err{display:flex}
+
+  .dock-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:14px}
+  .dock-actions .button-style{height:40px}
+
+  /* notify step */
+  .notify-card{display:flex;align-items:center;gap:14px;margin-top:6px}
+  .notify-card .bell{width:46px;height:46px;border-radius:12px;background:var(--bg-tertiary);color:var(--text-primary);display:flex;align-items:center;justify-content:center;font-size:21px;flex:0 0 auto}
+  .notify-card .ntext{flex:1;min-width:0}
+  .notify-card .ntext b{font-size:14px;font-weight:600;color:var(--text-primary);display:block}
+  .notify-card .ntext small{font-size:12.5px;color:var(--text-secondary)}
+  .notify-card .nbtns{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .notify-card .nbtns .button-style{height:40px}
+
+  /* paste box */
+  .dock-title.lg{font-size:16px;font-weight:500;color:var(--text-primary);line-height:1.1}
+  .pbox{position:relative;border:1px solid var(--border-secondary);border-radius:4px;background:var(--bg-elevated);transition:.2s;margin-top:16px}
+  .pbox:focus-within{border-color:var(--border-secondary)}
+  .pbox textarea{width:100%;min-height:140px;border:0;outline:0;resize:none;padding:12px;font-family:inherit;font-size:14px;color:var(--text-primary);background:transparent;line-height:1.43}
+  .pbox-ph{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-tertiary);pointer-events:none}
+  .pbox-ph .drop{color:var(--text-tertiary);text-decoration:underline;text-underline-offset:2px;display:inline-flex;align-items:center;gap:8px}
+  .pbox.has-text .pbox-ph{display:none}
+
+  .restart{position:fixed;bottom:18px;left:18px;z-index:50;border-radius:999px;gap:7px}
+  .toast{position:fixed;left:50%;bottom:30px;translate:-50% 20px;background:var(--bg-blackout);color:#fff;padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:9px;opacity:0;pointer-events:none;transition:.3s;z-index:60}
+  .toast.show{opacity:1;translate:-50% 0}
+  .toast i{font-size:16px;color:#7ee2b0}
+</style>
+</head>
+<body class="pai">
+
+<button class="button-style button-secondary nav-btn icon-only" id="backBtn" title="Back"><i class="ph ph-arrow-left"></i></button>
+<button class="button-style button-secondary nav-btn icon-only" id="closeBtn" title="Close"><i class="ph ph-x"></i></button>
+
+<div class="stage">
+
+  <!-- ============ COMPOSE ============ -->
+  <section class="screen is-active" data-screen="compose">
+    <div class="compose show-greet" id="compose">
+      <div class="compose-inner">
+        <p class="greet text-heading-2xl" id="greet">Manivasakan, let's create your first presentation</p>
+        <h1 class="compose-title text-heading-4xl text-text-primary">Describe your deck, or upload a file</h1>
+        <div class="ctrl-row">
+          <button class="button-style button-medium button-secondary"><i class="ph ph-stack"></i>Upload Files<i class="ph ph-caret-down caret"></i></button>
+          <span class="spacer"></span>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-squares-four"></i>Slide Count<i class="ph ph-caret-down caret"></i></button>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-sparkle"></i>AI Model<i class="ph ph-caret-down caret"></i></button>
+          <button class="button-style button-medium button-secondary icon-only"><i class="ph ph-sliders-horizontal"></i></button>
+        </div>
+        <div class="composer" id="composer">
+          <div class="composer-ph"><i class="ph ph-pencil-simple"></i>Type here or <span class="drop"><i class="ph ph-upload-simple"></i> drop in a file</span></div>
+          <textarea id="deckInput" spellcheck="false"></textarea>
+        </div>
+        <div class="create-wrap">
+          <button class="button-style button-large button-primary" id="createBtn">Create Presentation <i class="ph ph-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOADING + CHAT ============ -->
+  <section class="screen" data-screen="chat">
+    <div class="chat">
+      <div class="chat-scroll">
+        <div class="chat-col">
+          <div class="bubble-user" id="echoBubble"></div>
+        </div>
+      </div>
+
+      <!-- ===== bottom question dock — 3 steps ===== -->
+      <div class="dock" id="qDock">
+        <div class="status" id="status">
+          <div class="logo" id="logo"></div>
+          <div class="status-msg" id="statusMsg"><span class="t" id="statusTxt">Building your deck…</span></div>
+        </div>
+        <div class="dock-card">
+
+          <!-- STEP 1 — work email -->
+          <div class="step on" data-step="1">
+            <div class="dock-head">
+              <div class="dock-title">Share a bit about yourself and we'll make it feel just right.</div>
+            </div>
+            <div class="q-field icn-wrap" id="emailWrap">
+              <i class="ph ph-building-office"></i>
+              <input type="email" class="pai-input pai-input--lg" id="companyEmail" placeholder="Enter your work email" autocomplete="off">
+              <span class="fld-err" id="emailErr"><i class="ph-fill ph-warning-circle"></i><span id="emailErrTxt">Enter a valid email</span></span>
+            </div>
+            <div class="dock-actions">
+              <button class="button-style button-medium button-secondary q-btn" id="emailBtn">Skip</button>
+            </div>
+          </div>
+
+          <!-- STEP 2 — designation -->
+          <div class="step" data-step="2">
+            <div class="dock-head">
+              <div class="dock-title">And what's your role?</div>
+            </div>
+            <div class="q-field sel">
+              <select class="pai-input pai-input--lg" id="designation">
+                <option value="" selected disabled>Select your designation</option>
+                <option>Founder / Co-Founder</option><option>CEO</option><option>President</option>
+                <option>Chairperson / Board Member</option><option>CFO</option><option>CTO</option>
+                <option>COO</option><option>CMO</option><option>Other C-Suite (CXO)</option>
+                <option>EVP / SVP</option><option>Vice President</option><option>Director</option>
+                <option>Head of Department</option><option>General Manager</option><option>Managing Partner</option>
+              </select>
+            </div>
+            <div class="dock-actions">
+              <button class="button-style button-medium button-secondary q-btn" id="roleBtn">Skip</button>
+            </div>
+          </div>
+
+          <!-- STEP 3 — notification -->
+          <div class="step" data-step="3">
+            <div class="notify-card">
+              <div class="bell"><i class="ph-fill ph-bell-ringing"></i></div>
+              <div class="ntext"><b>Want a ping when it's done?</b></div>
+              <div class="nbtns">
+                <button class="button-style button-medium button-secondary" data-skip="3">Skip</button>
+                <button class="button-style button-medium button-primary" id="notifyBtn">Yes, notify me</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== bottom paste dock — appears when backend ready ===== -->
+      <div class="dock" id="pasteDock">
+        <div class="dock-card">
+          <div class="dock-title lg">Paste your content, notes, or data</div>
+          <div class="pbox" id="pbox">
+            <div class="pbox-ph"><i class="ph ph-pencil-simple"></i>Type here, or <span class="drop"><i class="ph ph-upload-simple"></i> upload a file</span></div>
+            <textarea id="pasteInput" spellcheck="false"></textarea>
+          </div>
+          <div class="dock-actions">
+            <button class="button-style button-medium button-secondary q-btn" id="pasteBtn">Skip</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<button class="button-style button-small button-secondary restart" id="restart"><i class="ph ph-arrow-counter-clockwise"></i>Restart demo</button>
+<div class="toast" id="toast"><i class="ph-fill ph-check-circle"></i><span id="toastTxt">Notifications enabled</span></div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const screens = document.querySelectorAll('.screen');
+  function go(name){ screens.forEach(s => s.classList.toggle('is-active', s.dataset.screen===name)); }
+
+  const READY_MS = 10000;   // backend ready — paste box arms behind the questions
+  const AWAIT_DELAY = 9000; // after backend ready, wait before showing "Awaiting your response"
+
+  const compose = $('#compose');
+  setTimeout(()=> compose.classList.remove('show-greet'), 1600);
+
+  const input = $('#deckInput'), composer = $('#composer');
+  input.addEventListener('input', ()=> composer.classList.toggle('has-text', input.value.trim().length>0));
+
+  let toastT;
+  function toast(msg){ const t=$('#toast'); $('#toastTxt').textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+  /* ---- rotating shimmer status ---- */
+  const MSGS = ["Building your deck…","On the right track…","Planning your deck…","Pieces are clicking…","Sorting through what fits best…",
+    "Letting it simmer…","Working the angles…","Mapping it out…","Thinking it over…","Mulling over a few directions…"];
+  let msgI=0, msgT=null;
+  function rotate(){
+    const box=$('#statusMsg'), txt=$('#statusTxt');
+    box.classList.add('swap');
+    setTimeout(()=>{ msgI=(msgI+1)%MSGS.length; txt.textContent=MSGS[msgI]; box.classList.remove('swap'); }, 360);
+  }
+  function startRotate(){ stopRotate(); msgI=0; $('#status').classList.remove('waiting'); $('#statusTxt').textContent=MSGS[0]; msgT=setInterval(rotate,2200); }
+  function stopRotate(){ if(msgT){clearInterval(msgT); msgT=null;} }
+  function hideStatus(){ stopRotate(); $('#status').style.display='none'; }
+
+  /* ---- create ---- */
+  $('#createBtn').addEventListener('click', startCreate);
+  function startCreate(){
+    const txt = input.value.trim();
+    if(!txt) return;
+    $('#echoBubble').textContent = txt;
+    $('#closeBtn').style.display='inline-flex';
+    go('chat');
+    $('#status').style.display='';
+    reset();
+    startRotate();
+    clearTimeout(seqT);
+    seqT=setTimeout(()=>{
+      const c=$('#qDock');
+      c.classList.remove('gone');
+      c.classList.add('prep');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>c.classList.add('show')));
+    }, 900);
+    clearTimeout(readyT);
+    readyT=setTimeout(onBackendReady, READY_MS);   // backend ready after 10s
+  }
+  let seqT, readyT, pasteShown=false, interacted=false, pendingReady=false;
+
+  /* ---- step flow ---- */
+  const steps = document.querySelectorAll('#qDock .step');
+  function showStep(n){ steps.forEach(s => s.classList.toggle('on', +s.dataset.step===n)); }
+  function reset(){
+    showStep(1);
+    pasteShown=false; interacted=false; pendingReady=false;
+    $('#qDock').classList.remove('show','gone','prep');
+    $('#pasteDock').classList.remove('show','gone','prep');
+    clearTimeout(readyT);
+    $('#companyEmail').value=''; $('#designation').selectedIndex=0;
+    paintEmail({state:'empty'});
+    morph($('#emailBtn'), false); morph($('#roleBtn'), false);
+    $('#pasteInput').value=''; $('#pbox').classList.remove('has-text'); morph($('#pasteBtn'), false);
+  }
+
+  /* email validation */
+  const email=$('#companyEmail');
+  const FREE=['gmail.com','googlemail.com','yahoo.com','yahoo.co.in','yahoo.co.uk','ymail.com','outlook.com','hotmail.com',
+    'hotmail.co.uk','live.com','msn.com','icloud.com','me.com','mac.com','aol.com','proton.me','protonmail.com','pm.me',
+    'gmx.com','gmx.net','mail.com','zoho.com','yandex.com','yandex.ru','tutanota.com','hey.com','fastmail.com','rediffmail.com'];
+  function emailState(){
+    const v=email.value.trim().toLowerCase();
+    if(!v) return {state:'empty'};
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return {state:'invalid', msg:'Enter a valid email'};
+    if(FREE.includes(v.split('@')[1])) return {state:'personal', msg:'Use your work email, not a personal one'};
+    return {state:'ok'};
+  }
+  function paintEmail(s){
+    const w=$('#emailWrap');
+    if(s.state==='ok'||s.state==='empty'){ w.classList.remove('error'); email.classList.remove('is-error'); }
+    else { w.classList.add('error'); email.classList.add('is-error'); $('#emailErrTxt').textContent=s.msg; }
+  }
+
+  /* Skip <-> Continue morph */
+  function morph(btn, active){
+    btn.classList.toggle('button-primary', active);
+    btn.classList.toggle('button-secondary', !active);
+    btn.innerHTML = active ? 'Continue <i class="ph ph-arrow-right"></i>' : 'Skip';
+  }
+
+  email.addEventListener('input', ()=>{
+    const s=emailState(); if(s.state==='ok'||s.state==='empty') paintEmail(s);
+    const has=email.value.trim().length>0;
+    morph($('#emailBtn'), has);
+    if(has) onInteract();
+  });
+  email.addEventListener('blur', ()=>{ paintEmail(emailState()); });
+  $('#designation').addEventListener('change', ()=>{ morph($('#roleBtn'), !!$('#designation').value); if($('#designation').value) onInteract(); });
+
+  /* answer/skip step 1 */
+  $('#emailBtn').addEventListener('click', ()=>{
+    const v=email.value.trim();
+    if(v){ const s=emailState(); if(s.state!=='ok'){ paintEmail(s); email.focus(); return; } }
+    showStep(2);
+  });
+  /* answer/skip step 2 */
+  $('#roleBtn').addEventListener('click', ()=> showStep(3));
+  /* step 3 */
+  $('#notifyBtn').addEventListener('click', ()=>{ questionsDone(); });
+  document.querySelector('[data-skip="3"]').addEventListener('click', questionsDone);
+
+  /* back chevrons */
+  document.querySelectorAll('.counter .cprev').forEach((b,i)=>{
+    b.addEventListener('click', ()=>{ const cur=+b.closest('.step').dataset.step; if(cur>1) showStep(cur-1); });
+  });
+
+  /* user starts answering (typing email / picking role) -> just cancel the backend-ready
+     auto-advance so we don't interrupt. Paste box waits until ALL steps are completed. */
+  function onInteract(){
+    if(interacted) return;
+    interacted=true;
+    clearTimeout(readyT);
+  }
+  /* all 3 answered -> dock moves up/out, paste box stays/shows (scenario 1) */
+  function questionsDone(){ showPasteBox(); hideDock(); }
+  /* backend ready with no interaction -> deck is built and paste box is ready BEHIND, but
+     we don't interrupt: dock STAYS (one card only), and a few seconds later the chat swaps
+     to "Awaiting your response". Paste box stays hidden until the user skips the questions. */
+  function onBackendReady(){
+    pendingReady=true;
+    setTimeout(()=>{ if(!pasteShown) showAwaiting(); }, AWAIT_DELAY);
+  }
+
+  /* swap rotating shimmer for a solid "Awaiting your response" line, keep status visible */
+  function showAwaiting(){
+    stopRotate();
+    $('#status').style.display='';
+    const box=$('#statusMsg');
+    box.classList.add('swap');                       // fade current loader text out
+    setTimeout(()=>{
+      $('#status').classList.add('waiting');
+      $('#statusTxt').textContent='Awaiting your response';
+      box.classList.remove('swap');                  // fade new message in
+    }, 360);
+  }
+
+  function showPasteBox(){
+    if(pasteShown) return;
+    pasteShown=true;
+    hideStatus();                                  // loader / awaiting gone
+    const pd=$('#pasteDock');
+    pd.classList.add('prep');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>pd.classList.add('show')));
+    setTimeout(()=>$('#pasteInput').focus(), 300);
+  }
+  function hideDock(){ const q=$('#qDock'); q.classList.remove('show'); q.classList.add('gone'); setTimeout(()=>q.classList.remove('prep','gone'), 450); }
+
+  /* paste finish */
+  function finishFlow(){ $('#pasteDock').classList.remove('show'); $('#pasteDock').classList.add('gone'); toast('Generating your presentation…'); }
+  $('#pasteBtn').addEventListener('click', finishFlow);
+  $('#pasteInput').addEventListener('input', e=>{
+    const has=e.target.value.trim().length>0;
+    $('#pbox').classList.toggle('has-text', has);
+    morph($('#pasteBtn'), has);
+  });
+  $('#pasteInput').addEventListener('keydown', e=>{ if(e.key==='Enter' && (e.metaKey||e.ctrlKey)) finishFlow(); });
+
+  /* nav */
+  function toCompose(){ clearTimeout(seqT); clearTimeout(readyT); stopRotate(); $('#closeBtn').style.display='none'; go('compose'); }
+  $('#backBtn').addEventListener('click', ()=>{ if($('.screen.is-active').dataset.screen==='chat') toCompose(); });
+  $('#closeBtn').addEventListener('click', toCompose);
+  $('#restart').addEventListener('click', ()=>{
+    clearTimeout(seqT); clearTimeout(readyT); stopRotate();
+    input.value='Board update for deck.in for Q4 covering revenue performance vs target OKR progress and 2026 strategic priorities for a 10-person executive team';
+    composer.classList.add('has-text'); compose.classList.remove('show-greet'); toCompose();
+  });
+
+  input.value='Board update for deck.in for Q4 covering revenue performance vs target OKR progress and 2026 strategic priorities for a 10-person executive team';
+  composer.classList.add('has-text');
+})();
+</script>
+
+<!-- Agentation -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body>
+</html>
