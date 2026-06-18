@@ -39,20 +39,22 @@ company patagonia.com
 
 ## Who can do what
 
-Editing rights follow blast radius: using a kit affects no one, a variant is additive, but editing
-an existing kit changes every deck that uses it.
+**Editing is admin-only.** Anyone in the workspace can *use* any kit; creating and editing kits is
+reserved for admins (multiple admins per workspace is fine). If someone else needs to edit a kit,
+they have to be **made an admin** first.
 
-| Action | Any member | Kit's creator | Admin |
-|---|:---:|:---:|:---:|
-| **Use** any kit on a deck | ✓ | ✓ | ✓ |
-| **Create** a new kit / variant | ✓ | — | ✓ |
-| **Edit** a member-created variant | — | ✓ | ✓ |
-| **Edit** the company-default (portal-seeded) kit | — | n/a | ✓ |
-| **Edit** the asset-portal definition | nobody — immutable | | |
+| Action | Member | Admin |
+|---|:---:|:---:|
+| **Use** any kit on a deck | ✓ | ✓ |
+| **Create** a new kit / variant | — | ✓ |
+| **Edit** any kit (incl. the company-default, portal-seeded one) | — | ✓ |
+| **Edit** the asset-portal definition | nobody — immutable | |
 
-- **Admins + the kit's creator** edit. The portal-seeded default has no creator, so only admins
-  edit it. Multiple admins per workspace is allowed and expected.
+- To create or edit a brand kit, a member must be made an **admin** — there is no separate
+  brand-editing permission for now.
 - Editing is gated behind a **Pro** seat (brand kit is a Pro feature).
+- **Finer-grained seats** (e.g. a dedicated brand-editing role distinct from admin) are a
+  deliberate **later** decision — not in scope yet.
 
 ## Open threads
 
