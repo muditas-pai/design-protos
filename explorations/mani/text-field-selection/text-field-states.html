@@ -22,6 +22,15 @@
 
   .grid{display:grid;grid-template-columns:1fr;gap:20px}
 
+  /* ===== final design (ship) screen ===== */
+  #finalScreen{display:none}
+  body.final #grid,body.final #sbScreen{display:none}
+  body.final #finalScreen{display:block}
+  .final-wrap{display:flex;gap:28px;align-items:flex-start}
+  .final-rail{width:210px;flex:none}
+  .fcard{flex:1;max-width:620px;background:var(--bg-elevated);border:1px solid var(--border-secondary);
+    border-radius:10px;padding:22px 24px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 6px 20px rgba(16,24,40,.07)}
+
   /* ===== sidebar thumbnail screen (editor left rail) ===== */
   #sbScreen{display:none}
   body.sb #grid{display:none}
@@ -135,13 +144,15 @@
   .n.focus input,.n input:focus{border-color:var(--bg-primary-inverted);border-width:1.5px}
 </style>
 </head>
-<body class="pai">
+<body class="pai final">
 <div class="wrap">
   <h1 class="page-h">Text field · selection &amp; hover states</h1>
   <p class="page-sub">Five options. Hover and click each field to feel it. Primary blue <b style="color:var(--text-brand)">#0055ED</b>.</p>
 
   <div class="toolbar">
-    <button id="liveBtn" class="on">Live (hover/click)</button>
+    <button id="finalBtn" class="on">Final design</button>
+    <span style="width:1px;height:22px;background:var(--border-secondary);margin:0 4px"></span>
+    <button id="liveBtn">Live (hover/click)</button>
     <button id="focusBtn">Force focus state</button>
     <span style="width:1px;height:22px;background:var(--border-secondary);margin:0 4px"></span>
     <button id="sbBtn">Sidebar thumbnail</button>
@@ -197,6 +208,17 @@
   </div>
 
   <div id="sbScreen"><div class="sb-grid" id="sbGrid"></div></div>
+
+  <div id="finalScreen">
+    <div class="final-wrap">
+      <div class="sb-rail final-rail o-outn" id="finalRail"></div>
+      <div class="fcard">
+        <div class="fld-title">Share a bit about yourself and we'll make your deck feel just right</div>
+        <div class="f n"><input placeholder="Enter your work email"><i class="ph ph-building-office"></i></div>
+        <div class="acts"><button class="button-style button-medium button-secondary skip">Skip</button></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -208,8 +230,16 @@
     force.classList.toggle('on', forced);
     fields.forEach(f => f.classList.toggle('focus', forced));
   }
-  live.onclick = ()=>set(false);
-  force.onclick = ()=>set(true);
+  const finalBtn = document.getElementById('finalBtn');
+  function exitFinal(){ document.body.classList.remove('final'); finalBtn.classList.remove('on'); }
+  finalBtn.onclick = ()=>{
+    document.body.classList.add('final');
+    document.body.classList.remove('sb');
+    finalBtn.classList.add('on');
+    document.getElementById('sbBtn').classList.remove('on');
+  };
+  live.onclick = ()=>{ exitFinal(); set(false); };
+  force.onclick = ()=>{ exitFinal(); set(true); };
 
   /* ===== sidebar thumbnail screen ===== */
   const SLIDES = [
@@ -235,6 +265,7 @@
        <p class="opt-d">${o.d}</p>
        <div class="sb-rail">${SLIDES}</div>
      </div>`).join('');
+  document.getElementById('finalRail').innerHTML = SLIDES;
   /* click a thumb to move selection within its rail */
   document.querySelectorAll('.sb-rail').forEach(rail => {
     rail.addEventListener('click', e => {
@@ -246,7 +277,7 @@
 
   /* sidebar-thumbnail screen toggle */
   const sb = document.getElementById('sbBtn');
-  sb.onclick = ()=>{ const on = document.body.classList.toggle('sb'); sb.classList.toggle('on', on); };
+  sb.onclick = ()=>{ exitFinal(); const on = document.body.classList.toggle('sb'); sb.classList.toggle('on', on); };
 
   /* Skip <-> Continue morph on typing */
   function morph(btn, active){
