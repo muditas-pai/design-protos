@@ -47,6 +47,9 @@ The settled product calls behind the spec — recorded here so the spec stays a 
 | Question | Decision |
 |---|---|
 | **Scope** | Workspace-level. Every kit is visible to everyone in the workspace and selectable on any deck. |
+| **Asset portal** | presentations.ai builds ~200 company brand kits internally and stores them in the **asset portal**. These definitions are the canonical source and are **immutable** — no one in any workspace can edit the portal version. On sign-in, a user's company kit is matched (email domain) and a **copy** is auto-seeded into their workspace. Full model: [brand-kit-ownership-spec](brand-kit-ownership-spec.html). |
+| **Scoping (fork-on-provision)** | The workspace copy is a **fork** — it detaches from the portal the moment it lands. Edits are scoped to that workspace only; they never touch the portal or any other workspace. Two workspaces from the same company each fork the same portal kit, then diverge independently. No cross-workspace visibility, **no merge**. Members can create variants (Patagonia Sales / Marketing) in their own workspace. Because the portal source is immutable, a **"Reset to original"** (re-fork) is always available. |
+| **Editing rights** | **Admins + the kit's creator.** Admins (multiple allowed) edit any kit, including the company-default portal-seeded one (which has no creator). A member who creates a variant can edit that variant. Anyone can **use** any kit; any Pro member can **create** a variant. Editing is gated behind a Pro seat (brand kit is Pro). |
 | **Mood coupling** | A kit overrides only **font pairing + color palette** on top of the active mood. Every other mood property — layout, padding, corners, SVG decor, image masks, animation — is **never** overridden. The kit's mood is a *starting point*, not a lock. **No mood builder** — a *custom mood* = a preset + the kit's font/colour, saved; users never edit the granular layers. |
 | **Templates** | In scope now (no longer deferred). Templates already exist in the app; the work is the brand-kit **binding** + a "save as template" action. FTUE just adds manual + import-from-deck. |
 | **Assets** | Upload → one **auto-tagging** pass → assets are both **AI-retrieved** (by relevance) and **hand-inserted**. |
@@ -113,3 +116,11 @@ These are prototype and demo choices, **not** product decisions — they live he
 - [ ] Deep **library views** for Templates and Assets (currently a sample grid + "View all" stub).
 - [ ] Real brand-logo artwork (current marks are simplified Simple Icons / Wikimedia versions).
 - [ ] Define the **"save deck as template → kit"** metadata (name, thumbnail, captured voice/mood).
+- [x] **Ownership / scoping / editing model decided** — asset-portal source (immutable) → fork-on-provision
+      into the workspace → edits scoped to the workspace → editing = admins + the kit's creator. Written up in
+      [brand-kit-ownership-spec](brand-kit-ownership-spec.html).
+- [ ] **Portal-update propagation** — when presentations.ai updates a company's portal kit, do existing
+      (already-forked) workspaces get notified / offered the update? Default assumption: no auto-sync; maybe
+      surface "a newer brand kit is available." OPEN.
+- [ ] Confirm **company matching** is by verified email domain, and where a **done-for-you custom kit** lands
+      (workspace, editable — vs the portal).
