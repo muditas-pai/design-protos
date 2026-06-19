@@ -30,21 +30,26 @@ meridian-b (anim)   vertical ellipse, width  6 → 96 → 6        ← 90° out 
 ```
 
 The two meridians breathing out of phase read as a **wireframe globe rotating** — no masks,
-seamless 2s loop (`fr 60`, `op 120`). Stroke 18 @ 256 viewbox ≈ 1.4px at 20px display.
+seamless 2s loop (`fr 60`, `op 120`). Stroke **14** @ 256 viewbox ≈ 1.1px at 20px display
+(was 18 — too heavy; Phosphor regular sits ~16).
+
+**Sparkle** (`sparkle.json`) — Phosphor four-point star, stroked outline like the globe. Main
+star slow-spins (0→90°, 4-fold symmetric so it loops seamlessly) and breathes (96%↔110%); a
+small companion star twinkles in once per loop. Same 14 stroke, same 2s loop.
 
 ## Files
 
-- `globe.json` — the Lottie deliverable (hand off to eng / drop into lottie-web).
-- `lottie-renderer.html` — the renderer. Globe is **inlined** so it runs from Finder
-  (`file://` blocks `fetch`); `globe.json` on disk is the identical data. Drag-drop loads any
-  other `.json` to preview.
+- `globe.json`, `sparkle.json` — the Lottie deliverables (hand off to eng / drop into lottie-web).
+- `lottie-renderer.html` — the renderer, with an icon switcher (Globe / Sparkle). Both are
+  **inlined** so it runs from Finder (`file://` blocks `fetch`); the `.json` files on disk are
+  identical. Drag-drop loads any other `.json` to preview.
 
 ## Decisions / TODO
 
 - **v1 = globe only.** Spin is symmetric (pulse), not directional — reads fine; a directional
   sweep would need a circle clip-mask. Revisit if it feels too "breathing".
 - Renderer uses `lottie-web@5.12.2` from unpkg (SVG renderer).
-- Next icons to try once the globe lands: magnifying-glass (searching), sparkle (generating),
-  brain/gear (reasoning) — to cover the chat phase set Tyo's loader exposes.
+- Done: globe (searching), sparkle (generating). Next: magnifying-glass, brain/gear (reasoning)
+  — to cover the chat phase set Tyo's loader exposes.
 - Open question: ship as Lottie, or is animated SVG/CSS enough for eng? Lottie wins if the same
   files feed web **and** native/mobile.
