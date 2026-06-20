@@ -183,4 +183,4 @@ Four ways in — templates are **not** pulled from the site:
 
 ## Later (not now)
 
-- **Brand-manager role.** Today every workspace member can edit any kit. In a **later version** we may add a new **"brand manager"** role — and **only brand managers could update brand kits** (everyone else applies / switches kits but can't change them). Keeps a company's brand locked down once a manager has set it. Not in this scope; flagged so the kit model can leave room for it.
+- **Brand-manager role.** Today, editing a kit is gated to **workspace admins** (grounding → *Editing rights*; [brand-kit-ownership-spec](brand-kit-ownership-spec.html)). In a **later version** we may split that out into a dedicated **"brand manager"** role — so **only brand managers could update brand kits** (everyone else applies / switches kits but can't change them), instead of tying brand control to general admin. Keeps a company's brand locked down once a manager has set it. Out of current scope; flagged so the kit model leaves room for it.
