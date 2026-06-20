@@ -178,3 +178,9 @@ Four ways in — templates are **not** pulled from the site:
 - Show the documents we already have, **greyed + locked**.
 - Message: *upgrade to **Gold** and we build a **knowledge graph** from them, so the AI fetches from your grounding knowledge far more accurately.*
 - Adding more documents is allowed; the **graph** is the Gold unlock.
+
+---
+
+## Later (not now)
+
+- **Brand-manager role.** Today every workspace member can edit any kit. In a **later version** we may add a new **"brand manager"** role — and **only brand managers could update brand kits** (everyone else applies / switches kits but can't change them). Keeps a company's brand locked down once a manager has set it. Not in this scope; flagged so the kit model can leave room for it.
