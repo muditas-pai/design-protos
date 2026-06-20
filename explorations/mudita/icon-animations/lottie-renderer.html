@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>" />
+  <title>Lottie renderer · icon animations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+  <script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+  <style>
+    body { background: #F4F5F7; color: var(--text-primary); }
+    .wrap { max-width: 940px; margin: 0 auto; padding: 48px 24px 96px; }
+    .back { display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:var(--text-secondary);
+      margin-bottom: 22px; transition: color 150ms var(--ease-out-strong); }
+    .back:hover { color: var(--text-primary); }
+
+    .panel { background: var(--bg-elevated); border-radius: 16px; box-shadow: var(--shadow-elevation-02); }
+
+    /* hero stage */
+    .stage { display:grid; place-items:center; border-radius: 16px 16px 0 0; padding: 56px 24px;
+      transition: background 220ms var(--ease-out-strong); position: relative; }
+    .stage.bg-white { background:#fff; }
+    .stage.bg-grey  { background:#F4F5F7; }
+    .stage.bg-navy  { background:#0A1925; }
+    .stage.bg-tint  { background:#EEEEFB; }
+    .hero { width:128px; height:128px; }
+
+    .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; padding:16px 20px; border-top:1px solid rgba(10,25,37,0.07); }
+    .ctl { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-secondary); }
+    .ctl label { font-weight:500; }
+    .iconbtn { width:34px; height:34px; display:grid; place-items:center; border:1px solid rgba(10,25,37,0.12);
+      background:#fff; border-radius:9px; cursor:pointer; color:var(--text-primary); font-size:16px;
+      transition: background 140ms, border-color 140ms; }
+    .iconbtn:hover { background:#F4F5F7; }
+    .iconbtn:active { transform: scale(0.96); }
+    input[type=range] { accent-color:#0A1925; width:120px; }
+    input[type=color] { width:30px; height:26px; border:none; padding:0; background:none; cursor:pointer; }
+    .swatches { display:flex; gap:6px; }
+    .sw { width:24px; height:24px; border-radius:7px; cursor:pointer; box-shadow:0 0 0 1px rgba(10,25,37,0.12) inset;
+      transition: transform 120ms; }
+    .sw:hover { transform: scale(1.08); }
+    .sw.active { box-shadow:0 0 0 2px #0A1925; }
+    .sw-white{background:#fff;} .sw-grey{background:#F4F5F7;} .sw-navy{background:#0A1925;} .sw-tint{background:#EEEEFB;}
+    output { font-variant-numeric: tabular-nums; color: var(--text-tertiary); min-width: 34px; }
+
+    /* size strip — the contexts these run in */
+    .sizes { display:flex; align-items:flex-end; gap:36px; padding:24px 20px 26px; border-top:1px solid rgba(10,25,37,0.07); }
+    .size-cell { display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .size-cell .stub { display:grid; place-items:center; }
+    .size-cap { font-size:11px; color:var(--text-tertiary); font-variant-numeric:tabular-nums; }
+
+    /* in-situ chat mock */
+    .chatmock { display:flex; align-items:center; gap:10px; padding:11px 14px; background:#fff;
+      border:1px solid rgba(10,25,37,0.08); border-radius:12px; box-shadow: var(--shadow-elevation-01); width:max-content; }
+    .chatmock .lot { width:20px; height:20px; flex:none; }
+    .chatmock .txt { font-size:13.5px; font-weight:500; color:var(--text-secondary); }
+
+    .label { color: var(--text-tertiary); margin: 34px 0 10px; }
+
+    /* drop zone */
+    .drop { border:1.5px dashed rgba(10,25,37,0.18); border-radius:14px; padding:22px; text-align:center;
+      color:var(--text-tertiary); font-size:13px; transition: border-color 150ms, background 150ms; cursor:pointer; }
+    .drop:hover, .drop.over { border-color:#0A1925; background:#fff; color:var(--text-secondary); }
+    .pill { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#0A1925;
+      background:#fff; border:1px solid rgba(10,25,37,0.12); padding:6px 11px; border-radius:999px; text-decoration:none; }
+    .pill:hover { background:#F4F5F7; }
+
+    /* icon switcher */
+    .picker { display:inline-flex; gap:4px; padding:4px; background:var(--bg-elevated); border-radius:11px;
+      box-shadow: var(--shadow-elevation-01); margin: 18px 0 14px; }
+    .seg { display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:13px; font-weight:500;
+      color:var(--text-secondary); background:transparent; border:0; padding:7px 14px; border-radius:8px; cursor:pointer;
+      transition: background 140ms, color 140ms; }
+    .seg i { font-size:16px; }
+    .seg:hover { color:var(--text-primary); }
+    .seg.active { background:#0A1925; color:#fff; }
+  </style>
+</head>
+<body class="pai">
+  <main class="wrap">
+    <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
+    <h1 class="text-heading-2xl" style="font-weight:600; margin:0 0 4px;">Lottie renderer</h1>
+    <p class="text-body-base-regular text-text-secondary" style="margin:0 0 6px; max-width:60ch;">
+      Phosphor icons, animated and exported as Lottie <code>.json</code> — the same format the app
+      uses for animated loading icons. Drops into the chat loading slot at <strong>20px</strong>,
+      alongside Tyo's spinner.
+    </p>
+
+    <div class="picker" id="picker"></div>
+
+    <div class="panel">
+      <!-- HERO -->
+      <div class="stage bg-white" id="stage">
+        <div class="hero" id="hero" aria-label="globe loading animation" role="img"></div>
+      </div>
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <div class="ctl">
+          <button class="iconbtn" id="playBtn" title="Play / pause"><i class="ph-fill ph-pause"></i></button>
+        </div>
+        <div class="ctl">
+          <label for="speed">Speed</label>
+          <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
+          <output id="speedOut">1.0×</output>
+        </div>
+        <div class="ctl">
+          <label for="color">Color</label>
+          <input type="color" id="color" value="#2f2be5">
+        </div>
+        <div class="ctl">
+          <label>Surface</label>
+          <div class="swatches" id="swatches">
+            <div class="sw sw-white active" data-bg="white" title="White"></div>
+            <div class="sw sw-grey"  data-bg="grey"  title="App grey"></div>
+            <div class="sw sw-tint"  data-bg="tint"  title="Loader tint"></div>
+            <div class="sw sw-navy"  data-bg="navy"  title="Navy"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIZE STRIP -->
+      <div class="sizes">
+        <div class="size-cell">
+          <div class="stub" style="width:20px;height:20px;" data-size="20"></div>
+          <div class="size-cap">20px · chat</div>
+        </div>
+        <div class="size-cell">
+          <div class="stub" style="width:24px;height:24px;" data-size="24"></div>
+          <div class="size-cap">24px</div>
+        </div>
+        <div class="size-cell">
+          <div class="stub" style="width:40px;height:40px;" data-size="40"></div>
+          <div class="size-cap">40px</div>
+        </div>
+        <div class="size-cell" style="margin-left:8px;">
+          <div class="chatmock">
+            <div class="lot" data-size="chat"></div>
+            <span class="txt" id="chatTxt">Searching the web…</span>
+          </div>
+          <div class="size-cap">in context</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOAD YOUR OWN -->
+    <div class="text-overline-small label">Try another file</div>
+    <div class="drop" id="drop">
+      <i class="ph ph-upload-simple" style="font-size:20px;"></i>
+      <div style="margin-top:6px;">Drop a Lottie <code>.json</code> here, or click to pick one — it previews above.</div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:8px; align-items:center;">
+      <a class="pill" id="dlGlobe" href="globe.json" download><i class="ph ph-download-simple"></i>globe.json</a>
+      <a class="pill" id="resetBtn" href="#"><i class="ph ph-arrow-counter-clockwise"></i>Reset to globe</a>
+      <span class="size-cap" id="fileName"></span>
+    </div>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </main>
+
+  <script>
+  /* ============================================================
+     globe Lottie — inlined so this page runs straight from Finder
+     (file:// blocks fetch). globe.json on disk is the same data.
+     ============================================================ */
+  const GLOBE = {
+    "v":"5.7.0","fr":60,"ip":0,"op":120,"w":256,"h":256,"nm":"globe","ddd":0,"assets":[],
+    "layers":[{
+      "ddd":0,"ind":1,"ty":4,"nm":"globe","sr":1,
+      "ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[128,128,0]},"a":{"a":0,"k":[128,128,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"ip":0,"op":120,"st":0,"bm":0,
+      "shapes":[
+        {"ty":"gr","nm":"frame","it":[
+          {"ty":"el","nm":"outer","p":{"a":0,"k":[128,128]},"s":{"a":0,"k":[192,192]},"d":1},
+          {"ty":"sh","nm":"equator","ks":{"a":0,"k":{"c":false,"v":[[33,128],[223,128]],"i":[[0,0],[0,0]],"o":[[0,0],[0,0]]}}},
+          {"ty":"sh","nm":"tropic-top","ks":{"a":0,"k":{"c":false,"v":[[47,84],[209,84]],"i":[[0,0],[0,0]],"o":[[0,0],[0,0]]}}},
+          {"ty":"sh","nm":"tropic-bottom","ks":{"a":0,"k":{"c":false,"v":[[47,172],[209,172]],"i":[[0,0],[0,0]],"o":[[0,0],[0,0]]}}},
+          {"ty":"st","nm":"stroke","c":{"a":0,"k":[0.1843,0.1686,0.898,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2,"ml":4},
+          {"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}
+        ]},
+        {"ty":"gr","nm":"meridian-a","it":[
+          {"ty":"el","nm":"ell-a","p":{"a":0,"k":[128,128]},"s":{"a":1,"k":[
+            {"t":0,"s":[96,190],"o":{"x":[0.45],"y":[0]},"i":{"x":[0.55],"y":[1]}},
+            {"t":60,"s":[6,190],"o":{"x":[0.45],"y":[0]},"i":{"x":[0.55],"y":[1]}},
+            {"t":120,"s":[96,190]}
+          ]},"d":1},
+          {"ty":"st","nm":"stroke","c":{"a":0,"k":[0.1843,0.1686,0.898,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2,"ml":4},
+          {"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}
+        ]},
+        {"ty":"gr","nm":"meridian-b","it":[
+          {"ty":"el","nm":"ell-b","p":{"a":0,"k":[128,128]},"s":{"a":1,"k":[
+            {"t":0,"s":[6,190],"o":{"x":[0.45],"y":[0]},"i":{"x":[0.55],"y":[1]}},
+            {"t":60,"s":[96,190],"o":{"x":[0.45],"y":[0]},"i":{"x":[0.55],"y":[1]}},
+            {"t":120,"s":[6,190]}
+          ]},"d":1},
+          {"ty":"st","nm":"stroke","c":{"a":0,"k":[0.1843,0.1686,0.898,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2,"ml":4},
+          {"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}
+        ]}
+      ]
+    }]
+  };
+
+  /* sparkle Lottie — Phosphor four-point star: slow spin + breath,
+     plus a small companion that twinkles once per loop. */
+  const SPARKLE = {
+    "v":"5.7.0","fr":60,"ip":0,"op":120,"w":256,"h":256,"nm":"sparkle","ddd":0,"assets":[],
+    "layers":[{
+      "ddd":0,"ind":1,"ty":4,"nm":"sparkle","sr":1,
+      "ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[128,128,0]},"a":{"a":0,"k":[128,128,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"ip":0,"op":120,"st":0,"bm":0,
+      "shapes":[
+        {"ty":"gr","nm":"star-main","it":[
+          {"ty":"sh","nm":"star","ks":{"a":0,"k":{"c":true,
+            "v":[[128,32],[150.63,105.37],[224,128],[150.63,150.63],[128,224],[105.37,150.63],[32,128],[105.37,105.37]],
+            "i":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],
+            "o":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]}}},
+          {"ty":"st","nm":"stroke","c":{"a":0,"k":[0.1843,0.1686,0.898,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2,"ml":4},
+          {"ty":"tr","p":{"a":0,"k":[128,128]},"a":{"a":0,"k":[128,128]},
+            "s":{"a":1,"k":[
+              {"t":0,"s":[96,96],"o":{"x":[0.45],"y":[0]},"i":{"x":[0.55],"y":[1]}},
+              {"t":60,"s":[110,110],"o":{"x":[0.45],"y":[0]},"i":{"x":[0.55],"y":[1]}},
+              {"t":120,"s":[96,96]}]},
+            "r":{"a":1,"k":[
+              {"t":0,"s":[0],"o":{"x":[0.333],"y":[0.333]},"i":{"x":[0.667],"y":[0.667]}},
+              {"t":120,"s":[90]}]},
+            "o":{"a":0,"k":100}}
+        ]},
+        {"ty":"gr","nm":"star-mini","it":[
+          {"ty":"sh","nm":"star","ks":{"a":0,"k":{"c":true,
+            "v":[[128,32],[150.63,105.37],[224,128],[150.63,150.63],[128,224],[105.37,150.63],[32,128],[105.37,105.37]],
+            "i":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],
+            "o":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]}}},
+          {"ty":"st","nm":"stroke","c":{"a":0,"k":[0.1843,0.1686,0.898,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":34},"lc":2,"lj":2,"ml":4},
+          {"ty":"tr","p":{"a":0,"k":[196,74]},"a":{"a":0,"k":[128,128]},
+            "s":{"a":1,"k":[
+              {"t":0,"s":[0,0],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":30,"s":[30,30],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":60,"s":[0,0],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":90,"s":[30,30],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":120,"s":[0,0]}]},
+            "r":{"a":0,"k":0},
+            "o":{"a":1,"k":[
+              {"t":0,"s":[0],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":30,"s":[100],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":60,"s":[0],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":90,"s":[100],"o":{"x":[0.4],"y":[0]},"i":{"x":[0.6],"y":[1]}},
+              {"t":120,"s":[0]}]}}
+        ]}
+      ]
+    }]
+  };
+
+  const ICONS = {
+    globe:   { data: GLOBE,   label: "Globe",   icon: "ph-globe-hemisphere-west", phase: "Searching the web…" },
+    sparkle: { data: SPARKLE, label: "Sparkle", icon: "ph-sparkle",               phase: "Generating…" },
+  };
+
+  /* ---- helpers ---------------------------------------------- */
+  const hexToRgb = (h) => {
+    const n = parseInt(h.replace('#',''), 16);
+    return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255, 1];
+  };
+  // deep-clone + re-tint every stroke / fill color
+  const tinted = (data, rgb) => {
+    const d = JSON.parse(JSON.stringify(data));
+    const walk = (node) => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (node && typeof node === 'object') {
+        if ((node.ty === 'st' || node.ty === 'fl') && node.c && node.c.a === 0) node.c.k = rgb.slice();
+        Object.values(node).forEach(walk);
+      }
+    };
+    walk(d);
+    return d;
+  };
+
+  /* ---- state ------------------------------------------------ */
+  let currentIcon = 'globe';
+  let baseData = ICONS[currentIcon].data;
+  let players = [];                 // every lottie instance currently mounted
+  let speed = 1, paused = false;
+  let color = '#2f2be5';
+
+  const mounts = [
+    document.getElementById('hero'),
+    ...document.querySelectorAll('.stub'),
+    ...document.querySelectorAll('.lot'),
+  ];
+
+  function render() {
+    players.forEach(p => p.destroy());
+    players = [];
+    const data = tinted(baseData, hexToRgb(color));
+    mounts.forEach(el => {
+      const anim = lottie.loadAnimation({
+        container: el, renderer: 'svg', loop: true, autoplay: !paused,
+        animationData: JSON.parse(JSON.stringify(data)),
+      });
+      anim.setSpeed(speed);
+      players.push(anim);
+    });
+  }
+
+  /* ---- controls --------------------------------------------- */
+  const playBtn = document.getElementById('playBtn');
+  playBtn.addEventListener('click', () => {
+    paused = !paused;
+    players.forEach(p => paused ? p.pause() : p.play());
+    playBtn.innerHTML = paused ? '<i class="ph-fill ph-play"></i>' : '<i class="ph-fill ph-pause"></i>';
+  });
+
+  const speedEl = document.getElementById('speed'), speedOut = document.getElementById('speedOut');
+  speedEl.addEventListener('input', () => {
+    speed = parseFloat(speedEl.value);
+    speedOut.textContent = speed.toFixed(2).replace(/0$/,'') + '×';
+    players.forEach(p => p.setSpeed(speed));
+  });
+
+  document.getElementById('color').addEventListener('input', (e) => { color = e.target.value; render(); });
+
+  const stage = document.getElementById('stage');
+  document.getElementById('swatches').addEventListener('click', (e) => {
+    const sw = e.target.closest('.sw'); if (!sw) return;
+    document.querySelectorAll('.sw').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    stage.className = 'stage bg-' + sw.dataset.bg;
+  });
+
+  /* ---- load a custom file ----------------------------------- */
+  const drop = document.getElementById('drop'), fileInput = document.getElementById('fileInput');
+  const fileName = document.getElementById('fileName');
+  const loadFile = (file) => {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try { baseData = JSON.parse(r.result); fileName.textContent = '· ' + file.name; render(); }
+      catch (err) { fileName.textContent = '· could not parse ' + file.name; }
+    };
+    r.readAsText(file);
+  };
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+  ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+
+  document.getElementById('resetBtn').addEventListener('click', (e) => {
+    e.preventDefault(); baseData = ICONS[currentIcon].data; fileName.textContent = ''; render();
+  });
+
+  /* ---- icon switcher ---------------------------------------- */
+  const picker = document.getElementById('picker');
+  const chatTxt = document.getElementById('chatTxt');
+  const dlLink = document.getElementById('dlGlobe');
+  picker.innerHTML = Object.entries(ICONS).map(([key, m]) =>
+    `<button class="seg${key === currentIcon ? ' active' : ''}" data-icon="${key}">
+       <i class="ph ${m.icon}"></i>${m.label}</button>`).join('');
+  picker.addEventListener('click', (e) => {
+    const b = e.target.closest('.seg'); if (!b) return;
+    currentIcon = b.dataset.icon;
+    picker.querySelectorAll('.seg').forEach(s => s.classList.toggle('active', s === b));
+    baseData = ICONS[currentIcon].data;
+    fileName.textContent = '';
+    chatTxt.textContent = ICONS[currentIcon].phase;
+    dlLink.setAttribute('href', currentIcon + '.json');
+    dlLink.innerHTML = '<i class="ph ph-download-simple"></i>' + currentIcon + '.json';
+    render();
+  });
+
+  render();
+  </script>
+</body>
+</html>
