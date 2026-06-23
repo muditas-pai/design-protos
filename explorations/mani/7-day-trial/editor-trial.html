@@ -1245,6 +1245,45 @@
     }
     #trial-exit-btn:hover { background: #fafafa; }
 
+    /* Exit-confirm modal (close floats OUTSIDE the card — house pattern) */
+    #trial-exit-modal {
+      position: fixed; inset: 0; z-index: 9000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(11,15,20,0.45);
+    }
+    #trial-exit-modal.is-open { display: flex; }
+    #trial-exit-modal .xm-wrap {
+      position: relative; width: min(480px, 92vw);
+      animation: xmPop .18s cubic-bezier(0.23,1,0.32,1);
+    }
+    #trial-exit-modal .xm-card {
+      width: 100%;
+      background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 24px 60px rgba(11,15,20,0.28);
+    }
+    @keyframes xmPop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+    #trial-exit-modal .xm-x {
+      position: absolute; top: 0; right: -44px; z-index: 2;
+      width: 34px; height: 34px; border-radius: 999px; border: 0;
+      background: #fff; color: #171717; cursor: pointer;
+      display: grid; place-items: center; font-size: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    }
+    #trial-exit-modal .xm-x:hover { background: #f4f6fa; }
+    #trial-exit-modal .xm-head {
+      padding: 16px 20px; background: #f5f6f7;
+      border-bottom: 1px solid rgba(11,15,20,0.08);
+      font: 600 15px/1.2 Inter, system-ui, sans-serif; color: #171717;
+    }
+    #trial-exit-modal .xm-body { padding: 22px 20px 8px; }
+    #trial-exit-modal .xm-sub { font: 400 14px/1.5 Inter, system-ui, sans-serif; color: #6b7280; margin: 0; }
+    #trial-exit-modal .xm-foot { display: flex; gap: 12px; padding: 20px; }
+    #trial-exit-modal .xm-btn { flex: 1; padding: 11px 16px; border-radius: 8px; font: 600 14px/1.2 Inter, system-ui, sans-serif; cursor: pointer; }
+    #trial-exit-modal .xm-leave { background: #fff; border: 1px solid rgba(11,15,20,0.16); color: #171717; }
+    #trial-exit-modal .xm-leave:hover { background: #fafafa; }
+    #trial-exit-modal .xm-stay { background: #0A1925; border: 1px solid #0A1925; color: #fff; }
+    #trial-exit-modal .xm-stay:hover { background: #142436; }
+
     /* Tooltip on filled thumb click */
     #trial-tooltip {
       position: fixed;
@@ -3492,9 +3531,44 @@
   </script>
 
   <!-- ==== 7-DAY TRIAL OVERLAY (Exit / title / tooltip / pricing iframe) ==== -->
-  <button id="trial-exit-btn" onclick="if(window.parent!==window){window.parent.postMessage({type:'trial-exit'},'*')}else{location.href='dashboard-trial.html'}">Exit</button>
+  <button id="trial-exit-btn">Exit</button>
   <div id="trial-stage-title">Start your free trial to view your slides</div>
   <div id="trial-tooltip">Start your free trial to view your slides</div>
+
+  <!-- Warn before leaving the generation screen for the dashboard -->
+  <div id="trial-exit-modal" role="dialog" aria-modal="true" aria-labelledby="xm-title">
+    <div class="xm-wrap">
+      <button class="xm-x" data-xm-close aria-label="Close"><i class="ph ph-x"></i></button>
+      <div class="xm-card">
+        <div class="xm-head"><span id="xm-title">Exit to dashboard?</span></div>
+        <div class="xm-body">
+          <p class="xm-sub">Your deck stays saved but locked. Start your free trial to view your slides.</p>
+        </div>
+        <div class="xm-foot">
+          <button class="xm-btn xm-leave" data-xm-leave>Leave to dashboard</button>
+          <button class="xm-btn xm-stay" data-xm-close>View my slides now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var modal = document.getElementById('trial-exit-modal');
+    var exitBtn = document.getElementById('trial-exit-btn');
+    function open(){ modal.classList.add('is-open'); }
+    function close(){ modal.classList.remove('is-open'); }
+    function leave(){
+      if (window.parent !== window) window.parent.postMessage({type:'trial-exit'},'*');
+      else location.href = 'dashboard-trial.html';
+    }
+    exitBtn.addEventListener('click', open);
+    modal.querySelectorAll('[data-xm-close]').forEach(function(b){ b.addEventListener('click', close); });
+    modal.querySelector('[data-xm-leave]').addEventListener('click', leave);
+    modal.addEventListener('click', function(e){ if (e.target === modal) close(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && modal.classList.contains('is-open')) close(); });
+  })();
+  </script>
 
   <script>
   (function(){
