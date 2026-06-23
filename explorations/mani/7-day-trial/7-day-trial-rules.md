@@ -13,8 +13,10 @@ Two user states:
 ## State A — Free user (deck locked, not paid)
 
 ### Free user exits generation and lands on the dashboard
-1. User clicks Exit (inside the pricing box, top right corner of the Generation screen).
-2. Generation continues to completion in the background. The deck is saved either way, no progress is lost.
+1. User clicks Exit (text button inside the pricing box) or the corner X (top-right of the Generation screen). Either one opens a **warn-on-exit confirm modal** first, never a direct exit.
+   - Modal: title "Exit to dashboard?", subtitle "Your deck stays saved but locked. Start your free trial to view your slides." Buttons: "Leave to dashboard" (leaves) / "View my slides now" (stays). Close (X) floats outside the card, top-right.
+   - Leave to dashboard → proceeds to the dashboard. View my slides now / X / Esc / backdrop click → stays on the Generation screen.
+2. On Leave, generation continues to completion in the background. The deck is saved either way, no progress is lost.
 3. User lands on the Dashboard in the free / locked state.
 4. Recent section shows exactly one presentation: the deck they just generated.
 5. The deck stays locked. Clicking its card reopens the Generation screen in ready state: all 10 slides loaded in the filmstrip, no loader, pricing page still filling the canvas, title "Start your free trial to view your slides".
