@@ -1,4 +1,4 @@
-# 7-Day Trial flow — dev handoff
+# 7 Day Trial Proto — dev handoff
 
 New-user trial funnel that converts during the "waiting for my deck" moment. Slides generate
 behind the pricing page; the deck stays locked until the user starts a free trial.

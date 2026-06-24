@@ -1,4 +1,4 @@
-# 7-Day Trial: Rules Document
+# 7 Day Trial Proto: Rules Document
 
 Step-by-step behaviour rules for the 7-day trial, screen by screen and state by state.
 Pairs with the [flow spec](7-day-trial-spec.html) (which covers visual layout); this doc covers
