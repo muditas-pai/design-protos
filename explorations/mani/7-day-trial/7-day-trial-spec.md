@@ -47,7 +47,7 @@ Checkout success → "Continue to your deck" → deck-ready editor
   tooltip **"Start your free trial to view your slides"** (springs in from the left, no arrow).
 - Exit button inside the pricing box, 20px from the top-right corner. Both it and the corner X
   (`#pres-exit`) open a **warn-on-exit modal** first ("Are you sure you want to leave?": deck stays
-  saved but locked; "Leave" / "Start free trial and view your slides"; close floats outside the
+  saved but locked; "Leave" / "Start your free trial and view your slides"; close floats outside the
   card). Only Leave proceeds to the dashboard.
 - `?state=ready` reopens this screen with all slides loaded and no loader (used when opening
   the existing presentation from the dashboard).
