@@ -14,8 +14,8 @@ Two user states:
 
 ### Free user exits generation and lands on the dashboard
 1. User clicks Exit (text button inside the pricing box) or the corner X (top-right of the Generation screen). Either one opens a **warn-on-exit confirm modal** first, never a direct exit.
-   - Modal: title "Exit to dashboard?", subtitle "Your deck stays saved but locked. Start your free trial to view your slides." Buttons: "Leave to dashboard" (leaves) / "View my slides now" (stays). Close (X) floats outside the card, top-right.
-   - Leave to dashboard → proceeds to the dashboard. View my slides now / X / Esc / backdrop click → stays on the Generation screen.
+   - Modal: title "Are you sure you want to leave?", subtitle "Your deck stays saved but locked. Start your free trial to view your slides." Buttons: "Leave" (leaves) / "Start free trial and view your slides" (stays). Close (X) floats outside the card, top-right.
+   - Leave → proceeds to the dashboard. Start free trial and view your slides / X / Esc / backdrop click → stays on the Generation screen.
 2. On Leave, generation continues to completion in the background. The deck is saved either way, no progress is lost.
 3. User lands on the Dashboard in the free / locked state.
 4. Recent section shows exactly one presentation: the deck they just generated.
