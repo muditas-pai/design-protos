@@ -42,6 +42,7 @@ All paths relative to `explorations/mani/7-day-trial-v2/`.
 | 8 | Settings: active trial | `settings-trial-active.html` | `?plan=gold` |
 | 9 | Settings: paid | `settings-active.html` | none |
 | 10 | Editor (trial) | `editor-trial.html` | `?state=ready` |
+| 11 | Activate modal: copy options (spec) | `activate-modal-options.html` | none |
 
 ## 3. Pricing page (`pricing.html`)
 
@@ -101,15 +102,23 @@ Single rounded pill: animated fire + "Trial: 500 credits left" + blue
 "Activate full credits" button. Fire flicker + number bump animations are CSS only.
 
 ### Activate / scenario modal (one modal, three scenarios)
-Driven by `?scenario`. Content set from a `SCENARIOS` config; summary + agree
+Driven by `?scenario`. Content set from a `SCENARIOS` config; summary box + agree
 checkbox + Confirm Payment (disabled until the Terms box is ticked).
 
-| Scenario | Trigger | Title | Plan / Due | Unlock |
-|---|---|---|---|---|
-| (default) | Topbar button | Activate full Pro plan now? | Pro $240 | 5,000 |
-| `credits-empty` | Auto-open + any credit action (prompt, pills); pill shows "0 credits left" | You're out of trial credits | Pro $240 | 5,000 |
-| `pro-to-gold` | Auto-open (hit a Gold feature on Pro trial) | Upgrade from Pro to Gold | Gold $1,200 | 50,000 |
+Order-summary box layout (final): plan name + price on top, **credits unlock shown
+as a subtitle** `Full plan credits unlock (N)` beneath the plan, a **Tax** row, then
+**Due today** = price + tax. The `pro-to-gold` scenario instead shows a discount
+(`Gold Plan - 50% off`, strikethrough list price), no Tax row, no proration, and
+Due today = the discounted price.
 
+| Scenario | Trigger | Title (current copy) | Plan / Due | Unlock |
+|---|---|---|---|---|
+| (default) | Topbar button | Unlock your full plan early | Pro US$240 + US$24 tax = **US$264** | 5,000 |
+| `credits-empty` | Auto-open + any credit action (prompt, pills); pill shows "0 credits left" | Keep creating, no waiting | Pro **US$264** (incl. tax) | 5,000 |
+| `pro-to-gold` | Auto-open (hit a Gold feature on Pro trial) | Project Knowledge is a Gold feature | Gold 50% off US$1,167 → **US$583.5** | 50,000 |
+
+Copy is the **Recommended** variant from `activate-modal-options.html` (see section 11).
+Each scenario also sets the Confirm button label (e.g. "Activate now", "Upgrade to Gold").
 On Confirm: trial pill hides, success toast fires (scenario-specific copy).
 
 ### Invite teammate to team flow
@@ -124,8 +133,11 @@ Sidebar "Invite new members" to email entry to **team-only pricing modal**
 - Billing panel shows trial credits now (Pro 500 / Gold 1,000) with the note
   "Trial credits, full plan credits (5,000) unlock after day 7".
 - "Activate your full plan now" card to confirm modal (order summary + Terms
-  checkbox + Confirm Payment). On confirm: credits unlock to full everywhere
-  (card, profile menu, note), card hides, toast fires.
+  checkbox + Confirm Payment). Order summary uses the same box as the dashboard:
+  plan price, credits-unlock subtitle, **Tax** row, Due today incl. tax
+  (Pro US$240 + US$24 = **US$264**; Gold US$1,200 + US$120 = **US$1,320**). On
+  confirm: credits unlock to full everywhere (card, profile menu, note), card hides,
+  toast fires.
 - The redundant "Upgrade" button next to the plan name was removed.
 - Checkout opened from here uses `?ctx=modal`; Back loads `pricing.html?modal=1`
   into the same modal frame, and pricing CTAs route back to checkout in-modal.
@@ -158,4 +170,28 @@ Standalone (no `ctx`) navigates with `location.href`.
 
 Built on `design-system/` (pai.tailwind.js, pai.css). Navy `#0A1925` = action,
 orange `#FF5500` = brand/upsell, blue `#2563eb` = the trial-activate accent button.
-No local asset files except the editor/dashboard thumbnails already bundled.
+Green `#16a34a` marks discount/savings (50% off, strikethrough). No local asset files
+except the editor/dashboard thumbnails already bundled.
+
+## 11. Activate modal: copy options (`activate-modal-options.html`)
+
+A spec/exploration page, not part of the runtime flow. Header tabs switch four
+scenarios; each shows **8 numbered copy variants** of the same modal so the team can
+pick wording. One variant per tab carries a green **★ Recommended** badge (green ring
+on the card); those recommended variants are the copy now wired into the live
+dashboard and settings modals.
+
+| Tab | Plan / Due | Recommended variant |
+|---|---|---|
+| Activate full Pro plan | Pro US$264 (incl. tax) | #2 "Unlock your full plan early" |
+| Out of trial credits | Pro US$264 (incl. tax) | #2 "Keep creating, no waiting" |
+| Pro to Gold | Gold 50% off → US$583.5 | #1 "Project Knowledge is a Gold feature" |
+| Add more seats | US$0 today, US$240 on day 7 | #2 "Invite a teammate" |
+
+Notes:
+- All modals share the box layout in section 6 (credits-unlock subtitle, Tax row,
+  Due today). The Gold tab uses the 50%-off discount box (no Tax, no proration).
+- The Gold tab references the gated feature by name ("Project Knowledge"); swap this
+  token for the actual feature that triggered the gate.
+- The Add-more-seats tab uses the day-7 billing box: US$0 due today, the seat is
+  charged on the day-7 date with the rest of the plan.

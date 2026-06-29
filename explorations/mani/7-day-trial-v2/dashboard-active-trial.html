@@ -439,6 +439,10 @@
     .tb-line.muted { color: var(--fg-2); font-size: 13px; }
     .tb-sep { height: 1px; background: var(--line); margin: 10px 0; }
     .tb-line.due-row { font-weight: 700; font-size: 15px; }
+    .tb-plan { margin-bottom: 8px; }
+    .tb-subline { font-size: 13px; color: var(--fg-2); margin-top: 2px; }
+    .tb-summary .off { color: #16a34a; font-weight: 700; }
+    .tb-summary .strike { text-decoration: line-through; color: var(--fg-3); font-weight: 500; margin-right: 6px; }
     #teamBuyModal .btn-confirm:disabled { background: var(--surface-2); color: var(--fg-3); cursor: not-allowed; filter: none; }
   </style>
   <div class="modal" id="teamBuyModal" style="z-index:1100;">
@@ -479,14 +483,17 @@
         <div class="modal-body">
           <p id="act-lead" style="font-size:13px;color:var(--fg-2);line-height:1.5;margin:0 0 16px;">End your trial early and unlock all 5,000 plan credits today, instead of waiting for day 7.</p>
           <div class="tb-summary">
-            <div class="tb-line"><span id="act-plan">Pro Plan (annual)</span><span id="act-price">US$240.00</span></div>
-            <div class="tb-line muted"><span id="act-unlock-label">Full plan credits unlock</span><span id="act-unlock-val">5,000</span></div>
+            <div class="tb-plan">
+              <div class="tb-line"><span id="act-plan">Pro Plan</span><span id="act-price">US$240.00</span></div>
+              <div class="tb-subline" id="act-unlock">Full plan credits unlock (5,000)</div>
+            </div>
+            <div class="tb-line muted" id="act-tax-row"><span>Tax</span><span id="act-tax">US$24.00</span></div>
             <div class="tb-sep"></div>
-            <div class="tb-line due-row"><span>Due today:</span><span id="act-due">US$240.00</span></div>
+            <div class="tb-line due-row"><span>Due today:</span><span id="act-due">US$264.00</span></div>
           </div>
           <label class="agree">
             <input type="checkbox" id="act-agree" />
-            <span id="act-agree-text">I agree to the Terms. Renews at US$240/year on June 16, 2027.</span>
+            <span id="act-agree-text">I agree to the Terms. Renews at US$264.00/year on June 16, 2027.</span>
           </label>
           <div class="modal-foot">
             <button class="btn-cancel" data-act-close>Cancel</button>
@@ -632,28 +639,32 @@
     //   pro-to-gold      hit a Gold feature on Pro trial → upgrade to Gold
     var SCENARIOS = {
       activate: {
-        title: 'Activate full Pro plan now?',
-        lead: 'End your trial early and unlock all 5,000 plan credits today, instead of waiting for day 7.',
-        plan: 'Pro Plan (annual)', price: 'US$240.00',
-        unlockLabel: 'Full plan credits unlock', unlockVal: '5,000', due: 'US$240.00',
-        agree: 'I agree to the Terms. Renews at US$240/year on June 16, 2027.',
+        title: 'Unlock your full plan early',
+        lead: 'Skip the wait. Activate now to get all 5,000 Pro credits today instead of on day 7.',
+        plan: 'Pro Plan', price: 'US$240.00',
+        unlock: '5,000', tax: 'US$24.00', due: 'US$264.00',
+        agree: 'I agree to the Terms. Renews at US$264.00/year on June 16, 2027.',
+        cta: 'Activate now',
         toast: 'Full Pro plan activated. 5,000 credits unlocked.'
       },
       'credits-empty': {
-        title: "You're out of trial credits",
-        lead: "You've used all 500 trial credits. Activate your full Pro plan to unlock all 5,000 credits and keep creating.",
-        plan: 'Pro Plan (annual)', price: 'US$240.00',
-        unlockLabel: 'Credits unlocked now', unlockVal: '5,000', due: 'US$240.00',
-        agree: 'I agree to the Terms. Renews at US$240/year on June 16, 2027.',
+        title: "Keep creating, no waiting",
+        lead: "You've used all 500 trial credits. Activate now to unlock 5,000 credits instead of waiting for day 7.",
+        plan: 'Pro Plan', price: 'US$240.00',
+        unlock: '5,000', tax: 'US$24.00', due: 'US$264.00',
+        agree: 'I agree to the Terms. Renews at US$264.00/year on June 16, 2027.',
+        cta: 'Unlock 5,000 credits',
         toast: 'Full Pro plan activated. 5,000 credits unlocked.',
         autoOpen: true, emptyCredits: true
       },
       'pro-to-gold': {
-        title: 'Upgrade from Pro to Gold',
-        lead: 'You found a Gold-only feature. Upgrade your trial from Pro to Gold to unlock it now, plus all 50,000 Gold plan credits.',
-        plan: 'Gold Plan (annual)', price: 'US$1,200.00',
-        unlockLabel: 'Gold credits unlock', unlockVal: '50,000', due: 'US$1,200.00',
-        agree: 'I agree to the Terms. Renews at US$1,200/year on June 16, 2027.',
+        title: 'Project Knowledge is a Gold feature',
+        lead: "You're on a Pro trial. Upgrade to Gold to use Project Knowledge and unlock 50,000 credits.",
+        plan: 'Gold Plan - <span class="off">50% off</span>',
+        price: '<span class="strike">US$1,167</span> US$583.5',
+        unlock: '50,000', tax: null, due: 'US$583.5',
+        agree: 'I agree to the Terms. Renews at US$1,167/year on Jun 19, 2027.',
+        cta: 'Upgrade to Gold',
         toast: 'Upgraded to Gold. 50,000 credits unlocked.',
         autoOpen: true
       }
@@ -668,12 +679,15 @@
     function applyScenario() {
       setTxt('act-title', SC.title);
       setTxt('act-lead', SC.lead);
-      setTxt('act-plan', SC.plan);
-      setTxt('act-price', SC.price);
-      setTxt('act-unlock-label', SC.unlockLabel);
-      setTxt('act-unlock-val', SC.unlockVal);
+      var pl = document.getElementById('act-plan'); if (pl) pl.innerHTML = SC.plan;
+      var pr = document.getElementById('act-price'); if (pr) pr.innerHTML = SC.price;
+      setTxt('act-unlock', 'Full plan credits unlock (' + SC.unlock + ')');
+      var taxRow = document.getElementById('act-tax-row');
+      if (SC.tax) { setTxt('act-tax', SC.tax); if (taxRow) taxRow.style.display = ''; }
+      else if (taxRow) { taxRow.style.display = 'none'; }
       setTxt('act-due', SC.due);
       setTxt('act-agree-text', SC.agree);
+      if (SC.cta) setTxt('act-confirm', SC.cta);
     }
     applyScenario();
 
