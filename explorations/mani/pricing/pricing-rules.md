@@ -67,7 +67,23 @@ When a Pro/Gold single user upgrades to a team plan:
 - **Renewal.** From the next billing cycle (next year) the user is billed the
   team plan price.
 
-## 5. Files
+## 5. Card layout and spacing (v6.1)
+
+The plan cards are absolutely positioned inside `#view-individual` / `#view-team`.
+A single in-flow spacer `<div style="height:Npx">` reserves their vertical room;
+the testimonials section below uses `margin: 120px 0 80px`.
+
+- The highlighted **Pro** card stays ~45px taller than Gold and floats up by 21px
+  (`top:-21px`), in both Individual and Team views. This is the intended hierarchy.
+- Attached cards in a joined row are equal height (Individual: Gold; Team: Gold + Enterprise).
+- **Whenever a card grows, grow the spacer too.** Size the spacer to the TALLEST
+  view (currently Team Pro, bottom ~880px) so the testimonials keep their gap. Rule
+  of thumb: testimonial top = spacer height + 120px margin; keep at least ~70px clear
+  below the tallest card. v6.1 spacer = `832px` (Team gap ~72px, Individual ~144px).
+- After any height change, verify in-browser that no card overlaps the testimonials
+  and nothing is clipped (measure `scrollHeight - clientHeight == 0` per card).
+
+## 6. Files
 
 - `v6.html`: public pricing page. Live:
   https://muditas-pai.github.io/design-protos/explorations/mani/pricing/v6.html
