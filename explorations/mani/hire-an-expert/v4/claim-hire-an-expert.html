@@ -201,6 +201,11 @@
     border:1px solid var(--border);border-radius:10px;padding:12px 14px;line-height:1.5;background:#fff}
   .claim-notes::placeholder{color:var(--ink3)}
   .claim-notes:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(10,25,37,.08)}
+  /* One action only: uploading hides the describe box; typing hides the uploader. */
+  .claim-box.mode-upload .claim-or,
+  .claim-box.mode-upload .claim-notes{display:none}
+  .claim-box.mode-text .claim-drop,
+  .claim-box.mode-text .claim-or{display:none}
   .claim-cta-note{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;color:#0f7a37;align-self:center}
   .claim-cta-note i{font-size:16px;color:var(--success)}
 
@@ -838,22 +843,32 @@
     openOnboarding('../onboarding/onboarding.html?' + qs.toString() + '&embed=1');
   }
 
-  // Landing upload box — filename chip + drag/drop (mirrors the widget's dropzone).
+  // Landing upload box — one action only: uploading hides the textarea, typing hides the uploader.
   (function(){
-    const drop = document.getElementById('claim-drop');
-    const inp  = document.getElementById('claim-file');
-    const card = document.getElementById('claim-file-card');
-    if (!drop || !inp || !card) return;
+    const box   = document.querySelector('.claim-box');
+    const drop  = document.getElementById('claim-drop');
+    const inp   = document.getElementById('claim-file');
+    const card  = document.getElementById('claim-file-card');
+    const notes = document.getElementById('claim-notes');
+    if (!box || !drop || !inp || !card || !notes) return;
     function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function syncMode(){
+      const hasFile = inp.files.length > 0;
+      const hasText = notes.value.trim() !== '';
+      box.classList.toggle('mode-upload', hasFile);   // file chosen → hide the describe box
+      box.classList.toggle('mode-text', hasText && !hasFile); // typing → hide the uploader
+    }
     function render(f){
-      if (!f){ card.innerHTML = ''; return; }
-      card.innerHTML =
+      card.innerHTML = f ? (
         '<div class="claim-file-chip"><span class="fi"><i class="ph-fill ph-file"></i></span>' +
         '<span class="fn">' + esc(f.name) + '</span>' +
-        '<button class="fx" type="button" aria-label="Remove"><i class="ph ph-x"></i></button></div>';
-      card.querySelector('.fx').addEventListener('click', () => { inp.value = ''; render(null); });
+        '<button class="fx" type="button" aria-label="Remove"><i class="ph ph-x"></i></button></div>'
+      ) : '';
+      if (f) card.querySelector('.fx').addEventListener('click', () => { inp.value = ''; render(null); syncMode(); });
+      syncMode();
     }
     inp.addEventListener('change', () => render(inp.files[0]));
+    notes.addEventListener('input', syncMode);
     ['dragenter','dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('is-drag'); }));
     ['dragleave','drop'].forEach(e => drop.addEventListener(e, () => drop.classList.remove('is-drag')));
     drop.addEventListener('drop', ev => {
