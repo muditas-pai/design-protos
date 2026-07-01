@@ -349,6 +349,24 @@
   .success-card p{margin-top:10px;font-size:15px;color:var(--ink2);line-height:1.55}
   .success-card p b{color:var(--ink);font-weight:700}
   .success-card .pay-btn{margin:28px auto 0;max-width:320px}
+
+  /* Claim mode — 72h→24h upgrade box on the confirmation step (hidden by default) */
+  #claim-upsell{display:none}
+  body.is-claim #claim-upsell{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    margin-top:18px;padding:16px 18px;border-radius:12px;
+    background:linear-gradient(135deg,#f5f8ff 0%,#eef2f7 100%);border:1px solid var(--border-brand)}
+  #claim-upsell.done{background:#f0fdf4;border-color:rgba(22,163,74,.3)}
+  .cu-left{min-width:220px;flex:1}
+  .cu-ttl{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:700;color:var(--navy)}
+  .cu-ttl i{font-size:18px}
+  .cu-sub{margin-top:4px;font-size:13px;color:var(--ink2);line-height:1.45}
+  .cu-btn{flex:0 0 auto;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;color:#fff;
+    background:var(--navy);border:none;border-radius:8px;padding:11px 18px;transition:.15s ease;white-space:nowrap}
+  .cu-btn:hover{background:#23303B}
+  .cu-done{display:none}
+  #claim-upsell.done .cu-btn{display:none}
+  #claim-upsell.done .cu-done{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;color:#0f7a37}
+  #claim-upsell.done .cu-done i{font-size:18px}
 </style>
 </head>
 <body>
@@ -475,6 +493,16 @@
         <div class="summary-row total"><span class="k">Paid today</span><span class="v"><span style="color:var(--ink2);font-size:.7em;vertical-align:.18em">$</span><span id="sum-total">750</span></span></div>
       </div>
 
+      <!-- Claim mode: offer a paid upgrade from 72h to 24h -->
+      <div id="claim-upsell">
+        <div class="cu-left">
+          <div class="cu-ttl"><i class="ph-bold ph-rocket-launch"></i>Need it faster?</div>
+          <div class="cu-sub">Your free deck lands in <b>72 hours</b>. Upgrade to <b>24-hour</b> delivery for <b>+$<span id="cu-rush">400</span></b>.</div>
+        </div>
+        <button class="cu-btn" type="button" onclick="upgrade24()">Upgrade to 24h · +$<span id="cu-rush2">400</span></button>
+        <div class="cu-done"><i class="ph-fill ph-check-circle"></i>Upgraded to 24-hour delivery</div>
+      </div>
+
       <div class="team">
         <div class="team-head">
           <div class="ttl"><i class="ph-bold ph-users-three"></i>Pairing you with a designer</div>
@@ -575,7 +603,7 @@
 <footer class="navfoot">
   <div class="navfoot-inner">
     <button class="btn btn-ghost" id="back" disabled style="display:none"><i class="ph-bold ph-arrow-left"></i>Back</button>
-    <span class="step-of"><span id="step-now">Step 1</span> of 4</span>
+    <span class="step-of"><span id="step-now">Step 1</span> of <span id="step-total">4</span></span>
     <button class="btn btn-primary" id="next">Continue <i class="ph-bold ph-arrow-right"></i></button>
   </div>
 </footer>
@@ -589,7 +617,16 @@
   const speed     = params.get('speed')    || 'standard';
   const hours     = +(params.get('hours') || 72);
   const total     = params.get('total')    || '750';
-  const days      = speed === 'sprint' ? 5 : (hours === 24 ? 1 : 3);
+  let   days      = speed === 'sprint' ? 5 : (hours === 24 ? 1 : 3);
+
+  // ── Gold claim mode ──────────────────────────────────────────────────────
+  // Free custom deck: no payment step, no slide-overage charge. Only paid action
+  // is the optional 72h→24h speed upgrade at the end.
+  const claim = params.get('claim') === 'gold';
+  const rush  = +(params.get('rush') || 400);
+  let   claimHours = 72;               // flips to 24 after an upgrade
+  let   payingUpgrade = false;         // true while the pay screen is handling the speed upgrade
+  if (claim) { days = 3; document.body.classList.add('is-claim'); }
 
   // ── Pricing engine (same logic as the landing page) ─────────────────────
   // Standard: $599 base (first 10) + $20/slide (11–20) + $30/slide (21+)
@@ -615,7 +652,7 @@
     setTxt('pay-btn-amt', m); setTxt('upi-amt', m);
     setTxt('pay-line-sub', curSlidesTxt + ' · ' + deliveryTxt);
     if (typeof step !== 'undefined' && step === 1 && typeof $next !== 'undefined' && $next)
-      $next.innerHTML = 'Proceed to Payment <i class="ph-bold ph-arrow-right"></i>';
+      $next.innerHTML = (claim ? 'Continue' : 'Proceed to Payment') + ' <i class="ph-bold ph-arrow-right"></i>';
   }
 
   // ── Reveal summary + enable Pay-now only after an upload ──────────────────
@@ -660,13 +697,32 @@
   }
 
   // ── Stripe-style pay screen control ───────────────────────────────────────
-  function goToPay(){ updateSummary(); document.body.classList.add('paying'); window.scrollTo(0, 0); }
-  function backFromPay(){ document.body.classList.remove('paying'); }
+  function goToPay(){
+    if (claim && !payingUpgrade){ step = 2; paint(); return; }   // free deck: no payment, go straight to Brand
+    updateSummary(); document.body.classList.add('paying'); window.scrollTo(0, 0);
+  }
+  function backFromPay(){ document.body.classList.remove('paying'); payingUpgrade = false; }
   function confirmPay(){
     document.body.classList.remove('paying');
+    if (payingUpgrade){ payingUpgrade = false; applyUpgrade24(); return; }
     setTxt('sum-total', (+currentTotal).toLocaleString('en-US'));
     setTxt('paid-amt', money(currentTotal));
     step = 2; paint();                          // straight to Brand, success banner shown inline
+  }
+  // Claim: optional 72h→24h speed upgrade, reusing the Stripe-style pay screen for +$rush.
+  function upgrade24(){
+    payingUpgrade = true;
+    currentTotal = rush; curSlidesTxt = 'Speed upgrade';
+    updateSummary();
+    setTxt('pay-line-sub', '72-hour → 24-hour delivery upgrade');
+    document.body.classList.add('paying'); window.scrollTo(0, 0);
+  }
+  function applyUpgrade24(){
+    claimHours = 24; days = 1;
+    const eta = addBusinessDays(new Date(), days).toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+    setTxt('sum-delivery', 'Custom deck · 24 hours');
+    setTxt('sum-eta', eta); setTxt('next-eta', eta);
+    const box = document.getElementById('claim-upsell'); if (box) box.classList.add('done');
   }
   function payTab(btn){
     document.querySelectorAll('.pay-tab').forEach(t => t.classList.toggle('active', t === btn));
@@ -677,6 +733,13 @@
   // ── Stepper navigation ────────────────────────────────────────────────────
   let step = 1;
   const TOTAL_STEPS = 3;
+  // Claim mode: no payment — drop the Payment dot + its connector so the stepper reads Upload → Brand → Done.
+  if (claim){
+    const payStep = document.querySelector('#stepper .step[data-step="2"]');
+    const payLine = payStep && payStep.nextElementSibling;
+    if (payLine && payLine.classList.contains('step-line')) payLine.remove();
+    if (payStep) payStep.remove();
+  }
   const $screens = document.querySelectorAll('.screen');
   const $steps   = document.querySelectorAll('#stepper .step');
   const $lines   = document.querySelectorAll('#stepper .step-line');
@@ -689,7 +752,8 @@
     document.body.classList.toggle('ob-modal', step === 1);   // upload step = modal; rest = full page
     // Stepper has 4 dots: Upload(0) Payment(1) Brand&Style(2) Done(3).
     // Content screens map: upload→0, brand&style→2, done→3. Payment(1) is marked done once paid.
-    const ai = (step === 1) ? 0 : step;
+    // Claim stepper is contiguous (Payment removed): upload→0, brand→1, done→2.
+    const ai = claim ? (step - 1) : ((step === 1) ? 0 : step);
     $steps.forEach((s,i) => {
       s.classList.toggle('is-current', i === ai);
       s.classList.toggle('is-done', i < ai);
@@ -697,9 +761,9 @@
     $lines.forEach((ln,i) => ln.classList.toggle('is-done', i < ai));
     $back.disabled = step === 1;
     $next.disabled = (step === 1) ? !hasUpload() : false;
-    $stepNow.textContent = 'Step ' + (ai + 1);
+    $stepNow.textContent = 'Step ' + (claim ? step : (ai + 1));
     if (step === 1){
-      $next.innerHTML = 'Proceed to Payment <i class="ph-bold ph-arrow-right"></i>';
+      $next.innerHTML = (claim ? 'Continue' : 'Proceed to Payment') + ' <i class="ph-bold ph-arrow-right"></i>';
     } else if (step === TOTAL_STEPS){
       $next.innerHTML = 'Open dashboard <i class="ph-bold ph-arrow-square-out"></i>';
     } else if (step === TOTAL_STEPS - 1){
@@ -924,6 +988,15 @@
   });
 
   function renderCount(count){
+    if (claim){
+      $countResult.className = 'count-result ok';
+      $countResult.innerHTML =
+        '<i class="ph-bold ph-check-circle"></i><div class="ctxt">' +
+          '<div class="ctitle">' + count + ' slides detected</div>' +
+          'Your free custom deck is covered by Gold. No slide limit, no extra charge.' +
+        '</div>';
+      return;
+    }
     if (speed === 'sprint'){
       $countResult.className = 'count-result ok';
       $countResult.innerHTML =
@@ -1029,6 +1102,26 @@
   document.getElementById('sum-eta').textContent = etaDate;
   document.getElementById('sum-total').textContent = (+total).toLocaleString('en-US');
   document.getElementById('next-eta').textContent = etaDate;
+
+  // ── Claim-mode copy overrides ─────────────────────────────────────────────
+  if (claim){
+    const q = s => document.querySelector(s);
+    document.getElementById('step-total').textContent = '3';
+    const h1 = q('.screen[data-screen="1"] h1'); if (h1) h1.textContent = 'Upload your document';
+    const pp = q('.screen[data-screen="1"] .panel-head p'); if (pp) pp.textContent = 'Drop in any document — a deck, doc, PDF, or notes. Our expert designers turn it into a polished, custom deck.';
+    const dztt = q('.dz-ttl'); if (dztt) dztt.textContent = 'Drag & drop your document here';
+    const dzfmt = q('.dz-fmt'); if (dzfmt) dzfmt.textContent = '.PPTX · .PDF · .DOCX · .KEY · .ZIP · one file';
+    const di = document.getElementById('deckinput'); if (di) di.setAttribute('accept', '.pptx,.pdf,.docx,.key,.zip,.txt,.md');
+    const mp = document.getElementById('modal-pay'); if (mp) mp.innerHTML = 'Continue <i class="ph-bold ph-arrow-right"></i>';
+    const pn = document.getElementById('plan-note-txt'); if (pn) pn.innerHTML = 'Your <b>free custom deck</b> is covered by Gold. No payment needed.';
+    const bb = q('.screen[data-screen="2"] .success-banner'); if (bb) bb.innerHTML = '<i class="ph-fill ph-check-circle"></i>Your <b>free custom deck</b> is claimed. Let\'s set up your project.';
+    setTxt('sum-project', 'Custom deck design');
+    setTxt('sum-slides', 'Your document');
+    setTxt('sum-delivery', 'Custom deck · 72 hours');
+    setTxt('sum-total', '0');
+    setTxt('cu-rush', rush.toLocaleString('en-US'));
+    setTxt('cu-rush2', rush.toLocaleString('en-US'));
+  }
 
   document.getElementById('decklink').addEventListener('input', refreshUploadState);
   updateSummary();
