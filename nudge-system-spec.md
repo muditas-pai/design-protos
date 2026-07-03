@@ -1,6 +1,6 @@
 # Feature Nudge System — Spec
 
-**Owner:** Mudita · **Drafted:** 3 Jul 2026 · **Status:** v0 draft for eng/DS review
+**Owner:** Mudita · **Drafted:** 3 Jul 2026 · **Status:** v0.2 draft for eng/DS review (updated 3 Jul 2026: CTA → checkout, Export-PPT nudge fires pre-tap, v1 desktop-only)
 
 **Primary goal:** boost payment conversions.
 **Secondary goal:** discoverability of new features.
@@ -43,7 +43,7 @@ Grounding: **[first-session-qualification](../resources/investigations/first-ses
 
 | Nudge | Trigger signals (router) | JTBD | Min. vessel | First-session? |
 |---|---|---|---|---|
-| **Export editable PPT** | export click / export-paywall hit | "I need this in PowerPoint" | one-liner | ✅ **v1** |
+| **Export editable PPT** | deck generation finished / deep edits done, **no export yet** — fires **pre-tap** (see note below) | "I need this in PowerPoint" | one-liner | ✅ **v1** |
 | **Remove P.AI branding** | published link, shared externally, export done | "this goes to a client/audience" | one-liner | ✅ **v1** |
 | **Invite a teammate** | shared deck, team/company email domain, manager+ role | "this is a team deck" | one-liner | ✅ |
 | **Set up a Brand Kit** | manual re-styling (colours/fonts), logo upload, marketing role | "must look on-brand" | demo/video | ✅ |
@@ -52,6 +52,8 @@ Grounding: **[first-session-qualification](../resources/investigations/first-ses
 | **Update data weekly** | inserted charts/data, finance/ops role, repeat visits | "recurring report" | short demo | later lifecycle |
 | **Set up knowledge graph** | multiple doc uploads, heavy doc-to-deck | "feed it my knowledge" | demo/video | later lifecycle |
 | **Hire an expert** | struggle signals (regen loops + abandons) at high-stakes role | "just do it for me" | rich card | later lifecycle |
+
+> **Export-PPT timing (decided 3 Jul 2026):** the nudge fires **before** the user taps export. Today's paywall only appears *after* the tap; the goal of this nudge is to grow the pool of users for whom tapping export is meaningful — not to redecorate the paywall. Trigger = upstream intent (deck finished generating / deep edits) with no export yet. The existing post-tap paywall stays untouched; an export-paywall hit remains a router signal for *other* nudges, not this one's show-moment.
 
 Later-lifecycle nudges must never show to a first-session user — the job can't exist yet.
 
@@ -133,9 +135,11 @@ Events, all carrying `nudge_id`, `manifestation`, `trigger_signal`, `session_id`
 ## 8. Rollout
 
 ```
- v1  PROVE IT   2 nudges (Remove branding, Export PPT) · embed-only · seams:
-                share-success + export-paywall · deterministic router · full
-                instrumentation · shipped AS an A/B (50/50 holdout)
+ v1  PROVE IT   2 nudges (Remove branding, Export PPT) · embed-only ·
+                desktop-only · seams: share-success + deck-generation-
+                finished (Export PPT fires pre-tap, before any paywall — §3)
+                · deterministic router · full instrumentation · shipped AS
+                an A/B (50/50 holdout)
                 → no ML dependency. Intent signals alone are high-precision.
 
  v2  WIDEN      + Invite teammate, Better models, Brand Kit · + tooltip & PIP
@@ -147,22 +151,27 @@ Events, all carrying `nudge_id`, `manifestation`, `trigger_signal`, `session_id`
                 + later-lifecycle nudges
 ```
 
-**v1 A/B:** primary metric = 7-day payment conversion, treatment vs holdout, cohort = users who hit a v1 seam. Secondary: nudge CTR, dismissal rate, export/branding feature adoption. Per-nudge attribution via `variant` + `nudge_id`.
+**v1 A/B:** primary metric = 7-day payment conversion, treatment vs holdout, cohort = users who hit a v1 seam. Secondary: nudge CTR, dismissal rate, export/branding feature adoption. Per-nudge attribution via `variant` + `nudge_id`. All nudge CTAs deep-link to **checkout** (decided 3 Jul 2026).
 
 ---
 
 ## 9. Open questions
 
+- [ ] **Seam traffic + A/B power:** weekly first-session volume per v1 seam and baseline conversion per seam cohort — sizing investigation running (3 Jul 2026). Determines whether the 50/50 A/B is readable and in how many weeks.
 - [ ] Cooldown/caps values — v1 defaults above are guesses; tune on data.
 - [ ] Arbitration tiebreak beyond conversion-beats-discoverability (recency? scarcity?).
-- [ ] Mobile: signals differ (mobile is a *negative* static signal in the P model) — do v1 seams even fire enough on mobile to matter?
 - [ ] Copy/tone per `pai-visual-language` — how salesy is too salesy? Answer in mockups.
-- [ ] Pricing interplay: does a nudge deep-link to checkout, feature page, or trial?
 - [ ] Real-time scoring feasibility + cost (blocks v3 only).
+
+### Resolved (3 Jul 2026)
+
+- [x] **CTA destination:** always deep-links to **checkout**, for now.
+- [x] **Export-PPT nudge timing:** fires **before** the export tap; post-tap paywall unchanged (§3).
+- [x] **Mobile:** v1 is **desktop-only** — mobile is a negative static signal in the P model and v1 seams are unlikely to fire enough there.
 
 ## 10. Design to-dos (Mudita)
 
 - [ ] Mock the share-success embed (Remove branding) — the flagship moment.
-- [ ] Mock the export-paywall embed (Export PPT).
+- [ ] Mock the pre-export embed (Export PPT) — rides the deck-generation-finished surface.
 - [ ] Define the PIP card + tooltip patterns for v2.
 - [ ] Dismissal affordance + "don't show again" pattern.
