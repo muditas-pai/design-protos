@@ -207,6 +207,9 @@ off the picked variant. It doesn't know our conventions, so steer it:
 - Headlines use **setup → payoff** (lighter setup line, then a darker, bolder payoff).
 - Show **real product** (slide thumbnails, the editor), not abstract "AI" metaphors.
 - Copy is short, plain, human. Avoid "empower / unlock / seamless / revolutionize".
+- **Never use em dashes in any user-facing copy** (the `—` character or the `&mdash;` HTML
+  entity). Use a comma, period, colon, or parentheses instead. Applies to every proto, spec,
+  index card, and UI string we ship.
 - Apply the `emil-design-eng`, `make-interfaces-feel-better`, and `pai-visual-language` skills
   when relevant.
 
