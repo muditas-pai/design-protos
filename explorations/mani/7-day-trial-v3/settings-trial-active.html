@@ -165,6 +165,9 @@
     /* Billing */
     .bill-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
     .bill-plan { font-size: 30px; font-weight: 500; }
+    .off-badge { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; margin-left: 8px;
+      font: 700 12px "Inter", sans-serif; color: #15803d; background: #e7f6ec; padding: 5px 11px; border-radius: 999px; }
+    .off-badge i { font-size: 14px; }
     .bill-meta { color: var(--fg-2); margin-top: 4px; }
     .btn-dark { height: 40px; padding: 0 22px; border: 0; border-radius: 8px; background: var(--ink);
       color: #fff; font: 500 14px "Inter", sans-serif; cursor: pointer; }
@@ -640,7 +643,7 @@
         <section class="panel" data-panel="billing">
           <div class="bill-head">
             <div>
-              <div class="bill-plan" id="co-bill-plan">Pro</div>
+              <div class="bill-plan" id="co-bill-plan">Pro <span class="off-badge" id="co-off-badge" hidden><i class="ph-fill ph-seal-percent"></i>US$60 off applied</span></div>
               <div class="bill-meta" id="co-bill-meta">$240/year · 1 seat · 5,000 Credits</div>
             </div>
           </div>
@@ -1042,9 +1045,29 @@
     // Cancel flow (default): discount + benefits (close-nudge) -> if still cancelling, ask why -> confirm.
     // ?cancel=reason | simple open a single modal; ?cancel=gauntlet keeps the old 5-step stepper.
     var cancelVariant = (new URLSearchParams(location.search).get('cancel') || 'steps').toLowerCase();
-    var chained = cancelVariant === 'steps'; // offer -> reason -> confirm
+    // ?offer=taken: user already accepted the US$60 offer and kept the plan.
+    // The discount lever is spent, so cancelling skips the offer -> straight to reason -> confirm.
+    var offerTaken = new URLSearchParams(location.search).get('offer') === 'taken';
+    var chained = cancelVariant === 'steps' || offerTaken; // reason -> confirm
+
+    if (offerTaken) {
+      document.getElementById('co-off-badge').hidden = false;
+      document.getElementById('co-bill-meta').textContent = 'US$180/year · 1 seat · 5,000 Credits';
+      document.getElementById('co-invoice-up').textContent = 'Upcoming Invoice: US$180.00 on June 16, 2027';
+      document.getElementById('co-confirm-p').innerHTML = 'You’re already on your lowest price — Pro at <b>US$180</b>, US$60 off. Cancel now and you lose that rate, and everything you’ve created locks right away:';
+      // add the lost-discount row to the confirm "what you lose" list
+      var wyl = document.querySelector('#cancelModal .wyl');
+      if (wyl) {
+        var row = document.createElement('div');
+        row.className = 'wyl-row';
+        row.innerHTML = '<i class="ph-fill ph-seal-percent"></i><b>Your US$60 loyalty discount</b><span class="tag">Lost</span>';
+        wyl.insertBefore(row, wyl.firstChild);
+      }
+    }
+
     document.querySelector('[data-cancel-open]').addEventListener('click', function () {
       if (cancelLocked) return;
+      if (offerTaken) { reasonModal.classList.add('is-open'); return; } // discount already used — skip the offer
       var target = cancelVariant === 'reason' ? reasonModal
         : cancelVariant === 'simple' ? cancelModal
         : cancelVariant === 'gauntlet' ? (stepReset(), stepModal)
