@@ -271,6 +271,14 @@
     .dc-mid { flex: 1; min-width: 0; }
     .dc-name { font-size: 15px; font-weight: 700; color: #171717; }
     .dc-cred { font-size: 13px; font-weight: 600; color: #005eff; margin-top: 2px; }
+    /* paid-tier credit counts: count-up on open + soft shimmer sweep */
+    .dc-cred-num { display: inline-block; min-width: 42px;
+      background: linear-gradient(100deg, #005eff 30%, #66a5ff 50%, #005eff 70%);
+      background-size: 200% 100%; -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: cred-shimmer 2.4s linear infinite; }
+    @keyframes cred-shimmer { from { background-position: 120% 0; } to { background-position: -80% 0; } }
+    @media (prefers-reduced-motion: reduce) { .dc-cred-num { animation: none; -webkit-text-fill-color: #005eff; color: #005eff; } }
     .dc-price { font-size: 15px; font-weight: 600; color: #171717; white-space: nowrap; }
     .dc-price .strike { text-decoration: line-through; color: #a3a3a3; font-weight: 500; margin-right: 6px; }
     .dc-summary { margin-top: auto; padding-top: 18px; }
@@ -545,7 +553,7 @@
                 <span class="dc-dot"></span>
                 <span class="dc-mid">
                   <span class="dc-name">Pro Plan</span>
-                  <div class="dc-cred">5,000 Credits</div>
+                  <div class="dc-cred"><span class="dc-cred-num" data-count="5000">5,000</span> Credits</div>
                 </span>
                 <span class="dc-price"><span class="strike">$240</span>$180/year</span>
               </div>
@@ -553,7 +561,7 @@
                 <span class="dc-dot"></span>
                 <span class="dc-mid">
                   <span class="dc-name">Gold Plan</span>
-                  <div class="dc-cred">50,000 Credits</div>
+                  <div class="dc-cred"><span class="dc-cred-num" data-count="50000">50,000</span> Credits</div>
                 </span>
                 <span class="dc-price">$1,200/year</span>
               </div>
@@ -815,6 +823,22 @@
       r.addEventListener('click', function () { state.plan = r.dataset.dcPlan; renderDirect(); });
     });
 
+    /* count-up: 0 -> target on each direct-checkout open */
+    function countUpCredits() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      document.querySelectorAll('.dc-cred-num').forEach(function (el) {
+        var target = parseInt(el.dataset.count, 10);
+        var t0 = performance.now(), dur = 900;
+        function step(t) {
+          var p = Math.min(1, (t - t0) / dur);
+          var eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(target * eased).toLocaleString('en-US');
+          if (p < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      });
+    }
+
     /* offer countdown, ticks down from 59:56 */
     var endsLeft = 59 * 60 + 56, endsTimer = null;
     function tickEnds() {
@@ -859,6 +883,7 @@
       document.querySelector('.m-foot').style.display = state.direct ? 'none' : '';
       if (state.direct) {
         renderDirect();
+        countUpCredits();
         if (!endsTimer) endsTimer = setInterval(tickEnds, 1000);
       } else {
         render();
