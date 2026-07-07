@@ -410,15 +410,15 @@
 
       <section class="hero">
         <h1>Your next presentation, Manivasakan?</h1>
-        <div class="prompt" data-credit-action>
+        <div class="prompt" data-credit-action="new-deck">
           <div class="prompt-field">
             <span class="ph-text">Type here to start, or <u>drop in a file</u></span>
             <i class="ph ph-upload-simple"></i>
           </div>
         </div>
         <div class="pills">
-          <button class="pill" data-credit-action><span class="pill-ic"><i class="ph-fill ph-file-arrow-up"></i></span>Upload &amp; share link</button>
-          <button class="pill" data-credit-action><span class="pill-ic"><i class="ph-fill ph-microsoft-powerpoint-logo"></i></span>Import PPT</button>
+          <button class="pill" data-credit-action="import-ppt"><span class="pill-ic"><i class="ph-fill ph-file-arrow-up"></i></span>Upload &amp; share link</button>
+          <button class="pill" data-credit-action="import-ppt"><span class="pill-ic"><i class="ph-fill ph-microsoft-powerpoint-logo"></i></span>Import PPT</button>
           <button class="pill"><span class="pill-ic"><i class="ph-fill ph-pencil-ruler"></i></span>Hire an Expert</button>
         </div>
       </section>
@@ -527,10 +527,10 @@
           <!-- direct flow: upgrade radio list + discount summary -->
           <div id="directPanel" style="display:none;flex-direction:column;flex:1;min-height:0;">
             <div class="dc-head">
-              <span class="dc-title">You've used all your <span class="dc-title-cr">credits</span></span>
+              <span class="dc-title" id="dcTitle">You've used all your <span class="dc-title-cr">credits</span></span>
               <button class="dc-compare" id="comparePlans">Compare Plans<i class="ph ph-arrow-right"></i></button>
             </div>
-            <div class="dc-sub">Get more credits with a plan. Credits refill every month.</div>
+            <div class="dc-sub" id="dcSub">Get more credits with a plan.</div>
 
             <div class="dc-plans" role="radiogroup" aria-label="Plan">
               <div class="dc-row" data-dc-plan="basic" role="radio" aria-checked="false">
@@ -712,7 +712,7 @@
       if (!doc.querySelector('.zc-subline')) {
         var sub = doc.createElement('p');
         sub.className = 'zc-subline';
-        sub.textContent = 'Pick a plan to keep creating. Credits refill every month.';
+        sub.textContent = 'Pick a plan to keep creating.';
         var container = doc.querySelector('body > .relative.mx-auto');
         if (container) container.appendChild(sub);
       }
@@ -739,11 +739,16 @@
     /* every credit action on the dashboard routes to the paywall.
        Default: pricing modal first. ?flow=direct skips it and opens checkout straight. */
     var DIRECT = new URLSearchParams(location.search).get('flow') === 'direct';
-    function openPaywall() { if (DIRECT) { openCheckout('pro', true); } else { openPricing(); } }
+    function openPaywall(tp) {
+      applyTouchpoint(tp);
+      if (DIRECT) { openCheckout('pro', true); } else { openPricing(); }
+    }
     document.querySelectorAll('[data-credit-action]').forEach(function (el) {
-      el.addEventListener('click', function (e) { e.preventDefault(); openPaywall(); });
+      el.addEventListener('click', function (e) {
+        e.preventDefault(); openPaywall(el.dataset.creditAction || 'generic');
+      });
     });
-    $('#getCreditsBtn').addEventListener('click', openPaywall);
+    $('#getCreditsBtn').addEventListener('click', function () { openPaywall('generic'); });
 
     /* ── Checkout modal (v5.1 Stripe pattern) ── */
     var PLANS = {
@@ -764,6 +769,29 @@
     };
     var state = { plan: 'pro', bill: 'annual', seats: 1, direct: false };
     var scrim = $('#checkout');
+
+    /* touchpoint-based messaging: what the user was doing when credits ran out.
+       Keys map to the product touchpoints: createNewPresentation, slide/add,
+       slide/new, pptx/v3/pptxupload. Preview any with ?tp=<key>. */
+    var CR = '<span class="dc-title-cr">credits</span>';
+    var TOUCHPOINTS = {
+      'generic':   { title: 'You’ve used all your ' + CR,
+                     sub: 'Get more credits with a plan.' },
+      'new-deck':  { title: 'You’re out of ' + CR + ' for this new deck',      /* createNewPresentation */
+                     sub: 'Pick a plan and we’ll generate your deck right away.' },
+      'slide-add': { title: 'No ' + CR + ' left to generate this slide',            /* slide/add */
+                     sub: 'Pick a plan and your slide will be ready in seconds.' },
+      'slide-new': { title: 'No ' + CR + ' left to add a new slide',                /* slide/new */
+                     sub: 'Pick a plan to keep building this deck.' },
+      'import-ppt':{ title: 'No ' + CR + ' left to import your PPT',                /* pptx/v3/pptxupload */
+                     sub: 'Pick a plan and we’ll finish your import.' },
+    };
+    var TP_FORCE = new URLSearchParams(location.search).get('tp');
+    function applyTouchpoint(key) {
+      var tp = TOUCHPOINTS[TP_FORCE] || TOUCHPOINTS[key] || TOUCHPOINTS.generic;
+      $('#dcTitle').innerHTML = tp.title;
+      $('#dcSub').textContent = tp.sub;
+    }
 
     /* direct flow pricing: annual list price, Pro carries the $60 close-nudge offer */
     var DC = {
