@@ -380,6 +380,7 @@
     .cn2-solo .cn2-right { padding: 30px; }
     .cn2-right { flex: 1; display: flex; flex-direction: column; padding: 30px 32px; min-width: 0; }
     .cn2-body { flex: 1; min-height: 0; overflow-y: auto; }
+    .gb-emoji { font-size: 44px; line-height: 1; margin: 8px 0 14px; }
     .cn2-lead { font-size: 18px; font-weight: 700; color: #171717; margin-bottom: 4px; }
     .cn2-p { font-size: 14px; color: #525252; line-height: 1.6; margin-bottom: 16px; }
     .cn2-foot { margin-top: 18px; display: flex; gap: 12px; justify-content: flex-end; }
@@ -936,14 +937,14 @@
     </div>
   </div>
 
-  <!-- ── Cancel trial confirm modal ── -->
+  <!-- ── Step 1: are you sure + what you lose ── -->
   <div class="confirm-modal" id="cancelModal">
     <div class="cn-stack">
       <div class="cn2-box cn2-solo" role="dialog" aria-modal="true">
         <div class="cn2-right">
           <div class="cn2-body">
-            <p class="cn2-lead">Cancel your renewal?</p>
-            <p class="cn2-p" id="co-confirm-p">You still have <b>7 days of Pro, free</b>, no charge until your trial ends. Cancel now, though, and everything you've created locks right away:</p>
+            <p class="cn2-lead">Are you sure you want to cancel?</p>
+            <p class="cn2-p" id="co-confirm-p">Your Pro plan powers everything you've built. Cancel and you'll lose access to:</p>
             <div class="wyl">
               <div class="wyl-row"><i class="ph ph-projector-screen"></i><b>42 presentations</b><span class="tag">Locked</span></div>
               <div class="wyl-row"><i class="ph-fill ph-sparkle"></i><b>5,000 credits</b><span class="tag">Reset to 0</span></div>
@@ -951,11 +952,30 @@
             </div>
           </div>
           <div class="cn2-foot">
-            <button class="sbtn sbtn-danger-ghost" data-cancel-confirm>Cancel renewal</button>
+            <button class="sbtn sbtn-danger-ghost" data-cancel-confirm>Continue to cancel</button>
             <button class="sbtn sbtn-navy" data-cancel-close>Keep my plan</button>
           </div>
         </div>
         <button class="cn-close" data-cancel-close aria-label="Close"><i class="ph ph-x"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Final: goodbye after cancelling ── -->
+  <div class="confirm-modal" id="goodbyeModal">
+    <div class="cn-stack">
+      <div class="cn2-box cn2-solo" role="dialog" aria-modal="true">
+        <div class="cn2-right" style="text-align:center; align-items:center;">
+          <div class="cn2-body" style="display:flex; flex-direction:column; align-items:center;">
+            <div class="gb-emoji">👋</div>
+            <p class="cn2-lead" style="text-align:center;">Sad to see you go</p>
+            <p class="cn2-p" style="text-align:center;">Your renewal is cancelled. Come back anytime, your <b>US$60 discount</b> will be right here waiting for you.</p>
+          </div>
+          <div class="cn2-foot" style="justify-content:center;">
+            <button class="sbtn sbtn-navy" data-goodbye-close style="min-width:160px;">Done</button>
+          </div>
+        </div>
+        <button class="cn-close" data-goodbye-close aria-label="Close"><i class="ph ph-x"></i></button>
       </div>
     </div>
   </div>
@@ -1053,6 +1073,7 @@
     var cancelModal = document.getElementById('cancelModal');
     var offerModal = document.getElementById('offerModal');
     var reasonModal = document.getElementById('reasonModal');
+    var goodbyeModal = document.getElementById('goodbyeModal');
     var stepModal = document.getElementById('stepModal');
 
     // Cancel flow (default): discount + benefits (close-nudge) -> if still cancelling, ask why -> confirm.
@@ -1081,13 +1102,13 @@
       }
     }
 
+    // Default flow order: (1) are you sure + what you lose -> (2) reason -> (3) discount offer -> (4) goodbye.
     document.querySelector('[data-cancel-open]').addEventListener('click', function () {
       if (cancelLocked) return;
-      if (offerTaken) { reasonModal.classList.add('is-open'); return; } // discount already used, skip the offer
       var target = cancelVariant === 'reason' ? reasonModal
         : cancelVariant === 'simple' ? cancelModal
         : cancelVariant === 'gauntlet' ? (stepReset(), stepModal)
-        : offerModal;
+        : cancelModal; // default (and offerTaken): start at "are you sure"
       target.classList.add('is-open');
     });
 
@@ -1147,8 +1168,10 @@
     reasonModal.addEventListener('click', function (e) { if (e.target === reasonModal) reasonModal.classList.remove('is-open'); });
     document.querySelector('[data-reason-confirm]').addEventListener('click', function () {
       reasonModal.classList.remove('is-open');
-      if (chained) cancelModal.classList.add('is-open');
-      else showToast('Renewal cancelled. Pro access stays until June 16, 2027.');
+      if (!chained) { showToast('Renewal cancelled. Pro access stays until June 16, 2027.'); return; } // ?cancel=reason
+      if (offerTaken) { openGoodbye(); return; } // discount already used, no second offer
+      personalizeOffer();
+      offerModal.classList.add('is-open'); // reason -> discount offer
     });
 
     function showToast(msg) {
@@ -1165,7 +1188,7 @@
     });
     document.querySelector('[data-offer-continue]').addEventListener('click', function () {
       offerModal.classList.remove('is-open');
-      (chained ? reasonModal : cancelModal).classList.add('is-open');
+      openGoodbye(); // declined the discount -> cancel + goodbye
     });
 
     // ── close-nudge internals: feature switch + $60 digit roll + countdown ──
@@ -1218,11 +1241,30 @@
     cancelModal.addEventListener('click', function (e) { if (e.target === cancelModal) cancelModal.classList.remove('is-open'); });
     document.querySelector('[data-cancel-confirm]').addEventListener('click', function () {
       cancelModal.classList.remove('is-open');
-      var t = document.getElementById('toast');
-      document.getElementById('toastMsg').textContent = 'Renewal cancelled. Pro access stays until June 16, 2027.';
-      t.classList.add('show');
-      setTimeout(function () { t.classList.remove('show'); }, 3200);
+      if (chained) reasonModal.classList.add('is-open'); // step 1 -> reason
+      else showToast('Renewal cancelled. Pro access stays until June 16, 2027.'); // ?cancel=simple
     });
+
+    // goodbye (final) + offer personalisation
+    function openGoodbye() { goodbyeModal.classList.add('is-open'); }
+    document.querySelectorAll('[data-goodbye-close]').forEach(function (el) {
+      el.addEventListener('click', function () { goodbyeModal.classList.remove('is-open'); });
+    });
+    goodbyeModal.addEventListener('click', function (e) { if (e.target === goodbyeModal) goodbyeModal.classList.remove('is-open'); });
+    function personalizeOffer() {
+      var checked = reasonModal.querySelector('input[name="reason"]:checked');
+      var eb = offerModal.querySelector('.cn-eyebrow p');
+      var map = {
+        expensive: 'We hear you on price. Here’s US$60 off to stay.',
+        unused: 'Give Pro another try, with US$60 off, just for you.',
+        missing: 'Still worth a look, and now US$60 cheaper.',
+        alternative: 'Before you switch, here’s US$60 off to stay.',
+        bugs: 'We’re on it. Here’s US$60 off while we make things right.',
+        break: 'Take a breather, here’s US$60 off for when you’re back.',
+        other: 'Before you cancel your renewal, here’s a one-time discount to stay, just for you.'
+      };
+      if (eb) eb.textContent = (checked && map[checked.value]) || map.other;
+    }
 
     // ── checkout modal ──
     var cmodal = document.getElementById('cmodal');
