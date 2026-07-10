@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>" />
+  <title>Onboarding — designation capture in chat</title>
+
+  <!-- Fonts + icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+  <!-- Design system -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    :root { --ease-out: cubic-bezier(0.16, 1, 0.3, 1); }
+    * { -webkit-font-smoothing: antialiased; }
+    body { background: #ffffff; }
+
+    .stage { display: none; }
+    .stage.is-active { display: block; animation: stageIn .4s var(--ease-out) both; }
+    @keyframes stageIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    /* nav circular buttons (back / close) */
+    .nav-circle { width: 40px; height: 40px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border-secondary); background: #fff; color: var(--text-primary); box-shadow: 0 1px 2px rgba(11,15,20,.05);
+      transition: box-shadow .2s var(--ease-out), background .2s var(--ease-out); }
+    .nav-circle:hover { box-shadow: 0 3px 10px rgba(11,15,20,.10); }
+
+    /* prompt-screen toolbar buttons (Figma: white tertiary, rounded-lg, ~36px) */
+    .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 8px;
+      background: #fff; border: 1px solid var(--border-secondary); box-shadow: 0 1px 2px rgba(11,15,20,.04);
+      font-size: 13px; font-weight: 500; color: var(--text-primary); cursor: pointer; transition: box-shadow .15s var(--ease-out); }
+    .tb-btn:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.14), 0 1px 2px rgba(11,15,20,.05); }
+    .tb-icon { width: 36px; padding: 0; justify-content: center; }
+
+    /* prompt box — dark thin ring (Figma focused card) */
+    .prompt-box { border-radius: 16px; background: #fff;
+      box-shadow: 0 0 0 1.5px rgba(11,15,20,.88), 0 24px 40px -18px rgba(11,15,20,.10), 0 2px 4px rgba(11,15,20,.05); }
+
+    /* suggestion rows */
+    .sugg { transition: box-shadow .15s var(--ease-out), transform .12s var(--ease-out); }
+    .sugg:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.14), 0 4px 10px -2px rgba(11,15,20,.08); transform: translateY(-1px); }
+    .sugg:active { transform: translateY(.5px); }
+
+    /* pai mark */
+    .pai-mark { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(160deg,#3E5DF7,#0055ED); display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:10px; flex:none; }
+
+    /* shimmer text (loading line) */
+    .shimmer { background: linear-gradient(90deg, rgba(115,115,115,.9) 0%, rgba(115,115,115,.9) 40%, rgba(23,23,23,1) 50%, rgba(115,115,115,.9) 60%, rgba(115,115,115,.9) 100%);
+      background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.7s linear infinite; }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    /* streamed reasoning rows */
+    .reason { opacity: 0; transform: translateY(6px); animation: reasonIn .5s var(--ease-out) forwards; }
+    @keyframes reasonIn { to { opacity: 1; transform: none; } }
+
+    /* soft callout card (works like the "Get notified" card) */
+    .callout { opacity: 0; transform: translateY(10px); animation: reasonIn .5s var(--ease-out) forwards; }
+
+    /* combobox dropdown */
+    .combo-menu { box-shadow: 0 0 0 1px rgba(11,15,20,.08), 0 12px 28px -8px rgba(11,15,20,.16); }
+    .combo-opt { transition: background .12s var(--ease-out); }
+    .combo-opt:hover, .combo-opt.active { background: var(--bg-tertiary); }
+
+    textarea.prompt { resize: none; outline: none; }
+    .proto-bar { backdrop-filter: blur(8px); background: rgba(255,255,255,.82); }
+    .step-dot { transition: all .3s var(--ease-out); }
+  </style>
+</head>
+
+<body class="pai">
+
+  <!-- ============ Proto control bar (scaffolding) ============ -->
+  <div class="proto-bar fixed top-0 left-0 right-0 z-[100] border-b border-border-tertiary flex items-center gap-3 px-4 h-11">
+    <span class="text-body-xs-semibold text-text-tertiary uppercase" style="letter-spacing:.06em">Proto</span>
+    <span class="text-body-sm-medium text-text-secondary">Onboarding · designation capture in chat</span>
+    <div class="flex items-center gap-1.5 ml-2" id="stepDots"></div>
+    <div class="ml-auto flex items-center gap-1">
+      <button onclick="prevStage()" class="button-style button-small button-ghost icon-only" title="Back"><i class="ph ph-arrow-left"></i></button>
+      <button onclick="restart()" class="button-style button-small button-ghost" title="Restart"><i class="ph ph-arrow-counter-clockwise mr-1"></i>Restart</button>
+    </div>
+  </div>
+
+  <!-- ============================= STAGE 1 — Prompt screen (faithful new_dev replica) ============================= -->
+  <section class="stage is-active" id="stage-prompt">
+    <div class="min-h-screen w-full pt-11">
+      <!-- top nav -->
+      <div class="w-full px-6 pt-4 flex items-center">
+        <button class="nav-circle" title="Back"><i class="ph ph-arrow-left text-[18px]"></i></button>
+        <button class="nav-circle ml-auto" title="Close"><i class="ph ph-x text-[18px]"></i></button>
+      </div>
+
+      <div class="w-full max-w-[600px] mx-auto px-6">
+        <!-- title -->
+        <h1 class="text-center text-[30px] sm:text-[34px] leading-tight tracking-[-0.3px] font-normal text-text-primary mt-6">Describe your deck, or upload a file</h1>
+
+        <!-- toolbar row -->
+        <div class="flex items-center mt-9">
+          <button class="tb-btn"><i class="ph ph-upload-simple text-[15px]"></i>Upload Files<i class="ph ph-caret-down text-[11px] text-text-tertiary"></i></button>
+          <div class="ml-auto flex items-center gap-2">
+            <button class="tb-btn"><i class="ph ph-stack text-[15px]"></i>Slide Count<i class="ph ph-caret-down text-[11px] text-text-tertiary"></i></button>
+            <button class="tb-btn"><i class="ph ph-brain text-[15px]"></i>AI Model<i class="ph ph-caret-down text-[11px] text-text-tertiary"></i></button>
+            <button class="tb-btn tb-icon" title="Settings"><i class="ph ph-sliders-horizontal text-[15px]"></i></button>
+          </div>
+        </div>
+
+        <!-- prompt box -->
+        <div class="prompt-box mt-3 px-4 pt-4 pb-3">
+          <div class="flex items-center gap-2 text-text-tertiary">
+            <i class="ph ph-pencil-simple text-[16px]"></i>
+            <textarea id="promptInput" class="prompt flex-1 text-body-lg-regular text-text-primary bg-transparent placeholder:text-text-tertiary" rows="1" placeholder="Type here or"></textarea>
+          </div>
+          <div class="pl-6 -mt-6 pointer-events-none text-text-tertiary text-body-lg-regular flex items-center gap-1" id="ghostHint">
+            <span class="opacity-0">Type here or</span>
+            <i class="ph ph-upload-simple text-[15px]"></i>
+            <span class="underline underline-offset-2">drop in a file</span>
+          </div>
+          <div style="height:150px"></div>
+        </div>
+
+        <!-- suggestions -->
+        <div class="mt-7 pb-16">
+          <p class="text-body-base-semibold text-text-primary mb-3">Leaders are creating presentations for</p>
+          <div class="space-y-2.5" id="suggList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== STAGE 2 — Chat flow: generation + soft designation capture (Figma pattern) ====================== -->
+  <section class="stage" id="stage-chat">
+    <div class="min-h-screen w-full pt-11">
+      <div class="w-full px-6 pt-4 flex items-center">
+        <button onclick="prevStage()" class="nav-circle" title="Back"><i class="ph ph-arrow-left text-[18px]"></i></button>
+        <button class="nav-circle ml-auto" title="Close"><i class="ph ph-x text-[18px]"></i></button>
+      </div>
+
+      <div class="w-full max-w-[560px] mx-auto px-6 pb-24">
+        <!-- echoed prompt bubble -->
+        <div class="flex justify-end mt-3">
+          <div class="max-w-[82%] rounded-2xl rounded-br-md bg-bg-tertiary px-4 py-2.5">
+            <p id="echoPrompt" class="text-body-sm-regular text-text-primary leading-snug">Board update for deck.in for Q4 covering revenue performance vs target, OKR progress, and 2026 strategic priorities for a 10-person executive team</p>
+          </div>
+        </div>
+
+        <!-- generation stream -->
+        <div class="mt-6 flex items-start gap-2">
+          <span class="pai-mark mt-0.5"><i class="ph-fill ph-sparkle" style="font-size:9px"></i></span>
+          <div class="flex-1">
+            <p id="loadingLine" class="text-body-sm-medium"><span class="shimmer">Mulling over a few directions…</span></p>
+            <div class="mt-3 space-y-2.5" id="reasonRows"></div>
+
+            <!-- soft callout slot (email → designation) -->
+            <div id="calloutSlot" class="mt-4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // ---------- Data ----------
+    // Suggestion rows on the prompt screen (faithful to new_dev leadership persona).
+    const suggestions = [
+      { icon: "🏛️", text: "Q4 revenue performance and 2026 strategic priorities" },
+      { icon: "🎯", text: "Q3 OKR progress with risks and recommended actions" },
+      { icon: "📁", text: "Q3 results team milestones and 6-month priorities" },
+    ];
+
+    // Designation options (searchable). Seeded to match the Figma example (marketing-leaning),
+    // but searchable across the full set — mirrors getDesignationOptions(role).
+    const designationOptions = [
+      "Marketing Manager", "Brand Manager", "Performance Marketing Manager", "Product Marketing Manager",
+      "Growth Marketing Manager", "Director of Marketing", "VP Marketing", "Chief Marketing Officer (CMO)",
+      "Head of Department", "Managing Director", "VP Operations", "General Manager",
+      "Director", "Chief Executive Officer", "Chief Operating Officer", "President",
+    ];
+
+    const REASONS = [
+      { title: "Analysing strategy recommendation", caret: "caret-right", body: null },
+      { title: "Confirming company details", caret: "caret-down", body: "I've identified “deck.in” as the company, likely pai.com. Now, I need to confirm this with you and ensure the domain is correct before proceeding with the business flow." },
+    ];
+
+    // ---------- State ----------
+    const stages = ["stage-prompt", "stage-chat"];
+    let stageIdx = 0;
+    let selectedDesignation = "";
+    let emailDone = false;
+
+    // ---------- Stage nav ----------
+    function renderDots() {
+      document.getElementById("stepDots").innerHTML = stages.map((_, i) =>
+        `<span class="step-dot rounded-full" style="width:${i===stageIdx?18:6}px;height:6px;background:${i===stageIdx?'#0A1925':(i<stageIdx?'#a3a3a3':'#E5E5E5')}"></span>`).join("");
+    }
+    function showStage(i) {
+      stageIdx = Math.max(0, Math.min(stages.length - 1, i));
+      stages.forEach((id, idx) => document.getElementById(id).classList.toggle("is-active", idx === stageIdx));
+      renderDots();
+      window.scrollTo({ top: 0 });
+      if (stages[stageIdx] === "stage-chat") runChat();
+    }
+    function prevStage() { showStage(stageIdx - 1); }
+    function restart() {
+      selectedDesignation = ""; emailDone = false;
+      document.getElementById("promptInput").value = "";
+      document.getElementById("ghostHint").style.display = "";
+      showStage(0);
+    }
+
+    // ---------- Stage 1 ----------
+    function renderSuggestions() {
+      document.getElementById("suggList").innerHTML = suggestions.map(s => `
+        <button onclick="pickSuggestion('${s.text.replace(/'/g,"\\'")}')"
+          class="sugg w-full flex items-center gap-3 rounded-xl bg-bg-elevated border border-border-secondary px-4 py-3 text-left">
+          <span class="w-8 h-8 rounded-lg bg-bg-secondary flex items-center justify-center text-[16px]">${s.icon}</span>
+          <span class="text-body-base-regular text-text-primary">${s.text}</span>
+        </button>`).join("");
+    }
+    function pickSuggestion(t) {
+      document.getElementById("promptInput").value = t;
+      document.getElementById("ghostHint").style.display = "none";
+      goToChat();
+    }
+    // hide the "drop in a file" ghost hint once typing
+    function onPromptType() {
+      const v = document.getElementById("promptInput").value;
+      document.getElementById("ghostHint").style.display = v ? "none" : "";
+    }
+    function goToChat() {
+      const v = document.getElementById("promptInput").value.trim();
+      if (v) document.getElementById("echoPrompt").textContent = v;
+      showStage(1);
+    }
+
+    // ---------- Stage 2: generation + soft capture ----------
+    let chatRan = false;
+    function runChat() {
+      const rows = document.getElementById("reasonRows");
+      const slot = document.getElementById("calloutSlot");
+      rows.innerHTML = ""; slot.innerHTML = "";
+      selectedDesignation = ""; emailDone = false;
+
+      // stream reasoning rows
+      REASONS.forEach((r, i) => {
+        setTimeout(() => {
+          const el = document.createElement("div");
+          el.className = "reason";
+          el.innerHTML = `
+            <div class="flex items-center gap-1.5 text-text-secondary">
+              <i class="ph ph-${r.caret} text-[12px] text-text-tertiary"></i>
+              <span class="text-body-sm-medium text-text-primary">${r.title}</span>
+            </div>
+            ${r.body ? `<p class="text-body-sm-regular text-text-tertiary leading-snug mt-1 ml-4">${r.body}</p>` : ""}`;
+          rows.appendChild(el);
+        }, 500 + i * 900);
+      });
+
+      // after reasoning, drop the soft asks (email first, then designation) — the Figma sequence
+      setTimeout(() => {
+        document.getElementById("loadingLine").innerHTML = `<span class="text-text-tertiary text-body-sm-regular">Structuring your outline…</span>`;
+        renderEmailCallout();
+      }, 500 + REASONS.length * 900 + 400);
+    }
+
+    // --- Work email ask (soft, incentivised) ---
+    function renderEmailCallout() {
+      const slot = document.getElementById("calloutSlot");
+      slot.innerHTML = `
+        <div class="callout" id="emailCallout">
+          <p class="text-body-sm-regular text-text-secondary mb-2">Share your work email · <a href="#" onclick="return false" class="text-text-brand font-medium">Get 50 credits after verification</a></p>
+          <div class="flex items-center gap-2 max-w-[360px]">
+            <div class="pai-input pai-input--lg flex items-center gap-2 flex-1 px-3">
+              <i class="ph ph-envelope-simple text-text-tertiary text-[15px]"></i>
+              <input id="emailInput" class="flex-1 bg-transparent outline-none text-body-sm-regular text-text-primary placeholder:text-text-tertiary" placeholder="name@company.com" />
+            </div>
+            <button onclick="submitEmail()" class="button-style button-medium button-primary !h-11">Submit</button>
+          </div>
+        </div>`;
+    }
+    function submitEmail() {
+      emailDone = true;
+      const c = document.getElementById("emailCallout");
+      c.innerHTML = `<p class="text-body-sm-regular text-text-secondary flex items-center gap-1.5"><i class="ph-fill ph-check-circle text-text-success-primary"></i>Work email added · <span class="text-text-brand font-medium">+50 credits after verification</span></p>`;
+      setTimeout(renderDesignationCallout, 500);
+    }
+
+    // --- Designation ask (soft, incentivised, searchable) ---
+    function renderDesignationCallout() {
+      const slot = document.getElementById("calloutSlot");
+      const wrap = document.createElement("div");
+      wrap.className = "callout mt-4";
+      wrap.id = "desigCallout";
+      wrap.innerHTML = `
+        <p class="text-body-sm-regular text-text-secondary mb-2">Meanwhile, tailor this deck to your designation · <a href="#" onclick="return false" class="text-text-brand font-medium">Get 50 credits</a></p>
+        <div class="relative max-w-[360px]" id="comboWrap">
+          <div class="pai-input pai-input--lg w-full flex items-center gap-2 px-3" onclick="openCombo()">
+            <i class="ph ph-magnifying-glass text-text-tertiary text-[15px]" id="comboIcon"></i>
+            <input id="comboSearch" oninput="filterCombo()" onfocus="openCombo()" autocomplete="off"
+              class="flex-1 bg-transparent outline-none text-body-sm-regular text-text-primary placeholder:text-text-tertiary" placeholder="Search for designation" />
+            <i class="ph ph-caret-down text-text-tertiary text-[12px] hidden" id="comboCaret"></i>
+          </div>
+          <div id="comboMenu" class="combo-menu hidden absolute left-0 right-0 top-full mt-1.5 bg-bg-elevated rounded-lg p-1 z-20 max-h-[240px] overflow-y-auto">
+            <div id="comboOpts"></div>
+          </div>
+        </div>`;
+      slot.appendChild(wrap);
+    }
+    function openCombo() {
+      document.getElementById("comboMenu").classList.remove("hidden");
+      renderComboOpts(document.getElementById("comboSearch").value);
+    }
+    function renderComboOpts(filter) {
+      const f = (filter || "").toLowerCase();
+      const list = designationOptions.filter(d => d.toLowerCase().includes(f)).slice(0, 8);
+      document.getElementById("comboOpts").innerHTML = list.length
+        ? list.map(d => `<button onclick="pickDesig('${d.replace(/'/g,"\\'")}')" class="combo-opt w-full text-left px-3 py-2 rounded-md text-body-sm-regular text-text-primary">${d}</button>`).join("")
+        : `<div class="px-3 py-2 text-body-sm-regular text-text-tertiary">Press enter to use "<span class="text-text-secondary">${filter}</span>"</div>`;
+    }
+    function filterCombo() { renderComboOpts(document.getElementById("comboSearch").value); }
+    function pickDesig(d) {
+      selectedDesignation = d;
+      document.getElementById("comboMenu").classList.add("hidden");
+      // collapse to selected state (dropdown-style field, like the Figma "CMO" state)
+      const inp = document.getElementById("comboSearch");
+      inp.value = d;
+      inp.classList.add("text-text-primary");
+      document.getElementById("comboIcon").classList.add("hidden");
+      document.getElementById("comboCaret").classList.remove("hidden");
+      // confirmation
+      const wrap = document.getElementById("desigCallout");
+      if (!document.getElementById("desigConfirm")) {
+        const p = document.createElement("p");
+        p.id = "desigConfirm";
+        p.className = "text-body-sm-regular text-text-secondary flex items-center gap-1.5 mt-2";
+        p.innerHTML = `<i class="ph-fill ph-check-circle text-text-success-primary"></i>Tailoring for <span class="text-text-primary font-medium">${d}</span> · <span class="text-text-brand font-medium">+50 credits</span>`;
+        wrap.appendChild(p);
+      } else {
+        document.getElementById("desigConfirm").innerHTML = `<i class="ph-fill ph-check-circle text-text-success-primary"></i>Tailoring for <span class="text-text-primary font-medium">${d}</span> · <span class="text-text-brand font-medium">+50 credits</span>`;
+      }
+    }
+
+    // close combo on outside click
+    document.addEventListener("click", (e) => {
+      const wrap = document.getElementById("comboWrap");
+      if (wrap && !wrap.contains(e.target)) document.getElementById("comboMenu")?.classList.add("hidden");
+    });
+
+    // ---------- init ----------
+    document.getElementById("promptInput").addEventListener("input", onPromptType);
+    document.getElementById("promptInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (e.target.value.trim()) goToChat(); }
+    });
+    renderSuggestions();
+    renderDots();
+  </script>
+</body>
+</html>

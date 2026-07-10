@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>" />
+  <title>Prompt-screen role + designation flow</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    :root { --ease-out: cubic-bezier(0.16, 1, 0.3, 1); }
+    * { -webkit-font-smoothing: antialiased; }
+    body { background: #f7f7f7; }
+
+    .stage { display: none; }
+    .stage.is-active { display: block; }
+    .fade-in { animation: fadeIn .45s var(--ease-out) both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .nav-circle { width: 40px; height: 40px; border-radius: 44px; display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(11,15,20,.09); background: rgba(255,255,255,.85); color: var(--text-primary);
+      box-shadow: 0 0 0 1px rgba(227,225,222,.25); transition: box-shadow .2s var(--ease-out); }
+    .nav-circle:hover { box-shadow: 0 3px 10px rgba(11,15,20,.10); }
+
+    /* prompt wrapper (Figma 160:1740): bg-tertiary #f5f5f5, border neutral-300, rounded-12, elevation-3 */
+    .prompt-wrap { background: #f5f5f5; border: 1px solid #d4d4d4; border-radius: 12px; padding: 8px 1px 1px;
+      box-shadow: 0 1px 2px rgba(11,15,20,.09), 0 4px 6px rgba(11,15,20,.09), 0 24px 40px -16px rgba(11,15,20,.09); }
+    .brandkit-bar { display: flex; align-items: center; gap: 8px; padding: 4px 12px; }
+    /* white input box (Figma 160:1748) */
+    .prompt-inner { background: #fff; border: 1px solid #d4d4d4; border-radius: 12px; padding: 12px; min-height: 148px; display: flex; flex-direction: column; justify-content: space-between; }
+
+    /* toolbar buttons (always visible in this design) */
+    .tool-btn { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 4px; background: #fff;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.09), 0 1px 2px 1px rgba(11,15,20,.06), inset 0 0 0 1px rgba(255,255,255,.8);
+      font-size: 12px; font-weight: 500; color: var(--text-primary); cursor: pointer; white-space: nowrap; }
+    .tool-btn.icon { padding: 0; width: 28px; justify-content: center; }
+    /* Create Presentation (Figma 160:1770): navy #0b0f14, disabled = opacity-40 */
+    .btn-create { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 4px; cursor: pointer;
+      background: #0b0f14; color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.09); transition: opacity .18s var(--ease-out), transform .1s var(--ease-out); }
+    .btn-create:active { transform: translateY(.5px); }
+    .btn-create.dim { opacity: .4; pointer-events: none; }
+
+    /* action pills (Figma 160:1772): rounded-24, white, icon-in-circle + label */
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 16px 4px 4px; border-radius: 24px; background: #fff; cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 2px 6px rgba(11,15,20,.09), inset 0 0 0 1px rgba(255,255,255,.8); transition: box-shadow .15s var(--ease-out), transform .1s var(--ease-out); }
+    .pill:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.12), 0 4px 12px rgba(11,15,20,.10); transform: translateY(-1px); }
+    .pill .picon { width: 40px; height: 40px; border-radius: 34px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+    .badge-pro { background: #e6efff; color: #005eff; }
+    .badge-gold { background: #fef3c7; color: #92400e; }
+    .mini-badge { font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; border-radius: 34px; padding: 2px 6px; line-height: 1.33; }
+
+    /* suggestion rows (Figma 160:1607) */
+    .sugg { transition: box-shadow .15s var(--ease-out), transform .12s var(--ease-out);
+      box-shadow: 0 0 0 1px rgba(11,15,20,.09), 0 1px 2px rgba(11,15,20,.09), inset 0 0 0 1px rgba(255,255,255,.8); }
+    .sugg:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.14), 0 4px 10px -2px rgba(11,15,20,.08); transform: translateY(-1px); }
+    .sugg .sicon { width: 24px; height: 24px; border-radius: 4px; background: #fff; display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.09); font-size: 14px; }
+
+    /* white step card (loading + role/designation) */
+    .step-card { background: #fff; border: 1px solid #d4d4d4; border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(11,15,20,.09), 0 4px 6px rgba(11,15,20,.09), 0 24px 40px -16px rgba(11,15,20,.09); }
+
+    /* role chips + reveal + combobox */
+    .role-chip { transition: box-shadow .2s var(--ease-out), border-color .2s var(--ease-out), transform .1s var(--ease-out); border: 1.5px solid var(--border-secondary); background:#fff; }
+    .role-chip:hover { box-shadow: 0 3px 12px rgba(11,15,20,.08); }
+    .role-chip:active { transform: scale(.98); }
+    .role-chip.selected { border-color: #0A1925; box-shadow: 0 3px 14px rgba(10,25,37,.12); }
+    .reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .42s var(--ease-out), opacity .32s var(--ease-out); }
+    .reveal.open { grid-template-rows: 1fr; opacity: 1; }
+    .reveal > div { overflow: hidden; }
+    .combo-menu { box-shadow: 0 0 0 1px rgba(11,15,20,.08), 0 12px 28px -8px rgba(11,15,20,.16); }
+    .combo-opt { transition: background .12s var(--ease-out); }
+    .combo-opt:hover, .combo-opt.active { background: var(--bg-tertiary); }
+
+    .proc-ring { width: 40px; height: 40px; border-radius: 999px; border: 2.5px solid var(--bg-quaternary); border-top-color: var(--bg-primary-inverted); animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pai-mark { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(160deg,#3E5DF7,#0055ED); display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:10px; flex:none; }
+    .shimmer { background: linear-gradient(90deg, rgba(115,115,115,.9) 0%, rgba(115,115,115,.9) 40%, rgba(23,23,23,1) 50%, rgba(115,115,115,.9) 60%, rgba(115,115,115,.9) 100%);
+      background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.7s linear infinite; }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    textarea.prompt { resize: none; outline: none; }
+    .proto-bar { backdrop-filter: blur(8px); background: rgba(255,255,255,.82); }
+    .vbtn { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; cursor: pointer; border: 1px solid var(--border-secondary); background:#fff; color: var(--text-secondary); }
+    .vbtn.on { background: #0A1925; color: #fff; border-color: #0A1925; }
+  </style>
+</head>
+
+<body class="pai">
+
+  <!-- proto control bar -->
+  <div class="proto-bar fixed top-0 left-0 right-0 z-[100] border-b border-border-tertiary flex items-center gap-3 px-4 h-11">
+    <span class="text-body-xs-semibold text-text-tertiary uppercase" style="letter-spacing:.06em">Proto</span>
+    <span class="text-body-sm-medium text-text-secondary hidden md:inline">Prompt-screen role + designation</span>
+    <div class="flex items-center gap-1.5 ml-3">
+      <span class="text-body-xs-medium text-text-tertiary mr-1 hidden sm:inline">Role→title:</span>
+      <button class="vbtn on" id="v1" onclick="setVariant(1)">1 · Stacked</button>
+      <button class="vbtn" id="v2" onclick="setVariant(2)">2 · Focused</button>
+      <button class="vbtn" id="v3" onclick="setVariant(3)">3 · One field</button>
+    </div>
+    <div class="ml-auto flex items-center gap-1">
+      <button onclick="restart()" class="button-style button-small button-ghost"><i class="ph ph-arrow-counter-clockwise mr-1"></i>Restart</button>
+    </div>
+  </div>
+
+  <!-- ===== STAGE: prompt screen (JAS Figma 160:1595, exact) ===== -->
+  <section class="stage is-active" id="stage-prompt">
+    <div class="min-h-screen w-full pt-11">
+      <div class="w-full px-6 pt-4 flex items-center">
+        <button class="nav-circle"><i class="ph ph-arrow-left text-[18px]"></i></button>
+        <button class="nav-circle ml-auto"><i class="ph ph-x text-[18px]"></i></button>
+      </div>
+
+      <div class="w-full max-w-[800px] mx-auto px-6">
+        <h1 class="text-center text-[32px] leading-[1.1] tracking-[-0.24px] font-normal text-text-primary mt-4">Describe your deck, or upload a file</h1>
+
+        <!-- morph zone: prompt wrap → processing → role/designation step -->
+        <div id="morphZone" class="mt-8"></div>
+
+        <!-- 4 action pills -->
+        <div id="chipRow" class="flex items-center gap-3 mt-3">
+          <button class="pill"><span class="picon"><i class="ph ph-microsoft-powerpoint-logo text-[20px]" style="color:#C43E1C"></i></span><span class="text-body-base-medium text-text-primary">Import PowerPoint</span></button>
+          <button class="pill"><span class="picon"><i class="ph ph-pen-nib text-[20px] text-text-brand"></i></span><span class="text-body-base-medium text-text-primary">Hire an Expert</span></button>
+          <button class="pill"><span class="picon"><i class="ph ph-layout text-[20px] text-text-brand"></i></span><span class="text-body-base-medium text-text-primary">Use a Template</span></button>
+          <button class="pill flex-1 !justify-start"><span class="picon"><i class="ph ph-chart-donut text-[20px] text-text-brand"></i></span><span class="text-body-base-medium text-text-primary">Refresh Data</span><span class="mini-badge badge-gold ml-auto">Gold</span></button>
+        </div>
+
+        <!-- suggestions -->
+        <div class="mt-10 pb-16" id="suggBlock">
+          <p class="text-body-base-medium text-text-primary mb-3">Marketers are creating presentations for</p>
+          <div class="space-y-3" id="suggList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STAGE: chat (stub, after both captured) ===== -->
+  <section class="stage" id="stage-chat">
+    <div class="min-h-screen w-full pt-11">
+      <div class="w-full px-6 pt-4 flex items-center">
+        <button onclick="showStage('stage-prompt')" class="nav-circle"><i class="ph ph-arrow-left text-[18px]"></i></button>
+        <button class="nav-circle ml-auto"><i class="ph ph-x text-[18px]"></i></button>
+      </div>
+      <div class="w-full max-w-[560px] mx-auto px-6 pb-24">
+        <div class="flex justify-center mt-2">
+          <div class="inline-flex items-center gap-2 rounded-full bg-bg-brand-selected px-3.5 py-1.5">
+            <i class="ph-fill ph-magic-wand text-text-brand"></i>
+            <span class="text-body-sm-medium text-text-secondary" id="tailorText">Tailoring for Marketing</span>
+          </div>
+        </div>
+        <div class="flex justify-end mt-5">
+          <div class="max-w-[82%] rounded-2xl rounded-br-md bg-bg-tertiary px-4 py-2.5">
+            <p id="echoPrompt" class="text-body-sm-regular text-text-primary leading-snug">Q4 performance review with channel ROI breakdown</p>
+          </div>
+        </div>
+        <div class="mt-6 flex items-start gap-2">
+          <span class="pai-mark mt-0.5"><i class="ph-fill ph-sparkle" style="font-size:9px"></i></span>
+          <p class="text-body-sm-medium"><span class="shimmer">Building your deck…</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // ---------- Data (JAS marketing frame) ----------
+    const suggestions = [
+      { icon: "📊", text: "Q4 performance review with channel ROI breakdown" },
+      { icon: "🚀", text: "Go-to-market deck for a new product launch" },
+      { icon: "🎨", text: "Brand refresh pitch to leadership" },
+    ];
+    const roles = [
+      { label: "Leadership", role: "leadership", icon: "🧭" },
+      { label: "Sales", role: "sales", icon: "🤝" },
+      { label: "Marketing", role: "marketing", icon: "📣" },
+      { label: "Product", role: "product", icon: "🧩" },
+      { label: "Design", role: "design", icon: "🎨" },
+      { label: "Finance", role: "finance", icon: "💰" },
+    ];
+    const marketingTitles = [
+      "Marketing Coordinator","Marketing Associate","Marketing Specialist","Growth Associate",
+      "Content Marketing Associate","Social Media Manager","SEO Specialist","Email Marketing Manager",
+      "Marketing Manager","Growth Marketing Manager","Product Marketing Manager","Performance Marketing Manager",
+      "Demand Generation Manager","Brand Manager","Content Manager","Community Manager",
+      "Digital Marketing Manager","Marketing Operations Manager","Field Marketing Manager","Events Marketing Manager",
+      "Senior Marketing Manager","Director of Marketing","VP Marketing","Chief Marketing Officer (CMO)",
+    ];
+
+    // ---------- State ----------
+    let variant = 1;
+    let sel = { role: null, designation: "" };
+
+    function setVariant(v) {
+      variant = v;
+      [1,2,3].forEach(n => document.getElementById("v"+n).classList.toggle("on", n===v));
+      if (document.getElementById("roleStep")) renderRoleStep();
+    }
+    function showStage(id) {
+      document.querySelectorAll(".stage").forEach(s => s.classList.remove("is-active"));
+      document.getElementById(id).classList.add("is-active");
+      window.scrollTo({ top: 0 });
+    }
+    function restart() {
+      sel = { role: null, designation: "" };
+      document.getElementById("morphZone").innerHTML = promptWrapHTML();
+      document.getElementById("chipRow").style.display = "";
+      document.getElementById("suggBlock").style.display = "";
+      wirePrompt();
+      showStage("stage-prompt");
+    }
+
+    // ---------- Prompt wrapper (JAS 160:1595 exact) ----------
+    function promptWrapHTML() {
+      return `
+      <div id="promptCard" class="prompt-wrap">
+        <div class="brandkit-bar">
+          <i class="ph ph-book-open-text text-[17px] text-text-secondary"></i>
+          <span class="text-body-base-medium text-text-secondary">Set up Brand Kit to use your logo, colours, and voice</span>
+          <span class="mini-badge badge-pro">Pro</span>
+          <i class="ph ph-caret-right text-[15px] text-text-tertiary ml-0.5"></i>
+        </div>
+        <div class="prompt-inner">
+          <textarea id="promptInput" rows="1" class="prompt w-full text-text-primary bg-transparent placeholder:text-text-tertiary" style="font-size:22px; line-height:1.4; padding:8px;" placeholder="Start a new presentation..."></textarea>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <button class="tool-btn"><i class="ph ph-upload-simple text-[15px]"></i>Upload files, or links</button>
+              <button class="tool-btn"><i class="ph ph-cards-three text-[15px]"></i>5 Slides<i class="ph ph-caret-down text-[11px] text-text-tertiary ml-0.5"></i></button>
+              <button class="tool-btn"><i class="ph ph-sparkle text-[15px]"></i>Standard Model<i class="ph ph-caret-down text-[11px] text-text-tertiary ml-0.5"></i></button>
+              <button class="tool-btn icon"><i class="ph ph-sliders-horizontal text-[15px]"></i></button>
+            </div>
+            <button id="createBtn" class="btn-create dim" onclick="startProcessing()">Create Presentation</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    function wirePrompt() {
+      const inp = document.getElementById("promptInput");
+      inp.addEventListener("input", onType);
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (inp.value.trim()) startProcessing(); } });
+    }
+    function onType() {
+      const has = document.getElementById("promptInput").value.trim().length > 0;
+      document.getElementById("createBtn").classList.toggle("dim", !has);
+    }
+    function renderSuggestions() {
+      document.getElementById("suggList").innerHTML = suggestions.map(s => `
+        <button onclick="pickSuggestion('${s.text.replace(/'/g,"\\'")}')"
+          class="sugg w-full flex items-center gap-2 rounded-lg bg-bg-elevated pl-3 pr-4 py-3 text-left">
+          <span class="sicon">${s.icon}</span>
+          <span class="text-body-base-regular text-text-primary">${s.text}</span>
+        </button>`).join("");
+    }
+    function pickSuggestion(t) {
+      document.getElementById("echoPrompt").textContent = t;
+      const inp = document.getElementById("promptInput"); if (inp) inp.value = t;
+      startProcessing();
+    }
+
+    // ---------- 3s processing ----------
+    function startProcessing() {
+      const inp = document.getElementById("promptInput");
+      const v = inp ? inp.value.trim() : "";
+      if (v) document.getElementById("echoPrompt").textContent = v;
+      document.getElementById("chipRow").style.display = "none";
+      document.getElementById("suggBlock").style.display = "none";
+      document.getElementById("morphZone").innerHTML = `
+        <div class="fade-in step-card px-6 py-10 flex flex-col items-center justify-center text-center max-w-[600px] mx-auto" style="min-height:200px">
+          <div class="proc-ring mb-4"></div>
+          <p class="text-body-base-medium text-text-primary"><span class="shimmer">Reading your prompt…</span></p>
+          <p class="text-body-sm-regular text-text-tertiary mt-1">Setting things up to build your deck</p>
+        </div>`;
+      setTimeout(() => renderRoleStep(true), 3000);
+    }
+
+    // ---------- Role + designation step (3 variants) ----------
+    function renderRoleStep(firstEnter) {
+      let html = `<div id="roleStep" class="${firstEnter ? 'fade-in' : ''} step-card px-6 py-7 max-w-[600px] mx-auto">`;
+      if (variant === 1) html += stackedHTML();
+      else if (variant === 2) html += focusedHTML();
+      else html += oneFieldHTML();
+      html += `</div>`;
+      document.getElementById("morphZone").innerHTML = html;
+    }
+
+    function continueFooter() {
+      const ready = !!sel.role;
+      return `<div class="flex items-center gap-3 mt-6">
+        ${sel.role ? `<button onclick="skipDesig()" class="button-style button-medium button-ghost">Skip title</button>` : ``}
+        <button id="continueBtn" onclick="goChat()" class="button-style button-large button-primary ${ready?'':'button-disabled button-disabled-40'} w-full ml-auto" ${ready?'':'disabled'}>
+          ${sel.role ? 'Continue' : 'Pick your role to continue'}</button></div>`;
+    }
+
+    // Variant 1 — stacked reveal
+    function stackedHTML() {
+      return `
+        <p class="text-body-sm-medium text-text-tertiary text-center">One quick thing to tailor your deck</p>
+        <h2 class="text-[22px] leading-snug tracking-[-0.2px] text-text-primary text-center mt-1">What best describes your work?</h2>
+        <div class="flex flex-wrap justify-center gap-2 mt-5">
+          ${roles.map(r => `<button onclick="selectRole('${r.role}')" data-role="${r.role}"
+            class="role-chip rounded-full px-3.5 py-2 flex items-center gap-1.5 ${sel.role===r.role?'selected':''}">
+            <span class="text-[15px]">${r.icon}</span><span class="text-body-sm-medium text-text-primary">${r.label}</span></button>`).join("")}
+        </div>
+        <div class="reveal ${sel.role?'open':''}" id="desigReveal"><div>
+          <div class="pt-6 mt-6 border-t border-border-tertiary">
+            <label class="text-body-sm-medium text-text-primary block mb-2">Your title in <span id="roleName">Marketing</span> <span class="text-text-tertiary font-normal">(optional)</span></label>
+            ${comboHTML()}
+          </div>
+        </div></div>
+        ${continueFooter()}`;
+    }
+    // Variant 2 — focused swap
+    function focusedHTML() {
+      if (!sel.role) {
+        return `
+          <p class="text-body-sm-medium text-text-tertiary text-center">One quick thing to tailor your deck</p>
+          <h2 class="text-[22px] leading-snug tracking-[-0.2px] text-text-primary text-center mt-1">What best describes your work?</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-6">
+            ${roles.map(r => `<button onclick="selectRole('${r.role}')" class="role-chip rounded-xl px-3 py-3 flex items-center gap-2">
+              <span class="text-[17px]">${r.icon}</span><span class="text-body-sm-medium text-text-primary">${r.label}</span></button>`).join("")}
+          </div>`;
+      }
+      const r = roles.find(x => x.role === sel.role);
+      return `
+        <button onclick="backToRole()" class="inline-flex items-center gap-1.5 rounded-full bg-bg-tertiary px-3 py-1.5 mb-4">
+          <span class="text-[14px]">${r.icon}</span><span class="text-body-sm-medium text-text-primary">${r.label}</span><i class="ph ph-x text-[11px] text-text-tertiary ml-0.5"></i></button>
+        <h2 class="text-[22px] leading-snug tracking-[-0.2px] text-text-primary">What's your title?</h2>
+        <p class="text-body-sm-regular text-text-tertiary mt-1 mb-4">Helps us match tone and examples</p>
+        ${comboHTML()}
+        ${continueFooter()}`;
+    }
+    // Variant 3 — one progressive combobox
+    function oneFieldHTML() {
+      return `
+        <p class="text-body-sm-medium text-text-tertiary text-center">One quick thing to tailor your deck</p>
+        <h2 class="text-[22px] leading-snug tracking-[-0.2px] text-text-primary text-center mt-1 mb-5">Tell us who you are</h2>
+        <div class="relative max-w-[420px] mx-auto" id="ofWrap">
+          <div class="pai-input pai-input--lg w-full flex items-center gap-2 px-3" onclick="ofOpen()">
+            <span id="ofRoleTag" class="hidden items-center gap-1.5 rounded-full bg-bg-primary-inverted text-white px-2.5 py-1 text-body-xs-medium"></span>
+            <input id="ofInput" oninput="ofFilter()" onfocus="ofOpen()" autocomplete="off"
+              class="flex-1 bg-transparent outline-none text-body-sm-regular text-text-primary placeholder:text-text-tertiary" placeholder="Select your role" />
+            <i class="ph ph-caret-down text-text-tertiary text-[12px]"></i>
+          </div>
+          <div id="ofMenu" class="combo-menu hidden absolute left-0 right-0 top-full mt-1.5 bg-bg-elevated rounded-lg p-1 z-20 max-h-[240px] overflow-y-auto"></div>
+        </div>
+        ${continueFooter()}`;
+    }
+    function comboHTML() {
+      return `
+        <div class="relative max-w-[420px]" id="comboWrap">
+          <div class="pai-input pai-input--lg w-full flex items-center gap-2 px-3" onclick="comboOpen()">
+            <i class="ph ph-magnifying-glass text-text-tertiary text-[15px]" id="comboIcon"></i>
+            <input id="comboSearch" oninput="comboFilter()" onfocus="comboOpen()" autocomplete="off"
+              class="flex-1 bg-transparent outline-none text-body-sm-regular text-text-primary placeholder:text-text-tertiary" placeholder="Search your title…" />
+            <i class="ph ph-caret-down text-text-tertiary text-[12px] hidden" id="comboCaret"></i>
+          </div>
+          <div id="comboMenu" class="combo-menu hidden absolute left-0 right-0 top-full mt-1.5 bg-bg-elevated rounded-lg p-1 z-20 max-h-[240px] overflow-y-auto"></div>
+        </div>`;
+    }
+
+    function selectRole(role) {
+      sel.role = role; sel.designation = "";
+      if (variant === 2) { renderRoleStep(); setTimeout(()=>document.getElementById("comboSearch")?.focus(), 60); return; }
+      renderRoleStep();
+      document.getElementById("desigReveal")?.classList.add("open");
+      const rn = document.getElementById("roleName"); if (rn) rn.textContent = roles.find(r=>r.role===role).label;
+    }
+    function backToRole() { sel.role = null; sel.designation = ""; renderRoleStep(); }
+
+    function desigList() { return sel.role === "marketing" ? marketingTitles : []; }
+    function comboOpen() { document.getElementById("comboMenu").classList.remove("hidden"); comboRender(document.getElementById("comboSearch").value); }
+    function comboFilter() { sel.designation = document.getElementById("comboSearch").value.trim(); comboRender(document.getElementById("comboSearch").value); }
+    function comboRender(filter) {
+      const f = (filter||"").toLowerCase();
+      const list = desigList().filter(d => d.toLowerCase().includes(f)).slice(0, 8);
+      const opts = list.map(d => `<button onclick="comboPick('${d.replace(/'/g,"\\'")}')" class="combo-opt w-full text-left px-3 py-2 rounded-md text-body-sm-regular text-text-primary">${d}</button>`).join("");
+      const freeEntry = filter && !desigList().some(d => d.toLowerCase() === f)
+        ? `<button onclick="comboPick('${(filter||'').replace(/'/g,"\\'")}')" class="combo-opt w-full text-left px-3 py-2 rounded-md text-body-sm-regular text-text-secondary">Use "<span class="text-text-primary">${filter}</span>"</button>` : "";
+      document.getElementById("comboMenu").innerHTML = (opts + freeEntry) || `<div class="px-3 py-2 text-body-sm-regular text-text-tertiary">Type your title…</div>`;
+    }
+    function comboPick(d) {
+      sel.designation = d;
+      document.getElementById("comboMenu").classList.add("hidden");
+      document.getElementById("comboSearch").value = d;
+      document.getElementById("comboIcon").classList.add("hidden");
+      document.getElementById("comboCaret").classList.remove("hidden");
+    }
+    function skipDesig() { sel.designation = ""; goChat(); }
+
+    let ofMode = "role";
+    function ofOpen() { document.getElementById("ofMenu").classList.remove("hidden"); ofRender(document.getElementById("ofInput").value); }
+    function ofFilter() { if (ofMode === "title") sel.designation = document.getElementById("ofInput").value.trim(); ofRender(document.getElementById("ofInput").value); }
+    function ofRender(filter) {
+      const f = (filter||"").toLowerCase();
+      const menu = document.getElementById("ofMenu");
+      if (ofMode === "role") {
+        menu.innerHTML = roles.filter(r => r.label.toLowerCase().includes(f)).map(r =>
+          `<button onclick="ofPickRole('${r.role}')" class="combo-opt w-full text-left px-3 py-2 rounded-md text-body-sm-regular text-text-primary flex items-center gap-2"><span>${r.icon}</span>${r.label}</button>`).join("");
+      } else {
+        const list = desigList().filter(d => d.toLowerCase().includes(f)).slice(0, 8);
+        const opts = list.map(d => `<button onclick="ofPickTitle('${d.replace(/'/g,"\\'")}')" class="combo-opt w-full text-left px-3 py-2 rounded-md text-body-sm-regular text-text-primary">${d}</button>`).join("");
+        const freeEntry = filter && !desigList().some(d => d.toLowerCase() === f)
+          ? `<button onclick="ofPickTitle('${(filter||'').replace(/'/g,"\\'")}')" class="combo-opt w-full text-left px-3 py-2 rounded-md text-body-sm-regular text-text-secondary">Use "<span class="text-text-primary">${filter}</span>"</button>` : "";
+        menu.innerHTML = (opts + freeEntry) || `<div class="px-3 py-2 text-body-sm-regular text-text-tertiary">Type your title…</div>`;
+      }
+    }
+    function ofPickRole(role) {
+      sel.role = role; sel.designation = ""; ofMode = "title";
+      const r = roles.find(x=>x.role===role);
+      const tag = document.getElementById("ofRoleTag");
+      tag.innerHTML = `<span>${r.icon}</span>${r.label}<i class="ph ph-x text-[10px] opacity-70 cursor-pointer" onclick="event.stopPropagation(); ofResetRole()"></i>`;
+      tag.classList.remove("hidden"); tag.classList.add("inline-flex");
+      const inp = document.getElementById("ofInput"); inp.value = ""; inp.placeholder = "Search your title…"; inp.focus();
+      ofOpen(); refreshContinue();
+    }
+    function ofResetRole() {
+      sel.role = null; sel.designation = ""; ofMode = "role";
+      const tag = document.getElementById("ofRoleTag"); tag.classList.add("hidden"); tag.classList.remove("inline-flex");
+      const inp = document.getElementById("ofInput"); inp.value=""; inp.placeholder = "Select your role";
+      ofRender(""); refreshContinue();
+    }
+    function ofPickTitle(d) { sel.designation = d; document.getElementById("ofInput").value = d; document.getElementById("ofMenu").classList.add("hidden"); refreshContinue(); }
+
+    function refreshContinue() {
+      const b = document.getElementById("continueBtn"); if (!b) return;
+      const ready = !!sel.role;
+      b.disabled = !ready; b.classList.toggle("button-disabled", !ready); b.classList.toggle("button-disabled-40", !ready);
+      b.textContent = ready ? "Continue" : "Pick your role to continue";
+    }
+
+    document.addEventListener("click", (e) => {
+      const cw = document.getElementById("comboWrap"); if (cw && !cw.contains(e.target)) document.getElementById("comboMenu")?.classList.add("hidden");
+      const ow = document.getElementById("ofWrap"); if (ow && !ow.contains(e.target)) document.getElementById("ofMenu")?.classList.add("hidden");
+    });
+
+    function goChat() {
+      if (!sel.role) return;
+      const r = roles.find(x=>x.role===sel.role);
+      document.getElementById("tailorText").textContent = "Tailoring for " + r.label + (sel.designation ? " · " + sel.designation : "");
+      showStage("stage-chat");
+    }
+
+    // init
+    document.getElementById("morphZone").innerHTML = promptWrapHTML();
+    renderSuggestions();
+    wirePrompt();
+  </script>
+</body>
+</html>
