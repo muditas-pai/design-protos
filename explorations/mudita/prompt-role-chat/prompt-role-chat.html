@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>" />
+  <title>Prompt → Role → Chat</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    :root { --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-io: cubic-bezier(0.4, 0, 0.2, 1); }
+    * { -webkit-font-smoothing: antialiased; }
+    body { background: #f7f7f7; }
+
+    .stage { display: none; }
+    .stage.is-active { display: block; }
+    .fade-in { animation: fadeIn .45s var(--ease-out) both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .fade-out { animation: fadeOut .3s var(--ease-io) both; }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px); } }
+
+    .nav-circle { width: 40px; height: 40px; border-radius: 44px; display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(11,15,20,.09); background: rgba(255,255,255,.85); color: var(--text-primary);
+      box-shadow: 0 0 0 1px rgba(227,225,222,.25); transition: box-shadow .2s var(--ease-out); }
+    .nav-circle:hover { box-shadow: 0 3px 10px rgba(11,15,20,.10); }
+
+    /* prompt wrapper (Figma 160:1740) */
+    .prompt-wrap { background: #f5f5f5; border: 1px solid #d4d4d4; border-radius: 12px; padding: 8px 1px 1px;
+      box-shadow: 0 1px 2px rgba(11,15,20,.09), 0 4px 6px rgba(11,15,20,.09), 0 24px 40px -16px rgba(11,15,20,.09);
+      transition: box-shadow .4s var(--ease-out); }
+    .brandkit-bar { display: flex; align-items: center; gap: 8px; padding: 4px 12px; overflow: hidden;
+      transition: max-height .38s var(--ease-io), opacity .28s var(--ease-io), padding .38s var(--ease-io); max-height: 32px; }
+    .prompt-inner { background: #fff; border: 1px solid #d4d4d4; border-radius: 12px; padding: 12px; min-height: 148px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      transition: min-height .42s var(--ease-out), padding .42s var(--ease-out); }
+    .prompt-toolbar { overflow: hidden; transition: max-height .34s var(--ease-io), opacity .24s var(--ease-io), margin .34s var(--ease-io); max-height: 40px; }
+
+    /* collapsed loader state: box shrinks to just the text, shimmer sweeps it */
+    .prompt-wrap.collapsing .brandkit-bar { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+    .prompt-wrap.collapsing .prompt-inner { min-height: 0; padding: 16px; }
+    .prompt-wrap.collapsing .prompt-toolbar { max-height: 0; opacity: 0; margin-top: 0 !important; }
+
+    .tool-btn { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 4px; background: #fff;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.09), 0 1px 2px 1px rgba(11,15,20,.06), inset 0 0 0 1px rgba(255,255,255,.8);
+      font-size: 12px; font-weight: 500; color: var(--text-primary); cursor: pointer; white-space: nowrap; }
+    .tool-btn.icon { padding: 0; width: 28px; justify-content: center; }
+    .btn-create { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 4px; cursor: pointer;
+      background: #0b0f14; color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.09); transition: opacity .18s var(--ease-out), transform .1s var(--ease-out); }
+    .btn-create:active { transform: translateY(.5px); }
+    .btn-create.dim { opacity: .4; pointer-events: none; }
+
+    /* action pills (Figma 160:1772) */
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 16px 4px 4px; border-radius: 24px; background: #fff; cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 2px 6px rgba(11,15,20,.09), inset 0 0 0 1px rgba(255,255,255,.8); transition: box-shadow .15s var(--ease-out), transform .1s var(--ease-out); }
+    .pill:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.12), 0 4px 12px rgba(11,15,20,.10); transform: translateY(-1px); }
+    .pill .picon { width: 40px; height: 40px; border-radius: 34px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+    .badge-pro { background: #e6efff; color: #005eff; }
+    .badge-gold { background: #fef3c7; color: #92400e; }
+    .mini-badge { font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; border-radius: 34px; padding: 2px 6px; line-height: 1.33; }
+
+    /* suggestion rows (Figma 160:1607) */
+    .sugg { transition: box-shadow .15s var(--ease-out), transform .12s var(--ease-out);
+      box-shadow: 0 0 0 1px rgba(11,15,20,.09), 0 1px 2px rgba(11,15,20,.09), inset 0 0 0 1px rgba(255,255,255,.8); }
+    .sugg:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.14), 0 4px 10px -2px rgba(11,15,20,.08); transform: translateY(-1px); }
+    .sugg .sicon { width: 24px; height: 24px; border-radius: 4px; background: #fff; display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.09); font-size: 14px; }
+
+    /* compact prompt pill in role stage (Figma 183:667) */
+    .prompt-pill { background: #fff; border: 1px solid #d4d4d4; border-radius: 12px; padding: 16px 20px;
+      box-shadow: 0 1px 2px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.05); }
+
+    /* role card grid (Figma 160:1972) */
+    .role-card { position: relative; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px;
+      background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; cursor: pointer; text-align: left; width: 100%;
+      box-shadow: 0 1px 2px rgba(11,15,20,.04); transition: box-shadow .18s var(--ease-out), border-color .18s var(--ease-out), transform .08s var(--ease-out); }
+    .role-card:hover { border-color: #d0d0d0; box-shadow: 0 3px 10px -2px rgba(11,15,20,.10); }
+    .role-card:active { transform: scale(.985); }
+    .role-card .r-emoji { font-size: 18px; line-height: 1; flex: none; }
+    .role-card.is-open { z-index: 40; }
+
+    .role-cell { position: relative; }
+    /* in-place designation dropdown (Figma 183:785) */
+    .desig-pop { position: absolute; top: 0; left: 0; right: 0; z-index: 40; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.04), 0 18px 40px -12px rgba(11,15,20,.22); overflow: hidden;
+      transform-origin: top center; animation: popIn .28s var(--ease-out) both; }
+    @keyframes popIn { from { opacity: 0; transform: translateY(-3px) scaleY(.94); } to { opacity: 1; transform: none; } }
+    .desig-search { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; }
+    .desig-search input { flex: 1; min-width: 0; background: transparent; outline: none; border: none;
+      font-size: 14px; color: var(--text-primary); }
+    .desig-search input::placeholder { color: var(--text-tertiary); }
+    .desig-list { padding: 4px; max-height: 220px; overflow-y: auto; border-top: 1px solid #f0f0f0; }
+    .desig-opt { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 6px; font-size: 14px; line-height: 1.3;
+      color: var(--text-primary); cursor: pointer; transition: background .1s var(--ease-out); }
+    .desig-opt.active { background: #f4f4f4; }
+    .desig-opt .use-q { color: var(--text-tertiary); }
+
+    .role-card.entering { animation: cardIn .4s var(--ease-out) both; }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* shimmer sweep over text */
+    .shimmer { background: linear-gradient(90deg, rgba(115,115,115,.9) 0%, rgba(115,115,115,.9) 40%, rgba(23,23,23,1) 50%, rgba(115,115,115,.9) 60%, rgba(115,115,115,.9) 100%);
+      background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.6s linear infinite; }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    .pai-mark { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(160deg,#3E5DF7,#0055ED); display:inline-flex; align-items:center; justify-content:center; color:#fff; flex:none;
+      box-shadow: 0 2px 6px rgba(0,85,237,.28); animation: markPulse 1.8s var(--ease-io) infinite; }
+    @keyframes markPulse { 0%,100% { transform: scale(1); box-shadow: 0 2px 6px rgba(0,85,237,.28); } 50% { transform: scale(1.08); box-shadow: 0 4px 12px rgba(0,85,237,.4); } }
+
+    .bubble-in { animation: bubbleIn .42s var(--ease-out) both; }
+    @keyframes bubbleIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    textarea.prompt { resize: none; outline: none; }
+    .proto-bar { backdrop-filter: blur(8px); background: rgba(255,255,255,.82); }
+  </style>
+</head>
+
+<body class="pai">
+
+  <!-- proto control bar -->
+  <div class="proto-bar fixed top-0 left-0 right-0 z-[100] border-b border-border-tertiary flex items-center gap-3 px-4 h-11">
+    <span class="text-body-xs-semibold text-text-tertiary uppercase" style="letter-spacing:.06em">Proto</span>
+    <span class="text-body-sm-medium text-text-secondary hidden md:inline">Prompt → Role → Chat</span>
+    <span class="text-body-xs-medium text-text-tertiary hidden lg:inline ml-1">JAS Figma 160:1834</span>
+    <div class="ml-auto flex items-center gap-1">
+      <button onclick="restart()" class="button-style button-small button-ghost"><i class="ph ph-arrow-counter-clockwise mr-1"></i>Restart</button>
+    </div>
+  </div>
+
+  <!-- ===== STAGE: prompt → loader → role (one morphing screen) ===== -->
+  <section class="stage is-active" id="stage-create">
+    <div class="min-h-screen w-full pt-11">
+      <div class="w-full px-6 pt-4 flex items-center">
+        <button class="nav-circle"><i class="ph ph-arrow-left text-[18px]"></i></button>
+        <button class="nav-circle ml-auto"><i class="ph ph-x text-[18px]"></i></button>
+      </div>
+
+      <div class="w-full max-w-[800px] mx-auto px-6">
+        <h1 class="text-center text-[32px] leading-[1.1] tracking-[-0.24px] font-normal text-text-primary mt-4">Describe your deck, or upload a file</h1>
+
+        <!-- morph zone: prompt wrap ⇄ compact pill -->
+        <div id="morphZone" class="mt-8"></div>
+
+        <!-- role zone (hidden until loader done) -->
+        <div id="roleZone" class="mt-7" style="display:none">
+          <p class="text-center text-body-lg-medium text-text-primary">Tailor this deck to your role</p>
+          <div id="roleGrid" class="grid grid-cols-3 gap-4 mt-5 max-w-[680px] mx-auto"></div>
+        </div>
+
+        <!-- 4 action pills -->
+        <div id="chipRow" class="flex items-center gap-3 mt-3">
+          <button class="pill"><span class="picon"><i class="ph ph-microsoft-powerpoint-logo text-[20px]" style="color:#C43E1C"></i></span><span class="text-body-base-medium text-text-primary">Import PowerPoint</span></button>
+          <button class="pill"><span class="picon"><i class="ph ph-pen-nib text-[20px] text-text-brand"></i></span><span class="text-body-base-medium text-text-primary">Hire an Expert</span></button>
+          <button class="pill"><span class="picon"><i class="ph ph-layout text-[20px] text-text-brand"></i></span><span class="text-body-base-medium text-text-primary">Use a Template</span></button>
+          <button class="pill flex-1 !justify-start"><span class="picon"><i class="ph ph-chart-donut text-[20px] text-text-brand"></i></span><span class="text-body-base-medium text-text-primary">Refresh Data</span><span class="mini-badge badge-gold ml-auto">Gold</span></button>
+        </div>
+
+        <!-- suggestions -->
+        <div class="mt-10 pb-16" id="suggBlock">
+          <p class="text-body-base-medium text-text-primary mb-3">Marketers are creating presentations for</p>
+          <div class="space-y-3" id="suggList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STAGE: chat ===== -->
+  <section class="stage" id="stage-chat">
+    <div class="min-h-screen w-full pt-11">
+      <div class="w-full px-6 pt-4 flex items-center">
+        <button onclick="restart()" class="nav-circle"><i class="ph ph-arrow-left text-[18px]"></i></button>
+        <button class="nav-circle ml-auto"><i class="ph ph-x text-[18px]"></i></button>
+      </div>
+      <div class="w-full max-w-[720px] mx-auto px-6 pb-24" id="chatCol">
+        <!-- populated on entry -->
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // ---------- Data ----------
+    const suggestions = [
+      { icon: "📊", text: "Q4 performance review with channel ROI breakdown" },
+      { icon: "🚀", text: "Go-to-market deck for a new product launch" },
+      { icon: "🎨", text: "Brand refresh pitch to leadership" },
+    ];
+    // 3×4 grid, column-major order matching Figma 160:1957
+    const roles = [
+      { label: "Consulting",     icon: "🧭" },
+      { label: "HR",             icon: "👫" },
+      { label: "Product",        icon: "🧩" },
+      { label: "Design",         icon: "🎨" },
+      { label: "Sales",          icon: "📈" },
+      { label: "Engineering",    icon: "🛠️" },
+      { label: "Marketing",      icon: "📣" },
+      { label: "Finance",        icon: "💰" },
+      { label: "Investor",       icon: "📊" },
+      { label: "Legal",          icon: "⚖️" },
+      { label: "Operations",     icon: "⚙️" },
+      { label: "Communications", icon: "💬" },
+    ];
+    const designations = {
+      Consulting:     ["Analyst","Associate Consultant","Consultant","Senior Consultant","Engagement Manager","Principal","Partner"],
+      HR:             ["HR Manager","HR Business Partner","Recruiter","Talent Acquisition Manager","People Operations Manager","Head of People","CHRO"],
+      Product:        ["Product Manager","Senior Product Manager","Product Owner","Group Product Manager","Director of Product","VP Product","Chief Product Officer"],
+      Design:         ["Product Designer","UX Designer","UI Designer","Design Lead","Design Manager","Head of Design","Creative Director"],
+      Sales:          ["Account Executive","Sales Manager","Sales Development Rep","Account Manager","Regional Sales Manager","VP Sales","Chief Revenue Officer"],
+      Engineering:    ["Software Engineer","Senior Software Engineer","Engineering Manager","Staff Engineer","Tech Lead","Director of Engineering","CTO"],
+      Marketing:      ["Marketing Manager","Brand Manager","Performance Marketing Manager","Content Marketing Manager","Growth Marketing Manager","Product Marketing Manager","Director of Marketing","VP Marketing","CMO"],
+      Finance:        ["Financial Analyst","Finance Manager","Controller","FP&A Manager","Director of Finance","VP Finance","CFO"],
+      Investor:       ["Analyst","Associate","Principal","Investment Manager","Partner","General Partner","Managing Director"],
+      Legal:          ["Legal Counsel","Corporate Counsel","Paralegal","Compliance Manager","General Counsel","Head of Legal"],
+      Operations:     ["Operations Analyst","Operations Manager","Business Operations Manager","Director of Operations","VP Operations","COO"],
+      Communications: ["Communications Specialist","PR Manager","Corporate Communications Manager","Content Strategist","Head of Communications","VP Communications"],
+    };
+
+    // ---------- State ----------
+    let promptText = "";
+    let openRole = null;   // label of the card currently expanded
+    let activeIdx = 0;     // highlighted option index in the open dropdown
+
+    // ---------- Stage helpers ----------
+    function showStage(id) {
+      document.querySelectorAll(".stage").forEach(s => s.classList.remove("is-active"));
+      document.getElementById(id).classList.add("is-active");
+      window.scrollTo({ top: 0 });
+    }
+    function restart() {
+      promptText = ""; openRole = null; activeIdx = 0;
+      document.getElementById("morphZone").innerHTML = promptWrapHTML();
+      document.getElementById("roleZone").style.display = "none";
+      document.getElementById("roleGrid").innerHTML = "";
+      document.getElementById("chipRow").style.display = "";
+      document.getElementById("chipRow").classList.remove("fade-out");
+      document.getElementById("suggBlock").style.display = "";
+      document.getElementById("suggBlock").classList.remove("fade-out");
+      document.getElementById("chatCol").innerHTML = "";
+      wirePrompt();
+      showStage("stage-create");
+    }
+
+    // ---------- Prompt wrapper (JAS 160:1595) ----------
+    function promptWrapHTML() {
+      return `
+      <div id="promptCard" class="prompt-wrap">
+        <div class="brandkit-bar">
+          <i class="ph ph-book-open-text text-[17px] text-text-secondary"></i>
+          <span class="text-body-base-medium text-text-secondary">Set up Brand Kit to use your logo, colours, and voice</span>
+          <span class="mini-badge badge-pro">Pro</span>
+          <i class="ph ph-caret-right text-[15px] text-text-tertiary ml-0.5"></i>
+        </div>
+        <div class="prompt-inner">
+          <textarea id="promptInput" rows="1" class="prompt w-full text-text-primary bg-transparent placeholder:text-text-tertiary" style="font-size:22px; line-height:1.4; padding:8px;" placeholder="Start a new presentation..."></textarea>
+          <div class="prompt-toolbar flex items-center gap-2 mt-3">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <button class="tool-btn"><i class="ph ph-upload-simple text-[15px]"></i>Upload files, or links</button>
+              <button class="tool-btn"><i class="ph ph-cards-three text-[15px]"></i>5 Slides<i class="ph ph-caret-down text-[11px] text-text-tertiary ml-0.5"></i></button>
+              <button class="tool-btn"><i class="ph ph-sparkle text-[15px]"></i>Standard Model<i class="ph ph-caret-down text-[11px] text-text-tertiary ml-0.5"></i></button>
+              <button class="tool-btn icon"><i class="ph ph-sliders-horizontal text-[15px]"></i></button>
+            </div>
+            <button id="createBtn" class="btn-create dim" onclick="startLoader()">Create Presentation</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    function wirePrompt() {
+      const inp = document.getElementById("promptInput");
+      inp.addEventListener("input", onType);
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (inp.value.trim()) startLoader(); } });
+      autosize(inp);
+    }
+    function autosize(t) { t.style.height = "auto"; t.style.height = Math.max(32, t.scrollHeight) + "px"; }
+    function onType() {
+      const inp = document.getElementById("promptInput");
+      autosize(inp);
+      document.getElementById("createBtn").classList.toggle("dim", inp.value.trim().length === 0);
+    }
+    function renderSuggestions() {
+      document.getElementById("suggList").innerHTML = suggestions.map(s => `
+        <button onclick="pickSuggestion('${s.text.replace(/'/g,"\\'")}')"
+          class="sugg w-full flex items-center gap-2 rounded-lg bg-bg-elevated pl-3 pr-4 py-3 text-left">
+          <span class="sicon">${s.icon}</span>
+          <span class="text-body-base-regular text-text-primary">${s.text}</span>
+        </button>`).join("");
+    }
+    function pickSuggestion(t) {
+      const inp = document.getElementById("promptInput"); if (inp) { inp.value = t; onType(); }
+      startLoader();
+    }
+
+    // ---------- Loader (≈3s shimmer over the typed text, box shrinks) ----------
+    function startLoader() {
+      const inp = document.getElementById("promptInput");
+      promptText = (inp ? inp.value.trim() : "") || "Create a pitchdeck for my ceramics collectibles business";
+
+      // fade out pills + suggestions
+      ["chipRow","suggBlock"].forEach(id => {
+        const el = document.getElementById(id); el.classList.add("fade-out");
+        setTimeout(() => { el.style.display = "none"; }, 300);
+      });
+
+      // collapse the prompt box down to just the text, sweep a shimmer over it
+      const card = document.getElementById("promptCard");
+      const inner = card.querySelector(".prompt-inner");
+      inner.innerHTML = `<p class="shimmer" style="font-size:22px; line-height:1.4; padding:8px; margin:0">${escapeHtml(promptText)}</p>`;
+      card.classList.add("collapsing");
+
+      setTimeout(swapToRoleStep, 3000);
+    }
+
+    // ---------- Role step: compact prompt pill + role grid ----------
+    function swapToRoleStep() {
+      // morph the collapsed box into the clean compact pill
+      document.getElementById("morphZone").innerHTML =
+        `<div class="prompt-pill max-w-[680px] mx-auto fade-in">
+           <p class="text-body-base-regular text-text-primary" style="line-height:1.4">${escapeHtml(promptText)}</p>
+         </div>`;
+
+      // reveal the role zone + stagger the cards in
+      const zone = document.getElementById("roleZone");
+      zone.style.display = "";
+      zone.classList.add("fade-in");
+      renderRoleGrid();
+    }
+
+    function renderRoleGrid() {
+      const grid = document.getElementById("roleGrid");
+      grid.innerHTML = roles.map((r, i) => `
+        <div class="role-cell" data-role="${r.label}">
+          <button class="role-card entering" style="animation-delay:${i*28}ms" onclick="openDropdown('${r.label}')">
+            <span class="r-emoji">${r.icon}</span>
+            <span class="text-body-base-medium text-text-primary">${r.label}</span>
+          </button>
+        </div>`).join("");
+    }
+
+    // ---------- In-place designation dropdown (Figma 183:766) ----------
+    function openDropdown(label) {
+      if (openRole === label) return;
+      closeDropdown();
+      openRole = label; activeIdx = 0;
+      const cell = document.querySelector(`.role-cell[data-role="${label}"]`);
+      cell.querySelector(".role-card").classList.add("is-open");
+      const pop = document.createElement("div");
+      pop.className = "desig-pop";
+      pop.innerHTML = `
+        <div class="desig-search">
+          <i class="ph ph-magnifying-glass text-text-tertiary text-[15px]"></i>
+          <input id="desigInput" autocomplete="off" placeholder="Your designation" />
+        </div>
+        <div class="desig-list" id="desigList"></div>`;
+      cell.appendChild(pop);
+      renderDesigList("");
+      const input = pop.querySelector("#desigInput");
+      input.addEventListener("input", () => { activeIdx = 0; renderDesigList(input.value); });
+      input.addEventListener("keydown", onDesigKey);
+      setTimeout(() => input.focus(), 30);
+    }
+    function currentList(filter) {
+      const f = (filter || "").toLowerCase().trim();
+      const base = designations[openRole] || [];
+      const matches = base.filter(d => d.toLowerCase().includes(f));
+      // free-text fallback so any typed title is accepted
+      if (f && !base.some(d => d.toLowerCase() === f)) matches.push({ free: filter.trim() });
+      return matches;
+    }
+    function renderDesigList(filter) {
+      const list = currentList(filter);
+      if (activeIdx >= list.length) activeIdx = Math.max(0, list.length - 1);
+      const el = document.getElementById("desigList");
+      if (!list.length) { el.innerHTML = `<div class="desig-opt text-text-tertiary">Type your title…</div>`; return; }
+      el.innerHTML = list.map((d, i) => {
+        const isFree = typeof d === "object";
+        const val = isFree ? d.free : d;
+        const inner = isFree ? `Use "<span class="text-text-primary">${escapeHtml(val)}</span>"` : escapeHtml(val);
+        return `<button class="desig-opt ${i===activeIdx?'active':''} ${isFree?'use-q':''}" data-i="${i}"
+                  onmouseenter="setActive(${i})" onclick="pickDesignation()">${inner}</button>`;
+      }).join("");
+    }
+    function setActive(i) {
+      activeIdx = i;
+      document.querySelectorAll("#desigList .desig-opt").forEach((o, k) => o.classList.toggle("active", k===i));
+    }
+    function onDesigKey(e) {
+      const input = e.target;
+      const list = currentList(input.value);
+      if (e.key === "ArrowDown") { e.preventDefault(); activeIdx = Math.min(list.length-1, activeIdx+1); renderDesigList(input.value); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); activeIdx = Math.max(0, activeIdx-1); renderDesigList(input.value); }
+      else if (e.key === "Enter") { e.preventDefault(); pickDesignation(); }
+      else if (e.key === "Escape") { closeDropdown(); }
+    }
+    function pickDesignation() {
+      const input = document.getElementById("desigInput");
+      const list = currentList(input ? input.value : "");
+      if (!list.length) return;
+      const chosen = list[activeIdx];
+      const title = typeof chosen === "object" ? chosen.free : chosen;
+      goChat(openRole, title);
+    }
+    function closeDropdown() {
+      if (!openRole) return;
+      const cell = document.querySelector(`.role-cell[data-role="${openRole}"]`);
+      if (cell) { cell.querySelector(".desig-pop")?.remove(); cell.querySelector(".role-card")?.classList.remove("is-open"); }
+      openRole = null;
+    }
+    document.addEventListener("click", (e) => {
+      if (openRole && !e.target.closest(".role-cell")) closeDropdown();
+    });
+
+    // ---------- Chat ----------
+    const chatPhrases = ["Mulling over a few directions…","Structuring your outline…","Designing your slides…"];
+    let phraseTimer = null;
+    function goChat(role, title) {
+      closeDropdown();
+      const col = document.getElementById("chatCol");
+      col.innerHTML = `
+        <div class="flex justify-center mt-2 bubble-in">
+          <div class="inline-flex items-center gap-2 rounded-full bg-bg-brand-selected px-3.5 py-1.5">
+            <i class="ph-fill ph-magic-wand text-text-brand"></i>
+            <span class="text-body-sm-medium text-text-secondary">Tailoring for ${escapeHtml(role)}${title ? " · " + escapeHtml(title) : ""}</span>
+          </div>
+        </div>
+        <div class="flex justify-end mt-6 bubble-in" style="animation-delay:.08s">
+          <div class="max-w-[78%] rounded-2xl rounded-br-md bg-bg-tertiary px-4 py-3">
+            <p class="text-body-base-regular text-text-primary" style="line-height:1.45">${escapeHtml(promptText)}</p>
+          </div>
+        </div>
+        <div class="mt-7 flex items-center gap-2.5 bubble-in" style="animation-delay:.5s" id="chatLoader">
+          <span class="pai-mark"><i class="ph-fill ph-sparkle" style="font-size:11px"></i></span>
+          <p class="text-body-base-medium"><span class="shimmer" id="chatPhrase">${chatPhrases[0]}</span></p>
+        </div>`;
+      showStage("stage-chat");
+      // cycle the loader phrases so the chat reads as "continuing"
+      let n = 0;
+      clearInterval(phraseTimer);
+      phraseTimer = setInterval(() => {
+        n = (n + 1) % chatPhrases.length;
+        const p = document.getElementById("chatPhrase"); if (p) p.textContent = chatPhrases[n]; else clearInterval(phraseTimer);
+      }, 2600);
+    }
+
+    // ---------- utils ----------
+    function escapeHtml(s) { return (s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+    // init
+    document.getElementById("morphZone").innerHTML = promptWrapHTML();
+    renderSuggestions();
+    wirePrompt();
+  </script>
+</body>
+</html>
