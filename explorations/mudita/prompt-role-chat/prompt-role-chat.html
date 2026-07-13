@@ -92,7 +92,8 @@
     .role-card:active { transform: scale(.97); transition-duration: .1s; }
     .role-card .r-emoji { font-size: 18px; line-height: 1; flex: none; }
     .role-card .r-label { font-size: 16px; font-weight: 400; line-height: 1.5; color: var(--text-primary); white-space: nowrap; }
-    .role-card.is-open { z-index: 40; }
+    /* open (dropdown showing): the chip is the trigger, keep it visible with a ring */
+    .role-card.is-open { z-index: 40; box-shadow: 0 0 0 1.5px rgba(11,15,20,.55), 0 3px 12px -2px rgba(11,15,20,.16), inset 0 0 0 1px rgba(255,255,255,.8); }
     /* selected state after a designation is picked */
     .role-card.selected { box-shadow: 0 0 0 1.5px #0A1925, 0 3px 12px -2px rgba(10,25,37,.18), inset 0 0 0 1px rgba(255,255,255,.8); }
     .role-card.selected .r-label { font-weight: 500; }
@@ -118,11 +119,11 @@
     .footer-cta:active { transform: scale(.97); transition-duration: .1s; }
 
     /* in-place designation dropdown (Figma 183:785 "menu"): elevation-3, rounded-4, p-8, gap-8 */
-    .desig-pop { position: absolute; top: -6px; left: 0; right: auto; z-index: 40; background: #fff; border-radius: 4px;
+    .desig-pop { position: absolute; top: calc(100% + 6px); left: 0; right: auto; z-index: 40; background: #fff; border-radius: 8px;
       width: max-content; min-width: 240px; max-width: 320px;
       display: flex; flex-direction: column; gap: 8px; padding: 8px;
       box-shadow: 0 0 0 1px rgba(11,15,20,.09), 0 1px 2px 0 rgba(11,15,20,.09), 0 4px 6px 0 rgba(11,15,20,.09), 0 24px 40px -16px rgba(11,15,20,.09), inset 0 0 0 1px rgba(255,255,255,.8);
-      transform-origin: top center; animation: popIn .2s var(--ease-out) both; }
+      transform-origin: top left; animation: popIn .2s var(--ease-out) both; }
     @keyframes popIn { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
     /* active-input field: strong outer ring (border/secondary-inverted 0.48) + inner border/tertiary */
     .desig-search { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; background: #fff;
@@ -428,13 +429,14 @@
       });
     }
 
-    // ---------- In-place designation dropdown (Figma 183:766) ----------
+    // ---------- Designation dropdown — a menu anchored below the chip (Figma 183:766) ----------
     function openDropdown(label) {
       if (openRole === label) return;
       closeDropdown();
       openRole = label; activeIdx = 0;
       const cell = document.querySelector(`.role-cell[data-role="${label}"]`);
       cell.querySelector(".role-card").classList.add("is-open");
+      cell.style.zIndex = "50"; // float this chip + its menu above the others
       const pop = document.createElement("div");
       pop.className = "desig-pop";
       pop.innerHTML = `
@@ -445,6 +447,9 @@
         <div class="desig-list" id="desigList"></div>`;
       cell.appendChild(pop);
       renderDesigList("");
+      // keep the menu inside the role zone: flip to right-aligned if it would overflow
+      const zoneRight = document.getElementById("roleZone").getBoundingClientRect().right;
+      if (pop.getBoundingClientRect().right > zoneRight) { pop.style.left = "auto"; pop.style.right = "0"; }
       const input = pop.querySelector("#desigInput");
       input.addEventListener("input", () => { activeIdx = 0; renderDesigList(input.value); });
       input.addEventListener("keydown", onDesigKey);
@@ -497,7 +502,7 @@
     function closeDropdown() {
       if (!openRole) return;
       const cell = document.querySelector(`.role-cell[data-role="${openRole}"]`);
-      if (cell) { cell.querySelector(".desig-pop")?.remove(); cell.querySelector(".role-card")?.classList.remove("is-open"); }
+      if (cell) { cell.querySelector(".desig-pop")?.remove(); cell.querySelector(".role-card")?.classList.remove("is-open"); cell.style.zIndex = ""; }
       openRole = null;
     }
     document.addEventListener("click", (e) => {
