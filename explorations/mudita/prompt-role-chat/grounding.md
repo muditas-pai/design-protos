@@ -42,7 +42,10 @@ create screen; this one follows the handoff frames beat for beat.
    first one highlighted. It floats over the cards beneath it. Type to filter; **Enter** (or click)
    on a title → chat.
 5. **Chat** — the prompt is sent as the **first user message** (right-aligned bubble); a loader sits
-   right below it (PAI mark + "Mulling over a few directions…") and the chat continues. (Figma `184:980`.)
+   right below it and the chat continues. (Figma `184:980`.) The loader is **Tyo's `PaiLoader`**
+   (inlined from `../../tyo/loader/chat-prototype.html`, settled config: 20px · speed 1.5 · linear ·
+   transparent) — it mounts as the logo cascade then morphs to the spinner; the label + spinner phase
+   cycle together ("Mulling over a few directions…" → "Structuring your outline…" → "Designing your slides…").
 
 ## Prototype decisions
 
