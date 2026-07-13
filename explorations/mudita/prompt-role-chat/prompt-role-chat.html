@@ -124,7 +124,9 @@
       display: flex; flex-direction: column; gap: 8px; padding: 8px;
       box-shadow: 0 0 0 1px rgba(11,15,20,.09), 0 1px 2px 0 rgba(11,15,20,.09), 0 4px 6px 0 rgba(11,15,20,.09), 0 24px 40px -16px rgba(11,15,20,.09), inset 0 0 0 1px rgba(255,255,255,.8);
       transform-origin: top left; animation: popIn .2s var(--ease-out) both; }
+    .desig-pop.up { transform-origin: bottom left; animation-name: popInUp; }
     @keyframes popIn { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+    @keyframes popInUp { from { opacity: 0; transform: translateY(4px) scale(.97); } to { opacity: 1; transform: none; } }
     /* active-input field: strong outer ring (border/secondary-inverted 0.48) + inner border/tertiary */
     .desig-search { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; background: #fff;
       box-shadow: 0 0 0 1px rgba(11,15,20,.48), 0 1px 1px 0 rgba(11,15,20,.09), inset 0 0 0 1px rgba(11,15,20,.06); }
@@ -436,7 +438,7 @@
       openRole = label; activeIdx = 0;
       const cell = document.querySelector(`.role-cell[data-role="${label}"]`);
       cell.querySelector(".role-card").classList.add("is-open");
-      cell.style.zIndex = "50"; // float this chip + its menu above the others
+      cell.style.zIndex = "60"; // float this chip + its menu above the others AND the footer (z-50)
       const pop = document.createElement("div");
       pop.className = "desig-pop";
       pop.innerHTML = `
@@ -447,9 +449,19 @@
         <div class="desig-list" id="desigList"></div>`;
       cell.appendChild(pop);
       renderDesigList("");
-      // keep the menu inside the role zone: flip to right-aligned if it would overflow
+      // collision-aware placement (like a native select)
       const zoneRight = document.getElementById("roleZone").getBoundingClientRect().right;
       if (pop.getBoundingClientRect().right > zoneRight) { pop.style.left = "auto"; pop.style.right = "0"; }
+      // flip UP if the menu would run past the bottom of the viewport
+      const chipRect = cell.getBoundingClientRect();
+      const margin = 12;
+      const spaceBelow = window.innerHeight - chipRect.bottom - margin;
+      const spaceAbove = chipRect.top - margin;
+      if (pop.offsetHeight > spaceBelow && spaceAbove > spaceBelow) {
+        pop.style.top = "auto";
+        pop.style.bottom = "calc(100% + 6px)";
+        pop.classList.add("up");
+      }
       const input = pop.querySelector("#desigInput");
       input.addEventListener("input", () => { activeIdx = 0; renderDesigList(input.value); });
       input.addEventListener("keydown", onDesigKey);
