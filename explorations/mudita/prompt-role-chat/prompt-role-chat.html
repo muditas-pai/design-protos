@@ -93,6 +93,26 @@
     .role-card .r-emoji { font-size: 18px; line-height: 1; flex: none; }
     .role-card .r-label { font-size: 16px; font-weight: 400; line-height: 1.5; color: var(--text-primary); }
     .role-card.is-open { z-index: 40; }
+    /* selected state after a designation is picked */
+    .role-card.selected { box-shadow: 0 0 0 1.5px #0A1925, 0 3px 12px -2px rgba(10,25,37,.18), inset 0 0 0 1px rgba(255,255,255,.8); }
+    .role-card.selected .r-label { font-weight: 500; }
+    .role-card .r-check { margin-left: auto; font-size: 17px; color: #0A1925; flex: none; }
+
+    /* fixed frosted footer CTA: gray→transparent gradient + masked gaussian blur */
+    .role-footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; pointer-events: none; }
+    .role-footer::before { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to top, #f7f7f7 18%, rgba(247,247,247,.6) 58%, rgba(247,247,247,0) 100%);
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      -webkit-mask-image: linear-gradient(to top, #000 32%, transparent 96%);
+      mask-image: linear-gradient(to top, #000 32%, transparent 96%); }
+    .role-footer-inner { position: relative; display: flex; justify-content: center; padding: 60px 24px 26px; }
+    .footer-cta { pointer-events: auto; display: inline-flex; align-items: center; justify-content: center;
+      min-width: 240px; height: 48px; padding: 0 28px; border-radius: 10px; cursor: pointer;
+      background: #0A1925; color: #fff; font-size: 15px; font-weight: 600; letter-spacing: -0.1px;
+      box-shadow: 0 1px 2px rgba(11,15,20,.18), 0 8px 24px -8px rgba(11,15,20,.35);
+      transition: transform .12s var(--ease-out), box-shadow .18s var(--ease-out); }
+    .footer-cta:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(11,15,20,.2), 0 12px 30px -8px rgba(11,15,20,.42); }
+    .footer-cta:active { transform: translateY(.5px); }
 
     /* in-place designation dropdown (Figma 183:785 "menu"): elevation-3, rounded-4, p-8, gap-8 */
     .desig-pop { position: absolute; top: -6px; left: 0; right: 0; z-index: 40; background: #fff; border-radius: 4px;
@@ -159,7 +179,7 @@
         <div id="morphZone" class="mt-8"></div>
 
         <!-- role zone (hidden until loader done) -->
-        <div id="roleZone" class="mt-7 max-w-[680px] mx-auto" style="display:none">
+        <div id="roleZone" class="mt-7 max-w-[680px] mx-auto" style="display:none; padding-bottom:140px">
           <p class="text-center text-text-primary" style="font-size:18px; font-weight:500; line-height:1">Tailor this deck to your role</p>
           <div id="roleGrid" class="grid grid-cols-3 gap-4 mt-6"></div>
         </div>
@@ -176,6 +196,13 @@
         <div class="mt-10 pb-16" id="suggBlock">
           <p class="text-body-base-medium text-text-primary mb-3">Marketers are creating presentations for</p>
           <div class="space-y-3" id="suggList"></div>
+        </div>
+      </div>
+
+      <!-- fixed frosted footer CTA — the only path into chat -->
+      <div class="role-footer" id="roleFooter" style="display:none">
+        <div class="role-footer-inner">
+          <button class="footer-cta" onclick="footerCreate()">Create Presentation</button>
         </div>
       </div>
     </div>
@@ -235,6 +262,7 @@
     let promptText = "";
     let openRole = null;   // label of the card currently expanded
     let activeIdx = 0;     // highlighted option index in the open dropdown
+    let selected = { role: null, title: null }; // the picked role + designation
 
     // ---------- Stage helpers ----------
     function showStage(id) {
@@ -243,8 +271,9 @@
       window.scrollTo({ top: 0 });
     }
     function restart() {
-      promptText = ""; openRole = null; activeIdx = 0;
+      promptText = ""; openRole = null; activeIdx = 0; selected = { role: null, title: null };
       document.getElementById("morphZone").innerHTML = promptWrapHTML();
+      document.getElementById("roleFooter").style.display = "none";
       document.getElementById("roleZone").style.display = "none";
       document.getElementById("roleGrid").innerHTML = "";
       document.getElementById("chipRow").style.display = "";
@@ -275,7 +304,7 @@
               <button class="tool-btn"><i class="ph ph-sparkle text-[15px]"></i>Standard Model<i class="ph ph-caret-down text-[11px] text-text-tertiary ml-0.5"></i></button>
               <button class="tool-btn icon"><i class="ph ph-sliders-horizontal text-[15px]"></i></button>
             </div>
-            <button id="createBtn" class="btn-create dim" onclick="startLoader()">Create Presentation</button>
+            <button id="createBtn" class="btn-create dim" onclick="startLoader()">Continue</button>
           </div>
         </div>
       </div>`;
@@ -339,24 +368,34 @@
       const ta = document.getElementById("promptInput");
       if (ta) { ta.style.display = ""; ta.value = promptText; autosize(ta); }
       const create = document.getElementById("createBtn");
-      if (create) { create.textContent = "Create Presentation"; create.classList.remove("dim"); }
+      if (create) { create.textContent = "Continue"; create.classList.remove("dim"); }
 
       // reveal the role zone + stagger the cards in
+      selected = { role: null, title: null };
       const zone = document.getElementById("roleZone");
       zone.style.display = "";
       zone.classList.add("fade-in");
       renderRoleGrid();
+
+      // show the fixed footer CTA (the only path into chat)
+      const footer = document.getElementById("roleFooter");
+      footer.style.display = "";
+      footer.classList.add("fade-in");
     }
 
     function renderRoleGrid() {
       const grid = document.getElementById("roleGrid");
-      grid.innerHTML = roles.map((r, i) => `
+      grid.innerHTML = roles.map((r, i) => {
+        const isSel = selected.role === r.label;
+        const label = isSel && selected.title ? selected.title : r.label;
+        return `
         <div class="role-cell" data-role="${r.label}">
-          <button class="role-card entering" style="animation-delay:${i*28}ms" onclick="openDropdown('${r.label}')">
+          <button class="role-card entering ${isSel ? 'selected' : ''}" style="animation-delay:${i*28}ms" onclick="openDropdown('${r.label}')">
             <span class="r-emoji">${r.icon}</span>
-            <span class="r-label">${r.label}</span>
+            <span class="r-label">${escapeHtml(label)}</span>
+            ${isSel ? `<i class="ph-fill ph-check-circle r-check"></i>` : ``}
           </button>
-        </div>`).join("");
+        </div>`; }).join("");
     }
 
     // ---------- In-place designation dropdown (Figma 183:766) ----------
@@ -420,7 +459,10 @@
       if (!list.length) return;
       const chosen = list[activeIdx];
       const title = typeof chosen === "object" ? chosen.free : chosen;
-      goChat(openRole, title);
+      // select — do NOT navigate. The footer CTA is the only path into chat.
+      selected = { role: openRole, title };
+      closeDropdown();
+      renderRoleGrid();
     }
     function closeDropdown() {
       if (!openRole) return;
@@ -435,8 +477,10 @@
     // ---------- Chat ----------
     const chatPhrases = ["Mulling over a few directions…","Structuring your outline…","Designing your slides…"];
     let phraseTimer = null;
+    function footerCreate() { goChat(selected.role, selected.title); }
     function goChat(role, title) {
       closeDropdown();
+      document.getElementById("roleFooter").style.display = "none";
       const col = document.getElementById("chatCol");
       // Figma 184:980 — prompt as first message (bg #eee, rounded-12, 14px), then logo-loader below
       col.innerHTML = `
