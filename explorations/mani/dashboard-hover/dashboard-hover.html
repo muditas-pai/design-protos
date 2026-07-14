@@ -272,39 +272,60 @@
     /* ── hover menu (Figma 2551:2635 compact · 2551:2723 expanded) ────────── */
     .menu {
       position: absolute; top: 44px; left: calc(100% - 46px); z-index: 25;
-      width: 248px; padding: 12px 0; background: var(--surface); border-radius: 16px;
+      width: 248px; padding: 8px 6px; background: var(--surface); border-radius: 14px;
       box-shadow: var(--sh-menu);
-      opacity: 0; visibility: hidden; transform: translateY(-4px) scale(0.98);
+      opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.94);
       transform-origin: top left;
-      transition: opacity 160ms var(--ease), transform 180ms var(--ease), visibility 0s linear 180ms;
+      transition: opacity 130ms var(--ease), transform 160ms var(--ease), visibility 0s linear 160ms;
     }
     .tile.is-menu-open .menu {
       opacity: 1; visibility: visible; transform: translateY(0) scale(1);
-      transition: opacity 160ms var(--ease), transform 180ms var(--ease);
+      transition: opacity 140ms var(--ease),
+                  transform 260ms cubic-bezier(0.34, 1.45, 0.64, 1); /* gentle spring */
     }
     .menu.flip { left: auto; right: 6px; transform-origin: top right; }
 
     .menu-item {
-      display: flex; align-items: center; gap: 8px; width: 100%;
-      padding: 8px 16px; margin: 0 0 12px; border: 0; background: transparent;
+      display: flex; align-items: center; gap: 10px; width: 100%; height: 36px;
+      padding: 8px 10px; margin: 0; border: 0; border-radius: 7px; background: transparent;
       font: 400 14px/1.43 "Inter", sans-serif; color: var(--fg); text-align: left;
-      cursor: pointer; transition: background 120ms var(--ease);
+      cursor: pointer; overflow: hidden;
+      transition: background 120ms var(--ease), height 220ms var(--ease),
+                  padding 220ms var(--ease), margin 220ms var(--ease);
     }
-    .menu-item:last-child { margin-bottom: 0; }
     .menu-item:hover { background: var(--sel); }
+    .menu-item:active { background: rgba(22,30,39,0.12); }
     .menu-item i { font-size: 20px; color: var(--fg); flex-shrink: 0; }
     .menu-item.magic span { background: var(--brand-gradient); -webkit-background-clip: text;
       background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
     .menu-item.magic i { background: var(--brand-gradient); -webkit-background-clip: text;
       background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
     .menu-item.danger, .menu-item.danger i { color: var(--danger); }
-    .menu-sep { height: 1px; background: var(--line); margin: 0 0 12px; }
+    .menu-item.danger:hover { background: rgba(185,28,28,0.07); }
+    .menu-sep { height: 1px; background: var(--line); margin: 6px 10px;
+      transition: height 220ms var(--ease), margin 220ms var(--ease); }
 
-    /* expanded state: swap "More..." for the full list */
-    .menu .m-extra { display: none; }
-    .menu.is-expanded .m-extra { display: flex; }
-    .menu.is-expanded .menu-sep.m-extra { display: block; }
-    .menu.is-expanded .m-more { display: none; }
+    /* items cascade in as the menu opens (animation, so hover transitions stay instant) */
+    @keyframes menu-item-in { from { opacity: 0; transform: translateY(-6px); } }
+    @keyframes menu-extra-in { from { opacity: 0; transform: translateY(-6px); } }
+    .tile.is-menu-open .menu .menu-item:not(.m-extra) {
+      animation: menu-item-in 220ms var(--ease) both;
+      animation-delay: calc(28ms * var(--i, 0));
+    }
+
+    /* expanded state: "More..." collapses, the full list cascades in */
+    .menu:not(.is-expanded) .menu-item.m-extra,
+    .menu:not(.is-expanded) .menu-sep.m-extra {
+      height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0;
+      pointer-events: none;
+    }
+    .menu.is-expanded .menu-item.m-extra {
+      animation: menu-extra-in 200ms var(--ease) both;
+      animation-delay: calc(30ms + 26ms * var(--e, 0));
+    }
+    .menu.is-expanded .m-more {
+      height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; pointer-events: none;
+    }
 
     /* deck covers — six distinct mock slides, kept self-contained (no raster assets) */
     .cover { position: relative; aspect-ratio: 366 / 202; overflow: hidden; padding: 16px;
@@ -536,18 +557,18 @@
       <button class="t-more" aria-label="More options"><i class="ph ph-dots-three-vertical"></i></button>
     </div>
     <div class="menu" role="menu">
-      <button class="menu-item" role="menuitem"><i class="ph ph-pencil-simple-line"></i><span>Open</span></button>
-      <button class="menu-item" role="menuitem"><i class="ph ph-microsoft-powerpoint-logo"></i><span>Export as PPT</span></button>
-      <button class="menu-item magic" role="menuitem"><i class="ph ph-magic-wand"></i><span>Improve Presentation</span></button>
+      <button class="menu-item" style="--i:0" role="menuitem"><i class="ph ph-pencil-simple-line"></i><span>Open</span></button>
+      <button class="menu-item" style="--i:1" role="menuitem"><i class="ph ph-microsoft-powerpoint-logo"></i><span>Export as PPT</span></button>
+      <button class="menu-item magic" style="--i:2" role="menuitem"><i class="ph ph-magic-wand"></i><span>Improve Presentation</span></button>
       <div class="menu-sep"></div>
-      <button class="menu-item m-more" role="menuitem"><i class="ph ph-dots-three-circle-vertical"></i><span>More...</span></button>
-      <button class="menu-item m-extra" role="menuitem"><i class="ph ph-share-fat"></i><span>Share</span></button>
-      <button class="menu-item m-extra" role="menuitem"><i class="ph ph-play"></i><span>Present</span></button>
-      <button class="menu-item m-extra" role="menuitem"><i class="ph ph-textbox"></i><span>Rename</span></button>
-      <button class="menu-item m-extra" role="menuitem"><i class="ph ph-copy"></i><span>Duplicate</span></button>
-      <button class="menu-item m-extra" role="menuitem"><i class="ph ph-arrows-out-line-horizontal"></i><span>Move to Folder</span></button>
+      <button class="menu-item m-more" style="--i:3" role="menuitem"><i class="ph ph-dots-three-circle-vertical"></i><span>More...</span></button>
+      <button class="menu-item m-extra" style="--e:0" role="menuitem"><i class="ph ph-share-fat"></i><span>Share</span></button>
+      <button class="menu-item m-extra" style="--e:1" role="menuitem"><i class="ph ph-play"></i><span>Present</span></button>
+      <button class="menu-item m-extra" style="--e:2" role="menuitem"><i class="ph ph-textbox"></i><span>Rename</span></button>
+      <button class="menu-item m-extra" style="--e:3" role="menuitem"><i class="ph ph-copy"></i><span>Duplicate</span></button>
+      <button class="menu-item m-extra" style="--e:4" role="menuitem"><i class="ph ph-arrows-out-line-horizontal"></i><span>Move to Folder</span></button>
       <div class="menu-sep m-extra"></div>
-      <button class="menu-item danger m-extra" role="menuitem"><i class="ph ph-trash"></i><span>Delete</span></button>
+      <button class="menu-item danger m-extra" style="--e:5" role="menuitem"><i class="ph ph-trash"></i><span>Delete</span></button>
     </div>
   </template>
 
