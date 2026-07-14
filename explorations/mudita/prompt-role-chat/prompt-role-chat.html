@@ -42,8 +42,9 @@
       transition: box-shadow .4s var(--ease-out); }
     /* centred group, balanced space above/below the text */
     .brandkit-bar { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; }
-    /* white input sits flush inside the wrap; a top border is the divider */
-    .prompt-inner { background: #fff; border-top: 1px solid #d4d4d4; padding: 16px; min-height: 148px;
+    /* white input sits flush inside the wrap, but with rounded top corners
+       (outer wrap corners stay flush); a top border is the divider */
+    .prompt-inner { background: #fff; border-top: 1px solid #d4d4d4; border-radius: 10px 10px 0 0; padding: 16px; min-height: 148px;
       display: flex; flex-direction: column; justify-content: space-between; }
 
     .tool-btn { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 4px; background: #fff;
@@ -193,7 +194,7 @@
         <div id="morphZone" class="mt-8"></div>
 
         <!-- role zone (hidden until loader done) -->
-        <div id="roleZone" class="mt-7 max-w-[680px] mx-auto" style="display:none; padding-bottom:140px">
+        <div id="roleZone" class="mt-12 max-w-[680px] mx-auto" style="display:none; padding-bottom:140px">
           <p class="role-heading text-center text-text-primary" style="font-size:18px; font-weight:500; line-height:1">Tailor this deck to your role</p>
           <div id="roleGrid" class="grid grid-cols-3 gap-4 mt-6"></div>
         </div>
@@ -429,12 +430,7 @@
     function openDropdown(label) {
       if (openRole === label) return;
       closeDropdown();
-      openRole = label; activeIdx = 0;
-      // reopening a selected chip? land the highlight on the chosen title
-      if (selected.role === label && selected.title) {
-        const idx = (designations[label] || []).findIndex(d => d.toLowerCase() === selected.title.toLowerCase());
-        if (idx >= 0) activeIdx = idx;
-      }
+      openRole = label; activeIdx = 0; // selected title (if any) is pinned to the top → index 0
       const cell = document.querySelector(`.role-cell[data-role="${label}"]`);
       cell.querySelector(".role-card").classList.add("is-open");
       cell.style.zIndex = "60"; // float this chip + its menu above the others AND the footer (z-50)
@@ -448,8 +444,6 @@
         <div class="desig-list" id="desigList"></div>`;
       cell.appendChild(pop);
       renderDesigList("");
-      // bring the highlighted (previously selected) item into view
-      document.querySelectorAll("#desigList .desig-opt")[activeIdx]?.scrollIntoView({ block: "nearest" });
       const input = pop.querySelector("#desigInput");
       input.addEventListener("input", () => { activeIdx = 0; renderDesigList(input.value); });
       input.addEventListener("keydown", onDesigKey);
@@ -458,7 +452,12 @@
     function currentList(filter) {
       const f = (filter || "").toLowerCase().trim();
       const base = designations[openRole] || [];
-      const matches = base.filter(d => d.toLowerCase().includes(f));
+      let matches = base.filter(d => d.toLowerCase().includes(f));
+      // pin the previously-picked title to the top so it's always the first (visible) item
+      if (selected.role === openRole && selected.title) {
+        matches = matches.filter(d => d.toLowerCase() !== selected.title.toLowerCase());
+        if (selected.title.toLowerCase().includes(f)) matches.unshift(selected.title);
+      }
       // free-text fallback so any typed title is accepted
       if (f && !base.some(d => d.toLowerCase() === f)) matches.push({ free: filter.trim() });
       return matches;
