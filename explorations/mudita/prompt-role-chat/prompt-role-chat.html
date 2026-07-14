@@ -56,13 +56,6 @@
       box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.09); transition: opacity .18s var(--ease-out), transform .1s var(--ease-out); }
     .btn-create:active { transform: scale(.96); transition-duration: .1s; }
     .btn-create.dim { opacity: .4; pointer-events: none; }
-    /* save-state button: quiet "Saved" status (not a competing primary CTA) */
-    .btn-create.btn-saved { background: #fff; color: var(--text-secondary); pointer-events: none;
-      box-shadow: 0 0 0 1px rgba(11,15,20,.09), inset 0 0 0 1px rgba(255,255,255,.8); }
-    .btn-create.btn-saved i { color: #0A1925; font-size: 14px; margin-right: 5px; }
-    .btn-spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.45); border-top-color: #fff;
-      display: inline-block; margin-right: 6px; vertical-align: -1px; animation: btnspin .7s linear infinite; }
-    @keyframes btnspin { to { transform: rotate(360deg); } }
     .tool-btn:active { transform: scale(.96); transition: transform .1s var(--ease-out); }
 
     /* action pills (Figma 160:1772) */
@@ -326,12 +319,11 @@
           <i class="ph ph-caret-right text-[15px] text-text-tertiary ml-0.5"></i>
         </div>`;
     }
-    const CHECK_ICON = `<i class="ph-fill ph-check-circle"></i>`;
-    // The trailing button varies by state: Continue (landing), Save (active edit),
-    // or the quiet "Saved" status (collapsed).
+    // Landing has a "Continue" CTA; the in-place edit box has none (it commits on
+    // blur — no explicit Save button).
     function ctaButton(label, o = {}) {
-      const cls = ["btn-create", o.saved ? "btn-saved" : "", o.dim ? "dim" : ""].filter(Boolean).join(" ");
-      return `<button id="createBtn" class="${cls}" onclick="${o.onclick || ''}">${o.icon || ''}${label}</button>`;
+      const cls = ["btn-create", o.dim ? "dim" : ""].filter(Boolean).join(" ");
+      return `<button id="createBtn" class="${cls}" onclick="${o.onclick || ''}">${label}</button>`;
     }
     function toolbarHTML(buttonHTML) {
       return `
@@ -342,14 +334,15 @@
               <button class="tool-btn"><i class="ph ph-sparkle text-[15px]"></i>Standard Model<i class="ph ph-caret-down text-[11px] text-text-tertiary ml-0.5"></i></button>
               <button class="tool-btn icon"><i class="ph ph-sliders-horizontal text-[15px]"></i></button>
             </div>
-            ${buttonHTML}
+            ${buttonHTML || ""}
           </div>`;
     }
     // Editable box — tall textarea. Landing fills the column; the in-place active
-    // box (opts.wrapClass) matches the collapsed width. opts.button = trailing CTA.
+    // box (opts.wrapClass) matches the collapsed width. opts.button = trailing CTA
+    // ("" for no button).
     function promptWrapHTML(opts = {}) {
       const wrapClass = opts.wrapClass || "";
-      const button = opts.button || ctaButton("Continue", { dim: true, onclick: "submitPrompt()" });
+      const button = ("button" in opts) ? opts.button : ctaButton("Continue", { dim: true, onclick: "submitPrompt()" });
       return `
       <div id="promptCard" class="prompt-wrap ${wrapClass}">
         ${brandKitHTML()}
@@ -359,15 +352,15 @@
         </div>
       </div>`;
     }
-    // Collapsed box — same chrome, single-line summary. The CTA is now a quiet
-    // "Saved" status (roles don't depend on the prompt, so nothing to re-run).
+    // Collapsed box — same chrome, single-line summary. No trailing button
+    // (editing commits on blur), just the actions row.
     function collapsedPromptHTML() {
       return `
       <div id="promptCard" class="prompt-wrap collapsed max-w-[680px] mx-auto fade-in">
         ${brandKitHTML()}
         <div class="prompt-inner">
           <div class="collapsed-text" onclick="expandPrompt()" title="Edit prompt">${escapeHtml(promptText)}</div>
-          ${toolbarHTML(ctaButton("Saved", { saved: true, icon: CHECK_ICON }))}
+          ${toolbarHTML("")}
         </div>
       </div>`;
     }
@@ -381,7 +374,8 @@
     function onType() {
       const inp = document.getElementById("promptInput");
       autosize(inp);
-      document.getElementById("createBtn").classList.toggle("dim", inp.value.trim().length === 0);
+      const btn = document.getElementById("createBtn"); // only the landing box has one
+      if (btn) btn.classList.toggle("dim", inp.value.trim().length === 0);
     }
     function renderSuggestions() {
       document.getElementById("suggList").innerHTML = suggestions.map(s => `
@@ -429,30 +423,22 @@
     function expandPrompt() {
       document.getElementById("morphZone").innerHTML = promptWrapHTML({
         wrapClass: "max-w-[680px] mx-auto",
-        button: ctaButton("Save", { dim: true, onclick: "saveEdit()" }),
+        button: "", // no Save button — commit on blur
       });
       wirePrompt();
       const ta = document.getElementById("promptInput");
       ta.value = promptText; onType(); ta.focus();
+      // commit + collapse when focus leaves the box entirely (no Save button)
+      ta.addEventListener("focusout", (e) => {
+        const card = document.getElementById("promptCard");
+        if (card && !card.contains(e.relatedTarget)) commitPrompt();
+      });
       updateFooterMode();
-    }
-    // Save an in-place edit: Saving… (spinner) → Saved ✓ → collapse. Roles never
-    // refresh (they don't depend on the prompt), so this is a pure save, not a re-run.
-    function saveEdit() {
-      const ta = document.getElementById("promptInput");
-      if (ta) promptText = ta.value.trim() || promptText;
-      const btn = document.getElementById("createBtn");
-      if (!btn) { commitPrompt(); return; }
-      btn.style.pointerEvents = "none";
-      btn.innerHTML = `<span class="btn-spinner"></span>Saving…`;
-      setTimeout(() => {
-        btn.classList.add("btn-saved");
-        btn.innerHTML = `${CHECK_ICON}Saved`;
-        setTimeout(commitPrompt, 650);
-      }, 900);
     }
     // Collapse the box again, leaving roles + selection intact.
     function commitPrompt() {
+      const card = document.getElementById("promptCard");
+      if (!card || card.classList.contains("collapsed")) return; // already collapsed
       const ta = document.getElementById("promptInput");
       if (ta) promptText = ta.value.trim() || promptText;
       document.getElementById("morphZone").innerHTML = collapsedPromptHTML();
