@@ -3,6 +3,14 @@
 Reference for when the slide-limit gate fires and what the upgrade prompt offers, across
 standard and trial users. This is the logic behind the [free-slide-limit-card](crazy8s.html).
 
+## Plan limits
+
+| Plan | Slide limit |
+|------|-------------|
+| Free | 15 |
+| Pro | 60 |
+| Gold | 99 (advertised limit / hard cap) |
+
 ## Group 1 — Standard users (no trial)
 
 ### Free users
@@ -33,11 +41,3 @@ Regardless of slide count, a Free-account trial user cannot view the presentatio
 
 - **< 60 slides** → creation allowed and the presentation generates; visibility is gated behind the paywall (upgrade to Pro or Gold to view).
 - **> 60 slides** → gate triggers at upload. Prompt: continue with first 60 slides, or upgrade to Gold (99 slides).
-
-## Plan limits
-
-| Plan | Slide limit |
-|------|-------------|
-| Free | 15 |
-| Pro | 60 |
-| Gold | 99 (advertised limit / hard cap) |
