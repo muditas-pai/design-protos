@@ -166,6 +166,10 @@
     .proto-bar { backdrop-filter: blur(8px); background: rgba(255,255,255,.82); }
 
     h1, .role-heading { text-wrap: balance; }
+    /* main title: large on the landing, shrinks to match the role heading when collapsed */
+    .main-title { font-size: 32px; line-height: 1.15; letter-spacing: -0.3px; font-weight: 500;
+      transition: font-size .32s var(--ease-out); }
+    .main-title.compact { font-size: 20px; letter-spacing: -0.2px; }
 
     /* Reduced motion: keep opacity/comprehension, drop movement + scale */
     @media (prefers-reduced-motion: reduce) {
@@ -198,7 +202,7 @@
       </div>
 
       <div class="w-full max-w-[800px] mx-auto px-6">
-        <h1 class="text-center text-[20px] leading-tight tracking-[-0.2px] font-medium text-text-primary mt-4">Describe your deck, or upload a file</h1>
+        <h1 id="mainTitle" class="main-title text-center text-text-primary mt-4">Describe your deck, or upload a file</h1>
 
         <!-- morph zone: full prompt box ⇄ collapsed box -->
         <div id="morphZone" class="mt-5"></div>
@@ -297,6 +301,7 @@
     }
     function restart() {
       promptText = ""; openRole = null; activeIdx = 0; selected = { role: null, title: null };
+      document.getElementById("mainTitle").classList.remove("compact");
       document.getElementById("morphZone").innerHTML = promptWrapHTML();
       document.getElementById("roleFooter").style.display = "none";
       document.getElementById("roleZone").style.display = "none";
@@ -344,7 +349,7 @@
     // box (opts.wrapClass) matches the collapsed width. opts.button = trailing CTA.
     function promptWrapHTML(opts = {}) {
       const wrapClass = opts.wrapClass || "";
-      const button = opts.button || ctaButton("Continue", { dim: true, onclick: "startLoader()" });
+      const button = opts.button || ctaButton("Continue", { dim: true, onclick: "submitPrompt()" });
       return `
       <div id="promptCard" class="prompt-wrap ${wrapClass}">
         ${brandKitHTML()}
@@ -369,7 +374,7 @@
     function wirePrompt() {
       const inp = document.getElementById("promptInput");
       inp.addEventListener("input", onType);
-      inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (inp.value.trim()) startLoader(); } });
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (inp.value.trim()) submitPrompt(); } });
       autosize(inp);
     }
     function autosize(t) { t.style.height = "auto"; t.style.height = Math.max(32, t.scrollHeight) + "px"; }
@@ -388,45 +393,24 @@
     }
     function pickSuggestion(t) {
       const inp = document.getElementById("promptInput"); if (inp) { inp.value = t; onType(); }
-      startLoader();
+      submitPrompt();
     }
 
-    // ---------- Loader (≈3s shimmer over the typed text) ----------
-    // Keeps the prompt box + its toolbar/options intact; only sweeps a shimmer
-    // over the text while it "reads", then restores the editable box.
-    function startLoader() {
+    // ---------- Continue: go straight to the roles (no loader — roles don't
+    //            depend on the prompt content, so there's nothing to "read") ----------
+    function submitPrompt() {
       const inp = document.getElementById("promptInput");
-      // preserve promptText when re-triggered from the collapsed box (no textarea)
       promptText = (inp ? inp.value.trim() : promptText) || "Create a pitchdeck for my ceramics collectibles business";
-
-      // fade out landing extras (pills + suggestions)
-      ["chipRow","suggBlock"].forEach(id => {
-        const el = document.getElementById(id); el.classList.add("fade-out");
-        setTimeout(() => { el.style.display = "none"; }, 300);
-      });
-
-      // shimmer over the text — swap the textarea for a shimmering line, keep the toolbar
-      const ta = document.getElementById("promptInput");
-      if (ta) {
-        ta.style.display = "none";
-        const sh = document.createElement("p");
-        sh.id = "loadShimmer"; sh.className = "shimmer";
-        sh.style.cssText = "font-size:20px; line-height:1.4; padding:8px; margin:0";
-        sh.textContent = promptText;
-        ta.parentNode.insertBefore(sh, ta);
-      }
-      const create = document.getElementById("createBtn");
-      if (create) { create.classList.add("dim"); create.textContent = "Reading your prompt…"; }
-
-      setTimeout(revealRoles, 3000);
+      document.getElementById("chipRow").style.display = "none";
+      document.getElementById("suggBlock").style.display = "none";
+      revealRoles();
     }
 
     // ---------- Role step: collapse prompt to a tight single line, reveal role grid ----------
     function revealRoles() {
       // morph the prompt box into its sleeker collapsed form (keeps brand-kit + actions + CTA)
       document.getElementById("morphZone").innerHTML = collapsedPromptHTML();
-
-      // ensure the landing extras are hidden (also faded out by startLoader)
+      document.getElementById("mainTitle").classList.add("compact"); // shrink the title
       document.getElementById("chipRow").style.display = "none";
       document.getElementById("suggBlock").style.display = "none";
 
@@ -437,11 +421,8 @@
       zone.classList.add("fade-in");
       renderRoleGrid();
 
-      // show the CTA (static below the roles, or fixed on overflow — see updateFooterMode)
-      const footer = document.getElementById("roleFooter");
-      footer.style.display = "";
-      footer.classList.add("fade-in");
-      updateFooterMode();
+      // footer CTA stays hidden until a role is picked (see pickDesignation)
+      document.getElementById("roleFooter").style.display = "none";
     }
 
     // Tap the collapsed prompt → go active/editable IN PLACE (roles stay below).
@@ -497,6 +478,7 @@
       closeDropdown();
       document.getElementById("roleFooter").style.display = "none";
       document.getElementById("roleZone").style.display = "none";
+      document.getElementById("mainTitle").classList.remove("compact"); // title back to large
       document.getElementById("morphZone").innerHTML = promptWrapHTML();
       document.getElementById("chipRow").style.display = "";
       document.getElementById("chipRow").classList.remove("fade-out");
@@ -607,6 +589,11 @@
       selected = { role: openRole, title };
       closeDropdown();
       applySelection();
+      // the Create Presentation CTA appears only once a role is chosen
+      const footer = document.getElementById("roleFooter");
+      footer.style.display = "";
+      footer.classList.add("fade-in");
+      updateFooterMode();
     }
     function closeDropdown() {
       if (!openRole) return;
