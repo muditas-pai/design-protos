@@ -79,14 +79,10 @@
     .sugg .sicon { width: 24px; height: 24px; border-radius: 4px; background: #fff; display: inline-flex; align-items: center; justify-content: center;
       box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.09); font-size: 14px; }
 
-    /* compact single-line prompt in the role stage (Figma 183:667) — click to edit */
-    .prompt-compact { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #d4d4d4; border-radius: 12px;
-      padding: 14px 16px; cursor: text; box-shadow: 0 1px 2px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.05);
-      transition: box-shadow .18s var(--ease-out); }
-    .prompt-compact:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.14), 0 4px 12px -2px rgba(11,15,20,.08); }
-    .prompt-compact-text { flex: 1; min-width: 0; font-size: 16px; line-height: 1.4; color: var(--text-primary);
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .prompt-compact .pc-edit { flex: none; color: var(--text-tertiary); font-size: 16px; }
+    /* collapsed prompt box in the role stage — sleeker, single-line text, same chrome */
+    .prompt-wrap.collapsed .prompt-inner { min-height: 0; padding: 12px 16px; }
+    .collapsed-text { font-size: 16px; line-height: 1.4; color: var(--text-primary); cursor: text;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 8px; }
 
     /* role cards (Figma 160:1973): equal-width grid, single line, title truncates */
     .role-cell { position: relative; }
@@ -193,14 +189,14 @@
       </div>
 
       <div class="w-full max-w-[800px] mx-auto px-6">
-        <h1 class="text-center text-[32px] leading-[1.1] tracking-[-0.24px] font-normal text-text-primary mt-4">Describe your deck, or upload a file</h1>
+        <h1 class="text-center text-[20px] leading-tight tracking-[-0.2px] font-medium text-text-primary mt-4">Describe your deck, or upload a file</h1>
 
-        <!-- morph zone: prompt wrap ⇄ compact pill -->
-        <div id="morphZone" class="mt-8"></div>
+        <!-- morph zone: full prompt box ⇄ collapsed box -->
+        <div id="morphZone" class="mt-5"></div>
 
         <!-- role zone (hidden until loader done) -->
         <div id="roleZone" class="mt-12 max-w-[680px] mx-auto" style="display:none; padding-bottom:140px">
-          <p class="role-heading text-center text-text-primary" style="font-size:18px; font-weight:500; line-height:1">Tailor this deck to your role</p>
+          <p class="role-heading text-center text-text-primary" style="font-size:20px; font-weight:500; line-height:1.1">Tailor this deck to your role</p>
           <div id="roleGrid" class="grid grid-cols-3 gap-4 mt-6"></div>
         </div>
 
@@ -306,17 +302,18 @@
     }
 
     // ---------- Prompt wrapper (JAS 160:1595) ----------
-    function promptWrapHTML() {
+    // Shared chrome so the full + collapsed boxes stay identical row-for-row.
+    function brandKitHTML() {
       return `
-      <div id="promptCard" class="prompt-wrap">
         <div class="brandkit-bar">
           <i class="ph ph-book-open-text text-[17px] text-text-secondary"></i>
           <span class="text-body-base-medium text-text-secondary">Set up Brand Kit to use your logo, colours, and voice</span>
           <span class="mini-badge badge-pro">Pro</span>
           <i class="ph ph-caret-right text-[15px] text-text-tertiary ml-0.5"></i>
-        </div>
-        <div class="prompt-inner">
-          <textarea id="promptInput" rows="1" class="prompt w-full text-text-primary bg-transparent placeholder:text-text-tertiary" style="font-size:20px; line-height:1.4; padding:8px;" placeholder="Start a new presentation..."></textarea>
+        </div>`;
+    }
+    function toolbarHTML(ctaLabel, dim) {
+      return `
           <div class="prompt-toolbar flex items-center gap-2 mt-3">
             <div class="flex items-center gap-2 flex-1 min-w-0">
               <button class="tool-btn"><i class="ph ph-upload-simple text-[15px]"></i>Upload files, or links</button>
@@ -324,8 +321,29 @@
               <button class="tool-btn"><i class="ph ph-sparkle text-[15px]"></i>Standard Model<i class="ph ph-caret-down text-[11px] text-text-tertiary ml-0.5"></i></button>
               <button class="tool-btn icon"><i class="ph ph-sliders-horizontal text-[15px]"></i></button>
             </div>
-            <button id="createBtn" class="btn-create dim" onclick="startLoader()">Continue</button>
-          </div>
+            <button id="createBtn" class="btn-create ${dim ? 'dim' : ''}" onclick="startLoader()">${ctaLabel}</button>
+          </div>`;
+    }
+    // Full compose box — tall textarea, focused on the landing.
+    function promptWrapHTML() {
+      return `
+      <div id="promptCard" class="prompt-wrap">
+        ${brandKitHTML()}
+        <div class="prompt-inner">
+          <textarea id="promptInput" rows="1" class="prompt w-full text-text-primary bg-transparent placeholder:text-text-tertiary" style="font-size:20px; line-height:1.4; padding:8px;" placeholder="Start a new presentation..."></textarea>
+          ${toolbarHTML("Continue", true)}
+        </div>
+      </div>`;
+    }
+    // Collapsed box — same chrome (Brand Kit row + actions + CTA), but the
+    // textarea becomes a single-line summary; click / Back to edit.
+    function collapsedPromptHTML() {
+      return `
+      <div id="promptCard" class="prompt-wrap collapsed max-w-[680px] mx-auto fade-in">
+        ${brandKitHTML()}
+        <div class="prompt-inner">
+          <div class="collapsed-text" onclick="backToPrompt()" title="Edit prompt">${escapeHtml(promptText)}</div>
+          ${toolbarHTML("Continue", false)}
         </div>
       </div>`;
     }
@@ -359,7 +377,8 @@
     // over the text while it "reads", then restores the editable box.
     function startLoader() {
       const inp = document.getElementById("promptInput");
-      promptText = (inp ? inp.value.trim() : "") || "Create a pitchdeck for my ceramics collectibles business";
+      // preserve promptText when re-triggered from the collapsed box (no textarea)
+      promptText = (inp ? inp.value.trim() : promptText) || "Create a pitchdeck for my ceramics collectibles business";
 
       // fade out landing extras (pills + suggestions)
       ["chipRow","suggBlock"].forEach(id => {
@@ -369,26 +388,24 @@
 
       // shimmer over the text — swap the textarea for a shimmering line, keep the toolbar
       const ta = document.getElementById("promptInput");
-      ta.style.display = "none";
-      const sh = document.createElement("p");
-      sh.id = "loadShimmer"; sh.className = "shimmer";
-      sh.style.cssText = "font-size:20px; line-height:1.4; padding:8px; margin:0";
-      sh.textContent = promptText;
-      ta.parentNode.insertBefore(sh, ta);
+      if (ta) {
+        ta.style.display = "none";
+        const sh = document.createElement("p");
+        sh.id = "loadShimmer"; sh.className = "shimmer";
+        sh.style.cssText = "font-size:20px; line-height:1.4; padding:8px; margin:0";
+        sh.textContent = promptText;
+        ta.parentNode.insertBefore(sh, ta);
+      }
       const create = document.getElementById("createBtn");
-      create.classList.add("dim"); create.textContent = "Reading your prompt…";
+      if (create) { create.classList.add("dim"); create.textContent = "Reading your prompt…"; }
 
       setTimeout(revealRoles, 3000);
     }
 
     // ---------- Role step: collapse prompt to a tight single line, reveal role grid ----------
     function revealRoles() {
-      // morph the prompt box into a compact, single-line summary (click / Back to edit)
-      document.getElementById("morphZone").innerHTML = `
-        <div class="prompt-compact fade-in max-w-[680px] mx-auto" onclick="backToPrompt()" title="Edit prompt">
-          <span class="prompt-compact-text">${escapeHtml(promptText)}</span>
-          <i class="ph ph-pencil-simple pc-edit"></i>
-        </div>`;
+      // morph the prompt box into its sleeker collapsed form (keeps brand-kit + actions + CTA)
+      document.getElementById("morphZone").innerHTML = collapsedPromptHTML();
 
       // ensure the landing extras are hidden (also faded out by startLoader)
       document.getElementById("chipRow").style.display = "none";
