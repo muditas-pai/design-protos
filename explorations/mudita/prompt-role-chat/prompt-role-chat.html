@@ -79,9 +79,14 @@
     .sugg .sicon { width: 24px; height: 24px; border-radius: 4px; background: #fff; display: inline-flex; align-items: center; justify-content: center;
       box-shadow: 0 0 0 1px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.09); font-size: 14px; }
 
-    /* compact prompt pill in role stage (Figma 183:667) */
-    .prompt-pill { background: #fff; border: 1px solid #d4d4d4; border-radius: 12px; padding: 16px 20px;
-      box-shadow: 0 1px 2px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.05); }
+    /* compact single-line prompt in the role stage (Figma 183:667) — click to edit */
+    .prompt-compact { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #d4d4d4; border-radius: 12px;
+      padding: 14px 16px; cursor: text; box-shadow: 0 1px 2px rgba(11,15,20,.06), 0 1px 2px rgba(11,15,20,.05);
+      transition: box-shadow .18s var(--ease-out); }
+    .prompt-compact:hover { box-shadow: 0 0 0 1px rgba(11,15,20,.14), 0 4px 12px -2px rgba(11,15,20,.08); }
+    .prompt-compact-text { flex: 1; min-width: 0; font-size: 16px; line-height: 1.4; color: var(--text-primary);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prompt-compact .pc-edit { flex: none; color: var(--text-tertiary); font-size: 16px; }
 
     /* role cards (Figma 160:1973): equal-width grid, single line, title truncates */
     .role-cell { position: relative; }
@@ -183,7 +188,7 @@
   <section class="stage is-active" id="stage-create">
     <div class="min-h-screen w-full pt-11">
       <div class="w-full flex items-center" style="padding:28px 80px">
-        <button class="nav-circle"><i class="ph ph-arrow-left text-[18px]"></i></button>
+        <button onclick="backToPrompt()" class="nav-circle" title="Back to prompt"><i class="ph ph-arrow-left text-[18px]"></i></button>
         <button class="nav-circle ml-auto"><i class="ph ph-x text-[18px]"></i></button>
       </div>
 
@@ -376,14 +381,18 @@
       setTimeout(revealRoles, 3000);
     }
 
-    // ---------- Role step: keep the editable prompt box, reveal role grid below ----------
+    // ---------- Role step: collapse prompt to a tight single line, reveal role grid ----------
     function revealRoles() {
-      // restore the editable textarea with the prompt still in it
-      const sh = document.getElementById("loadShimmer"); if (sh) sh.remove();
-      const ta = document.getElementById("promptInput");
-      if (ta) { ta.style.display = ""; ta.value = promptText; autosize(ta); }
-      const create = document.getElementById("createBtn");
-      if (create) { create.textContent = "Continue"; create.classList.remove("dim"); }
+      // morph the prompt box into a compact, single-line summary (click / Back to edit)
+      document.getElementById("morphZone").innerHTML = `
+        <div class="prompt-compact fade-in max-w-[680px] mx-auto" onclick="backToPrompt()" title="Edit prompt">
+          <span class="prompt-compact-text">${escapeHtml(promptText)}</span>
+          <i class="ph ph-pencil-simple pc-edit"></i>
+        </div>`;
+
+      // ensure the landing extras are hidden (also faded out by startLoader)
+      document.getElementById("chipRow").style.display = "none";
+      document.getElementById("suggBlock").style.display = "none";
 
       // reveal the role zone + stagger the cards in
       selected = { role: null, title: null };
@@ -396,6 +405,22 @@
       const footer = document.getElementById("roleFooter");
       footer.style.display = "";
       footer.classList.add("fade-in");
+    }
+
+    // ---------- Back: return to the full, focused prompt with the input preserved ----------
+    function backToPrompt() {
+      closeDropdown();
+      document.getElementById("roleFooter").style.display = "none";
+      document.getElementById("roleZone").style.display = "none";
+      document.getElementById("morphZone").innerHTML = promptWrapHTML();
+      document.getElementById("chipRow").style.display = "";
+      document.getElementById("chipRow").classList.remove("fade-out");
+      document.getElementById("suggBlock").style.display = "";
+      document.getElementById("suggBlock").classList.remove("fade-out");
+      wirePrompt();
+      const ta = document.getElementById("promptInput");
+      ta.value = promptText; onType(); ta.focus();
+      window.scrollTo({ top: 0 });
     }
 
     // Full render — only on first reveal (runs the entrance stagger once).

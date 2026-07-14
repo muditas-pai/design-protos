@@ -33,7 +33,9 @@ create screen; this one follows the handoff frames beat for beat.
    suggestion rows. (Reused verbatim from `../onboarding-role-in-chat/prompt-screen-role-flow.html`.)
 2. **Loader (~3s)** — no spinner card. The prompt box **collapses to just the text the user wrote**
    and a **shimmer sweeps across that text** while the box shrinks and lifts. (Figma `160:1835`.)
-3. **Role options** — the prompt box stays (editable) at top; below it "Tailor this deck to your role"
+3. **Role options** — the prompt box collapses to a tight **single-line summary** (body-size text,
+   truncated) with an edit affordance; the top-left **Back button** (or clicking the summary) returns
+   to the full, focused prompt with the text preserved. Below it "Tailor this deck to your role"
    and the 12 roles as an **equal-width 3×4 grid** (Consulting · HR · Product · Design · Sales ·
    Engineering · Marketing · Finance · Investor · Legal · Operations · Communications), each with an
    emoji. (Figma `160:1957`.) Cards never resize: on select the title truncates within the card and
