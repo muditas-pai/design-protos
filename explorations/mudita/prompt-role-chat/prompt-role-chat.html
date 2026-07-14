@@ -428,15 +428,19 @@
       wirePrompt();
       const ta = document.getElementById("promptInput");
       ta.value = promptText; onType(); ta.focus();
-      // commit + collapse when focus leaves the box entirely (no Save button)
+      // commit + collapse when focus leaves the box entirely (no Save button).
+      // Deferred so a click on a role chip / Create button resolves FIRST — otherwise
+      // the collapse's layout shift would steal the click.
       ta.addEventListener("focusout", (e) => {
         const card = document.getElementById("promptCard");
-        if (card && !card.contains(e.relatedTarget)) commitPrompt();
+        if (card && card.contains(e.relatedTarget)) return; // focus stayed in the box
+        setTimeout(commitPrompt, 60);
       });
       updateFooterMode();
     }
     // Collapse the box again, leaving roles + selection intact.
     function commitPrompt() {
+      if (!document.getElementById("stage-create").classList.contains("is-active")) return; // left for chat
       const card = document.getElementById("promptCard");
       if (!card || card.classList.contains("collapsed")) return; // already collapsed
       const ta = document.getElementById("promptInput");
@@ -846,7 +850,12 @@
       { phrase: "Designing your slides…",         phase: "generating" },
     ];
     let phraseTimer = null;
-    function footerCreate() { goChat(selected.role, selected.title); }
+    // Create Presentation always goes to chat — capture any in-progress edit first.
+    function footerCreate() {
+      const ta = document.getElementById("promptInput");
+      if (ta) promptText = ta.value.trim() || promptText;
+      goChat(selected.role, selected.title);
+    }
     function goChat(role, title) {
       closeDropdown();
       document.getElementById("roleFooter").style.display = "none";
