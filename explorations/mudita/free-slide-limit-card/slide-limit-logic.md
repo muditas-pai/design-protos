@@ -16,12 +16,12 @@ standard and trial users. This is the logic behind the [free-slide-limit-card](c
 ### Free users
 
 - **< 15 slides** → No gate. Proceed to presentation.
-- **> 15 slides** → Prompt: continue with first 15 slides, upgrade to Pro (60 slides), or upgrade to Gold (99 slides). Selecting an upgrade opens the checkout modal directly. "Explore plans" option also shown.
+- **> 15 slides** → Prompt: continue with first 15 slides, upgrade to Pro (60 slides), or upgrade to Gold (99 slides). Selecting an upgrade opens the checkout modal directly.
 
 ### Pro users
 
 - **< 60 slides** → No gate. Proceed to presentation.
-- **> 60 slides** → Prompt: continue with first 60 slides, or upgrade to Gold (99 slides). Selecting an upgrade opens the checkout modal directly. "Explore plans" option also shown.
+- **> 60 slides** → Prompt: continue with first 60 slides, or upgrade to Gold (99 slides). Selecting an upgrade opens the checkout modal directly.
 
 ## Group 2 — Trial users (7-day trial)
 
