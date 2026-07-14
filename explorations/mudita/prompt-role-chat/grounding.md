@@ -34,10 +34,10 @@ create screen; this one follows the handoff frames beat for beat.
 2. **Loader (~3s)** — no spinner card. The prompt box **collapses to just the text the user wrote**
    and a **shimmer sweeps across that text** while the box shrinks and lifts. (Figma `160:1835`.)
 3. **Role options** — the prompt box stays (editable) at top; below it "Tailor this deck to your role"
-   and the 12 roles as **hug-content chips in a centred wrap** (Consulting · HR · Product · Design ·
-   Sales · Engineering · Marketing · Finance · Investor · Legal · Operations · Communications), each
-   with an emoji. (Figma `160:1957` was an equal-width 3×4 grid; switched to a wrap so a selected chip
-   can grow to its title and the rest reflow around it without shifting the whole row.)
+   and the 12 roles as an **equal-width 3×4 grid** (Consulting · HR · Product · Design · Sales ·
+   Engineering · Marketing · Finance · Investor · Legal · Operations · Communications), each with an
+   emoji. (Figma `160:1957`.) Cards never resize: on select the title truncates within the card and
+   the leading emoji swaps to a check, so the row height never shifts.
 4. **In-place dropdown** — tapping a card turns *that cell* into a dropdown **in its own spot**
    (Figma `183:766`): a search field ("Your designation") with the role's related titles below,
    first one highlighted. It floats over the cards beneath it. Type to filter; **Enter** (or click)
