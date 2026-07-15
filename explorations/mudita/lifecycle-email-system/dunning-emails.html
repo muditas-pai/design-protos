@@ -66,7 +66,7 @@
   <p class="sub">Email templates across two sequences. <code>{{fields}}</code> resolve from the tables below; text in "quotes" is literal email copy.</p>
   <p class="sub">All of these ship on SES, the billing rail, sent from a named person rather than a marketing address.</p>
   <p class="sub"><b>Two acquisition variants (A/B).</b> Group A is a free plan whose credits run out, then the user upgrades and is charged on the spot. Group B is a 7-day paid trial (card given upfront) charged at day 7. Both renew a year later, so both share the renewal sequence below.</p>
-  <p class="sub"><b>Cadence follows the provider, not the calendar.</b> Stripe and Paddle retry a failed charge 3 times over about a month, timed by their own algorithm for the best success rate. We send one email per failed retry (on the payment_failed webhook), so these are attempt 1 / 2 / 3, not fixed days. Access pauses only after the final retry fails.</p>
+  <p class="sub"><b>Cadence follows the provider, not the calendar.</b> Stripe and Paddle retry a failed charge 3 times over about a month, timed by their own algorithm for the best success rate. We send one email per failed retry (on the payment_failed webhook), so those are attempt 1 / 2 / 3, not fixed days. Access pauses at a fixed 30 days from the first failure, regardless of when the retries land.</p>
 
   <!-- ===================== REFERENCE ===================== -->
   <h2>Plans</h2>
@@ -140,7 +140,7 @@
 
   <div class="email">
     <div class="day">Attempt 2 · still unpaid</div>
-    <div class="meta">Fires on the 2nd failed retry · access continues · next retry is the last</div>
+    <div class="meta">Fires on a later failed retry · access continues until day 30</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your {{plan_name}} plan is still unpaid</span></div>
@@ -148,7 +148,7 @@
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>We tried again and still couldn't renew your {{plan_name}} plan. Your account stays active until {{pause_date}}, but the next attempt is the last before it pauses.</p>
+      <p>We tried again and still couldn't renew your {{plan_name}} plan. Your account stays active until {{pause_date}}. After that it pauses until the payment goes through.</p>
       <div class="v"><span class="vlab">Active user</span>
         <p>You've built {{deck_count}} decks in Presentations.AI. They stay right where they are, along with your AI assets and {{credits}} credits. One card update keeps everything running.</p>
       </div>
@@ -161,8 +161,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Attempt 3 · account paused</div>
-    <div class="meta">Fires on the final failed retry · account paused</div>
+    <div class="day">Day 30 · account paused</div>
+    <div class="meta">Fires at day 30 when the grace period ends · account paused</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your Presentations.AI account is now paused</span></div>
@@ -170,10 +170,10 @@
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>Your {{plan_name}} plan is now paused because we couldn't renew it after several tries. Here's exactly where things stand:</p>
-      <p>• Your decks and files are safe and still in your account<br>
-         • Creating and editing is on hold<br>
-         • Published links are offline for now</p>
+      <p>Your {{plan_name}} plan is now paused because the renewal didn't go through within 30 days. Here's exactly where things stand:</p>
+      <p>• Creating and editing is on hold<br>
+         • Published links are offline for now<br>
+         • Your decks and files are safe and still in your account</p>
       <p>Everything comes back the moment your plan is active. No re-setup, no lost work.</p>
       <p><a class="link" href="#">Reactivate my plan</a></p>
       <p class="sig">{{sender}}, Presentations.AI</p>
@@ -250,8 +250,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Attempt 3 · plan not started</div>
-    <div class="meta">Fires on the final failed retry · stays on the free plan</div>
+    <div class="day">Day 30 · plan not started</div>
+    <div class="meta">Fires after the 30-day retry window · stays on the free plan</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">We couldn't start your {{plan_name}} plan</span></div>
@@ -259,7 +259,7 @@
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>After a few tries, we still couldn't start your {{plan_name}} plan, so your account will stay on the free plan. Your trial decks are safe.</p>
+      <p>After 30 days of retries, we still couldn't start your {{plan_name}} plan, so your account stays on the free plan. Your trial decks are safe.</p>
       <p>Whenever you're ready, adding a working card starts the plan with all your credits and features.</p>
       <p><a class="link" href="#">Add payment method</a></p>
       <p class="sig">{{sender}}, Presentations.AI</p>
