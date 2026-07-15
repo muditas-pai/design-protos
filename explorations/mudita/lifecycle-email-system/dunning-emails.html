@@ -66,7 +66,7 @@
   <p class="sub">Email templates across two sequences. <code>{{fields}}</code> resolve from the tables below; text in "quotes" is literal email copy.</p>
   <p class="sub">All of these ship on SES, the billing rail, sent from a named person rather than a marketing address.</p>
   <p class="sub"><b>Two acquisition variants (A/B).</b> Group A is a free plan whose credits run out, then the user upgrades and is charged on the spot. Group B is a 7-day paid trial (card given upfront) charged at day 7. Both renew a year later, so both share the renewal sequence below.</p>
-  <p class="sub"><b>Cadence follows the provider, not the calendar.</b> Stripe and Paddle retry a failed charge 3 times over about a month, timed by their own algorithm for the best success rate. We send one email per failed retry (on the payment_failed webhook), so those are attempt 1 / 2 / 3, not fixed days. Access pauses at a fixed 30 days from the first failure, regardless of when the retries land.</p>
+  <p class="sub"><b>Cadence follows the provider, not the calendar.</b> Stripe and Paddle retry a failed charge a variable number of times (usually 3 or 4) over about a month, on their own algorithm. We can't number the retries ahead of time, but the provider does tell us which one is its final attempt. So we send one email on the first failure, one on each further retry, and one on the final retry it flags. Access pauses at a fixed 30 days from the first failure, whatever the retries do.</p>
 
   <!-- ===================== REFERENCE ===================== -->
   <h2>Plans</h2>
@@ -97,8 +97,8 @@
   <h2>Annual renewal failed (both groups)</h2>
 
   <div class="email">
-    <div class="day">Attempt 1 · payment failed</div>
-    <div class="meta">Fires on the 1st failed charge · access continues</div>
+    <div class="day">First failure · payment failed</div>
+    <div class="meta">Fires on the first failed charge · access continues until day 30</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI &lt;billing@…&gt;</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Action needed: Your Presentations.AI payment failed</span></div>
@@ -121,7 +121,7 @@
   </div>
 
   <div class="email">
-    <div class="day ex">Example · Attempt 1 filled in</div>
+    <div class="day ex">Example · first email filled in</div>
     <div class="meta">Pro · expired card · active user</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>Aarav, Presentations.AI &lt;billing@presentations.ai&gt;</span></div>
@@ -139,8 +139,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Attempt 2 · still unpaid</div>
-    <div class="meta">Fires on a later failed retry · access continues until day 30</div>
+    <div class="day">Further retry · still unpaid</div>
+    <div class="meta">Fires on each further failed retry, however many the provider makes · access continues</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your {{plan_name}} plan is still unpaid</span></div>
@@ -161,8 +161,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Attempt 3 · final retry</div>
-    <div class="meta">Fires on the 3rd (final) failed retry · access continues until day 30</div>
+    <div class="day">Final retry · last attempt</div>
+    <div class="meta">Fires on the retry the provider flags as its last · access continues until day 30</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your {{plan_name}} plan pauses on {{pause_date}}</span></div>
@@ -226,8 +226,8 @@
   <p class="note">Same 3-retry cadence. The trial has already ended, so the user is on the free tier while the retries run. The whole sequence depends on a Paddle/Stripe webhook that doesn't exist yet.</p>
 
   <div class="email">
-    <div class="day">Attempt 1 · charge failed</div>
-    <div class="meta">Fires on the 1st failed charge · trial ended, on free tier meanwhile</div>
+    <div class="day">First failure · charge failed</div>
+    <div class="meta">Fires on the first failed charge · trial ended, on free tier meanwhile</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Payment failed: Your {{plan_name}} plan didn't start</span></div>
@@ -251,8 +251,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Attempt 2 · still unpaid</div>
-    <div class="meta">Fires on the 2nd failed retry · next retry is the last</div>
+    <div class="day">Further retry · still unpaid</div>
+    <div class="meta">Fires on each further failed retry, however many the provider makes · still on the free tier</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Still can't start your {{plan_name}} plan</span></div>
@@ -268,8 +268,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Attempt 3 · final retry</div>
-    <div class="meta">Fires on the 3rd (final) failed retry · still on the free tier</div>
+    <div class="day">Final retry · last attempt</div>
+    <div class="meta">Fires on the retry the provider flags as its last · still on the free tier</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Last automatic try to start your {{plan_name}} plan</span></div>
