@@ -66,6 +66,7 @@
   <p class="sub">Email templates across two sequences. <code>{{fields}}</code> resolve from the tables below; text in "quotes" is literal email copy.</p>
   <p class="sub">All of these ship on SES, the billing rail, sent from a named person rather than a marketing address.</p>
   <p class="sub"><b>Two acquisition variants (A/B).</b> Group A is a free plan whose credits run out, then the user upgrades and is charged on the spot. Group B is a 7-day paid trial (card given upfront) charged at day 7. Both renew a year later, so both share the renewal sequence below.</p>
+  <p class="sub"><b>Cadence follows the provider, not the calendar.</b> Stripe and Paddle retry a failed charge 3 times over about a month, timed by their own algorithm for the best success rate. We send one email per failed retry (on the payment_failed webhook), so these are attempt 1 / 2 / 3, not fixed days. Access pauses only after the final retry fails.</p>
 
   <!-- ===================== REFERENCE ===================== -->
   <h2>Plans</h2>
@@ -86,8 +87,8 @@
       <tr><td class="k">{{amount}}</td><td>₹8,999 (Pro) / ₹1,07,700 (Gold)</td></tr>
       <tr><td class="k">{{credits}}</td><td>5,000 (Pro) / 50,000 (Gold)</td></tr>
       <tr><td class="k">{{deck_count}}</td><td>Deck count (active-user block only)</td></tr>
-      <tr><td class="k">{{grace_end}} {{suspend_date}}</td><td>Dates, written as 21 Apr 2026</td></tr>
-      <tr><td class="k">{{billing_url}}</td><td>Link straight to the billing page</td></tr>
+      <tr><td class="k">{{pause_date}}</td><td>Date access pauses if still unpaid, after the final retry. Written as 21 Apr 2026</td></tr>
+      <tr><td class="k">{{billing_url}}</td><td>Per-user hosted link from the provider (Stripe / Paddle), generated at send time. Not a saved billing page</td></tr>
       <tr><td class="k">{{sender}}</td><td>Placeholder: a real teammate's name + a named from-address</td></tr>
     </tbody>
   </table>
@@ -96,8 +97,8 @@
   <h2>Annual renewal failed (both groups)</h2>
 
   <div class="email">
-    <div class="day">Day 0 · payment failed</div>
-    <div class="meta">Fires on payment_failed · exits when the charge succeeds</div>
+    <div class="day">Attempt 1 · payment failed</div>
+    <div class="meta">Fires on the 1st failed charge · access continues</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI &lt;billing@…&gt;</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Action needed: Your Presentations.AI payment failed</span></div>
@@ -105,7 +106,7 @@
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>We tried to renew your {{plan_name}} plan today, but the payment didn't go through.</p>
+      <p>We tried to renew your {{plan_name}} plan, but the payment didn't go through.</p>
       <div class="v reason">
         <span class="vlab">Pick based on reason</span>
         <p><span class="code">expired_card</span> "The card on file has expired." <span class="mid">·</span> <a class="link" href="#">"Update your card"</a></p>
@@ -114,13 +115,13 @@
         <p><span class="code">lost_or_stolen</span> "The card on file was reported lost or stolen, so we couldn't use it." <span class="mid">·</span> <a class="link" href="#">"Add a new card"</a></p>
         <p><span class="code">generic_decline</span> "The charge was declined this time, but it's usually a quick fix." <span class="mid">·</span> <a class="link" href="#">"Update your card"</a></p>
       </div>
-      <p>Your account stays active until {{grace_end}}. If you've already taken care of it, you can ignore this.</p>
+      <p>Your account stays active until {{pause_date}}. If you've already taken care of it, you can ignore this.</p>
       <p class="sig">{{sender}}, Presentations.AI</p>
     </div>
   </div>
 
   <div class="email">
-    <div class="day ex">Example · Day 0 filled in</div>
+    <div class="day ex">Example · Attempt 1 filled in</div>
     <div class="meta">Pro · expired card · active user</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>Aarav, Presentations.AI &lt;billing@presentations.ai&gt;</span></div>
@@ -129,17 +130,17 @@
     </div>
     <div class="body">
       <p>Hi Mani,</p>
-      <p>We tried to renew your Pro plan today, but the payment didn't go through.</p>
+      <p>We tried to renew your Pro plan, but the payment didn't go through.</p>
       <p>The card on file has expired.</p>
       <p><a class="link" href="#">Update your card</a></p>
-      <p>Your account stays active until 24 Apr 2026. If you've already taken care of it, you can ignore this.</p>
+      <p>Your account stays active until 21 Apr 2026. If you've already taken care of it, you can ignore this.</p>
       <p class="sig">Aarav, Presentations.AI</p>
     </div>
   </div>
 
   <div class="email">
-    <div class="day">Day 3 · reminder</div>
-    <div class="meta">Exits on charge success or card updated</div>
+    <div class="day">Attempt 2 · still unpaid</div>
+    <div class="meta">Fires on the 2nd failed retry · access continues · next retry is the last</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your {{plan_name}} plan is still unpaid</span></div>
@@ -147,7 +148,7 @@
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>A quick follow-up. We still couldn't renew your {{plan_name}} plan. Your account stays active until {{suspend_date}}.</p>
+      <p>We tried again and still couldn't renew your {{plan_name}} plan. Your account stays active until {{pause_date}}, but the next attempt is the last before it pauses.</p>
       <div class="v"><span class="vlab">Active user</span>
         <p>You've built {{deck_count}} decks in Presentations.AI. They stay right where they are, along with your AI assets and {{credits}} credits. One card update keeps everything running.</p>
       </div>
@@ -160,26 +161,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Day 5 · pauses soon</div>
-    <div class="meta">No reason line from here on</div>
-    <div class="hdr">
-      <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
-      <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your {{plan_name}} access pauses in 2 days</span></div>
-      <div class="r"><span class="lbl">Prev</span><span class="pre">One step to avoid an interruption.</span></div>
-    </div>
-    <div class="body">
-      <p>Hi {{first_name}},</p>
-      <p>Your {{plan_name}} renewal still hasn't cleared, and on {{suspend_date}} your account pauses until it does.</p>
-      <p>Paused means you can't create or edit decks, and your published links stop working. Your decks and files are <b>not</b> deleted. They're waiting for you the moment your plan is active again.</p>
-      <p><a class="link" href="#">Update payment method</a></p>
-      <p>Updating your card keeps everything running.</p>
-      <p class="sig">{{sender}}, Presentations.AI</p>
-    </div>
-  </div>
-
-  <div class="email">
-    <div class="day">Day 7 · suspended</div>
-    <div class="meta">Exits on charge success, instant reactivation</div>
+    <div class="day">Attempt 3 · account paused</div>
+    <div class="meta">Fires on the final failed retry · account paused</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your Presentations.AI account is now paused</span></div>
@@ -187,7 +170,7 @@
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>Your {{plan_name}} plan is now paused because we couldn't renew it. Here's exactly where things stand:</p>
+      <p>Your {{plan_name}} plan is now paused because we couldn't renew it after several tries. Here's exactly where things stand:</p>
       <p>• Your decks and files are safe and still in your account<br>
          • Creating and editing is on hold<br>
          • Published links are offline for now</p>
@@ -198,8 +181,8 @@
   </div>
 
   <div class="email">
-    <div class="day">Day 30 · win-back</div>
-    <div class="meta">Exits on repurchase</div>
+    <div class="day">Win-back</div>
+    <div class="meta">About a month after pausing · exits on repurchase</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Your decks are still here, {{first_name}}</span></div>
@@ -222,11 +205,11 @@
 
   <!-- ===================== SEQUENCE B ===================== -->
   <h2>Paid-trial charge failed (Group B)</h2>
-  <p class="note">Compressed to Day 0 + Day 3, since the trial has already ended. Blocked until a Paddle/Stripe webhook exists (the day-7 charge is invisible today).</p>
+  <p class="note">Same 3-retry cadence. The trial has already ended, so the user is on the free tier while the retries run. The whole sequence depends on a Paddle/Stripe webhook that doesn't exist yet.</p>
 
   <div class="email">
-    <div class="day">Trial +0 · charge failed</div>
-    <div class="meta">Exits when card added or charge settles</div>
+    <div class="day">Attempt 1 · charge failed</div>
+    <div class="meta">Fires on the 1st failed charge · trial ended, on free tier meanwhile</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
       <div class="r"><span class="lbl">Subj</span><span class="sub-l">Payment failed: Your {{plan_name}} plan didn't start</span></div>
@@ -234,32 +217,50 @@
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>Your 7-day {{plan_name}} trial wrapped up today. We tried to start your plan, but the payment didn't go through.</p>
-      <div class="v reason"><span class="vlab">Pick based on reason (same buckets as the renewal email)</span>
+      <p>Your 7-day {{plan_name}} trial has ended, but the payment to start your plan didn't go through.</p>
+      <div class="v reason">
+        <span class="vlab">Pick based on reason (same buckets as the renewal email)</span>
         <p><span class="code">expired_card</span> "The card on file has expired." <span class="mid">·</span> <a class="link" href="#">"Update your card"</a></p>
         <p><span class="code">insufficient_funds</span> "The charge didn't clear this time, which is usually easy to sort out." <span class="mid">·</span> <a class="link" href="#">"Try a different card"</a></p>
         <p><span class="code">issuer_declined</span> "Your bank declined the charge, which is often temporary." <span class="mid">·</span> <a class="link" href="#">"Try another card or contact your bank"</a></p>
         <p><span class="code">lost_or_stolen</span> "The card on file was reported lost or stolen, so we couldn't use it." <span class="mid">·</span> <a class="link" href="#">"Add a new card"</a></p>
         <p><span class="code">generic_decline</span> "The charge was declined this time, but it's usually a quick fix." <span class="mid">·</span> <a class="link" href="#">"Update your card"</a></p>
       </div>
-      <p>Your trial decks are saved. Add a working card and your {{plan_name}} plan starts right away. All {{credits}} credits unlock with it.</p>
+      <p>Your trial decks are saved. Add a working card and your {{plan_name}} plan starts right away, with all {{credits}} credits.</p>
       <p><a class="link" href="#">Add payment method</a></p>
       <p class="sig">{{sender}}, Presentations.AI</p>
     </div>
   </div>
 
   <div class="email">
-    <div class="day">Trial +3 · final step</div>
-    <div class="meta">Exits when card added</div>
+    <div class="day">Attempt 2 · still unpaid</div>
+    <div class="meta">Fires on the 2nd failed retry · next retry is the last</div>
     <div class="hdr">
       <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
-      <div class="r"><span class="lbl">Subj</span><span class="sub-l">Last chance to start your {{plan_name}} plan</span></div>
+      <div class="r"><span class="lbl">Subj</span><span class="sub-l">Still can't start your {{plan_name}} plan</span></div>
       <div class="r"><span class="lbl">Prev</span><span class="pre">Your trial decks are safe either way.</span></div>
     </div>
     <div class="body">
       <p>Hi {{first_name}},</p>
-      <p>Following up. The charge to start your {{plan_name}} plan still hasn't cleared, so you're on the free tier for now. Your trial decks are safe.</p>
-      <p>Whenever you're ready, one card update brings the plan back, credits and features included.</p>
+      <p>We tried again and the charge to start your {{plan_name}} plan still didn't clear, so you're on the free tier for now. Your trial decks are safe.</p>
+      <p>Updating your card is the quickest way to pick up where you left off, with all your credits and features.</p>
+      <p><a class="link" href="#">Add payment method</a></p>
+      <p class="sig">{{sender}}, Presentations.AI</p>
+    </div>
+  </div>
+
+  <div class="email">
+    <div class="day">Attempt 3 · plan not started</div>
+    <div class="meta">Fires on the final failed retry · stays on the free plan</div>
+    <div class="hdr">
+      <div class="r"><span class="lbl">From</span><span>{{sender}}, Presentations.AI</span></div>
+      <div class="r"><span class="lbl">Subj</span><span class="sub-l">We couldn't start your {{plan_name}} plan</span></div>
+      <div class="r"><span class="lbl">Prev</span><span class="pre">Add a card anytime to pick up where you left off.</span></div>
+    </div>
+    <div class="body">
+      <p>Hi {{first_name}},</p>
+      <p>After a few tries, we still couldn't start your {{plan_name}} plan, so your account will stay on the free plan. Your trial decks are safe.</p>
+      <p>Whenever you're ready, adding a working card starts the plan with all your credits and features.</p>
       <p><a class="link" href="#">Add payment method</a></p>
       <p class="sig">{{sender}}, Presentations.AI</p>
     </div>
