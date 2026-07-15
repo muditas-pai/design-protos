@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Prompt input · type-scale interaction — design-protos</title>
+
+  <!-- Fonts + icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+
+  <!-- Design system -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    :root {
+      /* tokens pulled from the Figma component */
+      --bg-tertiary: #f5f5f5;
+      --bg-primary: #ffffff;
+      --bg-elevated: #ffffff;
+      --bg-primary-inverted: #0b0f14;
+      --bg-brand-inverted: #e6efff;
+      --neutral-300: #d4d4d4;
+      --text-primary: #171717;
+      --text-secondary: #525252;
+      --text-tertiary: #a3a3a3;
+      --text-brand: #005eff;
+      --rounded-xl: 12px;
+      --rounded-lg: 8px;
+      --rounded-base: 4px;
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+      --shadow-prompt:
+        0px 1px 2px 0px rgba(11, 15, 20, 0.09),
+        0px 4px 6px 0px rgba(11, 15, 20, 0.09),
+        0px 24px 40px -16px rgba(11, 15, 20, 0.09);
+      --shadow-button:
+        0px 0px 0px 1px rgba(11, 15, 20, 0.09),
+        0px 1px 2px 1px rgba(11, 15, 20, 0.06);
+      --shadow-button-inner: inset 0px 0px 0px 1px rgba(255, 255, 255, 0.8);
+    }
+
+    body {
+      margin: 0;
+      background: #ececee;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .stage {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 72px 24px 120px;
+    }
+
+    /* ── Outer prompt card ─────────────────────────────────────────── */
+    .prompt-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--rounded-xl);
+      padding: 8px 1px 1px;
+      box-shadow: var(--shadow-prompt);
+      overflow: hidden;
+    }
+
+    /* ── Brand-kit promo strip ─────────────────────────────────────── */
+    .promo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 12px;
+      border-radius: var(--rounded-lg);
+    }
+    .promo-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .promo i.ph { font-size: 18px; color: var(--text-secondary); line-height: 1; }
+    .promo-text {
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.43;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .promo .caret { font-size: 18px; color: var(--text-secondary); transition: transform 220ms var(--ease); }
+    .promo-inner:hover .caret { transform: translateX(2px); }
+
+    .badge-pro {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      padding: 2px 6px;
+      border-radius: 34px;
+      background: var(--bg-brand-inverted);
+      mix-blend-mode: multiply;
+    }
+    .badge-pro span {
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.33;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: var(--text-brand);
+    }
+
+    /* ── Inner white input surface ─────────────────────────────────── */
+    .prompt-surface {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 148px;
+      background: var(--bg-primary);
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--rounded-xl);
+      padding: 12px;
+      transition: box-shadow 160ms var(--ease), border-color 160ms var(--ease);
+    }
+    .prompt-surface.is-focused {
+      border-color: #bcbcbc;
+      box-shadow: 0 0 0 3px rgba(0, 94, 255, 0.08);
+    }
+
+    /* input region — holds the placeholder overlay + textarea */
+    .input-region {
+      position: relative;
+      flex: 1 1 auto;
+      padding: 8px;
+      min-height: 0;
+    }
+
+    .prompt-field {
+      display: block;
+      width: 100%;
+      border: 0;
+      outline: none;
+      resize: none;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      line-height: 1.4;
+      /* the star of the show — size is driven by JS, eased here */
+      font-size: 20px;
+      transition: font-size 180ms var(--ease);
+      overflow-y: hidden;
+      max-height: 320px;
+    }
+    .prompt-field::-webkit-scrollbar { width: 8px; }
+    .prompt-field::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 8px; }
+
+    /* rich placeholder overlay (partial underline can't live in a textarea placeholder) */
+    .placeholder {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      pointer-events: none;
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--text-tertiary);
+      transition: opacity 140ms var(--ease);
+    }
+    .placeholder u { text-decoration: underline; text-underline-offset: 2px; }
+    .input-region.has-text .placeholder { opacity: 0; }
+
+    /* ── Action row ────────────────────────────────────────────────── */
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .action-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 28px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: var(--rounded-base);
+      background: var(--bg-elevated);
+      box-shadow: var(--shadow-button), var(--shadow-button-inner);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.33;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background 140ms var(--ease), box-shadow 140ms var(--ease);
+    }
+    .btn:hover { background: #fafafa; }
+    .btn:active { background: #f2f2f2; }
+    .btn i.ph { font-size: 16px; line-height: 1; color: var(--text-primary); }
+    .btn .caret-down { font-size: 12px; margin-left: 4px; color: var(--text-secondary); }
+    .btn.icon-only { width: 28px; padding: 0; }
+
+    .btn-create {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: var(--rounded-base);
+      background: var(--bg-primary-inverted);
+      color: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.33;
+      white-space: nowrap;
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow:
+        0px 0px 0px 1px rgba(11, 15, 20, 0.06),
+        0px 1px 2px 0px rgba(11, 15, 20, 0.09);
+      transition: opacity 180ms var(--ease), transform 140ms var(--ease);
+    }
+    .btn-create.is-ready {
+      opacity: 1;
+      cursor: pointer;
+    }
+    .btn-create.is-ready:hover { transform: translateY(-1px); }
+    .btn-create.is-ready:active { transform: translateY(0); }
+
+    /* ── Dev harness (not part of the component) ───────────────────── */
+    .harness {
+      max-width: 760px;
+      margin: 28px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      font-family: 'Inter', sans-serif;
+    }
+    .seg {
+      display: inline-flex;
+      background: #fff;
+      border: 1px solid var(--neutral-300);
+      border-radius: 999px;
+      padding: 3px;
+      box-shadow: var(--shadow-button);
+    }
+    .seg button {
+      border: 0;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: color 140ms var(--ease);
+    }
+    .seg button.active {
+      background: var(--bg-primary-inverted);
+      color: #fff;
+    }
+    .harness-note {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      max-width: 760px;
+      margin: 14px auto 0;
+    }
+    .harness-note b { color: var(--text-primary); font-weight: 600; }
+    .harness-actions { display: inline-flex; gap: 10px; align-items: center; }
+    .link-btn {
+      border: 0; background: none; padding: 0; cursor: pointer;
+      font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-brand);
+    }
+    .link-btn:hover { text-decoration: underline; }
+    .size-tag {
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+      font-variant-numeric: tabular-nums; background: #fff;
+      border: 1px solid var(--neutral-300); border-radius: 6px; padding: 3px 8px;
+    }
+  </style>
+</head>
+
+<body class="pai">
+  <div class="stage">
+
+    <!-- ══ THE COMPONENT ═══════════════════════════════════════════ -->
+    <div class="prompt-card">
+      <!-- brand-kit promo strip -->
+      <div class="promo">
+        <div class="promo-inner">
+          <i class="ph ph-book-open-text"></i>
+          <span class="promo-text">Set up Brand Kit to use your logo, colours, and voice</span>
+          <span class="badge-pro"><span>pro</span></span>
+          <i class="ph ph-caret-right caret"></i>
+        </div>
+      </div>
+
+      <!-- white input surface -->
+      <div class="prompt-surface" id="surface">
+        <div class="input-region" id="inputRegion">
+          <div class="placeholder" aria-hidden="true">To start creating, type here or <u>upload a file</u>...</div>
+          <textarea class="prompt-field" id="field" rows="1" spellcheck="false"></textarea>
+        </div>
+
+        <div class="action-row">
+          <div class="action-left">
+            <button class="btn" type="button">
+              <i class="ph ph-upload-simple"></i>Upload files, or links
+            </button>
+            <button class="btn" type="button">
+              <i class="ph ph-cards-three"></i>5 Slides<i class="ph ph-caret-down caret-down"></i>
+            </button>
+            <button class="btn" type="button">
+              <i class="ph ph-sparkle"></i>Standard Model<i class="ph ph-caret-down caret-down"></i>
+            </button>
+            <button class="btn icon-only" type="button" aria-label="Settings">
+              <i class="ph ph-sliders-horizontal"></i>
+            </button>
+          </div>
+          <button class="btn-create" id="createBtn" type="button">Create Presentation</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DEV HARNESS (remove for handoff) ════════════════════════ -->
+    <div class="harness">
+      <div class="seg" id="modeSeg">
+        <button data-mode="scale" class="active">Scale down (20 → 16)</button>
+        <button data-mode="snap">Snap to 16</button>
+        <button data-mode="fixed">Fixed 16, expand</button>
+      </div>
+      <span class="size-tag" id="sizeTag">20.0 px</span>
+      <div class="harness-actions">
+        <button class="link-btn" id="pasteBtn">Paste a big block</button>
+        <button class="link-btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <p class="harness-note" id="modeNote"></p>
+  </div>
+
+  <script>
+    const field       = document.getElementById('field');
+    const region      = document.getElementById('inputRegion');
+    const surface     = document.getElementById('surface');
+    const createBtn   = document.getElementById('createBtn');
+    const sizeTag     = document.getElementById('sizeTag');
+    const modeSeg     = document.getElementById('modeSeg');
+    const modeNote    = document.getElementById('modeNote');
+
+    const MAX_SIZE = 20;   // empty / placeholder size
+    const MIN_SIZE = 16;   // settled typing size
+    const RAMP     = 90;   // chars over which "scale" mode eases 20 → 16
+
+    let mode = 'scale';
+
+    const NOTES = {
+      scale: '<b>Scale down.</b> Text starts big and inviting at 20&nbsp;px, then eases down toward 16&nbsp;px over the first line or so of typing. The empty state feels like a headline; a full prompt reads like working text. Container grows on long input.',
+      snap:  '<b>Snap to 16.</b> The moment you type a character, the field drops from the 20&nbsp;px placeholder to 16&nbsp;px in one eased move, and stays there. Most predictable; least motion while typing.',
+      fixed: '<b>Fixed 16, expand.</b> Placeholder is 20&nbsp;px, but real text is always 16&nbsp;px. Nothing rescales as you type; instead the box <i>grows taller</i> to fit, so a big paste expands the surface rather than shrinking the type.'
+    };
+
+    // Compute the target font size for the current text length + mode.
+    function targetSize(len) {
+      if (len === 0) return MAX_SIZE;
+      if (mode === 'snap' || mode === 'fixed') return MIN_SIZE;
+      // scale: linear ease from MAX at 1 char to MIN at RAMP chars
+      const t = Math.min(1, len / RAMP);
+      return +(MAX_SIZE - (MAX_SIZE - MIN_SIZE) * t).toFixed(2);
+    }
+
+    // Auto-grow the textarea to fit its content (so paste expands the box).
+    function autosize() {
+      field.style.height = 'auto';
+      field.style.height = field.scrollHeight + 'px';
+      // once we hit the cap, let it scroll
+      field.style.overflowY = field.scrollHeight > 320 ? 'auto' : 'hidden';
+    }
+
+    function render() {
+      const len = field.value.length;
+      const hasText = len > 0;
+
+      region.classList.toggle('has-text', hasText);
+      createBtn.classList.toggle('is-ready', hasText);
+
+      const size = targetSize(len);
+      field.style.fontSize = size + 'px';
+      sizeTag.textContent = size.toFixed(1) + ' px';
+
+      autosize();
+    }
+
+    field.addEventListener('input', render);
+    field.addEventListener('focus', () => surface.classList.add('is-focused'));
+    field.addEventListener('blur',  () => surface.classList.remove('is-focused'));
+
+    // mode switch
+    modeSeg.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      mode = btn.dataset.mode;
+      [...modeSeg.children].forEach(b => b.classList.toggle('active', b === btn));
+      modeNote.innerHTML = NOTES[mode];
+      render();
+      field.focus();
+    });
+
+    // helpers
+    const SAMPLE = "Create a 12-slide investor update for Q3. Open with the headline metrics (revenue up, churn down), then walk through the product roadmap, the three big customer wins this quarter, our hiring plan, and close with the fundraise ask and use of funds. Keep the tone confident but grounded, and make the numbers the hero on every slide.";
+    document.getElementById('pasteBtn').addEventListener('click', () => {
+      field.value = SAMPLE;
+      render();
+      field.focus();
+    });
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      field.value = '';
+      render();
+      field.focus();
+    });
+
+    // init
+    modeNote.innerHTML = NOTES[mode];
+    render();
+  </script>
+</body>
+</html>
