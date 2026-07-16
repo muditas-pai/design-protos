@@ -39,10 +39,15 @@ The entry surface. The user describes their deck.
 - Below the box: quick action chips (Import PowerPoint, Hire an Expert, Use a Template, Refresh Data)
   and a list of example prompts.
 - **Continue** is disabled until there's text. Example prompts fill the box and proceed in one tap.
+- **Example prompts disappear as soon as the user types.** They're a starting nudge for an empty
+  box, not competing options once the user is writing their own; the whole suggestions block (its
+  "Marketers are creating presentations for" label included) fades out on first keystroke and fades
+  back in if the box is cleared.
 
 | Trigger | Result |
 |---|---|
-| Type text | Continue becomes enabled |
+| Type text | Continue becomes enabled; the example prompts fade out |
+| Clear the box | Continue disables again; the example prompts fade back in |
 | Continue (or an example prompt) | Go to the Role stage — **immediately**, no loading step (see Nuance) |
 
 **Nuance — no "reading your prompt" loader.** Because roles don't depend on the prompt, there's
@@ -196,6 +201,7 @@ The generation view.
 ## Checklist — the nuances that must not get lost
 
 - [ ] **No loader** between Continue and the roles — roles appear immediately.
+- [ ] **Example prompts fade out on first keystroke** and fade back in when the box is cleared.
 - [ ] Title is **large on landing, small in the role stage**.
 - [ ] Collapsed prompt **keeps the Brand Kit row + the actions row**; it's a condensed box, not a pill.
 - [ ] Collapsed/active prompt has **no Save (or any) button**; editing commits on blur.
