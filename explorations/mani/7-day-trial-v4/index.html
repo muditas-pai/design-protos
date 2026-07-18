@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>7 Day Trial Proto v4 · flow · presentations.ai</title>
+
+<!-- Fonts + Phosphor icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+<!-- Design system -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="../../../design-system/pai.tailwind.js"></script>
+<link rel="stylesheet" href="../../../design-system/pai.css" />
+
+<!-- Agentation -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+
+<style>
+  html, body { background: #ffffff; margin: 0; padding: 0; }
+  body.pai { color: #171717; }
+
+  /* Top product bar (black strip from the screenshots) */
+
+  /* Views */
+  .view { display: none; min-height: 100vh; }
+  .view.active { display: block; }
+  body.no-topbar .view { min-height: 100vh; }
+
+  /* === VIEW 1: ROLE SELECT === */
+  .role-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 220px));
+    gap: 12px;
+    justify-content: center;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .role-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 999px;
+    font: 500 14px/1 Inter, system-ui, sans-serif;
+    color: #171717;
+    cursor: pointer;
+    transition: border-color .12s, box-shadow .12s, transform .06s;
+    text-align: left;
+  }
+  .role-chip:hover { border-color: #0A1925; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .role-chip:active { transform: scale(0.98); }
+  .role-chip .emoji { font-size: 16px; }
+
+  /* === VIEW 2: DESCRIBE DECK (matches dashboard key-screen prompt) === */
+  .dp-tool {
+    display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px;
+    background: #fff; border: 1px solid rgba(11,15,20,0.12); border-radius: 8px;
+    font: 500 14px/1 Inter, system-ui, sans-serif; color: #171717; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(11,15,20,0.05);
+    transition: background .12s;
+  }
+  .dp-tool:hover { background: #fafafa; }
+  .dp-tool i { font-size: 16px; }
+  .dprompt {
+    background: #fff; border-radius: 8px; padding: 8px;
+    box-shadow: 0 24px 40px -16px rgba(11,15,20,0.09), 0 4px 6px rgba(11,15,20,0.09),
+                0 1px 2px rgba(11,15,20,0.09), 0 0 0 1px rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+  .dprompt-field {
+    position: relative;
+    min-height: 220px;
+    background: #fafafa;
+    border: 1px dashed rgba(11,15,20,0.20);
+    border-radius: 2px;
+    padding: 20px;
+    cursor: text;
+  }
+  .dprompt-placeholder {
+    position: absolute; top: 20px; left: 20px;
+    display: flex; align-items: center; gap: 8px;
+    color: #a3a3a3; font: 400 16px/1.5 Inter, system-ui, sans-serif;
+    pointer-events: none;
+  }
+  .dprompt-placeholder i { font-size: 20px; }
+  .dprompt-placeholder .drop-link { text-decoration: underline; text-underline-offset: 2px; margin-left: -4px; }
+  .dprompt-field textarea {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    background: transparent; border: 0; outline: none; resize: none;
+    padding: 20px; box-sizing: border-box;
+    font: 400 16px/1.5 Inter, system-ui, sans-serif; color: #171717;
+  }
+
+  .example-chip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    font: 400 14px/1.5 Inter, system-ui, sans-serif;
+    color: #171717;
+    transition: border-color .12s, background .12s;
+  }
+  .example-chip:hover { border-color: #0A1925; background: #fafafa; }
+  .example-chip .emoji { font-size: 18px; }
+
+  .generate-btn-wrap {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+  }
+  .generate-btn {
+    background: #0A1925;
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 999px;
+    font: 600 14px/1.2 Inter, system-ui, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(10,25,37,0.25);
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background .12s, transform .06s;
+  }
+  .generate-btn:hover { background: #1a2940; }
+  .generate-btn:active { transform: scale(0.98); }
+
+  /* === VIEW 2.5: DOC GENERATION (outline streams in) === */
+  #view-docgen { background: #f5f5f5; }
+  .docgen-wrap { max-width: 760px; margin: 0 auto; padding: 48px 24px 120px; }
+  .docgen-ticker {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 0 0 24px;
+  }
+  .docgen-ticker .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #0055ED; flex-shrink: 0;
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+  .docgen-ticker .label { font: 500 14px/1.4 Inter, system-ui, sans-serif; color: #525252; }
+  .doc-page {
+    background: #fff; border-radius: 8px;
+    box-shadow: 0 24px 40px -16px rgba(11,15,20,0.09), 0 4px 6px rgba(11,15,20,0.09),
+                0 1px 2px rgba(11,15,20,0.09), 0 0 0 1px rgba(11,15,20,0.09);
+    padding: 56px 64px 64px;
+    min-height: 480px;
+  }
+  .doc-line { opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .3s ease; }
+  .doc-line.shown { opacity: 1; transform: none; }
+  .doc-title { font: 700 26px/1.25 Inter, system-ui, sans-serif; color: #171717; letter-spacing: -0.3px; margin: 0 0 6px; }
+  .doc-sub { font: 400 14px/1.5 Inter, system-ui, sans-serif; color: #737373; margin: 0 0 28px; }
+  .doc-h { font: 600 15px/1.4 Inter, system-ui, sans-serif; color: #171717; margin: 22px 0 6px; display: flex; gap: 10px; align-items: baseline; }
+  .doc-h .num { color: #a3a3a3; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .doc-b { font: 400 13.5px/1.6 Inter, system-ui, sans-serif; color: #525252; margin: 0 0 2px 30px; position: relative; }
+  .doc-b::before { content: "•"; position: absolute; left: -14px; color: #a3a3a3; }
+  .doc-caret {
+    display: inline-block; width: 2px; height: 1em; background: #0055ED;
+    vertical-align: text-bottom; margin-left: 2px;
+    animation: caretBlink .8s step-end infinite;
+  }
+  @keyframes caretBlink { 50% { opacity: 0; } }
+  .docgen-done {
+    display: none; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 24px; font: 600 14px/1.4 Inter, system-ui, sans-serif; color: #16a34a;
+  }
+  .docgen-done.shown { display: flex; }
+
+  /* === VIEW 3: EDITOR-TO-PRESENT TRANSITION SHELL (Mudita loader-1 style) === */
+  #view-pricing.view.active, #view-dashboard.view.active { display: flex; }
+  #view-pricing, #view-dashboard { background: #E5E5E5; height: 100vh; overflow: hidden; }
+  .editor-shell {
+    flex: 1;
+    display: flex;
+    position: relative;
+    background: #E5E5E5;
+    min-height: 0;
+  }
+
+  /* Top-right Exit */
+  .exit-btn {
+    position: absolute;
+    top: 16px; right: 20px;
+    background: #fff;
+    border: 1px solid rgba(11,15,20,0.09);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font: 500 13px/1.2 Inter, system-ui, sans-serif;
+    color: #171717;
+    cursor: pointer;
+    z-index: 5;
+    box-shadow: 0 1px 2px rgba(11,15,20,0.06);
+  }
+  .exit-btn:hover { background: #fafafa; }
+
+  /* Filmstrip (left) */
+  .filmstrip { width: 220px; flex-shrink: 0; padding: 12px 0 12px 12px; }
+  .filmstrip-panel {
+    height: 100%;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px rgba(11,15,20,0.09);
+    display: flex; flex-direction: column;
+  }
+  .thumbs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .thumb {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #E5E5E5;
+    position: relative;
+    cursor: default;
+  }
+  .thumb .shimmer {
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, #E5E5E5 0%, #F5F5F5 50%, #E5E5E5 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .thumb.filled { background: #0A1925; cursor: pointer; }
+  .thumb.filled .shimmer { display: none; }
+  .thumb.filled .mini { display: flex; }
+  .mini {
+    display: none;
+    position: absolute; inset: 0;
+    flex-direction: column;
+    padding: 6px 7px;
+    color: #fff;
+    background: #0A1925;
+  }
+  .mini-title {
+    font: 700 7px/1.2 Inter, system-ui, sans-serif;
+    letter-spacing: .3px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    opacity: .85;
+  }
+  .mini-bars { display: flex; flex-direction: column; gap: 2px; }
+  .mini-bars .bar { height: 3px; background: rgba(255,255,255,0.18); border-radius: 1px; }
+  .mini-bars .bar.w1 { width: 60%; }
+  .mini-bars .bar.w2 { width: 75%; }
+  .mini-bars .bar.w3 { width: 45%; }
+
+  /* Tooltip */
+  .tooltip {
+    position: absolute;
+    background: #0A1925;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font: 500 12px/1.3 Inter, system-ui, sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  }
+  .tooltip::before {
+    content: "";
+    position: absolute;
+    left: -5px; top: 50%;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border: 5px solid transparent;
+    border-right-color: #0A1925;
+    border-left: 0;
+  }
+  .tooltip.show { opacity: 1; }
+
+  /* Canvas */
+  .canvas { flex: 1; position: relative; min-width: 0; display: flex; flex-direction: column; }
+  .stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 40px 40px 24px;
+    min-height: 0;
+  }
+  .stage-title {
+    text-align: center;
+    font: 600 22px/1.3 Inter, system-ui, sans-serif;
+    color: #171717;
+    margin: 0;
+    letter-spacing: -0.2px;
+  }
+
+  /* "Slide" surface holding pricing */
+  .slide {
+    width: min(76vw, 980px);
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 24px rgba(11,15,20,0.10), 0 0 0 1px rgba(11,15,20,0.05);
+    padding: 28px 32px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .plan-toggle { display: flex; justify-content: center; }
+  .plan-toggle .seg {
+    display: inline-flex;
+    background: #F5F5F5;
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .plan-toggle button {
+    border: 0;
+    background: transparent;
+    padding: 7px 16px;
+    border-radius: 999px;
+    font: 500 13px/1 Inter, system-ui, sans-serif;
+    color: #525252;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .plan-toggle button.active { background: #0A1925; color: #fff; }
+
+  .plans-row { display: flex; align-items: stretch; justify-content: center; gap: 0; width: 100%; }
+  .plan-card {
+    flex: 1;
+    max-width: 460px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 24px 24px 22px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .plan-pro {
+    border-radius: 10px 0 0 10px;
+    border-right: 0;
+    box-shadow: 0 0 0 2px #0A1925 inset;
+    z-index: 2;
+  }
+  .plan-gold { border-radius: 0 10px 10px 0; }
+
+  .plan-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+  .plan-icon { font-size: 30px; line-height: 1; }
+  .billing-seg { display: inline-flex; background: #f5f5f7; border-radius: 6px; padding: 3px; gap: 2px; }
+  .billing-seg button {
+    border: 0; background: transparent;
+    padding: 4px 10px; border-radius: 4px;
+    font: 600 10px/1 Inter, system-ui, sans-serif;
+    color: #525252; cursor: pointer; letter-spacing: .4px;
+  }
+  .billing-seg button.active { background: #0A1925; color: #fff; }
+
+  .plan-body { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .plan-name { font: 500 24px/1.2 Inter, system-ui, sans-serif; color: #171717; }
+  .plan-price-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+  .plan-trial-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    background: #ecfdf5;
+    color: #16a34a;
+    border-radius: 999px;
+    font: 600 11px/1.3 Inter, system-ui, sans-serif;
+  }
+  .plan-price { display: inline-flex; align-items: baseline; gap: 2px; }
+  .plan-price .amt { font: 600 24px/1 Inter, system-ui, sans-serif; }
+  .plan-price .per { font: 500 12px/1 Inter, system-ui, sans-serif; color: #525252; }
+  .plan-reminder { font: 500 11px/1.3 Inter, system-ui, sans-serif; color: #525252; }
+
+  .plan-cta {
+    margin-top: 18px;
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 8px;
+    font: 600 13px/1 Inter, system-ui, sans-serif;
+    cursor: pointer;
+    transition: background .12s, transform .06s;
+  }
+  .plan-cta.primary { background: #0A1925; color: #fff; border: 0; }
+  .plan-cta.primary:hover { background: #1a2940; }
+  .plan-cta.secondary { background: #fff; color: #0A1925; border: 1px solid #0A1925; }
+  .plan-cta.secondary:hover { background: #f5f5f7; }
+  .plan-cta:active { transform: scale(.99); }
+
+  .plan-features { margin-top: 16px; }
+  .plan-credits { display: flex; align-items: center; gap: 10px; font: 500 13px/1.3 Inter, system-ui, sans-serif; color: #171717; }
+  .plan-credits .diamond { width: 14px; height: 14px; background: #0A1925; transform: rotate(45deg); display: inline-block; flex-shrink: 0; }
+  .plan-credits strong { font-weight: 700; }
+  .plan-features-label { margin-top: 10px; font: 400 12px/1.4 Inter, system-ui, sans-serif; color: #737373; }
+
+  .social-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 4px 8px 0;
+  }
+  .social-row .lead { font: 600 12px/1.3 Inter, system-ui, sans-serif; color: #171717; }
+  .social-row .logo { font: 700 13px/1 Inter, system-ui, sans-serif; color: #525252; opacity: .65; }
+
+  /* Ticker (loader-1 style) */
+  .ticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 22px;
+    margin: 0 auto 22px;
+  }
+  .ticker .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #0055ED;
+    flex-shrink: 0;
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,85,237,0.45); }
+    50%     { transform: scale(0.8); box-shadow: 0 0 0 5px rgba(0,85,237,0); }
+  }
+  .ticker .label {
+    font: 500 14px/1.4 Inter, system-ui, sans-serif;
+    color: #525252;
+    font-variant-numeric: tabular-nums;
+    transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .ticker.hidden { display: none; }
+
+  /* === VIEW 4: CHECKOUT === */
+  .checkout-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .checkout-left { padding: 32px 60px; background: #F5F5F7; }
+  .checkout-right { padding: 32px 60px; background: #fff; }
+
+  .order-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font: 400 14px/1.5 Inter, system-ui, sans-serif; }
+  .order-row.muted { color: #525252; }
+  .divider { height: 1px; background: #e5e5e5; margin: 12px 0; }
+
+  .due-block { position: relative; padding: 12px 0 12px 28px; }
+  .due-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .label-stack { display: flex; align-items: center; gap: 12px; }
+  .label-stack.col { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .timeline-dot {
+    position: absolute;
+    left: 0;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid #0A1925;
+    background: #0A1925;
+  }
+  .timeline-dot.today { top: 22px; }
+  .timeline-dot.future { top: 84px; background: #fff; }
+  .timeline-line {
+    position: absolute;
+    left: 5px;
+    top: 34px;
+    height: 50px;
+    width: 2px;
+    background: #0A1925;
+  }
+
+  .trial-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #ecfdf5;
+    color: #16a34a;
+    border-radius: 999px;
+    font: 600 12px/1.4 Inter, system-ui, sans-serif;
+  }
+
+  .payment-tabs { display: flex; gap: 12px; margin: 20px 0; }
+  .payment-tab {
+    flex: 1;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    font: 500 13px/1.3 Inter, system-ui, sans-serif;
+    color: #171717;
+  }
+  .payment-tab.active {
+    border-color: #0A1925;
+    border-width: 2px;
+    padding: 13px 15px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font: 500 13px/1.3 Inter, system-ui, sans-serif; color: #171717; margin-bottom: 6px; }
+  .form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    font: 400 14px/1.4 Inter, system-ui, sans-serif;
+    outline: none;
+    transition: border-color .12s, box-shadow .12s;
+    background: #fff;
+  }
+  .form-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .input-wrap { position: relative; }
+  .card-icons {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 4px;
+  }
+  .card-icons .ci {
+    width: 28px; height: 18px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    font: 700 8px/1 Inter, system-ui, sans-serif;
+    color: #525252;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Success modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 16px;
+    width: 620px;
+    max-width: 90vw;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .modal-promo {
+    margin: 0 24px 24px;
+    padding: 28px 24px 24px;
+    background: linear-gradient(135deg, #FFF1E5 0%, #FFD4A8 100%);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .modal-badge {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 96px; height: 96px;
+    background: #0A1925;
+    border-radius: 50%;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 12px/1 Inter, system-ui, sans-serif;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body class="pai">
+
+
+<!-- ============== VIEW 1: ROLE SELECT ============== -->
+<section id="view-role" class="view active">
+  <div style="padding: 80px 24px 40px;">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <h1 class="text-heading-3xl" style="margin: 0 0 6px; font-weight: 600;">Select your role.</h1>
+      <p class="text-body-xl-regular" style="margin: 0; color: #525252;">We'll tailor your experience.</p>
+    </div>
+    <div class="role-grid" id="roleGrid"></div>
+  </div>
+</section>
+
+<!-- ============== VIEW 2: DESCRIBE DECK ============== -->
+<section id="view-describe" class="view">
+  <div style="padding: 24px 24px 120px;">
+    <div style="max-width: 600px; margin: 40px auto 0;">
+      <h1 style="margin: 0 0 64px; font: 400 32px/1.25 Inter, system-ui, sans-serif; letter-spacing: -0.0075em; text-align: center; color: #171717;">Describe your deck, or upload a file</h1>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <button class="dp-tool"><i class="ph ph-upload-simple"></i>Upload Files <i class="ph ph-caret-down" style="font-size: 12px;"></i></button>
+        <div style="display: flex; gap: 8px;">
+          <button class="dp-tool"><i class="ph ph-stack"></i>Slide Count <i class="ph ph-caret-down" style="font-size: 12px;"></i></button>
+          <button class="dp-tool"><i class="ph ph-globe-hemisphere-west"></i>AI Model <i class="ph ph-caret-down" style="font-size: 12px;"></i></button>
+          <button class="dp-tool" aria-label="Settings" style="padding: 0 10px;"><i class="ph ph-faders-horizontal" style="font-size: 16px;"></i></button>
+        </div>
+      </div>
+
+      <div class="dprompt">
+        <div class="dprompt-field" onclick="focusPrompt()">
+          <div class="dprompt-placeholder" id="promptPlaceholder">
+            <i class="ph ph-pencil-simple-line"></i>
+            <span>Type here or</span>
+            <i class="ph ph-upload-simple"></i>
+            <span class="drop-link">drop in a file</span>
+          </div>
+          <textarea id="promptInput" oninput="togglePlaceholder()"></textarea>
+        </div>
+      </div>
+
+      <div style="margin-top: 44px; text-align: left;">
+        <h3 style="margin: 0 0 16px; font: 600 15px/1.4 Inter, system-ui, sans-serif; color: #171717;">Leaders are creating presentations for</h3>
+        <div class="example-chip" onclick="pickExample(this)"><span class="emoji">🏛️</span> Q4 revenue performance and 2026 strategic priorities</div>
+        <div class="example-chip" onclick="pickExample(this)"><span class="emoji">🎯</span> Q3 OKR progress with risks and recommended actions</div>
+        <div class="example-chip" onclick="pickExample(this)"><span class="emoji">📣</span> Q3 results, team milestones, and 6-month priorities</div>
+      </div>
+    </div>
+  </div>
+  <div class="generate-btn-wrap">
+    <button class="generate-btn" onclick="go('docgen')">
+      <i class="ph-fill ph-sparkle"></i> Generate
+    </button>
+  </div>
+</section>
+
+<!-- ============== VIEW 2.5: DOC GENERATION (outline streams) ============== -->
+<section id="view-docgen" class="view">
+  <div class="docgen-wrap">
+    <div class="docgen-ticker">
+      <span class="dot"></span>
+      <span class="label" id="docgenLabel">Understanding your brief…</span>
+    </div>
+    <div class="doc-page" id="docPage"></div>
+    <div class="docgen-done" id="docgenDone">
+      <i class="ph-fill ph-check-circle" style="font-size: 18px;"></i>
+      Outline ready. Building your slides…
+    </div>
+  </div>
+</section>
+
+<!-- ============== VIEW 3: EDITOR-TO-PRESENT SHELL (iframe) ============== -->
+<section id="view-pricing" class="view">
+  <iframe id="editorTrialFrame" src="" title="Editor Trial" style="width:100%;height:100vh;border:0;display:block;background:#E5E5E5;"></iframe>
+</section>
+
+<!-- ============== DASHBOARD (loaded on Exit) ============== -->
+<section id="view-dashboard" class="view">
+  <iframe id="dashboardFrame" src="" title="Dashboard" style="width:100%;height:100vh;border:0;display:block;background:#E5E5E5;"></iframe>
+</section>
+
+<!-- ============== PRICING MODAL (dashboard prompt / pills) ============== -->
+<style>
+  .pmodal { position: fixed; inset: 0; z-index: 1000; display: none; }
+  .pmodal.open { display: block; }
+  .pmodal-backdrop { position: absolute; inset: 0; background: rgba(11,15,20,0.45); backdrop-filter: blur(2px); }
+  .pmodal-wrap {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(1120px, 94vw); height: min(86vh, 820px);
+  }
+  .pmodal-card {
+    position: relative; width: 100%; height: 100%;
+    background: #fff; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.30);
+  }
+  .pmodal-close {
+    position: absolute; top: 0; right: -44px; z-index: 2;
+    width: 34px; height: 34px; border-radius: 999px;
+    border: 0; background: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  }
+  .pmodal-close:hover { background: #f4f6fa; }
+  #pricingModalFrame {
+    position: absolute; top: 0; left: 50%;
+    width: 1280px; height: calc(100% / var(--pm-scale, 1));
+    transform: translateX(-50%) scale(var(--pm-scale, 1));
+    transform-origin: top center; border: 0; display: block;
+  }
+</style>
+<div class="pmodal" id="pricingModal" aria-hidden="true">
+  <div class="pmodal-backdrop" onclick="closePricingModal()"></div>
+  <div class="pmodal-wrap">
+    <div class="pmodal-card">
+      <iframe id="pricingModalFrame" src="" title="Pricing"></iframe>
+    </div>
+    <button class="pmodal-close" onclick="closePricingModal()" aria-label="Close"><i class="ph ph-x text-[18px]"></i></button>
+  </div>
+</div>
+
+<!-- ============== VIEW 4: CHECKOUT (iframe, single source) ============== -->
+<section id="view-checkout" class="view">
+  <iframe id="checkoutFrame" src="" title="Checkout" style="width:100%;height:100vh;border:0;display:block;background:#fafafa;"></iframe>
+</section>
+
+<!-- ============== VIEW 5: 7-DAY TRIAL OFFER (after last-slide exit) ============== -->
+<section id="view-trial" class="view">
+  <iframe id="trialFrame" src="" title="7 day trial" style="width:100%;height:100vh;border:0;display:block;background:#fafafa;"></iframe>
+</section>
+
+<!-- ============== SUCCESS MODAL ============== -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div style="padding: 32px 40px 24px;">
+      <div class="text-overline-small" style="color: #a3a3a3; margin-bottom: 12px;">INVOICE: #134524</div>
+      <h2 class="text-heading-2xl" style="margin: 0 0 8px; font-weight: 600;">Welcome to Pro Trial, Manivasakan Jay</h2>
+      <p class="text-body-base-regular" style="margin: 0; color: #525252;">We've sent you a confirmation email and invoice at mani@gmail.com</p>
+    </div>
+    <div class="modal-promo">
+      <div class="modal-badge">PRO ✦</div>
+      <h3 class="text-heading-lg" style="margin: 0 0 8px; font-weight: 600;">Make the most of Pro</h3>
+      <p class="text-body-base-regular" style="margin: 0 0 16px; color: #4b3a1a; max-width: 280px;">
+        You now have 1 license and 2,000 credits. Everything you need to create faster and explore premium features.
+      </p>
+      <button class="button-style button-primary button-medium" style="width: 100%;" onclick="closeSuccess()">
+        Continue to your deck
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+
+<script>
+  const ROLES = [
+    ['🧭', 'Leadership'], ['💼', 'Consulting'], ['💰', 'Sales'],
+    ['📣', 'Marketing'], ['✨', 'Creator'], ['📊', 'Data Analytics'],
+    ['🎨', 'Design'], ['🛠️', 'Engineering'], ['💵', 'Finance'],
+    ['⚖️', 'Legal'], ['⚙️', 'Operations'], ['🧩', 'Product'],
+    ['🎓', 'Student'], ['🎧', 'Support'], ['📚', 'Teacher']
+  ];
+  const grid = document.getElementById('roleGrid');
+  ROLES.forEach(([emoji, name]) => {
+    const b = document.createElement('button');
+    b.className = 'role-chip';
+    b.innerHTML = `<span class="emoji">${emoji}</span> ${name}`;
+    b.onclick = () => go('describe');
+    grid.appendChild(b);
+  });
+
+  // Editor-trial iframe — load on demand
+  const EDITOR_URL = 'editor-trial.html';
+  const DASHBOARD_URL = 'dashboard-trial.html';
+  const PRICING_MODAL_TITLE = 'Start your 7 day free trial. Choose a plan';
+  let dashboardWired = false;
+  let editorReady = false;   // open the editor already in the "deck ready" state
+
+  function go(view) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.body.classList.toggle('no-topbar', view === 'pricing' || view === 'dashboard');
+    window.scrollTo(0, 0);
+    if (view === 'docgen') startDocGen();
+    if (view === 'pricing') {
+      // (Re)load fresh each time. state=ready skips generation (existing deck).
+      const q = '?t=' + Date.now() + (editorReady ? '&state=ready' : '');
+      editorReady = false;
+      document.getElementById('editorTrialFrame').src = EDITOR_URL + q;
+    }
+    if (view === 'trial') {
+      document.getElementById('trialFrame').src = 'trial-offer.html?t=' + Date.now();
+    }
+    if (view === 'dashboard') loadDashboard();
+    if (view === 'checkout') {
+      // Reload fresh each time so the plan context (Pro/Gold) is current.
+      const cf = document.getElementById('checkoutFrame');
+      cf.dataset.loaded = '1';
+      const team = window.__checkoutTeam;
+      if (team) {
+        const cq = team.credits ? '&credits=' + team.credits : '';
+        cf.src = 'checkout-team.html?ctx=flow&plan=' + team.plan + cq + '&t=' + Date.now();
+      } else {
+        const planQ = window.__checkoutPlan === 'gold' ? '&plan=gold' : '';
+        cf.src = 'checkout.html?ctx=flow' + planQ + '&t=' + Date.now();
+      }
+    }
+  }
+  window.go = go;
+
+  // Dashboard: clicking the presentation opens the editor already "ready";
+  // clicking the prompt / pills opens the pricing as a centered modal.
+  function loadDashboard() {
+    const f = document.getElementById('dashboardFrame');
+    if (f.dataset.loaded) return;    // already loaded (f.src is truthy even when src="")
+    f.dataset.loaded = '1';
+    f.src = DASHBOARD_URL;
+    f.addEventListener('load', () => {
+      if (dashboardWired) return;
+      dashboardWired = true;
+      try {
+        const doc = f.contentDocument;
+        if (!doc) return;
+        doc.addEventListener('click', (ev) => {
+          // Existing presentation → editor in "deck ready" state.
+          // (Prompt / pills / Try Pro open the dashboard's own pricing modal.)
+          const card = ev.target.closest('.card');
+          if (card) { ev.preventDefault(); ev.stopPropagation(); editorReady = true; go('pricing'); }
+        }, true);
+      } catch (err) { /* cross-origin — ignore */ }
+    });
+  }
+
+  // ── Pricing modal (opened from the dashboard prompt / pills) ──────────────
+  let pricingModalWired = false;
+  function openPricingModal() {
+    const m = document.getElementById('pricingModal');
+    const f = document.getElementById('pricingModalFrame');
+    // NB: f.src on an src="" iframe reflects the page URL (truthy) — use a flag.
+    if (!f.dataset.loaded) { f.dataset.loaded = '1'; f.src = 'pricing.html?modal=1&t=' + Date.now(); }
+    m.classList.add('open');
+    m.setAttribute('aria-hidden', 'false');
+    fitPricingModal();
+    if (!pricingModalWired) {
+      pricingModalWired = true;
+      f.addEventListener('load', () => { injectPricingModal(f); fitPricingModal(); });
+    }
+  }
+  function closePricingModal() {
+    const m = document.getElementById('pricingModal');
+    m.classList.remove('open');
+    m.setAttribute('aria-hidden', 'true');
+  }
+  window.openPricingModal = openPricingModal;
+  window.closePricingModal = closePricingModal;
+
+  function fitPricingModal() {
+    const card = document.querySelector('.pmodal-card');
+    const f = document.getElementById('pricingModalFrame');
+    if (!card || !f) return;
+    let s = card.clientWidth / 1280;
+    if (s > 1) s = 1;
+    f.style.setProperty('--pm-scale', s);
+  }
+  window.addEventListener('resize', fitPricingModal);
+
+  function injectPricingModal(f) {
+    let doc;
+    try { doc = f.contentDocument; } catch (e) { return; }
+    if (!doc) return;
+    // Different title for the modal context.
+    const p = doc.querySelector('.relative.mx-auto > p:first-of-type');
+    if (p) p.textContent = PRICING_MODAL_TITLE;
+    if (!doc.getElementById('pmodal-style')) {
+      const st = doc.createElement('style');
+      st.id = 'pmodal-style';
+      st.textContent =
+        'body > .relative.mx-auto > button[aria-label="Close"]{display:none!important;}' +
+        'html,body{margin:0!important;scrollbar-width:none!important;-ms-overflow-style:none!important;}' +
+        'html::-webkit-scrollbar,body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}';
+      doc.head.appendChild(st);
+    }
+    // CTA (Try for Free / Buy) → checkout, close the modal.
+    doc.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button');
+      if (!btn) return;
+      const t = (btn.textContent || '').trim().toLowerCase();
+      // Team cards = direct buy (no trial) → Paddle-style team checkout.
+      if (btn.id === 'pro-team-cta' || btn.id === 'gold-team-cta') {
+        const planKey = btn.id === 'gold-team-cta' ? 'gold' : 'pro';
+        const ts = f.contentWindow && f.contentWindow.__teamState;
+        window.__checkoutTeam = { plan: planKey, credits: ts ? ts.credits[planKey] : '' };
+        closePricingModal();
+        go('checkout');
+        return;
+      }
+      if (t.indexOf('buy') !== -1 || t.indexOf('try for free') !== -1) {
+        // Individual Gold card → Gold checkout context; everything else → Pro.
+        window.__checkoutTeam = null;
+        window.__checkoutPlan = btn.closest('#gold-card') ? 'gold' : 'pro';
+        closePricingModal();
+        go('checkout');
+      }
+    }, true);
+  }
+
+  // Listen for messages from the editor / trial-offer iframes (plan picked / exit)
+  window.addEventListener('message', (e) => {
+    if (!e.data || !e.data.type) return;
+    if (e.data.type === 'trial-plan-selected') {
+      window.__checkoutTeam = null;
+      window.__checkoutPlan = e.data.plan === 'gold' ? 'gold' : 'pro';
+      go('checkout');
+    }
+    if (e.data.type === 'trial-open-deck') { editorReady = true; go('pricing'); }
+    // v4: exiting after the last slide was seen → 7-day trial offer; earlier exits → dashboard.
+    if (e.data.type === 'trial-exit') go(e.data.afterLastSlide ? 'trial' : 'dashboard');
+    if (e.data.type === 'trial-offer-start') {
+      window.__checkoutTeam = null;
+      window.__checkoutPlan = 'pro';
+      go('checkout');
+    }
+    if (e.data.type === 'trial-offer-close') go('dashboard');
+    if (e.data.type === 'trial-checkout-back') go('pricing');
+    if (e.data.type === 'trial-checkout-close') go('dashboard');
+  });
+
+  // ── Doc generation: outline streams into a document page, then auto-advance ──
+  const DOC_OUTLINE = [
+    { t: 'title', text: 'Bekoop · Investor Pitch Outline' },
+    { t: 'sub',   text: '10 slides · drafted from your brief' },
+    { t: 'h', num: '1',  text: 'Cover — Care for pets, not just their pantry',
+      b: ['Positioning: the first integrated pet care facility', 'Bangalore · pilot launch · Q2 2026'] },
+    { t: 'h', num: '2',  text: 'Problem — pet care is loud, scattered, fragmented',
+      b: ['Owners juggle vets, groomers, trainers, and stores', 'No single source of truth for a pet’s life'] },
+    { t: 'h', num: '3',  text: 'Solution — one place, one routine, one connected pet life',
+      b: ['Vet, groom, daycare, and essentials under one roof'] },
+    { t: 'h', num: '4',  text: 'Market — ₹48,000 Cr and compounding',
+      b: ['31M+ urban pet households, 19% annual growth'] },
+    { t: 'h', num: '5',  text: 'Product — your pet’s whole life in one app',
+      b: ['Single calendar, living health record, 24/7 vet chat'] },
+    { t: 'h', num: '6',  text: 'Traction — early signal from Bangalore',
+      b: ['2,400+ active pets · 68% month-2 retention · ₹1.2 Cr ARR'] },
+    { t: 'h', num: '7',  text: 'Business model — three revenue streams, one membership',
+      b: ['Care plans 62% · on-demand 28% · marketplace 10%'] },
+    { t: 'h', num: '8',  text: 'Roadmap — from supplies to true pet care',
+      b: ['Essentials → AI health insights → every Indian metro'] },
+    { t: 'h', num: '9',  text: 'Team — builders who’ve done this before',
+      b: ['ex-Swiggy, Cure.fit, Urban Company + 12 yrs clinical'] },
+    { t: 'h', num: '10', text: 'The ask — ₹15 Cr seed round',
+      b: ['5 metro facilities + connected care app by 2027'] },
+  ];
+  const DOCGEN_LABELS = ['Understanding your brief…', 'Structuring the story…', 'Drafting slide outline…', 'Refining sections…'];
+  let docgenRun = 0;
+
+  function startDocGen() {
+    const run = ++docgenRun;
+    const page = document.getElementById('docPage');
+    const label = document.getElementById('docgenLabel');
+    const done = document.getElementById('docgenDone');
+    page.innerHTML = '';
+    done.classList.remove('shown');
+    label.textContent = DOCGEN_LABELS[0];
+
+    // Flatten outline into a list of lines to reveal.
+    const lines = [];
+    DOC_OUTLINE.forEach(item => {
+      lines.push(item);
+      (item.b || []).forEach(text => lines.push({ t: 'b', text }));
+    });
+
+    let i = 0;
+    const caret = document.createElement('span');
+    caret.className = 'doc-caret';
+
+    function next() {
+      if (run !== docgenRun) return;                       // superseded by a new run
+      if (i >= lines.length) { finish(); return; }
+      const item = lines[i++];
+      const el = document.createElement(item.t === 'title' ? 'h2' : item.t === 'sub' ? 'p' : 'div');
+      el.className = item.t === 'title' ? 'doc-line doc-title'
+                   : item.t === 'sub'   ? 'doc-line doc-sub'
+                   : item.t === 'h'     ? 'doc-line doc-h' : 'doc-line doc-b';
+      if (item.t === 'h') {
+        el.innerHTML = '<span class="num">' + item.num + '.</span><span>' + item.text + '</span>';
+      } else {
+        el.textContent = item.text;
+      }
+      page.appendChild(el);
+      el.appendChild(caret);
+      requestAnimationFrame(() => el.classList.add('shown'));
+      const pct = i / lines.length;
+      label.textContent = DOCGEN_LABELS[Math.min(DOCGEN_LABELS.length - 1, Math.floor(pct * DOCGEN_LABELS.length))];
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      setTimeout(next, item.t === 'h' || item.t === 'title' ? 320 : 170);
+    }
+
+    function finish() {
+      caret.remove();
+      label.textContent = 'Outline complete';
+      done.classList.add('shown');
+      setTimeout(() => { if (run === docgenRun) go('pricing'); }, 1200);
+    }
+
+    setTimeout(next, 500);
+  }
+
+  function togglePlaceholder() {
+    const has = document.getElementById('promptInput').value.length > 0;
+    document.getElementById('promptPlaceholder').style.display = has ? 'none' : 'flex';
+  }
+  window.togglePlaceholder = togglePlaceholder;
+
+  function focusPrompt() {
+    document.getElementById('promptInput').focus();
+  }
+  window.focusPrompt = focusPrompt;
+
+  function pickExample(el) {
+    document.getElementById('promptInput').value = el.textContent.trim();
+    togglePlaceholder();
+  }
+  window.pickExample = pickExample;
+
+  function showSuccess() {
+    document.getElementById('successModal').classList.add('active');
+  }
+  window.showSuccess = showSuccess;
+
+  function closeSuccess() {
+    document.getElementById('successModal').classList.remove('active');
+    go('role');
+  }
+  window.closeSuccess = closeSuccess;
+</script>
+
+</body>
+</html>
