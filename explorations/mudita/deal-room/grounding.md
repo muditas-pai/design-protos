@@ -194,22 +194,25 @@ Each item carries three attributes that drive the UI:
   visibility: shared | internal-only        ← seller-backstage toggle
 ```
 
-### Permissions (asymmetric)
+### Permissions — flat buyer access (matches the norm)
+
+**Decided 20 Jul 2026.** Benchmarking Pitch, Trumpet, and Aligned showed the industry treats the buyer side as **one flat tier**: anyone with the link can view *and* interact (tick the MAP, comment). None of them gate buyer actions behind an invited-"champion" role. We match that. The only asymmetry kept is **seller vs buyer-side**, plus the seller-only internal-row toggle.
 
 ```
-                        │ SELLER │ CHAMPION │ COMMITTEE / viewer
-────────────────────────┼────────┼──────────┼───────────────────
-view room + assets      │   ✓    │    ✓     │   ✓
-view SHARED map rows    │   ✓    │    ✓     │   ✓
-view INTERNAL rows      │   ✓    │    ✗     │   ✗
-tick a row they own     │   ✓    │    ✓     │   ✗
-comment / ask           │   ✓    │    ✓     │   ✓ (optional)
-add / edit / reorder rows│  ✓    │  limited*│   ✗
-change room state        │   ✓   │    ✗     │   ✗
-────────────────────────┴────────┴──────────┴───────────────────
-  *champion can add / suggest a row but can't restructure the
-   seller's plan — the "buyer adopted my process" signal, kept safe.
+                        │ SELLER │ ANY BUYER-SIDE VIEWER
+                        │ (owner)│ (incl. champion + committee, flat)
+────────────────────────┼────────┼──────────────────────────────
+view room + assets      │   ✓    │   ✓
+view SHARED map rows    │   ✓    │   ✓
+view INTERNAL rows      │   ✓    │   ✗   ← the one asymmetry (seller backstage)
+tick / check a map row  │   ✓    │   ✓   ← open to anyone in the room
+comment / ask           │   ✓    │   ✓
+add / edit / reorder rows│  ✓    │   ✗   ← seller structures the plan
+change room state        │   ✓   │   ✗
+────────────────────────┴────────┴──────────────────────────────
 ```
+
+**Champion vs committee is an analytics/identity distinction, not an access tier** — it describes *who* a viewer is (named advocate vs unknown forwarded viewer, surfaced in engagement data), not what they're allowed to do. Asymmetric buyer roles (invited-champion can edit, others can't) were considered and **cut for V1** as more permission UI than the incumbents found worth building; revisit later if needed.
 
 ### Access vs role (two separate concepts)
 
@@ -231,19 +234,19 @@ LEVEL 5  password                   shared secret, no identity
 
 The tension: **security fights forwarding, and forwarding is the best signal.** A Level-4 allowlist *kills* forwarding (the CFO isn't on the list, so the champion can't forward to them, so "the CFO opened it" never fires). **V1 default = Level 1, skippable** — anyone with the link gets in (forwarding survives), but the room asks who they are (identity captured most of the time). Hard gates (3–4) are an **opt-in per room** for security-sensitive deals, accepting they suppress forwarding.
 
-**Role** is assigned by *how you arrived*, so no login is needed to know it:
+**Role** is just seller vs buyer-side (flat), so no login is needed to know it:
 
 ```
-HOW YOU ARRIVED               → ROLE          → CAN DO
-─────────────────────────────────────────────────────────────
-you own it (seller)           → OWNER         → everything
-seller explicitly invited you → COLLABORATOR  → tick own rows, comment,
-  (the champion, by email)      (champion)      suggest a row, see shared MAP
-opened a forwarded link       → VIEWER         → see shared assets + shared
-  (committee, unknown)          (committee)     MAP rows, comment (optional)
+WHO                → CAN DO
+──────────────────────────────────────────────────────────
+seller (owner)     → everything: build, invite, edit MAP, room state,
+                     see internal rows
+any buyer-side     → view shared assets + shared MAP, tick rows, comment.
+viewer (flat)        no editing the plan structure, no internal rows,
+                     no room-state changes
 ```
 
-The seller's invite defines the champion; everyone else arriving via the link is a read-only viewer until the seller promotes them. Internal-only MAP rows stay invisible to viewer and champion alike.
+The champion is identified in *analytics* (a named, invited viewer vs an unknown forwarded one), which is how the norm does it — not as a separate permission level. Internal-only MAP rows stay seller-side.
 
 ---
 
@@ -288,6 +291,36 @@ Onboarding / post-sale hub    no          full          yes
 
 **Posture:** not "build a better Aligned." The differentiator is the **deck-native deal room** — the obviously-right room for a deck that already lives in PAI, with analytics a layer deeper (per-slide) because PAI owns the artifact. Match them only on the MAP, because the MAP is what makes it a sales tool rather than a shared folder. They win where a team needs day-one CRM sync or Aligned-grade stakeholder rigor; those are not the first customers.
 
+**Design stance — opinionated, not a builder.** Trumpet and Qwilr are drag-and-drop microsite builders: the seller lays out a web page. We deliberately **do not** do that. The room is an **opinionated, templated layout in the Pitch mold** — PAI makes the design calls, the seller drops content in. The room does not need to be a freeform web page. This drops the entire page-builder surface (expensive, off-brand) and leans on PAI's existing strength in opinionated layout. (See the *Room design approach* row in Decided.)
+
+### Benchmarks
+
+Where to look, and what for. Design north star is **Pitch's opinionated approach**, not the builders.
+
+```
+★★★  DocSend (Dropbox)   the canonical share-analytics model — Feature A's
+                         reference (who viewed, which slide, forwarding). Study first.
+★★★  Pitch               design north star: opinionated, templated, on-brand.
+                         Also the access-controls model we matched.
+★★   DocSend / Papermark Papermark = open-source DocSend; the plumbing is
+                         inspectable (link controls, view tracking, access).
+★★   Recapped / Recall   MAP-first — deepest reference for mutual-action-plan mechanics.
+★★   Dock (dock.us)      structured (not freeform) room UX + onboarding handoff.
+★     Storydoc            deck-native + engagement analytics; adjacent competitor.
+```
+
+Boundary / anti-examples (what we are NOT building):
+
+```
+Qwilr, Trumpet, Flowla   drag-and-drop webpage/microsite builders. We reject the
+                         freeform-page model. (Qwilr's visual quality also reads
+                         dated per design review — not a craft reference.)
+GetAccept                broad DSR + e-sign; useful "full-scope" map, heavier than V1.
+Highspot/Seismic/Showpad enablement-hub incumbents; context only, not a model to copy.
+```
+
+Space churns (acquisitions, renames) — confirm a product is still live before a deep dive. DSR-natives (Trumpet/Aligned/Pitch) verified 20 Jul 2026; the rest are from prior knowledge.
+
 ---
 
 ## Decided (locked calls)
@@ -305,9 +338,11 @@ Onboarding / post-sale hub    no          full          yes
 | **Two analytics contexts** | Published decks (social/email) = aggregate, anonymous, ungated. Deal-room decks = per-person, identity-attributed. Same event pipeline, two read models. |
 | **Email gate** | **Skipped in V1.** No verified email gate on either context. |
 | **Anonymous viewing** | **Allowed.** |
-| **Room access (deal room)** | **V1 default = Level 1 soft name prompt, skippable** — link-open + "who's viewing?" that a viewer can skip. Preserves forwarding while capturing identity most of the time. Hard gates (email verification, allowlist/SSO, password) are opt-in per room, deferred past V1. |
+| **Room access (deal room)** | **V1 default = Level 1 soft name prompt, skippable** — link-open + "who's viewing?" that a viewer can skip. Preserves forwarding while capturing identity most of the time. Hard gates (email verification, allowlist/SSO, password) are opt-in per room, deferred past V1. Matches Pitch/Trumpet/Aligned (all open-by-default, gates opt-in). |
+| **Buyer-side roles** | **Flat — match the norm** (decided 20 Jul 2026 after benchmarking). Anyone with the link views + interacts (tick MAP, comment); no invited-champion access tier. Champion vs committee is an *analytics/identity* label, not a permission level. Only asymmetry kept: seller vs buyer-side + the seller-only internal-row toggle. |
 | **Room viewer surface** | Two surfaces, not one: published deck reuses the existing shared-deck viewer; the deal room is a bespoke surface (deck as one tile, MAP as the spine). |
 | **MAP in V1** | **Full** — owner · due · states (todo/in-progress/blocked/done) · internal-only visibility. Not the lite checkbox-only version. |
+| **Room design approach** | **Opinionated + templated (Pitch-style), NOT a customizable webpage/microsite builder (Qwilr/Trumpet-style)** (decided 20 Jul 2026). The room is a well-designed fixed layout the seller drops content into; PAI makes the design calls. Kills the drag-and-drop page-builder surface entirely — the most expensive, least on-brand part of the competitors. Plays to PAI's strength in opinionated layout. The room does **not** need to be a freeform web page. |
 
 ---
 
