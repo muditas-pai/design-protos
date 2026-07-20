@@ -302,12 +302,13 @@ Where to look, and what for. Design north star is **Pitch's opinionated approach
                          reference (who viewed, which slide, forwarding). Study first.
 ★★★  Pitch               design north star: opinionated, templated, on-brand.
                          Also the access-controls model we matched.
-★★   DocSend / Papermark Papermark = open-source DocSend; the plumbing is
-                         inspectable (link controls, view tracking, access).
 ★★   Recapped / Recall   MAP-first — deepest reference for mutual-action-plan mechanics.
-★★   Dock (dock.us)      structured (not freeform) room UX + onboarding handoff.
+★★   Dock (dock.us)      reference for the DEFERRED scope (School B account hub,
+                         order forms, onboarding handoff), not the V1 model.
 ★     Storydoc            deck-native + engagement analytics; adjacent competitor.
 ```
+
+Dropped: **Papermark** (doc-sharing / virtual-data-room tool — too simple, wrong use case for a sales deal room).
 
 Boundary / anti-examples (what we are NOT building):
 
