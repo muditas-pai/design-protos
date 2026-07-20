@@ -415,6 +415,9 @@
     background: #0A1925;
     color: #fff;
   }
+  /* Blue highlight on the "20% off" part of the Annual tab */
+  .plan-seg-btn .seg-off { color: #0055ED; }
+  .plan-seg-btn.is-active .seg-off { color: #7fa8ff; }
 
   /* Billing toggle switch (Monthly <-> Annual) + 50% off badge */
   .bill-toggle {
@@ -1996,7 +1999,7 @@
       <div class="absolute left-1/2 -translate-x-1/2" style="top:-72px;" data-bill-seg>
         <div class="plan-seg" role="tablist" aria-label="Billing period">
           <button type="button" class="plan-seg-btn is-active" data-period="weekly" role="tab" aria-selected="true">Weekly</button>
-          <button type="button" class="plan-seg-btn" data-period="annual" role="tab" aria-selected="false">Annual &middot; 20% off</button>
+          <button type="button" class="plan-seg-btn" data-period="annual" role="tab" aria-selected="false">Annual &middot; <span class="seg-off">20% off</span></button>
         </div>
       </div>
 
@@ -2397,10 +2400,10 @@
         <div class="flex flex-col items-center leading-none gap-1">
           <p class="text-[11px] font-medium text-success-fg hidden" id="sum-pro-save"></p>
           <div class="flex items-baseline gap-1">
-            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-pro-price"><span class="usd">$</span>16</p>
-            <p class="text-[12px] text-ink-tertiary">/mo</p>
+            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-pro-price"><span class="usd">$</span>9.99</p>
+            <p class="text-[12px] text-ink-tertiary" id="sum-pro-suf">/week</p>
           </div>
-          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-pro-cadence">$192 billed annually</p>
+          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-pro-cadence">Billed weekly</p>
         </div>
         <button id="sum-pro-cta" class="pro-btn mt-2 h-9 min-w-[180px] px-4 rounded-[4px] text-white text-[13px] font-bold">Try for Free</button>
         <div id="sum-pro-pill-slot" class="flex justify-center"></div>
@@ -2408,10 +2411,10 @@
       <div class="flex flex-col items-center justify-center gap-2 p-5 border-l border-tertiary">
         <div class="flex flex-col items-center leading-none gap-1">
           <div class="flex items-baseline gap-1">
-            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-gold-price"><span class="usd">$</span>80</p>
-            <p class="text-[12px] text-ink-tertiary">/mo</p>
+            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-gold-price"><span class="usd">$</span>49.99</p>
+            <p class="text-[12px] text-ink-tertiary" id="sum-gold-suf">/week</p>
           </div>
-          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-gold-cadence">$960 billed annually</p>
+          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-gold-cadence">Billed weekly</p>
         </div>
         <button id="sum-gold-cta" class="mt-2 h-9 min-w-[180px] px-4 rounded-[4px] border border-brand-500 text-brand-500 text-[13px] font-bold hover:bg-brand-50">Try for Free</button>
       </div>
@@ -2661,10 +2664,11 @@
       const PRICES = {
         annual: {
           now: '<span class="usd">$</span>80', suf: '/mo',
+          tag: '<span class="off-tag fade-in">20% off</span>',
           strike: '<p class="text-[17px] font-medium line-through text-ink-tertiary leading-none"><span class="usd">$</span>100</p>',
-          cadence: '$960 billed annually <span class="off-tag">20% off</span>',
+          cadence: '$960 billed annually',
         },
-        weekly: { now: '<span class="usd">$</span>49.99', suf: '/week', strike: '', cadence: 'Billed weekly' },
+        weekly: { now: '<span class="usd">$</span>49.99', suf: '/week', tag: '', strike: '', cadence: 'Billed weekly' },
       };
       const card = document.getElementById('gold-card');
       const priceEl = card.querySelector('[data-gold-price]');
@@ -2682,6 +2686,7 @@
       function render(period) {
         const p = PRICES[period] || PRICES.annual;
         priceEl.innerHTML = `
+          ${p.tag || ''}
           <div class="flex items-center gap-2 justify-end fade-in">
             ${p.strike || ''}
             <div class="flex items-baseline gap-1">
@@ -2791,11 +2796,22 @@
         const sumCadence = document.getElementById('sum-pro-cadence');
         const sumPill    = document.getElementById('sum-pro-pill-slot');
 
-        // Summary row always mirrors the annual plan — no weekly mirror.
+        // Summary rows mirror the selected billing period (Pro and Gold).
         const annualNow = '16';
+        const annualMode = period === 'annual';
         if (sumSave) sumSave.classList.add('hidden');
-        if (sumPrice) sumPrice.innerHTML = `<span class="usd">$</span>${annualNow}`;
-        if (sumCadence) sumCadence.textContent = '$192 billed annually';
+        if (sumPrice) sumPrice.innerHTML = annualMode ? `<span class="usd">$</span>${annualNow}` : '<span class="usd">$</span>9.99';
+        if (sumCadence) sumCadence.textContent = annualMode ? '$192 billed annually' : 'Billed weekly';
+        const sumProSuf = document.getElementById('sum-pro-suf');
+        if (sumProSuf) sumProSuf.textContent = annualMode ? '/mo' : '/week';
+        if ((document.body.dataset.topView || 'individual') === 'individual') {
+          const sGoldP = document.getElementById('sum-gold-price');
+          const sGoldC = document.getElementById('sum-gold-cadence');
+          const sGoldSuf = document.getElementById('sum-gold-suf');
+          if (sGoldP) sGoldP.innerHTML = annualMode ? '<span class="usd">$</span>80' : '<span class="usd">$</span>49.99';
+          if (sGoldC) sGoldC.textContent = annualMode ? '$960 billed annually' : 'Billed weekly';
+          if (sGoldSuf) sGoldSuf.textContent = annualMode ? '/mo' : '/week';
+        }
         if (sumPill) {
           // Bump state is communicated via the in-card green badge now —
           // suppress the legacy orange summary-row pill entirely.
@@ -2804,6 +2820,7 @@
 
         if (period === 'annual') {
           proPriceEl.innerHTML = `
+            <span class="off-tag fade-in">20% off</span>
             <div class="flex items-center gap-2 justify-end fade-in">
               <p class="text-[17px] font-medium line-through text-ink-tertiary leading-none"><span class="usd">$</span>20</p>
               <div class="flex items-baseline gap-1">
@@ -2811,7 +2828,7 @@
                 <span class="text-[13px] font-medium text-ink-tertiary">/mo</span>
               </div>
             </div>
-            <p class="text-[12px] font-medium text-ink-tertiary">$192 billed annually <span class="off-tag">20% off</span></p>
+            <p class="text-[12px] font-medium text-ink-tertiary">$192 billed annually</p>
             `;
 
           const offerApplied = document.getElementById('pro-offer-applied');
