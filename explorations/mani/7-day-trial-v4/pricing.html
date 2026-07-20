@@ -159,7 +159,7 @@
     #view-individual > div[aria-hidden="true"],
     #view-team     > div[aria-hidden="true"],
     #view-api      > div[aria-hidden="true"],
-    div[aria-hidden="true"][style*="height:744px"],
+    div[aria-hidden="true"][style*="height:704px"],
     div[aria-hidden="true"][style*="height:800px"] {
       display: none !important;
     }
@@ -1979,13 +1979,13 @@
 
 
     <!-- Plans row: positioned at left 76, top 156. Pro card floats up to 135. -->
-    <div id="view-individual" class="absolute" style="left:76px; top:200px; width:1128px; height:624px;">
+    <div id="view-individual" class="absolute" style="left:76px; top:160px; width:1128px; height:624px;">
 
       <!-- Billing period: Weekly vs Annual (20% off) -->
       <div class="absolute left-1/2 -translate-x-1/2" style="top:-72px;" data-bill-seg>
         <div class="plan-seg" role="tablist" aria-label="Billing period">
-          <button type="button" class="plan-seg-btn" data-period="weekly" role="tab" aria-selected="false">Weekly</button>
-          <button type="button" class="plan-seg-btn is-active" data-period="annual" role="tab" aria-selected="true">Annual &middot; 20% off</button>
+          <button type="button" class="plan-seg-btn is-active" data-period="weekly" role="tab" aria-selected="true">Weekly</button>
+          <button type="button" class="plan-seg-btn" data-period="annual" role="tab" aria-selected="false">Annual &middot; 20% off</button>
         </div>
       </div>
 
@@ -2291,7 +2291,7 @@
 
 
     <!-- Spacer reserving vertical room for the absolutely-positioned card area above -->
-    <div aria-hidden="true" style="height:744px;"></div>
+    <div aria-hidden="true" style="height:704px;"></div>
 
 
     <!-- Everything below is hidden on the API view -->
@@ -2386,10 +2386,10 @@
         <div class="flex flex-col items-center leading-none gap-1">
           <p class="text-[11px] font-medium text-success-fg hidden" id="sum-pro-save"></p>
           <div class="flex items-baseline gap-1">
-            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-pro-price"><span class="usd">$</span>20</p>
+            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-pro-price"><span class="usd">$</span>16</p>
             <p class="text-[12px] text-ink-tertiary">/mo</p>
           </div>
-          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-pro-cadence">$240 billed annually</p>
+          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-pro-cadence">$192 billed annually</p>
         </div>
         <button id="sum-pro-cta" class="pro-btn mt-2 h-9 min-w-[180px] px-4 rounded-[4px] text-white text-[13px] font-bold">Try for Free</button>
         <div id="sum-pro-pill-slot" class="flex justify-center"></div>
@@ -2397,10 +2397,10 @@
       <div class="flex flex-col items-center justify-center gap-2 p-5 border-l border-tertiary">
         <div class="flex flex-col items-center leading-none gap-1">
           <div class="flex items-baseline gap-1">
-            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-gold-price"><span class="usd">$</span>100</p>
+            <p class="text-[22px] font-bold text-ink-primary leading-none" id="sum-gold-price"><span class="usd">$</span>80</p>
             <p class="text-[12px] text-ink-tertiary">/mo</p>
           </div>
-          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-gold-cadence">$1,200 billed annually</p>
+          <p class="text-[11px] font-medium text-ink-tertiary" id="sum-gold-cadence">$960 billed annually</p>
         </div>
         <button id="sum-gold-cta" class="mt-2 h-9 min-w-[180px] px-4 rounded-[4px] border border-brand-500 text-brand-500 text-[13px] font-bold hover:bg-brand-50">Try for Free</button>
       </div>
@@ -2648,8 +2648,12 @@
   <script>
     (function () {
       const PRICES = {
-        annual: { now: '<span class="usd">$</span>100', suf: '/mo', cadence: '$1,200 billed annually' },
-        weekly: { now: '<span class="usd">$</span>49.99', suf: '/week', cadence: 'Billed weekly' },
+        annual: {
+          now: '<span class="usd">$</span>80', suf: '/mo',
+          strike: '<p class="text-[17px] font-medium line-through text-ink-tertiary leading-none"><span class="usd">$</span>100</p>',
+          cadence: '$960 billed annually (20% off $1,200)',
+        },
+        weekly: { now: '<span class="usd">$</span>49.99', suf: '/week', strike: '', cadence: 'Billed weekly' },
       };
       const card = document.getElementById('gold-card');
       const priceEl = card.querySelector('[data-gold-price]');
@@ -2668,7 +2672,7 @@
         const p = PRICES[period] || PRICES.annual;
         priceEl.innerHTML = `
           <div class="flex items-center gap-2 justify-end fade-in">
-            <span class="trial-badge-7day"><i class="ph-bold ph-clock"></i> 7-day free trial</span>
+            ${p.strike || ''}
             <div class="flex items-baseline gap-1">
               <p class="text-[24px] font-bold text-ink-primary leading-none">${p.now}</p>
               <span class="text-[13px] font-medium text-ink-tertiary">${p.suf}</span>
@@ -2703,8 +2707,8 @@
       }
       window.renderGoldIndividual = render;
 
-      // Annual-only now (Monthly/Annual toggle removed).
-      render('annual');
+      // Weekly is the default billing period.
+      render('weekly');
 
       // Dev flag: when true, every page load resets the bump + survey state so
       // the feedback modal always triggers fresh. Flip to false before shipping
@@ -2744,8 +2748,8 @@
           btn.setAttribute('aria-selected', String(active));
         });
       }
-      // Weekly/Annual toggle (annual = 20% off). Annual is the default.
-      let billPeriodState = 'annual';
+      // Weekly/Annual toggle (annual = 20% off). Weekly is the default.
+      let billPeriodState = 'weekly';
       function getProPeriod() {
         return billPeriodState;
       }
@@ -2777,10 +2781,10 @@
         const sumPill    = document.getElementById('sum-pro-pill-slot');
 
         // Summary row always mirrors the annual plan — no weekly mirror.
-        const annualNow = '20';
+        const annualNow = '16';
         if (sumSave) sumSave.classList.add('hidden');
         if (sumPrice) sumPrice.innerHTML = `<span class="usd">$</span>${annualNow}`;
-        if (sumCadence) sumCadence.textContent = '$240 billed annually';
+        if (sumCadence) sumCadence.textContent = '$192 billed annually';
         if (sumPill) {
           // Bump state is communicated via the in-card green badge now —
           // suppress the legacy orange summary-row pill entirely.
@@ -2790,13 +2794,13 @@
         if (period === 'annual') {
           proPriceEl.innerHTML = `
             <div class="flex items-center gap-2 justify-end fade-in">
-              <span class="trial-badge-7day"><i class="ph-bold ph-clock"></i> 7-day free trial</span>
+              <p class="text-[17px] font-medium line-through text-ink-tertiary leading-none"><span class="usd">$</span>20</p>
               <div class="flex items-baseline gap-1">
                 <p class="text-[24px] font-bold text-ink-primary leading-none"><span class="usd">$</span>${annualNow}</p>
                 <span class="text-[13px] font-medium text-ink-tertiary">/mo</span>
               </div>
             </div>
-            <p class="text-[12px] font-medium text-ink-tertiary">$240 billed annually</p>
+            <p class="text-[12px] font-medium text-ink-tertiary">$192 billed annually (20% off $240)</p>
             `;
 
           const offerApplied = document.getElementById('pro-offer-applied');
@@ -2813,7 +2817,6 @@
         } else {
           proPriceEl.innerHTML = `
             <div class="flex items-center gap-2 justify-end fade-in">
-              <span class="trial-badge-7day"><i class="ph-bold ph-clock"></i> 7-day free trial</span>
               <div class="flex items-baseline gap-1">
                 <p class="text-[24px] font-bold text-ink-primary leading-none"><span class="usd">$</span>9.99</p>
                 <span class="text-[13px] font-medium text-ink-tertiary">/week</span>
@@ -3036,8 +3039,8 @@
           if (sumPill) sumPill.innerHTML = '';
         } else {
           // Gold column summary has no renderer of its own — reset manually.
-          if (sGold)  sGold.innerHTML   = '<span class="usd">$</span>100';
-          if (sGoldC) sGoldC.textContent= '$1,200 billed annually';
+          if (sGold)  sGold.innerHTML   = '<span class="usd">$</span>80';
+          if (sGoldC) sGoldC.textContent= '$960 billed annually';
           if (sGoldB) sGoldB.textContent= 'Try for Free';
           // Pro CTA: reset from team's "Buy Pro N Seats" back to "Buy Pro".
           if (sProB)  sProB.textContent = 'Try for Free';
