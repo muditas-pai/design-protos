@@ -32,6 +32,26 @@ Two features, one shared foundation. **Analytics is the engine; the Deal Room is
 
 ---
 
+## Two analytics contexts (identity is inverse to reach)
+
+The same event pipeline feeds two different *read* models. The more public the deck, the less you can (or need to) know who is viewing.
+
+```
+CONTEXT 1 — PUBLISHED DECK              CONTEXT 2 — DEAL ROOM
+broadcast to the world                  1:few, a named account
+─────────────────────────────          ─────────────────────────────
+audience: unknown, many                 audience: a specific buying committee
+gating:   none, anonymous fine          gating:   you WANT to know who
+analytics: AGGREGATE                    analytics: PER-PERSON
+  views, geo, slide drop-off              who opened, forwarding detection
+  (YouTube-stats style)                   (DocSend-style tracked link)
+identity: irrelevant                    identity: the whole point
+```
+
+Same events underneath: Context 1 counts anonymous views; Context 2 attributes them to people. This also resolves the *room-viewer surface* question: Context 1 reuses the existing shared-deck viewer; Context 2 gets the bespoke room surface (deck as one tile, MAP as the spine).
+
+---
+
 ## Feature A — Share Analytics
 
 Turns a shared deck link into engagement signal for the owner.
@@ -41,7 +61,8 @@ Turns a shared deck link into engagement signal for the owner.
 | tracked share link per deck | CRM write-back (V2) |
 | open / no-open state | A/B deck comparison |
 | per-slide time + revisits | predictive deal scoring |
-| viewer identity (optional email gate) | heatmap replays |
+| viewer identity (skippable soft name prompt, deal-room context) | heatmap replays |
+| aggregate views for published decks (anonymous) | verified email gate |
 | **new-viewer detection (forwarding ★)** | team-wide analytics roll-up |
 | link controls: expiry, revoke | |
 | owner notification on first open | |
@@ -190,6 +211,40 @@ change room state        │   ✓   │    ✗     │   ✗
    seller's plan — the "buyer adopted my process" signal, kept safe.
 ```
 
+### Access vs role (two separate concepts)
+
+```
+1. ACCESS  (authentication) → can you OPEN the room at all?
+2. ROLE    (authorization)  → once in, what can you DO?
+```
+
+**Access** is a friction dial the seller picks per room:
+
+```
+LEVEL 0  anyone with the link       zero friction, fully anonymous
+LEVEL 1  name prompt (soft)         "who's viewing?" self-declared, skippable
+LEVEL 2  email capture (soft gate)  enter email to view, not verified
+LEVEL 3  email verification (OTP)   code to inbox → verified identity
+LEVEL 4  allowlist / SSO            only invited addresses/domains
+LEVEL 5  password                   shared secret, no identity
+```
+
+The tension: **security fights forwarding, and forwarding is the best signal.** A Level-4 allowlist *kills* forwarding (the CFO isn't on the list, so the champion can't forward to them, so "the CFO opened it" never fires). **V1 default = Level 1, skippable** — anyone with the link gets in (forwarding survives), but the room asks who they are (identity captured most of the time). Hard gates (3–4) are an **opt-in per room** for security-sensitive deals, accepting they suppress forwarding.
+
+**Role** is assigned by *how you arrived*, so no login is needed to know it:
+
+```
+HOW YOU ARRIVED               → ROLE          → CAN DO
+─────────────────────────────────────────────────────────────
+you own it (seller)           → OWNER         → everything
+seller explicitly invited you → COLLABORATOR  → tick own rows, comment,
+  (the champion, by email)      (champion)      suggest a row, see shared MAP
+opened a forwarded link       → VIEWER         → see shared assets + shared
+  (committee, unknown)          (committee)     MAP rows, comment (optional)
+```
+
+The seller's invite defines the champion; everyone else arriving via the link is a read-only viewer until the seller promotes them. Internal-only MAP rows stay invisible to viewer and champion alike.
+
 ---
 
 ## The three roles (why the room exists)
@@ -247,17 +302,29 @@ Onboarding / post-sale hub    no          full          yes
 | **Room creation point** | Default at the **demo → proposal boundary** (a real opportunity + a named champion + a polished deck worth wrapping). Power users may create earlier (post-discovery) for more engagement history. |
 | **MAP editing** | Seller owns and maintains it (~80% of the time), scaffolds from a template. Buyer contributes lightly (tick, comment, suggest a row) but can't restructure. Buyer co-editing is the healthy-deal signal. |
 | **Forwarding detection** | In scope for V1 and non-negotiable — it is the signal that makes analytics worth building. |
+| **Two analytics contexts** | Published decks (social/email) = aggregate, anonymous, ungated. Deal-room decks = per-person, identity-attributed. Same event pipeline, two read models. |
+| **Email gate** | **Skipped in V1.** No verified email gate on either context. |
+| **Anonymous viewing** | **Allowed.** |
+| **Room access (deal room)** | **V1 default = Level 1 soft name prompt, skippable** — link-open + "who's viewing?" that a viewer can skip. Preserves forwarding while capturing identity most of the time. Hard gates (email verification, allowlist/SSO, password) are opt-in per room, deferred past V1. |
+| **Room viewer surface** | Two surfaces, not one: published deck reuses the existing shared-deck viewer; the deal room is a bespoke surface (deck as one tile, MAP as the spine). |
+| **MAP in V1** | **Full** — owner · due · states (todo/in-progress/blocked/done) · internal-only visibility. Not the lite checkbox-only version. |
 
 ---
 
-## Open decisions (resolve before design starts)
+## Open decisions — resolved 20 Jul 2026
 
-These change what gets drawn:
+The four V1 forks are now settled (see the Decided table):
 
-1. **Email gate — default on or off?** Gate = better identity + forwarding data; adds buyer friction. (Lean: off by default, one-click on.)
-2. **Room viewer — new surface, or an evolved "shared deck" page?** Reusing the share page is faster; a bespoke room reads more premium.
-3. **MAP in V1 — full (owner/due/blocked/internal-only) or lite (just checkable rows)?** Lite ships faster but loses the mutual-commitment value that makes it a sales tool.
-4. **Anonymous viewing allowed at all,** or is every viewer at least name-prompted?
+1. **Email gate** → **skipped in V1.**
+2. **Room viewer surface** → **two surfaces** (published deck reuses the shared-deck viewer; deal room is bespoke), per the two-context model.
+3. **MAP in V1** → **full** (owner/due/blocked/internal-only).
+4. **Anonymous viewing** → **allowed.** Deal-room default is a skippable soft name prompt (Level 1); hard gates are opt-in per room, deferred.
+
+Still genuinely open (not V1-blocking):
+
+- Exact **inactivity window** for auto-stall (placeholder: 14 days).
+- Whether **hard gates** (email-verify / allowlist / password) land in V1.5 or V2.
+- How a viewer gets **promoted** to champion (seller action UI).
 
 ---
 
