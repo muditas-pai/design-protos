@@ -84,19 +84,22 @@ Y — single artifact (point tool) ⟷   whole deal / revenue workflow (platform
                                    ▲
    ┌───────────────────────────────┼───────────────────────────────┐
    │  ░ WHITESPACE ░                │  Highspot · Seismic (enablmnt) │
-   │  no one owns creation+platform │  PandaDoc · GetAccept (+e-sign)│
-   │      ⟵ where PAI is headed     │  Trumpet·Aligned·Dock·Flowla·  │
-   │        from the left           │  Recapped (DSR — deal workflow)│
+   │  no deck-maker has a room —    │  PandaDoc · GetAccept (+e-sign)│
+   │  the DEAL ROOM wedge           │  Trumpet·Aligned·Dock·Flowla·  │
+   │  ↑ PAI heads up here           │  Recapped (DSR — deal workflow)│
  MAKE ─────────────────────────────┼───────────────────────────────── MOVE
-   │  Pitch·Gamma·Storydoc·         │  DocSend · Papermark           │
-   │  Beautiful.ai · Qwilr(+track)  │  (share + track one doc)       │
-   │  ● PAI (today) ─Deal Room─⟶↑   │                                │
+   │ Pitch ··· Gamma · Beautiful.ai ····⟶ DocSend · Papermark       │
+   │ (pure     Qwilr · Storydoc · ● PAI   (share + track one doc)   │
+   │  create)  └─ ANALYTICS = table-stakes ─┘ (contested, not a wedge)│
    └───────────────────────────────┼───────────────────────────────┘
                                    ▼
                     SINGLE ARTIFACT (point tool)
 ```
 
-**We sit bottom-left** (creation, point tool — the "Pitch-like" game). **Analytics** pushes us right (toward DocSend); the **Deal Room** pushes us up into the DSR band — but we arrive from the creation side. PAI and the DSRs converge on the same space from **opposite corners**: they have the workflow but can't make a deck; we make the deck and add the workflow. Creation is the harder half to bolt on, so the creation corner is the stronger launch position — and the top-left (creation + platform) is open whitespace.
+**We sit bottom-left** with the deck-makers. Two different moves:
+
+- **Analytics = table-stakes, not a wedge.** Gamma, Beautiful.ai and Qwilr already track — the creation corner has slid right into analytics. Ship it to complete the make→share→track loop and not look dated, but it won't differentiate PAI *from them*. (Beautiful.ai has even added Salesforce — the first step onto the diagonal.)
+- **The Deal Room IS the wedge.** No deck-maker has a room + MAP; it's creation-side whitespace, *and* the move the DSRs can't easily counter (no native deck). PAI and the DSRs approach that space from **opposite corners** — they have the workflow but can't make a deck; we make the deck and add the workflow. Creation is the harder half to bolt on, so the creation corner is the stronger launch position.
 
 ---
 
