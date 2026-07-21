@@ -354,6 +354,9 @@ Champion vs committee is an *analytics label*, not an access tier. (Internal-onl
 
 **The hard email gate (reference · Pitch, 21 Jul 2026).** The opt-in top of the friction-dial: when a room requires an email, the buyer hits a full-screen threshold *before* the room renders. Pitch's version:
 
+![Pitch's email gate — a floating lock illustration on a bare black canvas, "This room requires you to enter an email to open", a consent line, an email field, a "Remember for next visit" checkbox, and an "Agree and continue" button](assets/pitch-email-gate.png)
+
+
 ```
 [ 🔒 lock ]           on a bare black canvas, no room context
 This room requires you to enter an email to open
@@ -370,7 +373,7 @@ Our take (**not built** — this is the deferred hard gate, see Open decisions):
 - **Show the room, then ask.** Put the **co-brand header + room title above the field** so it reads as a threshold into a *named space* (Vantage × Meridian), not an anonymous paywall. Pitch's naked lock throws away the one thing we have that they don't: a branded, deck-native room.
 - **Navy action button** (brand: navy = action), not an indigo fill.
 - The email captured here becomes the viewer's **identity for room-scoped analytics** — it's what turns an anonymous viewer into the champion / committee label.
-- Keep the consent line honest and the remember-me default on. (Layout captured in the sketch above; Pitch reference reviewed 21 Jul 2026.)
+- Keep the consent line honest and the remember-me default on. (Screenshot on file: `assets/pitch-email-gate.png`.)
 
 ### Room link options (the Share panel · Pitch reference)
 
