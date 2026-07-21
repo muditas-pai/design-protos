@@ -329,8 +329,23 @@
     .opt .oi { width: 34px; height: 34px; border-radius: 9px; background: var(--surface-2); color: var(--fg-2);
       display: grid; place-items: center; font-size: 17px; flex-shrink: 0; box-shadow: inset 0 0 0 1px var(--line); }
     .opt .ot { flex: 1; }
-    .opt .ot .otn { font-weight: 600; font-size: 13.5px; }
+    .opt .ot .otn { font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; }
     .opt .ot .ots { font-size: 12px; color: var(--fg-2); margin-top: 2px; line-height: 1.45; }
+    /* consent is a child of collect — dims + locks when collection is off */
+    .opt.disabled { opacity: 0.42; }
+    .opt.disabled .toggle { pointer-events: none; }
+    /* info tooltip (positioned below to stay clear of the sheet's top edge) */
+    .info { position: relative; display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 5px;
+      border-radius: 50%; color: var(--fg-3); cursor: help; outline: none; }
+    .info i { font-size: 13px; }
+    .info:hover, .info:focus-visible { color: var(--room-brand); }
+    .info .tip { position: absolute; top: calc(100% + 8px); right: -8px; width: 208px; background: var(--ink); color: #fff;
+      font-size: 11.5px; font-weight: 500; line-height: 1.45; padding: 8px 10px; border-radius: 8px; box-shadow: var(--sh-pop);
+      opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity 140ms var(--ease), transform 160ms var(--ease);
+      z-index: 70; text-transform: none; letter-spacing: normal; }
+    .info .tip::before { content: ""; position: absolute; bottom: 100%; right: 11px; border: 5px solid transparent;
+      border-bottom-color: var(--ink); }
+    .info:hover .tip, .info:focus-visible .tip { opacity: 1; transform: none; }
     .sheet-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--fg-3);
       margin: 22px 0 10px; }
 
@@ -495,11 +510,28 @@
         <button class="copy" id="copyLink"><i class="ph ph-copy"></i>Copy</button>
       </div>
 
+      <div class="sheet-label">Analytics</div>
+      <div class="opt">
+        <div class="oi" style="background:var(--room-tint);color:var(--room-brand)"><i class="ph-fill ph-chart-line-up"></i></div>
+        <div class="ot"><div class="otn">Collect engagement analytics</div><div class="ots">Visit duration, per-slide drop-off on the deck, and clicks on every attachment.</div></div>
+        <label class="toggle"><input type="checkbox" id="collectTgl" checked><span class="tr"></span><span class="kn"></span></label>
+      </div>
+      <div class="opt" id="consentOpt">
+        <div class="oi"><i class="ph ph-seal-check"></i></div>
+        <div class="ot"><div class="otn">Ask viewers to consent<span class="info" tabindex="0"><i class="ph ph-info"></i><span class="tip">Shows a quick consent prompt before any tracking starts. Turn on for GDPR or privacy-sensitive deals.</span></span></div><div class="ots">A one-tap prompt before tracking begins. Off by default.</div></div>
+        <label class="toggle"><input type="checkbox" id="consentTgl"><span class="tr"></span><span class="kn"></span></label>
+      </div>
+
       <div class="sheet-label">Access</div>
       <div class="opt">
         <div class="oi"><i class="ph ph-user-circle"></i></div>
         <div class="ot"><div class="otn">Ask for a name</div><div class="ots">A soft prompt when they open. Skippable, you'll still see who's engaging.</div></div>
         <label class="toggle"><input type="checkbox" checked><span class="tr"></span><span class="kn"></span></label>
+      </div>
+      <div class="opt">
+        <div class="oi"><i class="ph ph-envelope-simple"></i></div>
+        <div class="ot"><div class="otn">Require an email</div><div class="ots">A hard gate: viewers enter an email before the room opens. Off by default.</div></div>
+        <label class="toggle"><input type="checkbox"><span class="tr"></span><span class="kn"></span></label>
       </div>
       <div class="opt">
         <div class="oi"><i class="ph ph-lock-key"></i></div>
@@ -786,6 +818,21 @@
     $("#sheetClose").addEventListener("click", closeShare);
     $("#scrim").addEventListener("click", closeShare);
     $("#copyLink").addEventListener("click", function () { this.innerHTML = '<i class="ph ph-check"></i>Copied'; toast("Link copied to clipboard"); });
+
+    // analytics: consent is a child of collect — locks + clears when collection is off
+    var collectTgl = $("#collectTgl"), consentTgl = $("#consentTgl"), consentOpt = $("#consentOpt");
+    function syncConsent() {
+      var on = collectTgl.checked;
+      consentOpt.classList.toggle("disabled", !on);
+      consentTgl.disabled = !on;
+      if (!on) consentTgl.checked = false;
+    }
+    collectTgl.addEventListener("change", function () {
+      syncConsent(); saved();
+      toast(collectTgl.checked ? "Engagement analytics on for this room" : "Analytics off · this room won't be tracked");
+    });
+    consentTgl.addEventListener("change", saved);
+    syncConsent();
     $("#previewBtn").addEventListener("click", function () { toast("Preview · opening the buyer's view"); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closeShare(); closePops(); } });
 

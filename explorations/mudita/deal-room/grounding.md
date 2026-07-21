@@ -372,6 +372,27 @@ Our take (**not built** — this is the deferred hard gate, see Open decisions):
 - The email captured here becomes the viewer's **identity for room-scoped analytics** — it's what turns an anonymous viewer into the champion / committee label.
 - Keep the consent line honest and the remember-me default on. (Layout captured in the sketch above; Pitch reference reviewed 21 Jul 2026.)
 
+### Room link options (the Share panel · Pitch reference)
+
+Everything the seller sets on the room's shareable link lives in **one panel** (Pitch calls it "Link to <room>"). Two groups: **analytics** (what the room collects) and **access** (the friction-dial). The reference set, from Pitch's link modal (21 Jul 2026):
+
+```
+URL                              editable slug → full link preview
+─ Analytics ─
+Collect engagement analytics   ● on    visit duration · per-slide drop-off · attachment clicks
+Get visitor consent            ○ off  (ⓘ) show a consent prompt before tracking
+─ Access ─
+Require passcode               ○ off
+Require visitor email          ● on
+```
+
+Our take:
+
+- **Collect engagement analytics** is the master switch, **on by default** — the room is a tracked surface. Analytics itself is owned by [Deck Analytics](../deck-analytics/grounding.html); the room just flips collection on its link and reads the room-scoped slice. Off = a plain, untracked share.
+- **Consent** is a *child* of collect: it dims/disables when collect is off. On = the viewer sees a consent prompt before any tracking (GDPR / privacy-sensitive deals); off = silent tracking, the seller's call.
+- Sits in the **same panel as the access friction-dial** (soft name prompt default · email gate · passcode), so the seller tunes "how much do I ask / how much do I watch" in one place.
+- **Baked into `room-builder.html`** — the Share slide-over now leads with an Analytics group, then Access.
+
 ### Design stance
 
 Opinionated + templated (Pitch mold), **not** a drag-and-drop webpage builder (Qwilr/Trumpet). Room builder = pick a template + drop in content.
