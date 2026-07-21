@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
+  <title>Deck analytics + share modal — deck-analytics proto</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    /* ---- proto backdrop: a faint hint of the dashboard behind the scrim ---- */
+    body { margin: 0; background: #EEF0F3; }
+    .stage { position: fixed; inset: 0; overflow: auto; }
+    .ghost-app { position: absolute; inset: 0; padding: 26px 32px; filter: saturate(0.6); opacity: 0.5; pointer-events: none; user-select: none; }
+    .ghost-row { height: 13px; border-radius: 7px; background: #D7DBE0; margin-bottom: 12px; }
+    .ghost-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 22px; }
+    .ghost-card { height: 150px; border-radius: 14px; background: #DDE1E6; }
+    .scrim { position: fixed; inset: 0; background: rgba(10,25,37,0.42); backdrop-filter: blur(2px); }
+
+    /* ---- modal shell ---- */
+    .wrap { position: relative; min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+    .modal {
+      position: relative; width: 100%; max-width: 760px; max-height: calc(100vh - 80px);
+      display: flex; flex-direction: column; background: var(--bg-elevated);
+      border-radius: 16px; box-shadow: var(--shadow-elevation-03); overflow: hidden;
+      animation: pop 340ms var(--ease-out-strong) both;
+    }
+    @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .modal { animation: none; } }
+
+    /* ---- header ---- */
+    .m-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--border-secondary); }
+    .thumb { width: 52px; height: 34px; border-radius: 6px; flex: none; box-shadow: 0 0 0 1px rgba(11,15,20,0.10);
+      background: linear-gradient(135deg, #0A1925 0%, #1C3550 60%, #284B71 100%); position: relative; overflow: hidden; }
+    .thumb::after { content: "Acme × PAI"; position: absolute; left: 6px; bottom: 4px; color: #fff; font-size: 6.5px; font-weight: 700; letter-spacing: .02em; opacity: .92; }
+    .thumb .dot { position: absolute; top: 6px; left: 6px; width: 9px; height: 9px; border-radius: 50%; background: #FF5500; }
+    .m-title { min-width: 0; flex: 1; }
+    .m-title .name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .iconbtn { width: 32px; height: 32px; border: 0; background: transparent; border-radius: 8px; color: var(--text-secondary);
+      display: grid; place-items: center; cursor: pointer; font-size: 18px; transition: background 140ms var(--ease-out-strong), color 140ms; }
+    .iconbtn:hover { background: var(--bg-elevated-hover); color: var(--text-primary); }
+
+    /* ---- tabs ---- */
+    .tabs { display: flex; gap: 4px; padding: 10px 18px 0; border-bottom: 1px solid var(--border-secondary); }
+    .tab { position: relative; border: 0; background: transparent; padding: 8px 12px 12px; cursor: pointer; color: var(--text-secondary);
+      font-size: 14px; font-weight: 500; font-family: inherit; display: inline-flex; align-items: center; gap: 7px; transition: color 140ms; }
+    .tab:hover { color: var(--text-primary); }
+    .tab[aria-selected="true"] { color: var(--text-primary); }
+    .tab[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--bg-primary-inverted); }
+
+    .body { overflow-y: auto; padding: 20px 18px 22px; }
+    .panel[hidden] { display: none; }
+    .sec-label { color: var(--text-tertiary); margin: 0 0 10px; }
+    .sec + .sec { margin-top: 26px; }
+
+    /* ---- summary tiles ---- */
+    .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .tile { padding: 13px 14px; border-radius: 12px; background: var(--bg-secondary); box-shadow: var(--shadow-elevation-02); }
+    .tile .n { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .tile .l { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--text-secondary); }
+    .tile .l i { font-size: 13px; color: var(--text-tertiary); }
+
+    /* ---- per-slide bars ---- */
+    .slide { display: grid; grid-template-columns: 20px 1fr 128px 52px; align-items: center; gap: 10px; padding: 5px 0; }
+    .slide .idx { color: var(--text-tertiary); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+    .slide .ti { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 13px; }
+    .track { height: 8px; border-radius: 5px; background: var(--bg-tertiary); overflow: hidden; }
+    .fill { height: 100%; border-radius: 5px; background: #0055ED; }
+    .slide .tm { text-align: right; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .slide.low .ti, .slide.low .idx { color: var(--text-tertiary); }
+    .slide.low .fill { background: #AEB6C2; }
+
+    /* ---- source chips ---- */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--bg-secondary);
+      box-shadow: var(--shadow-elevation-02); font-size: 12.5px; color: var(--text-primary); }
+    .chip i { font-size: 14px; color: var(--text-secondary); }
+    .chip b { font-variant-numeric: tabular-nums; }
+
+    /* ---- viewers ---- */
+    .vhead, .vrow { display: grid; grid-template-columns: 1fr 116px 120px 96px; align-items: center; gap: 10px; }
+    .vhead { padding: 0 8px 8px; border-bottom: 1px solid var(--border-secondary); }
+    .vhead span { color: var(--text-tertiary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .vhead .r, .vrow .r { text-align: right; }
+    .vrow { padding: 9px 8px; border-radius: 8px; transition: background 120ms var(--ease-out-strong); }
+    .vrow:hover { background: var(--bg-secondary); }
+    .vwr { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .av { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 600; color: #fff; box-shadow: 0 0 0 1px rgba(11,15,20,0.06); }
+    .av.anon { background: var(--bg-quaternary); color: var(--text-tertiary); }
+    .vwr .who { min-width: 0; }
+    .vwr .nm { display: flex; align-items: center; gap: 6px; }
+    .vwr .nm span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vwr .em { color: var(--text-tertiary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .newbadge { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .02em;
+      color: #0055ED; background: rgba(0,85,237,0.12); padding: 2px 6px; border-radius: 999px; text-transform: uppercase; }
+    .vtime { color: var(--text-secondary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+    .vslides { display: flex; align-items: center; gap: 8px; }
+    .vslides .mini { width: 60px; height: 6px; border-radius: 4px; background: var(--bg-tertiary); overflow: hidden; }
+    .vslides .mini > i { display: block; height: 100%; background: #16A34A; border-radius: 4px; }
+    .vslides small { color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .vloc { color: var(--text-secondary); font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end; }
+    .vloc i { font-size: 13px; color: var(--text-tertiary); }
+    .morerow { text-align: center; padding: 12px 0 2px; }
+
+    /* ---- share tab ---- */
+    .linkrow { display: flex; gap: 8px; align-items: center; }
+    .linkbox { flex: 1; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 8px;
+      background: var(--bg-secondary); box-shadow: var(--shadow-elevation-input); color: var(--text-secondary); font-size: 13.5px; overflow: hidden; }
+    .linkbox i { color: var(--text-tertiary); flex: none; }
+    .linkbox span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .setting { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border-secondary); }
+    .setting:last-child { border-bottom: 0; }
+    .setting .ic { width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--bg-secondary); display: grid; place-items: center; color: var(--text-secondary); font-size: 17px; }
+    .setting .tx { flex: 1; min-width: 0; }
+    .setting .tx .h { color: var(--text-primary); }
+    .setting .tx .s { color: var(--text-tertiary); margin-top: 1px; }
+    .expiry { margin: 2px 0 0 46px; display: none; }
+    .expiry.on { display: block; }
+    .danger { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-secondary); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+    .m-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--border-secondary); background: var(--bg-elevated); }
+    .foot-note { color: var(--text-tertiary); display: inline-flex; align-items: center; gap: 6px; }
+
+    .reopen { position: fixed; inset: 0; display: none; place-items: center; }
+    .reopen.show { display: grid; }
+  </style>
+</head>
+
+<body class="pai">
+  <div class="stage">
+    <!-- faint dashboard hint behind the scrim -->
+    <div class="ghost-app" aria-hidden="true">
+      <div class="ghost-row" style="width:180px;height:20px;"></div>
+      <div class="ghost-row" style="width:120px;margin-top:18px;"></div>
+      <div class="ghost-grid">
+        <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+      </div>
+    </div>
+    <div class="scrim" aria-hidden="true"></div>
+
+    <div class="wrap">
+      <div class="modal" role="dialog" aria-label="Deck analytics and share" id="modal">
+
+        <!-- HEADER -->
+        <div class="m-head">
+          <div class="thumb"><span class="dot"></span></div>
+          <div class="m-title">
+            <span class="name text-body-lg-semibold text-text-primary">Acme × PAI — Platform Overview</span>
+            <span class="text-body-sm-regular text-text-tertiary">Shared 3 days ago · 12 slides</span>
+          </div>
+          <button class="iconbtn" title="Close" onclick="closeModal()"><i class="ph ph-x"></i></button>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" aria-selected="true" aria-controls="p-analytics" onclick="showTab('analytics', this)"><i class="ph ph-chart-bar"></i>Analytics</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="p-share" onclick="showTab('share', this)"><i class="ph ph-link"></i>Share</button>
+        </div>
+
+        <div class="body">
+          <!-- ============ ANALYTICS PANEL ============ -->
+          <div class="panel" id="p-analytics" role="tabpanel">
+
+            <div class="sec">
+              <div class="tiles">
+                <div class="tile"><div class="n">128</div><div class="l text-body-sm-medium"><i class="ph ph-eye"></i>Views</div></div>
+                <div class="tile"><div class="n">34</div><div class="l text-body-sm-medium"><i class="ph ph-users"></i>Unique viewers</div></div>
+                <div class="tile"><div class="n">78<span style="font-size:15px;font-weight:600;">%</span></div><div class="l text-body-sm-medium"><i class="ph ph-flag-checkered"></i>Completion</div></div>
+                <div class="tile"><div class="n">3:12</div><div class="l text-body-sm-medium"><i class="ph ph-clock"></i>Median time</div></div>
+              </div>
+            </div>
+
+            <div class="sec">
+              <p class="sec-label text-overline-small">Time on each slide</p>
+              <div id="slides"></div>
+            </div>
+
+            <div class="sec">
+              <p class="sec-label text-overline-small">Where views came from</p>
+              <div class="chips">
+                <div class="chip"><i class="ph ph-link-simple"></i>Direct link <b>·&nbsp;58%</b></div>
+                <div class="chip"><i class="ph ph-envelope-simple"></i>Email <b>·&nbsp;27%</b></div>
+                <div class="chip"><i class="ph ph-linkedin-logo"></i>LinkedIn <b>·&nbsp;15%</b></div>
+              </div>
+            </div>
+
+            <div class="sec">
+              <p class="sec-label text-overline-small">Viewers &nbsp;·&nbsp; 34 unique</p>
+              <div class="vhead">
+                <span>Viewer</span><span class="r">Last opened</span><span class="r">Slides viewed</span><span class="r">Location</span>
+              </div>
+              <div id="viewers"></div>
+              <div class="morerow"><button class="button-style button-small button-ghost">+ 30 more viewers</button></div>
+            </div>
+          </div>
+
+          <!-- ============ SHARE PANEL ============ -->
+          <div class="panel" id="p-share" role="tabpanel" hidden>
+            <div class="sec">
+              <p class="sec-label text-overline-small">Deck link</p>
+              <div class="linkrow">
+                <div class="linkbox"><i class="ph ph-link"></i><span>pai.show/acme-platform-overview</span></div>
+                <button class="button-style button-medium button-primary" id="copyBtn" onclick="copyLink()"><i class="ph ph-copy"></i>&nbsp;Copy link</button>
+              </div>
+              <p class="text-body-sm-regular text-text-tertiary" style="margin:8px 0 0;">Anyone with this link can view this deck. Every open is tracked in the Analytics tab.</p>
+            </div>
+
+            <div class="sec">
+              <p class="sec-label text-overline-small">Link settings</p>
+
+              <div class="setting">
+                <div class="ic"><i class="ph ph-user-focus"></i></div>
+                <div class="tx"><div class="h text-body-base-medium">Ask viewers for their name</div>
+                  <div class="s text-body-sm-regular">Skippable — viewers can continue anonymously.</div></div>
+                <label class="pai-toggle"><input type="checkbox"><span class="track"></span><span class="knob"></span></label>
+              </div>
+
+              <div class="setting">
+                <div class="ic"><i class="ph ph-download-simple"></i></div>
+                <div class="tx"><div class="h text-body-base-medium">Allow PDF download</div>
+                  <div class="s text-body-sm-regular">Viewers can save a copy of the deck.</div></div>
+                <label class="pai-toggle"><input type="checkbox"><span class="track"></span><span class="knob"></span></label>
+              </div>
+
+              <div class="setting">
+                <div class="ic"><i class="ph ph-bell"></i></div>
+                <div class="tx"><div class="h text-body-base-medium">Notify me of new views</div>
+                  <div class="s text-body-sm-regular">Get an alert on the first open and when a new viewer opens it.</div></div>
+                <label class="pai-toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label>
+              </div>
+
+              <div class="setting">
+                <div class="ic"><i class="ph ph-calendar-x"></i></div>
+                <div class="tx"><div class="h text-body-base-medium">Set an expiry date</div>
+                  <div class="s text-body-sm-regular">The link stops working after this date.</div></div>
+                <label class="pai-toggle"><input type="checkbox" onchange="toggleExpiry(this)"><span class="track"></span><span class="knob"></span></label>
+              </div>
+              <div class="expiry" id="expiry"><input class="pai-input" type="date" value="2026-08-15" style="max-width:200px;"></div>
+            </div>
+
+            <div class="danger">
+              <div><div class="text-body-base-medium text-text-primary">Revoke link</div>
+                <div class="text-body-sm-regular text-text-tertiary">Immediately disables this link for everyone.</div></div>
+              <button class="button-style button-medium button-secondary-danger"><i class="ph ph-link-break"></i>&nbsp;Revoke</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="m-foot">
+          <span class="foot-note text-body-sm-regular"><i class="ph ph-clock-countdown"></i>Updated just now</span>
+          <button class="button-style button-medium button-primary" onclick="closeModal()">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- reopen affordance (proto convenience) -->
+    <div class="reopen" id="reopen">
+      <button class="button-style button-large button-primary" onclick="openModal()"><i class="ph ph-chart-bar"></i>&nbsp;Open deck analytics</button>
+    </div>
+  </div>
+
+  <script>
+    // ---- per-slide dwell (realistic sales-deck shape: demo/results/pricing peak, tail drops off) ----
+    var slides = [
+      { t: "Cover", s: 22 },
+      { t: "The problem", s: 41 },
+      { t: "Why now", s: 33 },
+      { t: "Product overview", s: 68 },
+      { t: "How it works", s: 74 },
+      { t: "Live demo", s: 118 },
+      { t: "Results — 3.2× faster decks", s: 96 },
+      { t: "Pricing", s: 142 },
+      { t: "Security & compliance", s: 51 },
+      { t: "Roadmap", s: 38 },
+      { t: "The team", s: 12, low: true },
+      { t: "Next steps", s: 9, low: true },
+    ];
+    var max = Math.max.apply(null, slides.map(function (d) { return d.s; }));
+    function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return m ? (m + ":" + String(r).padStart(2, "0")) : (r + "s"); }
+    document.getElementById("slides").innerHTML = slides.map(function (d, i) {
+      return '<div class="slide' + (d.low ? ' low' : '') + '">' +
+        '<div class="idx">' + (i + 1) + '</div>' +
+        '<div class="ti">' + d.t + '</div>' +
+        '<div class="track"><div class="fill" style="width:' + Math.round(d.s / max * 100) + '%"></div></div>' +
+        '<div class="tm">' + fmt(d.s) + '</div></div>';
+    }).join("");
+
+    // ---- viewers (named champion, a NEW forwarded viewer, anonymous) ----
+    var viewers = [
+      { nm: "Sarah Chen", em: "sarah.chen@acme.com", col: "#0055ED", init: "SC", last: "2h ago", seen: 12, loc: "San Francisco" },
+      { nm: "Michael Reeves", em: "m.reeves@acme.com", col: "#7C3AED", init: "MR", last: "1h ago", seen: 8, loc: "New York", isNew: true },
+      { anon: true, last: "Today, 11:40", seen: 5, loc: "London" },
+      { nm: "Priya Nair", em: "priya@acme.com", col: "#DB2777", init: "PN", last: "Yesterday", seen: 12, loc: "Bengaluru" },
+      { anon: true, last: "Yesterday", seen: 3, loc: "Berlin" },
+    ];
+    document.getElementById("viewers").innerHTML = viewers.map(function (v) {
+      var who = v.anon
+        ? '<div class="vwr"><div class="av anon"><i class="ph ph-user"></i></div><div class="who"><div class="nm text-body-base-medium text-text-primary"><span>Anonymous viewer</span></div><div class="em">No name provided</div></div></div>'
+        : '<div class="vwr"><div class="av" style="background:' + v.col + '">' + v.init + '</div><div class="who"><div class="nm text-body-base-medium text-text-primary"><span>' + v.nm + '</span>' + (v.isNew ? '<span class="newbadge"><i class="ph-bold ph-arrow-bend-double-up-right"></i>New</span>' : '') + '</div><div class="em">' + v.em + '</div></div></div>';
+      var pct = Math.round(v.seen / 12 * 100);
+      return '<div class="vrow">' + who +
+        '<div class="vtime r">' + v.last + '</div>' +
+        '<div class="vslides r" style="justify-content:flex-end;"><div class="mini"><i style="width:' + pct + '%"></i></div><small>' + v.seen + '/12</small></div>' +
+        '<div class="vloc r"><i class="ph ph-map-pin"></i>' + v.loc + '</div></div>';
+    }).join("");
+
+    // ---- interactions ----
+    function showTab(name, btn) {
+      document.querySelectorAll(".tab").forEach(function (t) { t.setAttribute("aria-selected", "false"); });
+      btn.setAttribute("aria-selected", "true");
+      document.getElementById("p-analytics").hidden = name !== "analytics";
+      document.getElementById("p-share").hidden = name !== "share";
+    }
+    function toggleExpiry(cb) { document.getElementById("expiry").classList.toggle("on", cb.checked); }
+    function copyLink() {
+      var b = document.getElementById("copyBtn");
+      b.innerHTML = '<i class="ph ph-check"></i>&nbsp;Copied';
+      setTimeout(function () { b.innerHTML = '<i class="ph ph-copy"></i>&nbsp;Copy link'; }, 1600);
+    }
+    function closeModal() { document.getElementById("modal").style.display = "none"; document.querySelector(".scrim").style.opacity = ".5"; document.getElementById("reopen").classList.add("show"); }
+    function openModal() { document.getElementById("modal").style.display = "flex"; document.querySelector(".scrim").style.opacity = "1"; document.getElementById("reopen").classList.remove("show"); }
+  </script>
+</body>
+</html>
