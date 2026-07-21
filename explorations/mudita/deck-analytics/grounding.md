@@ -170,6 +170,24 @@ Grouped by flow. Kept deliberately simple.
 
 ---
 
+## Reference: Pitch analytics (screenshots)
+
+Pitch's live implementation, captured 21 Jul 2026. It confirms the **per-link model** below (one deck → many named links, each tracked separately) and gives a concrete read on the deep-view metrics.
+
+**All presentation links** — the list view. One deck can have several named links, each with its own visit count; links can be **Basic** (untracked) vs **Advanced** (analytics-tracked), and **room links** are a separate bucket. This *is* the per-link model.
+
+![Pitch — All presentation links list](assets/pitch-all-presentation-links.png)
+
+Notable: columns are Presentation (thumb + folder) · Link name · Analytics (sparkline + N visits) · Creator · Date · Copy link. A link can be **Disabled**. The same deck appears under multiple link names with different visit counts.
+
+**A link's analytics detail** — the deep view. Summary tiles (**median time spent · median viewed slides (completion) · total visits**), a **per-slide time chart**, and an **Activity** list of individual visits (visitor + device, visit length, viewed slides, location), each expandable.
+
+![Pitch — single link analytics detail](assets/pitch-link-analytics-detail.png)
+
+Notable for our metric set: Pitch uses **median** (not mean) time, **completion as "median viewed slides"**, per-visit rows carry **device + location**, and the per-slide chart is time-per-slide (our "dwell"). Anonymous visits show as "Visitor via Chrome" — matches our anonymous-allowed default.
+
+---
+
 ## Reference
 
 ### Identity is inverse to reach
