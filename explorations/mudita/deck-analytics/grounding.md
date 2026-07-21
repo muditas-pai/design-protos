@@ -242,6 +242,19 @@ Notable: columns are Presentation (thumb + folder) · Link name · Analytics (sp
 
 Notable for our metric set: Pitch uses **median** (not mean) time, **completion as "median viewed slides"**, per-visit rows carry **device + location**, and the per-slide chart is time-per-slide (our "dwell"). Anonymous visits show as "Visitor via Chrome" — matches our anonymous-allowed default.
 
+### Room link analytics (the deal-room context)
+
+Pitch's **New link** dialog for a *room* (its deal-room equivalent), captured 21 Jul 2026. Confirms how analytics behaves once a deck lives inside a room:
+
+- **The room has its own link** ("room link"), separate from the deck's presentation link — matches our *two surfaces, not two links* (the deck's own link + the room). Pitch buckets "presentation links" and "room links" separately.
+- **Analytics is a per-room-link toggle** ("Collect engagement analytics") that tracks **more than the deck: visit duration · clicks on attachments/resources · deck engagement**. So room-scoped analytics is *whole-room* — which resources the buyer opened — not just deck slides.
+- **Access controls live on the room link**: Require passcode · Require visitor email — our friction dial, at the room level. Pitch defaults **Require visitor email ON** for rooms (more identity-forward than a public deck). We chose the softer *skippable name prompt* to preserve forwarding, but the direction is the same: rooms lean toward identity.
+- **Get visitor consent for engagement analytics** — a GDPR-style consent toggle (Gamma has one too). A compliance item to keep in mind (→ Phase 2).
+
+Takeaway: the deal room's analytics is a room-scoped slice with two extras over a plain deck link — **attachment/resource click tracking** and **identity-forward access defaults**. Consistent with the Deal Room grounding's in-room analytics.
+
+_Screenshot pending: save the PNG to `assets/pitch-room-link-analytics.png` and it'll be embedded here (the paste's temp file was already cleared)._
+
 ---
 
 ## Reference: Gamma analytics (screenshots)
