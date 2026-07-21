@@ -63,12 +63,20 @@
     .sec-label { color: var(--text-tertiary); margin: 0 0 10px; }
     .sec + .sec { margin-top: 26px; }
 
-    /* ---- summary tiles ---- */
-    .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .tile { padding: 13px 14px; border-radius: 12px; background: var(--bg-secondary); box-shadow: var(--shadow-elevation-02); }
-    .tile .n { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    /* ---- summary tiles — act as TABS (TikTok-style): each swaps the chart ---- */
+    .tiles { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--border-secondary); border-radius: 12px; overflow: hidden; }
+    .tile { text-align: left; padding: 12px 14px; background: var(--bg-elevated); border: 0; border-right: 1px solid var(--border-secondary);
+      font-family: inherit; cursor: pointer; position: relative; transition: background 140ms var(--ease-out-strong); }
+    .tile:last-child { border-right: 0; }
+    .tile:hover { background: var(--bg-secondary); }
+    .tile[aria-selected="true"] { background: var(--bg-secondary); }
+    .tile[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--bg-primary-inverted); }
+    .tile .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .tile:not([aria-selected="true"]) .n { color: var(--text-secondary); }
     .tile .l { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--text-secondary); }
     .tile .l i { font-size: 13px; color: var(--text-tertiary); }
+    .chart { margin-top: 16px; }
+    .chart svg { width: 100%; height: auto; display: block; }
 
     /* ---- per-slide bars ---- */
     .slide { display: grid; grid-template-columns: 20px 1fr 128px 52px; align-items: center; gap: 10px; padding: 5px 0; }
@@ -80,19 +88,13 @@
     .slide.low .ti, .slide.low .idx { color: var(--text-tertiary); }
     .slide.low .fill { background: #AEB6C2; }
 
-    /* ---- segmented control (Retention / Time per slide) ---- */
-    .seg { display: inline-flex; background: var(--bg-tertiary); border-radius: 9px; padding: 3px; gap: 2px; }
-    .segbtn { border: 0; background: transparent; font-family: inherit; font-size: 12.5px; font-weight: 500; color: var(--text-secondary);
-      padding: 5px 11px; border-radius: 6px; cursor: pointer; transition: background 140ms var(--ease-out-strong), color 140ms; }
-    .segbtn:hover { color: var(--text-primary); }
-    .segbtn.is-on { background: var(--bg-elevated); color: var(--text-primary); box-shadow: var(--shadow-elevation-01); }
-
-    /* ---- retention curve ---- */
-    .reten svg { width: 100%; height: auto; display: block; }
-    .insight { display: flex; align-items: center; gap: 9px; margin-top: 10px; padding: 9px 12px; border-radius: 10px;
+    /* ---- insight callout (per-metric) ---- */
+    .insight { display: flex; align-items: center; gap: 9px; margin-top: 12px; padding: 9px 12px; border-radius: 10px;
       background: rgba(240,177,0,0.11); font-size: 13px; color: var(--text-primary); }
     .insight i { color: #B78100; font-size: 17px; flex: none; }
     .insight b { font-weight: 600; }
+    .insight.neutral { background: var(--bg-secondary); }
+    .insight.neutral i { color: var(--text-secondary); }
 
     /* ---- source chips ---- */
     .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -170,7 +172,7 @@
           <div class="thumb"><span class="dot"></span></div>
           <div class="m-title">
             <span class="name text-body-lg-semibold text-text-primary">Acme × PAI — Platform Overview</span>
-            <span class="text-body-sm-regular text-text-tertiary">Shared 3 days ago · 12 slides</span>
+            <span class="text-body-sm-regular text-text-tertiary">Shared 8 days ago · 12 slides</span>
           </div>
           <button class="iconbtn" title="Close" onclick="closeModal()"><i class="ph ph-x"></i></button>
         </div>
@@ -186,27 +188,22 @@
           <div class="panel" id="p-analytics" role="tabpanel">
 
             <div class="sec">
-              <div class="tiles">
-                <div class="tile"><div class="n">128</div><div class="l text-body-sm-medium"><i class="ph ph-eye"></i>Views</div></div>
-                <div class="tile"><div class="n">34</div><div class="l text-body-sm-medium"><i class="ph ph-users"></i>Unique viewers</div></div>
-                <div class="tile"><div class="n">78<span style="font-size:15px;font-weight:600;">%</span></div><div class="l text-body-sm-medium"><i class="ph ph-flag-checkered"></i>Completion</div></div>
-                <div class="tile"><div class="n">3:12</div><div class="l text-body-sm-medium"><i class="ph ph-clock"></i>Median time</div></div>
+              <div class="tiles" role="tablist" aria-label="Metric">
+                <button type="button" class="tile" role="tab" aria-selected="true" onclick="showMetric('views', this)">
+                  <div class="n">128</div><div class="l text-body-sm-medium"><i class="ph ph-eye"></i>Views</div>
+                </button>
+                <button type="button" class="tile" role="tab" aria-selected="false" onclick="showMetric('unique', this)">
+                  <div class="n">34</div><div class="l text-body-sm-medium"><i class="ph ph-users"></i>Unique viewers</div>
+                </button>
+                <button type="button" class="tile" role="tab" aria-selected="false" onclick="showMetric('completion', this)">
+                  <div class="n">78<span style="font-size:14px;font-weight:600;">%</span></div><div class="l text-body-sm-medium"><i class="ph ph-flag-checkered"></i>Completion</div>
+                </button>
+                <button type="button" class="tile" role="tab" aria-selected="false" onclick="showMetric('time', this)">
+                  <div class="n">3:12</div><div class="l text-body-sm-medium"><i class="ph ph-clock"></i>Median time</div>
+                </button>
               </div>
-            </div>
-
-            <div class="sec">
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
-                <p class="sec-label text-overline-small" style="margin:0;">Slide engagement</p>
-                <div class="seg" role="tablist" aria-label="Slide engagement view">
-                  <button class="segbtn is-on" role="tab" aria-selected="true" onclick="showEng('reten', this)">Retention</button>
-                  <button class="segbtn" role="tab" aria-selected="false" onclick="showEng('time', this)">Time per slide</button>
-                </div>
-              </div>
-              <div id="eng-reten">
-                <div class="reten" id="reten"></div>
-                <div class="insight" id="insight"></div>
-              </div>
-              <div id="eng-time" hidden><div id="slides"></div></div>
+              <div class="chart" id="metricChart"></div>
+              <div class="insight neutral" id="insight"></div>
             </div>
 
             <div class="sec">
@@ -295,71 +292,91 @@
   </div>
 
   <script>
-    // ---- per-slide dwell (realistic sales-deck shape: demo/results/pricing peak, tail drops off) ----
+    // ============ ANALYTICS ENGINE — the four tiles are tabs; each swaps the chart ============
+    // per-slide dwell (sec) — sales-deck shape
     var slides = [
-      { t: "Cover", s: 22 },
-      { t: "The problem", s: 41 },
-      { t: "Why now", s: 33 },
-      { t: "Product overview", s: 68 },
-      { t: "How it works", s: 74 },
-      { t: "Live demo", s: 118 },
-      { t: "Results — 3.2× faster decks", s: 96 },
-      { t: "Pricing", s: 142 },
-      { t: "Security & compliance", s: 51 },
-      { t: "Roadmap", s: 38 },
-      { t: "The team", s: 12, low: true },
-      { t: "Next steps", s: 9, low: true },
+      { t: "Cover", s: 22 }, { t: "The problem", s: 41 }, { t: "Why now", s: 33 },
+      { t: "Product overview", s: 68 }, { t: "How it works", s: 74 }, { t: "Live demo", s: 118 },
+      { t: "Results — 3.2× faster decks", s: 96 }, { t: "Pricing", s: 142 },
+      { t: "Security & compliance", s: 51 }, { t: "Roadmap", s: 38 },
+      { t: "The team", s: 12, low: true }, { t: "Next steps", s: 9, low: true },
     ];
-    var max = Math.max.apply(null, slides.map(function (d) { return d.s; }));
+    var smax = Math.max.apply(null, slides.map(function (d) { return d.s; }));
     function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return m ? (m + ":" + String(r).padStart(2, "0")) : (r + "s"); }
-    document.getElementById("slides").innerHTML = slides.map(function (d, i) {
-      return '<div class="slide' + (d.low ? ' low' : '') + '">' +
-        '<div class="idx">' + (i + 1) + '</div>' +
-        '<div class="ti">' + d.t + '</div>' +
-        '<div class="track"><div class="fill" style="width:' + Math.round(d.s / max * 100) + '%"></div></div>' +
-        '<div class="tm">' + fmt(d.s) + '</div></div>';
-    }).join("");
 
-    // ---- retention curve: % of viewers who reached each slide (funnel, cliff after Pricing) ----
-    var reten = [100, 96, 92, 88, 84, 80, 74, 70, 55, 47, 40, 35];
-    (function renderReten() {
-      var n = reten.length, W = 680, H = 172, pl = 34, pr = 10, pt = 12, pb = 24;
-      var pw = W - pl - pr, ph = H - pt - pb;
-      var X = function (i) { return pl + i * pw / (n - 1); };
-      var Y = function (v) { return pt + (1 - v / 100) * ph; };
-      var drop = 0, di = 0;
-      for (var i = 0; i < n - 1; i++) { var d = reten[i] - reten[i + 1]; if (d > drop) { drop = d; di = i; } }
-      var grid = [0, 50, 100].map(function (g) {
-        return '<line x1="' + pl + '" y1="' + Y(g) + '" x2="' + (W - pr) + '" y2="' + Y(g) + '" stroke="rgba(11,15,20,0.08)" stroke-dasharray="3 4"/>' +
-          '<text x="' + (pl - 6) + '" y="' + (Y(g) + 3.5) + '" text-anchor="end" font-size="10" fill="#a3a3a3">' + g + '%</text>';
+    var reten = [100, 96, 92, 88, 84, 80, 74, 70, 55, 47, 40, 35];  // % who reached each slide
+    var days  = ["Jul 13", "14", "15", "16", "17", "18", "19", "20", "21"];
+    var views = [5, 8, 3, 2, 1, 38, 26, 19, 26];                    // opens per day (spike when forwarded)
+    var uniq  = [3, 2, 1, 0, 0, 14, 6, 4, 4];                       // new unique viewers per day
+
+    // ---- SVG chart helpers ----
+    var CW = 680, CH = 182, PL = 34, PR = 12, PT = 14, PB = 26, PW = CW - PL - PR, PH = CH - PT - PB;
+    function niceMax(m) { var step = m > 40 ? 10 : (m > 15 ? 5 : 2); return Math.max(step, Math.ceil(m / step) * step); }
+    function gx(i, n) { return PL + i * PW / (n - 1); }
+    function gy(v, mx) { return PT + (1 - v / mx) * PH; }
+    function grid(mx, pct) {
+      return [0, mx / 2, mx].map(function (g) {
+        return '<line x1="' + PL + '" y1="' + gy(g, mx) + '" x2="' + (CW - PR) + '" y2="' + gy(g, mx) + '" stroke="rgba(11,15,20,0.08)" stroke-dasharray="3 4"/>' +
+          '<text x="' + (PL - 6) + '" y="' + (gy(g, mx) + 3.5) + '" text-anchor="end" font-size="10" fill="#a3a3a3">' + (pct ? g + "%" : g) + '</text>';
       }).join("");
-      var pts = reten.map(function (v, i) { return X(i) + "," + Y(v); });
-      var area = "M" + X(0) + "," + Y(0) + " L" + pts.join(" L") + " L" + X(n - 1) + "," + Y(0) + " Z";
-      var line = "M" + pts.map(function (p, i) { return (i ? "L" : "") + p; }).join(" ");
-      var seg = "M" + X(di) + "," + Y(reten[di]) + " L" + X(di + 1) + "," + Y(reten[di + 1]);
-      var dots = reten.map(function (v, i) {
-        var amber = (i === di + 1);
-        return '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="3.2" fill="' + (amber ? "#F0B100" : "#fff") + '" stroke="' + (amber ? "#F0B100" : "#0055ED") + '" stroke-width="2"/>';
-      }).join("");
-      var xl = reten.map(function (v, i) { return '<text x="' + X(i) + '" y="' + (H - 7) + '" text-anchor="middle" font-size="10" fill="#a3a3a3">' + (i + 1) + '</text>'; }).join("");
-      document.getElementById("reten").innerHTML =
-        '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Slide retention curve">' +
-        '<defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0055ED" stop-opacity="0.18"/><stop offset="1" stop-color="#0055ED" stop-opacity="0"/></linearGradient></defs>' +
-        grid +
-        '<path d="' + area + '" fill="url(#rg)"/>' +
-        '<path d="' + line + '" fill="none" stroke="#0055ED" stroke-width="2" stroke-linejoin="round"/>' +
-        '<path d="' + seg + '" fill="none" stroke="#F0B100" stroke-width="3" stroke-linecap="round"/>' +
-        dots + xl + '</svg>';
-      document.getElementById("insight").innerHTML =
-        '<i class="ph-fill ph-trend-down"></i><span>Most viewers drop off after slide ' + (di + 1) +
-        ' (<b>' + slides[di].t + '</b>) — retention falls from <b>' + reten[di] + '%</b> to <b>' + reten[di + 1] + '%</b>.</span>';
-    })();
-    function showEng(which, btn) {
-      btn.parentElement.querySelectorAll(".segbtn").forEach(function (b) { b.classList.remove("is-on"); b.setAttribute("aria-selected", "false"); });
-      btn.classList.add("is-on"); btn.setAttribute("aria-selected", "true");
-      document.getElementById("eng-reten").hidden = which !== "reten";
-      document.getElementById("eng-time").hidden = which !== "time";
     }
+    function xlabels(labels) {
+      var n = labels.length;
+      return labels.map(function (l, i) { return '<text x="' + gx(i, n) + '" y="' + (CH - 7) + '" text-anchor="middle" font-size="10" fill="#a3a3a3">' + l + '</text>'; }).join("");
+    }
+    function svgWrap(inner, label) {
+      return '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="' + label + '">' +
+        '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0055ED" stop-opacity="0.16"/><stop offset="1" stop-color="#0055ED" stop-opacity="0"/></linearGradient></defs>' + inner + '</svg>';
+    }
+    function lineChart(vals, labels, opts) {
+      opts = opts || {}; var n = vals.length, mx = opts.mx || niceMax(Math.max.apply(null, vals));
+      var pts = vals.map(function (v, i) { return gx(i, n) + "," + gy(v, mx); });
+      var area = "M" + gx(0, n) + "," + gy(0, mx) + " L" + pts.join(" L") + " L" + gx(n - 1, n) + "," + gy(0, mx) + " Z";
+      var line = "M" + pts.map(function (p, i) { return (i ? "L" : "") + p; }).join(" ");
+      var extra = "", dots;
+      if (opts.drop) {
+        var d = 0, di = 0; for (var i = 0; i < n - 1; i++) { var g = vals[i] - vals[i + 1]; if (g > d) { d = g; di = i; } }
+        extra = '<path d="M' + gx(di, n) + "," + gy(vals[di], mx) + " L" + gx(di + 1, n) + "," + gy(vals[di + 1], mx) + '" fill="none" stroke="#F0B100" stroke-width="3" stroke-linecap="round"/>';
+        dots = vals.map(function (v, i) { var a = (i === di + 1); return '<circle cx="' + gx(i, n) + '" cy="' + gy(v, mx) + '" r="3.2" fill="' + (a ? "#F0B100" : "#fff") + '" stroke="' + (a ? "#F0B100" : "#0055ED") + '" stroke-width="2"/>'; }).join("");
+      } else {
+        dots = vals.map(function (v, i) { return '<circle cx="' + gx(i, n) + '" cy="' + gy(v, mx) + '" r="3" fill="#fff" stroke="#0055ED" stroke-width="2"/>'; }).join("");
+      }
+      return svgWrap(grid(mx, opts.pct) + '<path d="' + area + '" fill="url(#g)"/><path d="' + line + '" fill="none" stroke="#0055ED" stroke-width="2" stroke-linejoin="round"/>' + extra + dots + xlabels(labels), opts.label || "chart");
+    }
+    function barChart(vals, labels, opts) {
+      opts = opts || {}; var n = vals.length, mx = opts.mx || niceMax(Math.max.apply(null, vals));
+      var bw = Math.min(26, PW / n * 0.5);
+      var bars = vals.map(function (v, i) { var x = gx(i, n) - bw / 2, y = gy(v, mx), h = PT + PH - y; return '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + Math.max(0, h) + '" rx="3" fill="#0055ED"/>'; }).join("");
+      return svgWrap(grid(mx, false) + bars + xlabels(labels), opts.label || "chart");
+    }
+    function timeBars() {
+      return slides.map(function (d, i) {
+        return '<div class="slide' + (d.low ? " low" : "") + '"><div class="idx">' + (i + 1) + '</div><div class="ti">' + d.t + '</div>' +
+          '<div class="track"><div class="fill" style="width:' + Math.round(d.s / smax * 100) + '%"></div></div><div class="tm">' + fmt(d.s) + '</div></div>';
+      }).join("");
+    }
+
+    // ---- tile → chart + caption ----
+    var METRICS = {
+      views:      { chart: function () { return lineChart(views, days, { label: "Views over time" }); },
+                    note: { tone: "neutral", icon: "ph-trend-up", html: 'Biggest spike on <b>Jul 18</b> — 38 opens the day it was forwarded to Acme’s team.' } },
+      unique:     { chart: function () { return barChart(uniq, days, { label: "Unique viewers over time" }); },
+                    note: { tone: "neutral", icon: "ph-users", html: '<b>34</b> unique viewers · <b>12</b> first opened on Jul 18.' } },
+      completion: { chart: function () { return lineChart(reten, slides.map(function (d, i) { return i + 1; }), { pct: true, mx: 100, drop: true, label: "Slide retention" }); },
+                    note: { tone: "warn", icon: "ph-trend-down", html: 'Most viewers drop off after slide 8 (<b>Pricing</b>) — retention falls from <b>70%</b> to <b>55%</b>.' } },
+      time:       { chart: timeBars,
+                    note: { tone: "neutral", icon: "ph-clock", html: 'Most attention on <b>Pricing</b> (2:22) and <b>Live demo</b> (1:58).' } },
+    };
+    function showMetric(key, tile) {
+      document.querySelectorAll(".tile").forEach(function (t) { t.setAttribute("aria-selected", "false"); });
+      tile.setAttribute("aria-selected", "true");
+      var m = METRICS[key];
+      document.getElementById("metricChart").innerHTML = m.chart();
+      var ins = document.getElementById("insight");
+      ins.className = "insight" + (m.note.tone === "neutral" ? " neutral" : "");
+      ins.innerHTML = '<i class="ph-fill ' + m.note.icon + '"></i><span>' + m.note.html + '</span>';
+    }
+    showMetric("views", document.querySelector(".tile"));
 
     // ---- viewers (named champion, a NEW forwarded viewer, anonymous) ----
     var viewers = [
