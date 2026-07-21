@@ -118,14 +118,63 @@ The deck is native; everything else is an attachment. Analytics we can capture v
 
 ---
 
+## Room templates & theming
+
+Two separate axes — keep them distinct in the design. Both are pre-made (no page building).
+
+```
+1. TEMPLATE = STRUCTURE    which blocks the room has + their order
+2. THEME    = BRAND SKIN    colors · fonts · logo · cover style
+```
+
+### Structure templates (a few archetypes)
+
+Opinionated layouts by deal shape (like the Brand Kit sample-deck archetypes — keep to a few). The seller picks one, then adds/removes/reorders blocks within it; never lays out a page from scratch.
+
+```
+TEMPLATE                 DEFAULT BLOCKS
+──────────────────────────────────────────────────────────────
+Standard deal room       cover · deck · pricing · case study · MAP
+Lightweight / follow-up  cover · deck · next steps (mini-MAP)
+Enterprise / security    cover · deck · security & legal · MAP · contacts
+Renewal / expansion      cover · deck · results-so-far · MAP   (clone target)
+```
+
+**Hero content (Pitch-style).** One piece of content is the room's **hero** — featured up top, larger — and the rest sits beneath it, reorderable. The deck is the hero by default (it's what the room is built around), but the seller can promote any asset (e.g. a personalized video intro, or a case study for a warm referral). So the layout is: **1 hero + an ordered stack below**, not a flat grid — which keeps the room opinionated and focused rather than a wall of tiles.
+
+### Theme = Brand Kit driven
+
+Pitch ships room themes; ours are **Brand Kits**. The [[brand-kit]] payload already models `{ fonts, colors, logo }` at the workspace level, so the room theme just *reads the same kit* — no new theming system, same override the deck uses (font pairing + palette + logo).
+
+```
+THEME PICKER
+  has Brand Kit(s)   → pick which kit → room adopts its colors/fonts/logo
+  multiple kits      → picker (agency / multi-brand, e.g. Patagonia Sales)
+  no Brand Kit       → a few neutral default themes (Pitch-style)
+  smart default      → inherit the DECK's kit, so room + deck already match
+                       (zero extra clicks on the common path)
+```
+
+**The smart default is the point:** if the deck was built with a Brand Kit, the room opens already wearing it. Picking a kit is only for overriding or the no-kit case. Guarantees the room and the deck it wraps are visually coherent, for free.
+
+```
+   Brand Kit ──┬──► the DECK's theme  (today)
+               └──► the ROOM's theme  (new — same payload, same override)
+```
+
+---
+
 ## Phase 1 — features + user stories
 
 Grouped by flow. Kept simple.
 
 **Creating a room**
 - As a seller, I can create a deal room from a deck (in editor or dashboard).
-- As a seller, I can name and brand the room for a specific account.
-- As a seller, I can pick a room template (no page building).
+- As a seller, I can name the room for a specific account.
+- As a seller, I can pick a room template — a structure archetype (no page building).
+- As a seller, I can theme the room with one of my Brand Kits.
+- As a seller with no Brand Kit, I can pick a default theme.
+- As a seller, I get the room pre-themed to match the deck's Brand Kit by default.
 
 **Adding content**
 - As a seller, I can add my PAI deck to the room.
@@ -133,7 +182,9 @@ Grouped by flow. Kept simple.
 - As a seller, I can add a video (upload or embed a link).
 - As a seller, I can add images.
 - As a seller, I can add external links.
-- As a seller, I can reorder / remove the content in the room.
+- As a seller, I can set one piece of content as the hero (featured) of the room.
+- As a seller, I can reorder the other content beneath the hero.
+- As a seller, I can remove content from the room.
 
 **Mutual Action Plan**
 - As a seller, I can add a checklist of next steps.
