@@ -395,7 +395,7 @@ Design north star **Pitch**. **Recapped/Recall** = MAP mechanics. **Dock** = ref
 
 - [ ] **Map to `presentation-services`** — container object, workspace/seat model, deck + event references.
 - [ ] Prototype **Room viewer (buyer)** — deck front and center, MAP as the spine, opinionated template.
-- [ ] Prototype **Room builder (seller)** — pick-a-template + drop-in content.
+- [x] Prototype **Room builder (seller)** — WYSIWYG inline canvas (`room-builder.html`, 21 Jul 2026): all six Phase-1 essentials, live Brand-Kit re-skin, share friction-dial.
 - [ ] Prototype **Deal rooms tab** — tiles + room detail.
 - [ ] Define the **MAP data model** spec.
 - [ ] Design the **stalled → re-engage** nudge + **close-lost reason capture**.
