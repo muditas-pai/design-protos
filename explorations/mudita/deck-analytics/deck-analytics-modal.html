@@ -75,8 +75,16 @@
     .tile:not([aria-selected="true"]) .n { color: var(--text-secondary); }
     .tile .l { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--text-secondary); }
     .tile .l i { font-size: 13px; color: var(--text-tertiary); }
-    .chart { margin-top: 16px; }
+    .chart { margin-top: 16px; position: relative; }
     .chart svg { width: 100%; height: auto; display: block; }
+    /* hover tooltip (slide title on retention, date+value on the column charts) */
+    .ctip { position: absolute; pointer-events: none; z-index: 5; transform: translate(-50%, calc(-100% - 10px));
+      background: var(--bg-primary-inverted); color: #fff; padding: 6px 9px; border-radius: 8px;
+      font-size: 12px; line-height: 1.35; white-space: nowrap; box-shadow: var(--shadow-elevation-03); }
+    .ctip[hidden] { display: none; }
+    .ctip b { font-weight: 600; }
+    .ctip::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: var(--bg-primary-inverted); }
 
     /* ---- per-slide bars ---- */
     .slide { display: grid; grid-template-columns: 20px 1fr 128px 52px; align-items: center; gap: 10px; padding: 5px 0; }
@@ -202,7 +210,10 @@
                   <div class="n">3:12</div><div class="l text-body-sm-medium"><i class="ph ph-clock"></i>Median time</div>
                 </button>
               </div>
-              <div class="chart" id="metricChart"></div>
+              <div class="chart" id="chartWrap">
+                <div id="metricChart"></div>
+                <div class="ctip" id="chartTip" hidden></div>
+              </div>
               <div class="insight neutral" id="insight"></div>
             </div>
 
@@ -326,55 +337,91 @@
     }
     function svgWrap(inner, label) {
       return '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="' + label + '">' +
-        '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0055ED" stop-opacity="0.16"/><stop offset="1" stop-color="#0055ED" stop-opacity="0"/></linearGradient></defs>' + inner + '</svg>';
+        '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0055ED" stop-opacity="0.16"/><stop offset="1" stop-color="#0055ED" stop-opacity="0"/></linearGradient></defs>' +
+        inner +
+        '<line class="cross" x1="0" y1="' + PT + '" x2="0" y2="' + (PT + PH) + '" stroke="rgba(11,15,20,0.22)" stroke-dasharray="3 3" style="opacity:0"/>' +
+        '<circle class="marker" r="4.5" fill="#0055ED" stroke="#fff" stroke-width="2" style="opacity:0"/>' +
+        '</svg>';
     }
     function lineChart(vals, labels, opts) {
       opts = opts || {}; var n = vals.length, mx = opts.mx || niceMax(Math.max.apply(null, vals));
-      var pts = vals.map(function (v, i) { return gx(i, n) + "," + gy(v, mx); });
-      var area = "M" + gx(0, n) + "," + gy(0, mx) + " L" + pts.join(" L") + " L" + gx(n - 1, n) + "," + gy(0, mx) + " Z";
-      var line = "M" + pts.map(function (p, i) { return (i ? "L" : "") + p; }).join(" ");
+      var pts = vals.map(function (v, i) { return { x: gx(i, n), y: gy(v, mx) }; });
+      var pstr = pts.map(function (p) { return p.x + "," + p.y; });
+      var area = "M" + gx(0, n) + "," + gy(0, mx) + " L" + pstr.join(" L") + " L" + gx(n - 1, n) + "," + gy(0, mx) + " Z";
+      var line = "M" + pstr.map(function (p, i) { return (i ? "L" : "") + p; }).join(" ");
       var extra = "", dots;
       if (opts.drop) {
         var d = 0, di = 0; for (var i = 0; i < n - 1; i++) { var g = vals[i] - vals[i + 1]; if (g > d) { d = g; di = i; } }
-        extra = '<path d="M' + gx(di, n) + "," + gy(vals[di], mx) + " L" + gx(di + 1, n) + "," + gy(vals[di + 1], mx) + '" fill="none" stroke="#F0B100" stroke-width="3" stroke-linecap="round"/>';
-        dots = vals.map(function (v, i) { var a = (i === di + 1); return '<circle cx="' + gx(i, n) + '" cy="' + gy(v, mx) + '" r="3.2" fill="' + (a ? "#F0B100" : "#fff") + '" stroke="' + (a ? "#F0B100" : "#0055ED") + '" stroke-width="2"/>'; }).join("");
+        extra = '<path d="M' + pts[di].x + "," + pts[di].y + " L" + pts[di + 1].x + "," + pts[di + 1].y + '" fill="none" stroke="#F0B100" stroke-width="3" stroke-linecap="round"/>';
+        dots = pts.map(function (p, i) { var a = (i === di + 1); return '<circle cx="' + p.x + '" cy="' + p.y + '" r="3.2" fill="' + (a ? "#F0B100" : "#fff") + '" stroke="' + (a ? "#F0B100" : "#0055ED") + '" stroke-width="2"/>'; }).join("");
       } else {
-        dots = vals.map(function (v, i) { return '<circle cx="' + gx(i, n) + '" cy="' + gy(v, mx) + '" r="3" fill="#fff" stroke="#0055ED" stroke-width="2"/>'; }).join("");
+        dots = pts.map(function (p) { return '<circle cx="' + p.x + '" cy="' + p.y + '" r="3" fill="#fff" stroke="#0055ED" stroke-width="2"/>'; }).join("");
       }
-      return svgWrap(grid(mx, opts.pct) + '<path d="' + area + '" fill="url(#g)"/><path d="' + line + '" fill="none" stroke="#0055ED" stroke-width="2" stroke-linejoin="round"/>' + extra + dots + xlabels(labels), opts.label || "chart");
+      return { svg: svgWrap(grid(mx, opts.pct) + '<path d="' + area + '" fill="url(#g)"/><path d="' + line + '" fill="none" stroke="#0055ED" stroke-width="2" stroke-linejoin="round"/>' + extra + dots + xlabels(labels), opts.label || "chart"), pts: pts };
     }
     function barChart(vals, labels, opts) {
       opts = opts || {}; var n = vals.length, mx = opts.mx || niceMax(Math.max.apply(null, vals));
-      var bw = Math.min(26, PW / n * 0.5);
-      var bars = vals.map(function (v, i) { var x = gx(i, n) - bw / 2, y = gy(v, mx), h = PT + PH - y; return '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + Math.max(0, h) + '" rx="3" fill="#0055ED"/>'; }).join("");
-      return svgWrap(grid(mx, false) + bars + xlabels(labels), opts.label || "chart");
+      var bw = Math.min(30, PW / n * 0.55);
+      var pts = vals.map(function (v, i) { return { x: gx(i, n), y: gy(v, mx) }; });
+      var bars = pts.map(function (p) { var h = PT + PH - p.y; return '<rect x="' + (p.x - bw / 2) + '" y="' + p.y + '" width="' + bw + '" height="' + Math.max(0, h) + '" rx="3" fill="#0055ED"/>'; }).join("");
+      return { svg: svgWrap(grid(mx, false) + bars + xlabels(labels), opts.label || "chart"), pts: pts };
     }
     function timeBars() {
-      return slides.map(function (d, i) {
+      return { svg: slides.map(function (d, i) {
         return '<div class="slide' + (d.low ? " low" : "") + '"><div class="idx">' + (i + 1) + '</div><div class="ti">' + d.t + '</div>' +
           '<div class="track"><div class="fill" style="width:' + Math.round(d.s / smax * 100) + '%"></div></div><div class="tm">' + fmt(d.s) + '</div></div>';
-      }).join("");
+      }).join(""), pts: null };
     }
 
-    // ---- tile → chart + caption ----
+    // ---- tile → chart + hover tooltip + caption ----
+    var slideNums = slides.map(function (d, i) { return i + 1; });
     var METRICS = {
-      views:      { chart: function () { return lineChart(views, days, { label: "Views over time" }); },
+      views:      { chart: function () { return barChart(views, days, { label: "Views over time" }); },
+                    tip: function (i) { return '<b>' + days[i] + '</b> · ' + views[i] + ' views'; },
                     note: { tone: "neutral", icon: "ph-trend-up", html: 'Biggest spike on <b>Jul 18</b> — 38 opens the day it was forwarded to Acme’s team.' } },
       unique:     { chart: function () { return barChart(uniq, days, { label: "Unique viewers over time" }); },
+                    tip: function (i) { return '<b>' + days[i] + '</b> · ' + uniq[i] + ' new viewers'; },
                     note: { tone: "neutral", icon: "ph-users", html: '<b>34</b> unique viewers · <b>12</b> first opened on Jul 18.' } },
-      completion: { chart: function () { return lineChart(reten, slides.map(function (d, i) { return i + 1; }), { pct: true, mx: 100, drop: true, label: "Slide retention" }); },
+      completion: { chart: function () { return lineChart(reten, slideNums, { pct: true, mx: 100, drop: true, label: "Slide retention" }); },
+                    tip: function (i) { return 'Slide ' + (i + 1) + ' · <b>' + slides[i].t + '</b><br>' + reten[i] + '% reached'; },
                     note: { tone: "warn", icon: "ph-trend-down", html: 'Most viewers drop off after slide 8 (<b>Pricing</b>) — retention falls from <b>70%</b> to <b>55%</b>.' } },
-      time:       { chart: timeBars,
+      time:       { chart: timeBars, tip: null,
                     note: { tone: "neutral", icon: "ph-clock", html: 'Most attention on <b>Pricing</b> (2:22) and <b>Live demo</b> (1:58).' } },
     };
     function showMetric(key, tile) {
       document.querySelectorAll(".tile").forEach(function (t) { t.setAttribute("aria-selected", "false"); });
       tile.setAttribute("aria-selected", "true");
       var m = METRICS[key];
-      document.getElementById("metricChart").innerHTML = m.chart();
+      var out = m.chart();
+      document.getElementById("metricChart").innerHTML = out.svg;
+      wireHover(out.pts, m.tip);
       var ins = document.getElementById("insight");
       ins.className = "insight" + (m.note.tone === "neutral" ? " neutral" : "");
       ins.innerHTML = '<i class="ph-fill ' + m.note.icon + '"></i><span>' + m.note.html + '</span>';
+    }
+    function wireHover(pts, tipFn) {
+      var tip = document.getElementById("chartTip");
+      tip.hidden = true;
+      if (!pts || !tipFn) return;
+      var svg = document.getElementById("metricChart").querySelector("svg");
+      if (!svg) return;
+      var cross = svg.querySelector(".cross"), marker = svg.querySelector(".marker");
+      svg.addEventListener("mousemove", function (e) {
+        var r = svg.getBoundingClientRect();
+        var vbx = (e.clientX - r.left) / r.width * CW, idx = 0, best = 1e9;
+        for (var i = 0; i < pts.length; i++) { var dd = Math.abs(pts[i].x - vbx); if (dd < best) { best = dd; idx = i; } }
+        var p = pts[idx];
+        if (cross) { cross.setAttribute("x1", p.x); cross.setAttribute("x2", p.x); cross.style.opacity = "1"; }
+        if (marker) { marker.setAttribute("cx", p.x); marker.setAttribute("cy", p.y); marker.style.opacity = "1"; }
+        tip.innerHTML = tipFn(idx); tip.hidden = false;
+        tip.style.left = (p.x / CW * r.width) + "px";
+        tip.style.top = (p.y / CH * r.height) + "px";
+      });
+      svg.addEventListener("mouseleave", function () {
+        tip.hidden = true;
+        if (cross) cross.style.opacity = "0";
+        if (marker) marker.style.opacity = "0";
+      });
     }
     showMetric("views", document.querySelector(".tile"));
 
