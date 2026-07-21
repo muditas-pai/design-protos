@@ -352,6 +352,26 @@ archive / clone room    │   ✓    │   ✗
 ```
 Champion vs committee is an *analytics label*, not an access tier. (Internal-only rows arrive with the rich MAP in E2.)
 
+**The hard email gate (reference · Pitch, 21 Jul 2026).** The opt-in top of the friction-dial: when a room requires an email, the buyer hits a full-screen threshold *before* the room renders. Pitch's version:
+
+```
+[ 🔒 lock ]           on a bare black canvas, no room context
+This room requires you to enter an email to open
+Your email will be shared with the creator of this room and their collaborators.
+[ Email ______________ ]
+[✓] Remember for next visit
+[ Agree and continue ]
+```
+
+- one email field · an explicit **consent line** (email shared with creator + collaborators) · a **remember-me** toggle so it's a one-time cost · a single continue action.
+
+Our take (**not built** — this is the deferred hard gate, see Open decisions):
+
+- **Show the room, then ask.** Put the **co-brand header + room title above the field** so it reads as a threshold into a *named space* (Vantage × Meridian), not an anonymous paywall. Pitch's naked lock throws away the one thing we have that they don't: a branded, deck-native room.
+- **Navy action button** (brand: navy = action), not an indigo fill.
+- The email captured here becomes the viewer's **identity for room-scoped analytics** — it's what turns an anonymous viewer into the champion / committee label.
+- Keep the consent line honest and the remember-me default on. (Layout captured in the sketch above; Pitch reference reviewed 21 Jul 2026.)
+
 ### Design stance
 
 Opinionated + templated (Pitch mold), **not** a drag-and-drop webpage builder (Qwilr/Trumpet). Room builder = pick a template + drop in content.
