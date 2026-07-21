@@ -188,6 +188,26 @@ Notable for our metric set: Pitch uses **median** (not mean) time, **completion 
 
 ---
 
+## Reference: Gamma analytics (screenshots)
+
+Gamma's live implementation, captured 21 Jul 2026. The **key contrast with Pitch: Gamma is per-DECK, not per-link** — "Includes all views for [deck] since it was created," one aggregated analytics view per gamma. Pitch is per-link; Gamma is per-deck. Our proposed **per-link + deck roll-up** is effectively a superset that can present either.
+
+**Page views** — two tabs (**Page views · Card engagement**), a viewer filter ("Everyone (4)"), a *unique-viewers-over-time* bar chart (last 30 days), and a list of unique viewers.
+
+![Gamma — analytics, Page views tab](assets/gamma-analytics-page-views.png)
+
+**Viewer list** — per viewer: name + email (or **Anonymous viewer**), **last opened**, and **cards viewed** as a completion bar (15/15 ✓). Note the monetization pattern: individual anonymous-viewer detail is **gated behind Upgrade** ("Turn viewer data into insights").
+
+![Gamma — viewer list + upgrade gate](assets/gamma-analytics-viewer-list.png)
+
+**Card engagement** — per-card (per-slide) heat, sub-tabs **Time spent · Viewed**. A "less ↔ more time spent" relative distribution bar per card, with un-viewed cards greyed (eye-off). This is Gamma's version of our per-slide dwell + drop-off.
+
+![Gamma — card engagement (per-slide)](assets/gamma-analytics-card-engagement.png)
+
+Takeaways vs our scope: Gamma frames completion as **"cards viewed,"** shows viewers **named-or-anonymous** (same as our default), splits **page-level vs card-level** (≈ our summary vs per-slide), and **paywalls per-viewer identity** — a monetization cue worth noting. It has **no per-link concept**, which is exactly the granularity Pitch (and our model) adds.
+
+---
+
 ## Reference
 
 ### Identity is inverse to reach
