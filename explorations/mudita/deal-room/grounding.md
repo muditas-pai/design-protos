@@ -207,6 +207,18 @@ Two axes, kept distinct — both pre-made (no page building):
 2. THEME       brand skin (colors · fonts · logo · cover style)
 ```
 
+### Builder reference (Pitch, 21 Jul 2026)
+
+Pitch's room builder — the seller edits the room in place. Left rail = message + **Action items** (their MAP) + **Resources** + **Get in touch** (contact); center = the **hero deck** with an **Add a highlight** grid beneath; top-right = presence, analytics, a **theme** control, Preview, Share.
+
+**Theme popover** — presets (White · Light · Dark · Custom) + an accent-color picker. This is the lever we replace with **Brand Kits**: instead of loose presets, the room reads the deck's kit (fonts · palette · logo) so room and deck already match.
+
+![Pitch room builder with the theme popover open — White / Light / Dark / Custom presets and an accent-color swatch, over a dark room with the hero deck and left-rail action items, resources, and contact](assets/pitch-room-builder-theme.png)
+
+**Content grid** — hero deck up top, then a 2-up grid of additional "highlights" (another deck, an image). Note this is a **grid** beneath the hero; our stance keeps it a **single ordered stack** (1 hero + a reorderable list), more opinionated and focused than a wall of tiles. Their co-brand sits as two app icons top-left (here Pitch × LinkedIn).
+
+![Pitch room builder with content filled — the Scale-Up Pitch Deck hero, a two-up grid of extra content tiles below (an Agency-name deck and a "The Shift" image), left rail with action items, resources, and contact](assets/pitch-room-builder-content.png)
+
 ### Phase 1: one default structure + hero content
 
 Phase 1 ships **a single opinionated room layout** — no choice of structure templates yet (deferred, see below). The seller drops content into that one layout.
