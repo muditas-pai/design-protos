@@ -218,6 +218,11 @@
     .step { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line);
       background: var(--surface); transition: background 130ms var(--ease); }
     .step:hover { background: var(--sel); }
+    .step.dragging { opacity: 0.5; background: var(--room-tint); }
+    .step-drag { width: 15px; margin-left: -5px; color: var(--fg-3); font-size: 15px; cursor: grab; flex-shrink: 0;
+      display: grid; place-items: center; opacity: 0; transition: opacity 130ms var(--ease); }
+    .step:hover .step-drag { opacity: 1; }
+    .step-drag:active { cursor: grabbing; }
     .step-check { width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0; border: 1.8px solid var(--line-strong);
       background: var(--surface); cursor: pointer; display: grid; place-items: center; color: #fff; font-size: 13px;
       transition: background 140ms var(--ease), border-color 140ms var(--ease), transform 120ms var(--ease); }
@@ -451,8 +456,7 @@
               <div class="who">Sam Rivera</div>
               <div class="role">Account Executive · Vantage</div>
             </div>
-            <button class="cta ghost" type="button"><i class="ph ph-envelope-simple"></i>Email</button>
-            <button class="cta solid" type="button"><i class="ph ph-calendar-plus"></i>Book a call</button>
+            <button class="cta solid" type="button"><i class="ph ph-envelope-simple"></i>Email</button>
           </div>
         </div>
       </div>
@@ -604,6 +608,7 @@
     function renderSteps() {
       $("#stepList").innerHTML = STEPS.map(function (s) {
         return '<div class="step' + (s.done ? " done" : "") + '" data-id="' + s.id + '">' +
+          '<span class="step-drag" title="Drag to reorder"><i class="ph ph-dots-six-vertical"></i></span>' +
           '<div class="step-check"><i class="ph-bold ph-check"></i></div>' +
           '<div class="step-title" contenteditable="true" spellcheck="false">' + s.title + '</div>' +
           '<button class="step-del" title="Remove step"><i class="ph ph-trash"></i></button>' +
@@ -723,6 +728,42 @@
       STEPS.push({ id: uid(), title: "", done: false }); renderSteps(); saved();
       var rows = $("#stepList").querySelectorAll(".step-title");
       var last = rows[rows.length - 1]; if (last) { last.focus(); }
+    });
+
+    // ── drag-reorder steps (handle-initiated so the title stays editable) ──
+    var stepDragId = null;
+    $("#stepList").addEventListener("mousedown", function (e) {
+      var h = e.target.closest(".step-drag"); if (!h) return;
+      var row = h.closest(".step"); if (row) row.setAttribute("draggable", "true");
+    });
+    $("#stepList").addEventListener("dragstart", function (e) {
+      var row = e.target.closest(".step"); if (!row) return;
+      stepDragId = row.getAttribute("data-id"); row.classList.add("dragging");
+    });
+    $("#stepList").addEventListener("dragend", function (e) {
+      var row = e.target.closest(".step"); if (row) { row.classList.remove("dragging"); row.removeAttribute("draggable"); }
+      stepDragId = null;
+    });
+    $("#stepList").addEventListener("dragover", function (e) {
+      if (!stepDragId) return; e.preventDefault();
+      var rows = [].slice.call(this.querySelectorAll(".step:not(.dragging)")), after = null;
+      for (var i = 0; i < rows.length; i++) {
+        var box = rows[i].getBoundingClientRect();
+        if (e.clientY < box.top + box.height / 2) { after = rows[i]; break; }
+      }
+      var dragging = this.querySelector(".dragging"); if (!dragging) return;
+      if (after) this.insertBefore(dragging, after); else this.appendChild(dragging);
+    });
+    $("#stepList").addEventListener("drop", function () {
+      if (!stepDragId) return;
+      var order = [].slice.call(this.querySelectorAll(".step")).map(function (r) { return r.getAttribute("data-id"); });
+      STEPS.sort(function (a, b) { return order.indexOf(a.id) - order.indexOf(b.id); });
+      renderSteps(); saved();
+    });
+    // clear a dangling draggable if the handle was pressed but no drag started
+    document.addEventListener("mouseup", function () {
+      var d = $("#stepList").querySelector('.step[draggable="true"]');
+      if (d && !d.classList.contains("dragging")) d.removeAttribute("draggable");
     });
 
     // ── room name mirrors the topbar mark initial ──
