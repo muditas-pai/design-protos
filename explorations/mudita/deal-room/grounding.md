@@ -50,10 +50,10 @@ The room's job is to travel from the champion outward to the committee (avg ~6�
 
 ## What's relevant to us?
 
-- the **one-link-per-deal container** + **Mutual Action Plan** (this is the core)
-- **content bundling** (deck + assets)
+- the **one-link-per-deal container** + a **simple next-steps checklist** (this is the core)
+- **content bundling** (deck + assets, with a hero)
 - **room-scoped engagement** (reuse Deck Analytics)
-- **room lifecycle** (draft → active → stalled → won/lost → archived)
+- **minimal room lifecycle** (draft → active → archived)
 
 **Not** relevant for V1: the page-builder, CRM sync, e-sign/order forms, the year-round hub. (See Phase 2.)
 
@@ -78,7 +78,7 @@ Entry from the **editor** and **dashboard**, not the create flow.
 EDITOR                          DASHBOARD                        TOPBAR
 [ Share ] ─► "Create deal room" "Deal rooms" tab (left nav)      🔔 bell
              from this deck      └ tiles, one per room            └ "room opened"
-deck card ⋯ → Add to deal room  └ click a tile → room detail      └ "room stalled"
+deck card ⋯ → Add to deal room  └ click a tile → room detail      └ "new viewer"
                                    (add deck/assets/MAP, invite,
                                     see engagement)
                                  + New deal room (empty → add deck)
@@ -91,13 +91,60 @@ LEFT NAV                 DEAL ROOMS TAB (tiles)          ROOM DETAIL (inside)
 ─────────                ────────────────────            ─────────────────────
 Home                     ┌────────┐ ┌────────┐           deck · assets · MAP
 Created by Me            │ Acme   │ │ Globex │           invite · engagement
-▸ Analytics              │ ●active│ │ ⚠stalld│    →      state (active/won/lost)
-▸ Deal rooms ◄ new       └────────┘ └────────┘
-Templates …              ┌────────┐ + New room
-                         │ Initech│
-                         │ ✓ won  │
-                         └────────┘
+▸ Analytics              │ active │ │ quiet  │    →      (active / archived)
+▸ Deal rooms ◄ new       │ 2d ago │ │ 15d ago│
+Templates …              └────────┘ └────────┘
+                         + New room  ("quiet" = passive age hint, not a state)
 ```
+
+---
+
+## Room anatomy (taxonomy)
+
+The standard components of a deal room, synthesized across Pitch / Trumpet / Aligned / Dock. Read as **chrome** (structural, ~always there), **content blocks** (the body), and **optional widgets** (add as needed).
+
+```
+┌─────────────────────────────────────────────────────┐
+│ [SellerLogo] ✕ [BuyerLogo]            👤👤 3 viewing │ ← co-brand header + presence
+├─────────────────────────────────────────────────────┤
+│ Acme × PAI — Evaluation                              │ ← title + description
+│ Everything for our pilot, in one place.              │
+├─────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────┐ │
+│ │             HERO CONTENT  (the deck)            │ │ ← hero
+│ └─────────────────────────────────────────────────┘ │
+│  ▸ Pricing.pdf   ▸ Case study   ▸ Demo video        │ ← content list
+├─────────────────────────────────────────────────────┤
+│ NEXT STEPS      ☑ Kickoff   ☐ Security   ☐ Sign     │ ← next steps (simple checklist)
+├─────────────────────────────────────────────────────┤
+│ 👤 Your contact — Sam, AE   [✉ email] [📅 book call] │ ← contact widget
+└─────────────────────────────────────────────────────┘
+```
+
+```
+CHROME (structural)              CONTENT BLOCKS       OPTIONAL WIDGETS (Phase 2+)
+─────────────────────            ──────────────       ──────────────────────────
+co-brand header (seller×buyer)   hero content         welcome video · book-a-meeting
+room title + description         content list         CTA button · FAQ / Q&A
+presence / participants          next steps (MAP)     testimonials · customer logos
+contact / rep card                                    case studies · pricing / proposal
+                                                      security & compliance · team /
+                                                      stakeholders · comments · process
+                                                      timeline · downloads · e-sign
+```
+
+**Phase 1 taxonomy = the six essentials** (a complete, credible room, nothing more):
+
+```
+1 co-brand header   (seller × buyer logo)
+2 title + description
+3 presence          (avatars of who's in the room)
+4 hero + content list
+5 next steps        (the simple checklist)
+6 contact card      (rep name / photo / email + book-a-call)
+```
+
+Everything in the optional column is Phase 2+, added as blocks when there's demand. **Book-a-meeting** is the first candidate to pull forward (advancing to the next conversation is the room's whole job).
 
 ---
 
@@ -173,10 +220,12 @@ Grouped by flow. Kept simple.
 
 **Creating a room**
 - As a seller, I can create a deal room from a deck (in editor or dashboard).
-- As a seller, I can name the room for a specific account.
+- As a seller, I can give the room a title and a short description.
+- As a seller, I can set the co-brand header (my logo + the buyer's).
 - As a seller, I can theme the room with one of my Brand Kits.
 - As a seller with no Brand Kit, I can pick a default theme.
 - As a seller, I get the room pre-themed to match the deck's Brand Kit by default.
+- As a seller, I can add my contact card (name, photo, email, book-a-call).
 
 **Adding content**
 - As a seller, I can add my PAI deck to the room.
@@ -188,14 +237,13 @@ Grouped by flow. Kept simple.
 - As a seller, I can reorder the other content beneath the hero.
 - As a seller, I can remove content from the room.
 
-**Mutual Action Plan**
-- As a seller, I can add a checklist of next steps.
-- As a seller, I can give each step an owner and a due date.
-- As a seller, I can mark a step internal-only, hidden from the buyer.
+**Next steps (simple checklist — the Phase 1 MAP)**
+- As a seller, I can add a list of next steps.
+- As a seller, I can edit or remove a step.
+- As a seller, I can reorder the steps.
 - As anyone in the room, I can tick a step as done.
-- As anyone in the room, I can comment on a step.
-- As a seller, I can see a step flagged as blocked.
-- As a seller, I can start the plan from a template.
+
+*(Owners, due dates, blocked state, internal-only rows, and comments on a step → E2. See Phase 2.)*
 
 **Sharing & access**
 - As a seller, I can share one room link.
@@ -204,11 +252,12 @@ Grouped by flow. Kept simple.
 
 **Managing rooms**
 - As a seller, I can see all my rooms as tiles in the Deal rooms tab.
-- As a seller, I can see each room's state and health (active / stalled).
-- As a seller, I can mark a room closed-won.
-- As a seller, I can mark a room closed-lost with a reason.
+- As a seller, I can see when each room was last active (a passive age hint).
 - As a seller, I can see engagement for the room (in-room analytics).
+- As a seller, I can archive a room when I'm done with it.
 - As a seller, I can clone a room to start a renewal / new deal.
+
+*(Closed-won / closed-lost + reason capture → E2, when there's a reporting roll-up to feed.)*
 
 **Buyer experience**
 - As a buyer, I can open the room link with no login.
@@ -219,39 +268,41 @@ Grouped by flow. Kept simple.
 
 ## Phase 2 and beyond (directions, not stories)
 
+- **Rich Mutual Action Plan** — per-step owners, due dates, blocked state, internal-only rows, comments on a step (the full model, deferred from Phase 1)
+- **Room lifecycle reporting** — closed-won / closed-lost + reason capture, once there's a roll-up to feed
+- **Optional room widgets** — book-a-meeting, CTA button, welcome video, FAQ / Q&A, testimonials / customer logos, case studies, pricing / proposal, security & compliance, team / stakeholders, comments, process timeline, downloads
 - Salesforce / HubSpot sync — prefill a room from an Opportunity + write engagement back
 - Proposal + e-signature / order forms signed in the room
 - School B — onboarding / renewal hub; room converts sell → onboard → portal (Dock-style)
 - Stakeholder-map visualization of the buying committee
 - AI room autofill / per-account personalization
-- Buyer-side comment threads / async Q&A
 - Room **structure templates** — a choice of layout archetypes by deal shape (Standard / Lightweight / Enterprise / Renewal), plus custom saved templates
 - MAP templates by deal type
 - Sales Engineer POC rooms; CS onboarding rooms
-- Scheduling / calendar embed; native pricing table
 
 ---
 
 ## Reference
 
-### Room lifecycle
+### Room lifecycle (Phase 1 — minimal)
 
 ```
-DRAFT ─► ACTIVE ⇄ STALLED ─► WON / LOST ─► ARCHIVED ─(clone)─► new DRAFT
-        (auto-stall after     (lost logs      (read-only
-         14d inactivity)       a reason)        record)
+DRAFT ─► ACTIVE ─► ARCHIVED ─(clone)─► new DRAFT
+building  shared   seller shelves it manually (read-only record)
 ```
 
-- **Active → Stalled** is automatic + reversible (catches the silent fizzle).
-- **→ Lost** is explicit + captures a reason.
-- **Won/Lost → Archived** freezes; **clone** seeds next year (School A).
+- No Won / Lost / reason capture in Phase 1 — those are reporting value, not user value (→ E2).
+- "Quiet for N days" is a **passive age hint** on the tile, not a formal Stalled state.
+- **Clone** seeds the next deal / renewal (School A).
 
-### MAP item lifecycle
+### Next steps — the Phase 1 MAP (simple list)
 
 ```
-TODO ─► IN PROGRESS ─► DONE      (+ BLOCKED = visible risk, REMOVED = de-scoped)
-attributes: owner (seller|buyer|both) · due date · visibility (shared|internal-only)
+a single ordered list of steps ·  each step: a title + done/not-done
+seller edits the list · anyone in the room can tick a step
 ```
+
+E2 adds the rich model: per-step owner · due date · BLOCKED state · internal-only visibility · comments.
 
 ### Access & roles (flat buyer access — matches the norm)
 
@@ -261,12 +312,12 @@ Access default = **Level 1 skippable soft name prompt** (friction dial shared wi
                         │ SELLER │ ANY BUYER-SIDE VIEWER (flat)
 ────────────────────────┼────────┼──────────────────────────────
 view room + assets      │   ✓    │   ✓
-view SHARED map rows    │   ✓    │   ✓
-view INTERNAL rows      │   ✓    │   ✗   ← the one asymmetry
-tick / comment          │   ✓    │   ✓
-edit/reorder rows, state│   ✓    │   ✗
+view next steps         │   ✓    │   ✓
+tick a step             │   ✓    │   ✓
+edit content / steps    │   ✓    │   ✗
+archive / clone room    │   ✓    │   ✗
 ```
-Champion vs committee is an *analytics label*, not an access tier.
+Champion vs committee is an *analytics label*, not an access tier. (Internal-only rows arrive with the rich MAP in E2.)
 
 ### Design stance
 
@@ -287,9 +338,10 @@ Design north star **Pitch**. **Recapped/Recall** = MAP mechanics. **Dock** = ref
 | **Salesforce sync** | V2, all tiers. V1 stands alone. |
 | **Post-sale model** | School A (freeze + clone). Not the School B year-round hub. |
 | **Brand lock** | Existing Brand Kit feature; not re-scoped. |
-| **Deal death** | Stalled (auto) + Closed-lost (explicit, reason logged). |
+| **Room lifecycle** | Minimal: Draft → Active → Archived (+ clone). No Won/Lost/reason in Phase 1 (→ E2); "quiet" is a passive age hint, not a state. |
 | **Room creation point** | Default at demo → proposal boundary; power users earlier. |
-| **MAP** | Full (owner · due · states · internal-only). Seller owns; buyer contributes. |
+| **MAP (next steps)** | **Simplified to a single checklist** for Phase 1: title + done, seller edits, anyone ticks. Rich model (owners · due · blocked · internal-only · comments) → E2. |
+| **Room anatomy** | Phase 1 chrome = co-brand header · title + description · presence · hero + content list · next steps · contact card. Optional widgets (book-a-meeting, video, CTA, FAQ, testimonials, security, team, comments, timeline) → Phase 2. |
 | **Buyer-side roles** | Flat — match the norm; champion = analytics label. |
 | **Design approach** | Opinionated + templated, NOT a page builder. |
 | **Dashboard home** | Own **Deal rooms** tab; tiles → room detail. |
@@ -297,10 +349,10 @@ Design north star **Pitch**. **Recapped/Recall** = MAP mechanics. **Dock** = ref
 
 ## Open decisions (not V1-blocking)
 
-- Exact **inactivity window** for auto-stall (placeholder: 14 days).
+- The **"quiet" threshold** — how many days of no activity before the tile shows the age hint.
 - Whether **hard gates** (email-verify / allowlist / password) land in V1.5 or V2.
-- **Room template** set — how many layouts, how the seller picks.
-- **MAP template** scaffold — what a default plan ships with.
+- Whether **book-a-meeting** gets pulled into Phase 1 (the strongest optional widget).
+- What the **single default room layout** looks like (the one Phase 1 structure).
 
 ## Where it maps to presentation-services (code reality)
 
