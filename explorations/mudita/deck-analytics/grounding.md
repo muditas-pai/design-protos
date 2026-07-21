@@ -2,142 +2,179 @@
 
 **Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 21 Jul 2026
 
-Engagement analytics for **any shared deck, on any channel** — not just decks inside a deal room. Split out of the Deal Room project on 21 Jul 2026 because analytics is the **engine** that serves many deck use cases (public posts, cold email, investor sends, embeds, and deal rooms alike); the deal room is just one consumer. This folder owns the tracked-link + identity + event-capture + dashboard layer. The room-specific work lives in the [Deal Room grounding](../deal-room/grounding.html).
+Engagement analytics for **any shared deck, on any channel**. Analytics is the engine; the [Deal Room](../deal-room/grounding.html) is one consumer of it. This doc owns the tracked-link + identity + event-capture + dashboard layer.
 
 ---
 
-## The core idea
+## Who is this for?
 
-One engine, many surfaces. PAI already emits **slide-level view events** (the same instrumentation the dashboards read), so this is largely *surface + attribute* rather than a new pipeline.
+Relevant to **three roles**, all *after* a deck exists and *when the user signals intent to share* (the Share button). Not part of the create flow.
 
-```
-                ┌─────────────────────────────┐
-                │   DECK ANALYTICS (engine)   │
-                │  tracked link · identity ·   │
-                │  event capture · dashboard   │
-                └──────────────┬──────────────┘
-        one consumer among many │
-   ┌───────────┬───────────┬────┴─────┬───────────┬──────────┐
-   ▼           ▼           ▼          ▼           ▼          ▼
- deal room  public /   cold email  investor    embed     marketing
-            social post            send                  broadcast
-```
+| Role | What they share | What analytics gives them |
+|---|---|---|
+| **Sales** | proposals / decks to prospects (deal room, cold email, follow-up) | who engaged, forwarding, which slides — time follow-ups, gauge deal health |
+| **Marketing** | published / broadcast decks (social, campaigns, embeds, newsletters) | reach, source, geo, completion — what content lands |
+| **Leadership** | (portfolio view) team + content performance | which decks / teams perform — the roll-up (mostly Phase 2) |
+| *Founders (adjacent)* | investor decks / fundraising sends | who opened, forwarded to partners, dwell on traction — fundraising signal |
 
----
-
-## Where decks travel (distribution taxonomy)
-
-The relevant use cases for a shared deck, and what analytics means for each. Identity and gating shift by channel; the underlying events are the same.
-
-| Distribution mode | Audience | Identity | Analytics that matter | Gating |
-|---|---|---|---|---|
-| **Deal room** | 1:few, named account | per-person | who opened, per-slide dwell, **forwarding**, MAP-linked engagement | soft prompt (default) |
-| **Public / social post** | broadcast, anonymous, large | none | views, unique visitors, source/referrer, geo, slide drop-off, completion | none |
-| **Cold email (1:1 outbound)** | one recipient (you know who you sent to) | known-ish | opened?, which slides, revisits, forwarded? | none / soft |
-| **Investor send (fundraising)** | a few named investors | per-person, high stakes | who opened, forwarding to partners, dwell on traction/financials, revisits | often email/soft |
-| **Embedded (site / blog / Notion)** | site visitors, anonymous | none | in-context impressions, engagement, drop-off | none |
-| **Marketing broadcast (list / newsletter / link-in-bio)** | large list, semi-known | aggregate (+ optional per-recipient via UTM) | opens, source, geo, completion | none |
-| **Post-meeting follow-up** | the people in the meeting | known | revisits, which slides re-opened, forwarding | none / soft |
-| **In-person / QR / event** | attendees, anonymous | none | scans, geo, device, completion | none |
-
----
-
-## Identity is inverse to reach
-
-The organizing principle. The more public a deck, the less you can (or need to) know who is viewing — so the *read model* slides from aggregate to per-person along the same axis.
+**When it's relevant:**
 
 ```
-REACH   (how many)   large  ●──────────────────────────────●  small
-IDENTITY (who)       anonymous ●────────────────────────●  fully known
-
-  public/social   marketing   embed   cold email   investor   deal room
-  ●──────────────●──────────●───────●───────────●──────────●
-  └─ AGGREGATE reads ─────────────┘   └──── PER-PERSON reads ────┘
-     "how many, from where,              "who, which slide,
-      how far did they get"               did they forward it"
-```
-
-**Two read models over one event stream:**
-
-- **Aggregate** (public end) — counts anonymous activity: views, unique visitors, source, geo, drop-off, completion.
-- **Per-person** (targeted end) — attributes activity to people: who opened, their per-slide dwell, revisits over time, forwarding / new-viewer detection.
-
----
-
-## Metrics catalog (what we can measure)
-
-```
-UNIVERSAL (any mode, even anonymous)
-  opens / views · unique viewers · per-slide dwell · completion %
-  · slide drop-off curve · device · geo · source / referrer
-PER-PERSON (when identity is known)
-  who opened · their per-slide dwell · revisits over time
-  · forwarding / new-viewer detection · CTA / link clicks
-CONTROLS-DERIVED
-  downloads (if allowed) · time-to-open (send → first view)
-```
-
-**Forwarding / new-viewer detection is the flagship signal** and non-negotiable for V1: a viewer on an email domain the owner has not seen means the deck traveled to someone new (up a buying committee, out to an investor's partners). It is the single most valuable thing analytics surfaces.
-
----
-
-## The engine (shared foundation, build once)
-
-```
-tracked link + access control  → per-share link, gate, expiry, revoke
-viewer identity model          → anon → soft-named → email-known → returning
-event capture pipeline         → open, slide-view, dwell, completion, download,
-                                 CTA-click  (PAI already emits slide events)
-notification service           → "opened", "new viewer / forwarded", milestones
+CREATE FLOW  →  deck exists  →  user hits SHARE  ←── the signal that turns analytics on
+(not here)                       │
+                                 └─ a tracked link is born → analytics starts
 ```
 
 ---
 
-## Link access controls (the friction dial)
+## Who are the incumbents?
 
-Access is a per-share dial the owner sets; the default varies by channel. Public posts sit at Level 0; a deal room defaults to Level 1 (see Deal Room grounding).
+**DocSend** (Dropbox) is the canonical reference. **Pitch** ships share-link analytics on presentations. **Papermark** (open-source DocSend). Every DSR (Trumpet, Aligned) bundles engagement tracking too.
+
+## What are they doing?
+
+- **Tracked links** — a shareable link per doc/deck instead of an attachment.
+- **Page/slide-level analytics** — time per page, drop-off, completion.
+- **Per-viewer identity** (opt-in) — require email; see who viewed.
+- **Forwarding signal** — a new viewer/domain = the deck traveled.
+- **Link controls** — expiry, passcode, download on/off.
+- **Notifications** — "someone viewed your doc."
+
+## What's relevant to us?
+
+Basically all of it — this *is* the feature. The parts we take:
+
+- tracked link per deck, per-slide dwell + drop-off, completion
+- per-viewer identity when known; **forwarding / new-viewer detection** (the flagship)
+- aggregate reads for public decks (views, source, geo)
+- link controls (expiry, revoke, download toggle) — gates opt-in, low by default
+- first-open + new-viewer notifications
+
+## What we play up (we're a presentation tool)
 
 ```
-LEVEL 0  anyone with the link       zero friction, fully anonymous
-LEVEL 1  name prompt (soft)         "who's viewing?" self-declared, skippable
-LEVEL 2  email capture (soft gate)  enter email to view, not verified
-LEVEL 3  email verification (OTP)   code to inbox → verified identity
-LEVEL 4  allowlist / SSO            only invited addresses / domains
-LEVEL 5  password / passcode        shared secret, no identity
+THEM: analytics on a deck they didn't make (a linked PDF they can't see into)
+US:   analytics on a LIVE, NATIVE PAI deck we own end-to-end
 ```
 
-**The tension: gating fights forwarding, and forwarding is the best signal.** Hard gates (3–5) suppress the forward you most want to detect. So V1 keeps gates **opt-in**, defaults low, and never forces identity. This matches Pitch / Trumpet / Aligned (all open-by-default, gates opt-in).
+- **Per-slide is native, not bolted on.** We already emit slide-level events — competitors reverse-engineer page views from a PDF; we have the real thing.
+- **One surface: make → share → track.** No export, no second tool. The Share button on the deck you just built starts the analytics.
+- **Distribution-agnostic from day one.** Same tracked link serves a social post, a cold email, and a deal room — because we own the deck object across all of them.
 
 ---
 
-## Surfaces to design
+## Touchpoints across the app
+
+Entry is from the **editor** and **dashboard**, never the create flow. The **Share button is the primary signal.**
 
 ```
-1  Share dialog        — create a tracked link for a deck; pick access level,
-                         expiry, download toggle. One dialog, any channel.
-2  Analytics dashboard — per deck: aggregate summary + per-person list (when
-   (per deck)            identity), per-slide heat, drop-off curve, source
-                         breakdown, open timeline.
-3  Notifications        — first open, new-viewer / forward, milestones (in-app + email).
+EDITOR                         DASHBOARD                         TOPBAR
+[ Share ] ─► create tracked    "Analytics" tab (left nav)        🔔 bell
+             link (analytics    └ snapshot: recently frequented   └ "X opened
+             begins)              / shared decks + mini-stats        your deck"
+[ ⋯ ] View analytics           └ click a deck → deep view         └ "forwarded to
+                                  (per-slide heat, drop-off,          a new viewer"
+                                  who, source, timeline)
+deck card ⋯ menu → View analytics (from any deck list)
 ```
 
-The deal room surfaces its **own room-scoped slice** of this dashboard inside the room — same data, filtered to the deal (see Deal Room grounding).
+**Dashboard placement (your direction):** a new **Analytics** tab in the left side-panel nav (sits with Home · Created by Me). Landing = a **snapshot of your most recently frequented decks** with at-a-glance stats; click a deck to open its **deep view**.
+
+```
+LEFT NAV                 ANALYTICS TAB (landing)              DEEP VIEW (per deck)
+─────────                ────────────────────────            ─────────────────────
+Home                     ┌─ Acme pitch   ▁▃▅ 42 views ─┐     who · when · per-slide
+Created by Me            ├─ Q3 board deck ▁▁▂ 8 views  ─┤ →   heat · drop-off curve
+▸ Analytics  ◄ new       └─ Cold outreach ▅▅▇ 130 views┘     · source · open timeline
+▸ Deal rooms ◄ new       (recent / frequented snapshot)
+Templates …
+```
 
 ---
 
-## V1 scope
+## Phase 1 — features + user stories
 
-| In V1 | Out (later) |
-|---|---|
-| tracked share link per deck (any channel) | CRM write-back (V2) |
-| aggregate reads (views, unique, source, geo, drop-off, completion) | A/B deck comparison |
-| per-person reads when identity known | predictive deal / intent scoring |
-| per-slide dwell + revisits | session replay / heatmap scrub |
-| **forwarding / new-viewer detection ★** | multi-deck / account roll-up |
-| link controls: expiry, revoke, download toggle | verified email gate (Level 3) |
-| optional skippable soft name prompt (Level 1) | allowlist / SSO / password (Levels 4–5) |
-| owner notification on first open + new viewer | |
-| per-deck analytics dashboard (owner-only) | |
+Grouped by flow. Kept deliberately simple.
+
+**Sharing a deck (creating a tracked link)**
+- As a user, I can hit Share on my deck to create a trackable link.
+- As a user, I can set the link to expire, or revoke it.
+- As a user, I can allow or block PDF download.
+- As a user, I can optionally ask viewers for their name (skippable).
+
+**Seeing a deck's analytics**
+- As a user, I can see how many people viewed my deck (and how many unique).
+- As a user, I can see which slides they spent time on.
+- As a user, I can see the drop-off — where people stopped.
+- As a user, I can see the completion rate.
+- As a user, I can see *who* viewed it, when their identity is known.
+- As a user, I can see when a new/unknown viewer opened it (it was forwarded).
+- As a user, I can see where views came from (source + geo) for public decks.
+
+**Getting notified**
+- As a user, I get notified when someone first opens my deck.
+- As a user, I get notified when a new/unknown viewer opens it.
+
+**Finding analytics in the app**
+- As a user, I can open an Analytics tab in the dashboard.
+- As a user, I can see my recently shared / frequented decks at a glance.
+- As a user, I can click a deck to open its deep analytics.
+- As a user, I can open a deck's analytics from its card menu.
+
+---
+
+## Phase 2 and beyond (directions, not stories)
+
+- CRM write-back — engagement logged to Salesforce / HubSpot
+- Team + account roll-up; leadership performance dashboards
+- A/B deck comparison
+- Predictive intent / deal scoring
+- Session replay / scrub of a viewing session
+- Verified email gate (Level 3), allowlist / SSO, password
+- Per-recipient tracking for marketing broadcasts (UTM stitching)
+- "Your decks" benchmarks (this deck vs your average)
+- Deeper per-content-type analytics (video watch %, PDF page depth)
+
+---
+
+## Reference
+
+### Identity is inverse to reach
+
+```
+REACH   large  ●──────────────────────────────●  small
+IDENTITY anonymous ●────────────────────────●  fully known
+
+ public/social  marketing  embed  cold email  investor  deal room
+ └── AGGREGATE reads ────────────┘  └──── PER-PERSON reads ────┘
+    "how many, from where"            "who, which slide, forwarded?"
+```
+
+### Distribution taxonomy (channels a deck travels)
+
+Deal room · public/social post · cold email (1:1) · investor send · embed (site/blog/Notion) · marketing broadcast (list/newsletter/link-in-bio) · post-meeting follow-up · in-person/QR. Same events; identity + gating shift per channel.
+
+### Two read models
+
+- **Aggregate** (public end) — views, unique visitors, source, geo, drop-off, completion.
+- **Per-person** (targeted end) — who opened, per-slide dwell, revisits, forwarding.
+
+### Metrics catalogue
+
+```
+UNIVERSAL     opens · unique viewers · per-slide dwell · completion %
+              · drop-off curve · device · geo · source/referrer
+PER-PERSON    who · their dwell · revisits · forwarding/new-viewer · CTA clicks
+DERIVED       downloads (if allowed) · time-to-open (send → first view)
+```
+
+### Access friction dial (shared with rooms)
+
+```
+L0 open link · L1 soft name (skippable) · L2 email capture · L3 email verify
+· L4 allowlist/SSO · L5 password
+```
+Gates fight forwarding (the best signal), so V1 keeps them **opt-in**, defaults low, never forces identity. Matches Pitch/Trumpet/Aligned.
 
 ---
 
@@ -145,22 +182,22 @@ The deal room surfaces its **own room-scoped slice** of this dashboard inside th
 
 | Question | Decision |
 |---|---|
-| **Ships first, standalone** | Analytics ships before the deal room — it is live value on any shared deck, and de-risks the tracking pipeline. The room reuses it whole. |
-| **Two read models** | Aggregate (public/anonymous) + per-person (targeted/identified) over one event stream. Read model follows the channel, not a separate build. |
-| **Email gate** | **Skipped in V1.** No verified email gate on any channel. |
-| **Anonymous viewing** | **Allowed** everywhere. Identity is a nice-to-have, never a wall. |
-| **Forwarding detection** | In scope, V1, non-negotiable — the signal that justifies the feature. |
-| **Reuse existing events** | Build on PAI's existing slide-view instrumentation; extend, don't rebuild. |
-| **Distribution-agnostic** | One tracked-link + dashboard model serves deal room, public/social, cold email, investor send, embed, marketing — not a per-channel product. |
-
----
+| **Ships first, standalone** | Before the deal room; live value on any shared deck; de-risks the pipeline. |
+| **Roles** | Sales · Marketing · Leadership (+ Founders adjacent). |
+| **Two read models** | Aggregate (public) + per-person (targeted) over one event stream. |
+| **Email gate** | Skipped in V1; no verified gate on any channel. |
+| **Anonymous viewing** | Allowed everywhere; identity is never a wall. |
+| **Forwarding detection** | In scope, V1, non-negotiable. |
+| **Reuse existing events** | Build on PAI's slide-view instrumentation; extend, don't rebuild. |
+| **Dashboard home** | Own **Analytics** tab in the left nav; landing = recent-decks snapshot → deep view. |
+| **Entry points** | Editor Share button (primary signal) + dashboard; not the create flow. |
 
 ## Open threads / TODO
 
-- [ ] **Map to `presentation-services`** — the existing slide-view / deck-share event schema (what's emitted, keyed how), whether a shareable-link primitive exists, notification plumbing.
-- [ ] Decide the **per-slide dwell** definition (active-tab time vs raw time; how to handle a slide left open).
-- [ ] Design the **share dialog** (Feature spec 1 — likely the first spec, since analytics ships first).
-- [ ] Design the **per-deck analytics dashboard** — aggregate + per-person, per-slide heat, drop-off curve.
-- [ ] Define **forwarding / new-viewer detection** mechanics (how a new identity on a link is detected without a hard gate).
-- [ ] Decide **UTM / source attribution** handling for the public + marketing channels.
-- [ ] Confirm the **anonymous → known** identity-stitch model (does a soft-named viewer merge with a later verified one).
+- [ ] **Map to `presentation-services`** — slide-view / deck-share event schema, share-link primitive, notification plumbing.
+- [ ] Define **per-slide dwell** (active-tab time vs raw; slide left open).
+- [ ] Design the **share dialog** (likely the first spec).
+- [ ] Design the **Analytics tab** — recent-decks snapshot + the deep per-deck view.
+- [ ] Define **forwarding / new-viewer detection** mechanics without a hard gate.
+- [ ] Decide **UTM / source attribution** for public + marketing channels.
+- [ ] Confirm the **anonymous → known** identity-stitch model.
