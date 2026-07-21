@@ -118,31 +118,22 @@ The deck is native; everything else is an attachment. Analytics we can capture v
 
 ---
 
-## Room templates & theming
+## Room structure & theming
 
-Two separate axes — keep them distinct in the design. Both are pre-made (no page building).
-
-```
-1. TEMPLATE = STRUCTURE    which blocks the room has + their order
-2. THEME    = BRAND SKIN    colors · fonts · logo · cover style
-```
-
-### Structure templates (a few archetypes)
-
-Opinionated layouts by deal shape (like the Brand Kit sample-deck archetypes — keep to a few). The seller picks one, then adds/removes/reorders blocks within it; never lays out a page from scratch.
+Two axes, kept distinct — both pre-made (no page building):
 
 ```
-TEMPLATE                 DEFAULT BLOCKS
-──────────────────────────────────────────────────────────────
-Standard deal room       cover · deck · pricing · case study · MAP
-Lightweight / follow-up  cover · deck · next steps (mini-MAP)
-Enterprise / security    cover · deck · security & legal · MAP · contacts
-Renewal / expansion      cover · deck · results-so-far · MAP   (clone target)
+1. STRUCTURE   the room's blocks + their order
+2. THEME       brand skin (colors · fonts · logo · cover style)
 ```
 
-**Hero content (Pitch-style).** One piece of content is the room's **hero** — featured up top, larger — and the rest sits beneath it, reorderable. The deck is the hero by default (it's what the room is built around), but the seller can promote any asset (e.g. a personalized video intro, or a case study for a warm referral). So the layout is: **1 hero + an ordered stack below**, not a flat grid — which keeps the room opinionated and focused rather than a wall of tiles.
+### Phase 1: one default structure + hero content
 
-### Theme = Brand Kit driven
+Phase 1 ships **a single opinionated room layout** — no choice of structure templates yet (deferred, see below). The seller drops content into that one layout.
+
+**Hero content (Pitch-style).** One piece of content is the room's **hero** — featured up top, larger — with the rest in an ordered, reorderable stack beneath, then the MAP. The deck is the hero by default (it's what the room is built around), but the seller can promote any asset (a personalized video intro, a case study for a warm referral). So the layout is **1 hero + an ordered stack**, not a flat grid — opinionated and focused, not a wall of tiles.
+
+### Theme = Brand Kit driven (Phase 1)
 
 Pitch ships room themes; ours are **Brand Kits**. The [[brand-kit]] payload already models `{ fonts, colors, logo }` at the workspace level, so the room theme just *reads the same kit* — no new theming system, same override the deck uses (font pairing + palette + logo).
 
@@ -150,17 +141,29 @@ Pitch ships room themes; ours are **Brand Kits**. The [[brand-kit]] payload alre
 THEME PICKER
   has Brand Kit(s)   → pick which kit → room adopts its colors/fonts/logo
   multiple kits      → picker (agency / multi-brand, e.g. Patagonia Sales)
-  no Brand Kit       → a few neutral default themes (Pitch-style)
+  no Brand Kit       → a neutral default theme
   smart default      → inherit the DECK's kit, so room + deck already match
                        (zero extra clicks on the common path)
 ```
 
-**The smart default is the point:** if the deck was built with a Brand Kit, the room opens already wearing it. Picking a kit is only for overriding or the no-kit case. Guarantees the room and the deck it wraps are visually coherent, for free.
+**The smart default is the point:** if the deck was built with a Brand Kit, the room opens already wearing it. Picking a kit is only for overriding or the no-kit case. Room + deck coherent, for free.
 
 ```
    Brand Kit ──┬──► the DECK's theme  (today)
                └──► the ROOM's theme  (new — same payload, same override)
 ```
+
+### Deferred: structure templates (Phase 2/3)
+
+A *choice* of layout archetypes by deal shape — not in Phase 1; one default layout covers the common case. Revisit later:
+
+```
+Standard deal room       cover · deck · pricing · case study · MAP
+Lightweight / follow-up  cover · deck · next steps (mini-MAP)
+Enterprise / security    cover · deck · security & legal · MAP · contacts
+Renewal / expansion      cover · deck · results-so-far · MAP
+```
+Plus custom saved templates. Theming (Brand Kit) stays Phase 1; only the multi-structure picker is deferred.
 
 ---
 
@@ -171,7 +174,6 @@ Grouped by flow. Kept simple.
 **Creating a room**
 - As a seller, I can create a deal room from a deck (in editor or dashboard).
 - As a seller, I can name the room for a specific account.
-- As a seller, I can pick a room template — a structure archetype (no page building).
 - As a seller, I can theme the room with one of my Brand Kits.
 - As a seller with no Brand Kit, I can pick a default theme.
 - As a seller, I get the room pre-themed to match the deck's Brand Kit by default.
@@ -223,7 +225,8 @@ Grouped by flow. Kept simple.
 - Stakeholder-map visualization of the buying committee
 - AI room autofill / per-account personalization
 - Buyer-side comment threads / async Q&A
-- Deal-room template library + MAP templates by deal type
+- Room **structure templates** — a choice of layout archetypes by deal shape (Standard / Lightweight / Enterprise / Renewal), plus custom saved templates
+- MAP templates by deal type
 - Sales Engineer POC rooms; CS onboarding rooms
 - Scheduling / calendar embed; native pricing table
 
