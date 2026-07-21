@@ -63,6 +63,36 @@ US:   analytics on a LIVE, NATIVE PAI deck we own end-to-end
 
 ---
 
+## Positioning (2×2)
+
+A reference frame for where PAI sits and where these features move us. Axes chosen so **revenue is deliberately not one** (it's a lagging output, not a position):
+
+```
+X — MAKE the content ⟷ MOVE it       (creation ⟷ distribution & tracking)
+Y — single artifact (point tool) ⟷   whole deal / revenue workflow (platform)
+```
+
+```
+                    WHOLE DEAL / REVENUE WORKFLOW (platform)
+                                   ▲
+   ┌───────────────────────────────┼───────────────────────────────┐
+   │  ░ WHITESPACE ░                │  Highspot · Seismic (enablmnt) │
+   │  no one owns creation+platform │  PandaDoc · GetAccept (+e-sign)│
+   │      ⟵ where PAI is headed     │  Trumpet·Aligned·Dock·Flowla·  │
+   │        from the left           │  Recapped (DSR — deal workflow)│
+ MAKE ─────────────────────────────┼───────────────────────────────── MOVE
+   │  Pitch·Gamma·Storydoc·         │  DocSend · Papermark           │
+   │  Beautiful.ai · Qwilr(+track)  │  (share + track one doc)       │
+   │  ● PAI (today) ──Analytics──⟶  │                                │
+   └───────────────────────────────┼───────────────────────────────┘
+                                   ▼
+                    SINGLE ARTIFACT (point tool)
+```
+
+**We sit bottom-left** (creation, point tool — the "Pitch-like" game). **Analytics** pushes us right (toward DocSend); the **Deal Room** pushes us up into the DSR band — but we arrive from the creation side. PAI and the DSRs converge on the same space from **opposite corners**: they have the workflow but can't make a deck; we make the deck and add the workflow. Creation is the harder half to bolt on, so the creation corner is the stronger launch position — and the top-left (creation + platform) is open whitespace.
+
+---
+
 ## Touchpoints across the app
 
 Entry is from the **editor** and **dashboard**, never the create flow. The **Share button is the primary signal.**
