@@ -96,6 +96,61 @@ Y — single artifact (point tool) ⟷   whole deal / revenue workflow (platform
 
 ---
 
+## The analytics model (one deck, one link)
+
+**Decided 21 Jul 2026.** A deck has **one** shareable tracked link — not many. Share that link anywhere (social, cold email, embed); analytics aggregates every view to the deck. This is the **Gamma model (per-deck)**, chosen over Pitch's per-link for its simplicity.
+
+```
+DECK "Acme pitch"
+ └─ ONE tracked link ─► share anywhere ─► DECK-LEVEL analytics
+                                          (summary · per-slide · viewers)
+
+ [ deal room ] wraps the deck as a SEPARATE surface, with its own
+   room-scoped analytics (see the Deal Room grounding)
+```
+
+The **two contexts live on two surfaces, not two links**: the deck's own link (published / shared, mostly aggregate) and the deal room (per-person). There is no per-link split to manage, and no roll-up (nothing to roll up with one link). Multiple named links per deck (Pitch-style, with a deck roll-up) is a **Phase 2** power feature.
+
+---
+
+## Deck analytics — the deep view
+
+What a deck's analytics screen contains. Panels **adapt to whether identity is known** (public/anonymous share vs a named audience):
+
+```
+SUMMARY (tiles)     views · unique viewers · median time · completion (slides viewed)
+PER-SLIDE           time-per-slide (dwell) bar — which slides held attention
+VIEWERS             who · last opened · slides viewed · ⚑new-viewer   [when identity known]
+SOURCE / GEO        where views came from                            [public / anonymous shares]
+TIMELINE            opens over time
+```
+
+- **Anonymous / public share** → show Summary + Per-slide + Source/Geo + Timeline; hide the viewer list (no identities to show).
+- **Named audience** → add the Viewers list + per-person on top.
+
+*(Cut for Phase 1: a standalone drop-off curve — per-slide dwell + completion already tell that story.)*
+
+### Metrics (Phase 1)
+
+```
+view / open     a session where the deck was opened
+unique viewer   a distinct identity (or device, if anonymous)
+dwell / slide   active-tab time on a slide (idle capped)
+completion      slides viewed / reached the last slide
+revisit         same viewer opens again later
+new viewer ⚑    a new identity on the link — esp. a new email domain = forwarded
+```
+
+### Notifications (Phase 1)
+
+```
+first open           "Sam opened Acme pitch"          in-app 🔔 + email
+new viewer / forward "A new viewer opened it (⚑)"      in-app 🔔 + email
+```
+Milestones and digests → later.
+
+---
+
 ## Touchpoints across the app
 
 Entry is from the **editor** and **dashboard**, never the create flow. The **Share button is the primary signal.**
@@ -106,7 +161,7 @@ EDITOR                         DASHBOARD                         TOPBAR
              link (analytics    └ snapshot: recently frequented   └ "X opened
              begins)              / shared decks + mini-stats        your deck"
 [ ⋯ ] View analytics           └ click a deck → deep view         └ "forwarded to
-                                  (per-slide heat, drop-off,          a new viewer"
+                                  (per-slide heat, completion,        a new viewer"
                                   who, source, timeline)
 deck card ⋯ menu → View analytics (from any deck list)
 ```
@@ -118,7 +173,7 @@ LEFT NAV                 ANALYTICS TAB (landing)              DEEP VIEW (per dec
 ─────────                ────────────────────────            ─────────────────────
 Home                     ┌─ Acme pitch   ▁▃▅ 42 views ─┐     who · when · per-slide
 Created by Me            ├─ Q3 board deck ▁▁▂ 8 views  ─┤ →   heat · drop-off curve
-▸ Analytics  ◄ new       └─ Cold outreach ▅▅▇ 130 views┘     · source · open timeline
+▸ Analytics  ◄ new       └─ Cold outreach ▅▅▇ 130 views┘     · completion · source · timeline
 ▸ Deal rooms ◄ new       (recent / frequented snapshot)
 Templates …
 ```
@@ -129,8 +184,8 @@ Templates …
 
 Grouped by flow. Kept deliberately simple.
 
-**Sharing a deck (creating a tracked link)**
-- As a user, I can hit Share on my deck to create a trackable link.
+**Sharing a deck (its one tracked link)**
+- As a user, I can hit Share on my deck to get its trackable link.
 - As a user, I can set the link to expire, or revoke it.
 - As a user, I can allow or block PDF download.
 - As a user, I can optionally ask viewers for their name (skippable).
@@ -138,11 +193,10 @@ Grouped by flow. Kept deliberately simple.
 **Seeing a deck's analytics**
 - As a user, I can see how many people viewed my deck (and how many unique).
 - As a user, I can see which slides they spent time on.
-- As a user, I can see the drop-off — where people stopped.
-- As a user, I can see the completion rate.
+- As a user, I can see the completion (how far viewers got).
 - As a user, I can see *who* viewed it, when their identity is known.
 - As a user, I can see when a new/unknown viewer opened it (it was forwarded).
-- As a user, I can see where views came from (source + geo) for public decks.
+- As a user, I can see where views came from (source + geo) for public shares.
 
 **Getting notified**
 - As a user, I get notified when someone first opens my deck.
@@ -158,6 +212,8 @@ Grouped by flow. Kept deliberately simple.
 
 ## Phase 2 and beyond (directions, not stories)
 
+- **Multiple named links per deck** (Pitch-style per-link tracking + a deck roll-up) — the power feature deferred from the one-link Phase 1
+- **Standalone drop-off curve** (beyond per-slide dwell + completion)
 - CRM write-back — engagement logged to Salesforce / HubSpot
 - Team + account roll-up; leadership performance dashboards
 - A/B deck comparison
@@ -172,9 +228,9 @@ Grouped by flow. Kept deliberately simple.
 
 ## Reference: Pitch analytics (screenshots)
 
-Pitch's live implementation, captured 21 Jul 2026. It confirms the **per-link model** below (one deck → many named links, each tracked separately) and gives a concrete read on the deep-view metrics.
+Pitch's live implementation, captured 21 Jul 2026. Pitch uses a **per-link** model — **which we did NOT adopt for Phase 1** (we chose one-deck-one-link, Gamma-style; see *The analytics model* above). Kept here because Pitch's per-link approach is our **Phase 2** power-feature reference, and its deep-view metrics are a strong read regardless of the link model.
 
-**All presentation links** — the list view. One deck can have several named links, each with its own visit count; links can be **Basic** (untracked) vs **Advanced** (analytics-tracked), and **room links** are a separate bucket. This *is* the per-link model.
+**All presentation links** — the list view. In Pitch, one deck can have several named links, each with its own visit count; links can be **Basic** (untracked) vs **Advanced** (analytics-tracked), and **room links** are a separate bucket. This is the per-link model we deferred to Phase 2.
 
 ![Pitch — All presentation links list](assets/pitch-all-presentation-links.png)
 
@@ -190,7 +246,7 @@ Notable for our metric set: Pitch uses **median** (not mean) time, **completion 
 
 ## Reference: Gamma analytics (screenshots)
 
-Gamma's live implementation, captured 21 Jul 2026. The **key contrast with Pitch: Gamma is per-DECK, not per-link** — "Includes all views for [deck] since it was created," one aggregated analytics view per gamma. Pitch is per-link; Gamma is per-deck. Our proposed **per-link + deck roll-up** is effectively a superset that can present either.
+Gamma's live implementation, captured 21 Jul 2026. Gamma is **per-DECK, not per-link** — "Includes all views for [deck] since it was created," one aggregated analytics view per gamma. **This is the model we adopted for Phase 1** (one deck, one link; see *The analytics model* above). So these screenshots are the closest reference to what we're building.
 
 **Page views** — two tabs (**Page views · Card engagement**), a viewer filter ("Everyone (4)"), a *unique-viewers-over-time* bar chart (last 30 days), and a list of unique viewers.
 
@@ -204,7 +260,7 @@ Gamma's live implementation, captured 21 Jul 2026. The **key contrast with Pitch
 
 ![Gamma — card engagement (per-slide)](assets/gamma-analytics-card-engagement.png)
 
-Takeaways vs our scope: Gamma frames completion as **"cards viewed,"** shows viewers **named-or-anonymous** (same as our default), splits **page-level vs card-level** (≈ our summary vs per-slide), and **paywalls per-viewer identity** — a monetization cue worth noting. It has **no per-link concept**, which is exactly the granularity Pitch (and our model) adds.
+Takeaways vs our scope: Gamma frames completion as **"cards viewed,"** shows viewers **named-or-anonymous** (same as our default), splits **page-level vs card-level** (≈ our summary vs per-slide), and **paywalls per-viewer identity** — a monetization cue worth noting. Its **one-link, per-deck** shape is what we adopted for Phase 1; per-link (Pitch-style) is our Phase 2.
 
 ---
 
@@ -255,7 +311,13 @@ Gates fight forwarding (the best signal), so V1 keeps them **opt-in**, defaults 
 |---|---|
 | **Ships first, standalone** | Before the deal room; live value on any shared deck; de-risks the pipeline. |
 | **Roles** | Sales · Marketing · Leadership (+ Founders adjacent). |
-| **Two read models** | Aggregate (public) + per-person (targeted) over one event stream. |
+| **Link model** | **One deck = one tracked link** (Gamma-style, per-deck analytics). Multiple named links per deck (Pitch-style) + roll-up → Phase 2. |
+| **Two contexts, two surfaces** | The deck's own link (published, mostly aggregate) + the deal room (per-person). Not two links on one deck. |
+| **Phase 1 metric set** | views · unique viewers · per-slide dwell · completion (slides viewed) · revisit · new-viewer(forward). |
+| **Deep view** | Per-deck: summary tiles + per-slide dwell + viewer list (when identity) + source/geo (public) + timeline. Panels adapt to identity. |
+| **Source / geo** | **Kept** in Phase 1 (the Marketing/public value; shows on public shares). |
+| **Drop-off curve** | **Cut** from Phase 1 — per-slide dwell + completion cover it (→ Phase 2). |
+| **Notifications** | Phase 1 = first-open + new-viewer, in-app 🔔 + email. |
 | **Email gate** | Skipped in V1; no verified gate on any channel. |
 | **Anonymous viewing** | Allowed everywhere; identity is never a wall. |
 | **Forwarding detection** | In scope, V1, non-negotiable. |
