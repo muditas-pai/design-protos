@@ -243,6 +243,20 @@ Notable: columns are Presentation (thumb + folder) · Link name · Analytics (sp
 
 Notable for our metric set: Pitch uses **median** (not mean) time, **completion as "median viewed slides"**, per-visit rows carry **device + location**, and the per-slide chart is time-per-slide (our "dwell"). Anonymous visits show as "Visitor via Chrome" — matches our anonymous-allowed default.
 
+### Per-visit expansion — slide thumbnails + time-per-slide
+
+Pitch's take on the per-viewer detail: instead of a separate page (Gamma) it **expands a visit inline** in the Activity list (an accordion row). The expanded visit lays out the deck as a **grid of slide thumbnails, each stamped with a time-spent badge** (2s · <1s · 55s) — the *visual*, per-slide version of dwell: you see which slides held that visitor **and the actual slide**, not just its title. Above the list, the link **Summary** carries the same three top-line metrics as ours (**median time spent · median viewed slides · total visits**) plus a **per-slide median-time bar chart** across the whole deck.
+
+![Pitch — link summary + a visit expanded (slide thumbnails + time badges)](assets/pitch-link-visit-expanded.png)
+
+![Pitch — full per-visit slide-thumbnail grid with time-per-slide badges](assets/pitch-visit-slide-grid.png)
+
+_Second screenshot pending: save the PNG to `assets/pitch-visit-slide-grid.png` and it'll embed here (the paste's temp file was already cleared)._
+
+**Three drill-in patterns now on the board** — Gamma navigates to a **new page**, Pitch **expands inline** (accordion), our modal does a **push/pop** to a person screen. Pitch's thumbnail grid is lovely (you see the real slide) but eats a lot of vertical space; our per-slide bars are denser. For a 760px modal, push/pop + bars stays compact; the thumbnail grid is more of a **full-page-dashboard** affordance.
+
+**Is time-per-slide the only thing that matters per visitor?** Pitch's expansion is **time-per-slide only** (badges) + the visit's header metadata (length · viewed count · device · location). Time-per-slide is the backbone — it answers *where attention went* — but on its own it doesn't answer *is this a buyer, and what do they want*. Richer per-person signals worth weighing: **coverage / drop-off** (how far they got), **session cadence / revisits** (came back = intent), **navigation path** (jumped straight to Pricing; re-read Security), and **in-deck actions** (clicked a CTA, played a video — the strongest intent tell). Our drill-in already goes past Pitch on two of these: it adds per-slide **Viewed / Not-viewed** coverage and a **sessions-over-time** view alongside dwell.
+
 ### Room link analytics (the deal-room context)
 
 Pitch's **New link** dialog for a *room* (its deal-room equivalent), captured 21 Jul 2026. Confirms how analytics behaves once a deck lives inside a room:
