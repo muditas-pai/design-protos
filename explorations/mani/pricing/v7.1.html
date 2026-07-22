@@ -140,7 +140,8 @@
     #view-individual > div[aria-hidden="true"],
     #view-team     > div[aria-hidden="true"],
     #view-api      > div[aria-hidden="true"],
-    div[aria-hidden="true"][style*="height:800px"] {
+    div[aria-hidden="true"][style*="height:800px"],
+    #card-spacer {
       display: none !important;
     }
 
@@ -2351,7 +2352,7 @@
     <!-- Spacer reserving vertical room for the absolutely-positioned card area above.
          Sized to the TALLEST view (Team Pro card bottom ≈ 880px); grow this whenever
          a card grows so the testimonials below keep their gap. -->
-    <div aria-hidden="true" style="height:880px;"></div>
+    <div aria-hidden="true" id="card-spacer" style="height:880px;"></div>
 
 
     <!-- Everything below is hidden on the API view -->
@@ -4228,5 +4229,30 @@
     createRoot(document.getElementById('agentation-root'))
       .render(React.createElement(Agentation));
   </script>
+
+<script>
+  // Auto-size the card-area spacer so content below always keeps its gap,
+  // no matter how tall the visible cards grow.
+  (function () {
+    const spacer = document.getElementById('card-spacer');
+    if (!spacer) return;
+    const stage = spacer.parentElement;
+    function update() {
+      if (window.innerWidth <= 768) { spacer.style.height = ''; return; }
+      const stageRect = stage.getBoundingClientRect();
+      const scale = stage.offsetWidth ? stageRect.width / stage.offsetWidth : 1;
+      let bottom = 0;
+      document.querySelectorAll('#view-individual > section, #view-team > section').forEach(sec => {
+        if (!sec.offsetParent) return;
+        bottom = Math.max(bottom, (sec.getBoundingClientRect().bottom - stageRect.top) / scale);
+      });
+      if (bottom > 0) spacer.style.height = Math.round(bottom + 24) + 'px';
+    }
+    const ro = new ResizeObserver(update);
+    document.querySelectorAll('#view-individual > section, #view-team > section').forEach(sec => ro.observe(sec));
+    window.addEventListener('resize', update);
+    update();
+  })();
+</script>
 </body>
 </html>
