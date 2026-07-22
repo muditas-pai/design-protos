@@ -351,26 +351,51 @@ Ticking carries no gate of its own — it inherits the room's access dial (anony
 
 E2 adds the rich model: per-step owner · due date · BLOCKED state · internal-only visibility · comments. Once steps have **owners**, only the assigned person completes their step, and seller-side steps ("Send security docs" — rep ticks) split from buyer-side steps ("Complete internal review" — buyer ticks).
 
-### Access & roles (flat buyer access — Pitch model)
+### Roles & access — the full spec (flat, Pitch model)
 
-Access default = **Level 1 skippable soft name prompt** (friction dial shared with [Deck Analytics](../deck-analytics/grounding.html); hard gates opt-in). Buyer side is **one flat tier** — anyone with the link views *and* interacts, **no buyer login** (confirmed universal norm — [see benchmark](#roles--access-benchmark-22-jul-2026)). We keep it **like Pitch: ticking needs no auth of its own.**
+The whole model, stated explicitly. It is **flat by design**, so the spec is short: there are really only **two rules**, and the value of writing it down is naming everything we deliberately *don't* do.
 
-```
-                        │ SELLER │ ANY BUYER-SIDE VIEWER (flat)
-────────────────────────┼────────┼──────────────────────────────
-view room + assets      │   ✓    │   ✓
-view next steps         │   ✓    │   ✓
-tick a step             │   ✓    │   ✓   ← no separate gate; see below
-edit content / steps    │   ✓    │   ✗
-archive / clone room    │   ✓    │   ✗
-```
-
-Champion vs committee is an *analytics label*, not an access tier. (Internal-only rows arrive with the rich MAP in E2.)
-
-**Why no auth to tick (the Pitch rationale).** The room URL is an unguessable capability token — **holding the link _is_ the authorization**, same model as a Google Doc / Figma share link. A tick is low-stakes, reversible, non-destructive (a status marker, not a signature), and the realistic threat model is empty (whoever holds the link is already the intended buying committee). A login wall would kill the frictionless interaction that is the whole point, and suppress the buying signal a tick represents. So ticking carries **no gate of its own** — it inherits whatever the room's single access dial already is:
+**The two rules (this is all of it):**
 
 ```
-ROOM ACCESS DIAL          → who ticks, and how they're named
+1. EDIT   — only members of the seller's own PAI workspace can edit a room.  (flat across the team)
+2. VIEW   — anyone else (any buyer-side viewer with the link) can view + interact, never edit.
+```
+
+Everything below is just those two rules spelled out. **Champion vs committee is an analytics label, never an access tier.**
+
+**Full capability matrix.** Two actors only — a seller-workspace member, and any buyer-side viewer. There is no third tier.
+
+```
+                              │ SELLER (workspace member) │ BUYER-SIDE VIEWER (anyone w/ link)
+──────────────────────────────┼───────────────────────────┼───────────────────────────────────
+view room + assets            │            ✓              │              ✓
+view next steps               │            ✓              │              ✓
+tick / untick a step          │            ✓              │              ✓   (no auth — see below)
+add / reorder / remove content│            ✓              │              ✗
+edit / add / reorder steps    │            ✓              │              ✗
+set hero · pick theme (kit)   │            ✓              │              ✗
+share link · set access dial  │            ✓              │              ✗
+archive · clone · delete room │            ✓              │              ✗
+```
+
+**Viewership — explicit.**
+
+- **Who can view:** anyone holding the link. The room is not listed, indexed, or discoverable; the link is an unguessable capability token.
+- **Login:** buyers **never** log into PAI (confirmed universal norm — [see benchmark](#roles--access-benchmark-22-jul-2026)). Sellers are logged in because it's their workspace.
+- **Identity:** optional, and the seller's call, set by the room's **one access dial** (below). Default = anonymous / skippable soft name prompt. Identity only exists if the seller dials it up.
+- The access dial is the **only** knob that affects viewership. There is nothing per-viewer and nothing per-asset — every viewer sees the whole room.
+
+**Edit access — explicit.**
+
+- **Who can edit:** any member of the seller's PAI workspace, flat — **not** scoped to the room's creator/owner (Pitch's shared-workspace model). If you're on the team, you can edit any room.
+- **Buyers never edit** — view + tick only. No buyer-side edit role exists to grant.
+- No approval / publish step, no draft-lock, no per-room owner. (Owner-scoping is the E2 lever — see below.)
+
+**The one knob: the room access dial.** A single friction dial (shared with [Deck Analytics](../deck-analytics/grounding.html)) governs the door. Ticking has **no gate of its own** — it inherits the dial:
+
+```
+ROOM ACCESS DIAL          → who gets in, and how a tick is named
 ──────────────────────────  ───────────────────────────────────
 Anonymous (default)         anyone with the link · ticks are anonymous
 Soft name prompt            anyone · ticks carry the name they gave (skippable)
@@ -378,11 +403,20 @@ Require email (opt-in)      identified at the door · ticks are named as a side 
 Passcode / domain (opt-in)  same, plus the door is locked to holders / the buyer domain
 ```
 
-One dial, not two: the seller tunes "how much do I ask at the door" once, and ticking rides along. No just-in-time identity prompt at the moment of ticking.
+One dial, not two — no just-in-time prompt at the checkbox. *Why no auth to tick:* holding the link **is** the authorization (Google-Doc / Figma model); a tick is low-stakes, reversible, non-destructive (a status marker, not a signature); the threat model is empty (whoever holds the link is already the intended committee); and a login wall would kill the frictionless interaction that is the point and suppress the buying signal a tick represents.
 
-**Defining "the buyer team" — infer, don't gate.** Don't force a work-email domain to define who's on the buyer side. Default stays anonymous / soft name. When a seller *does* turn on email capture, match the entered domain against the buyer company (already known from the co-brand header) to label people **same-company stakeholder** vs **external / personal-email** — an analytics label, for free, with no hard gate.
+**Defining "the buyer team" — infer, don't gate.** Never force a work-email domain to define the buyer side. Default stays anonymous / soft name. *If* the seller turns on email capture, match the entered domain against the buyer company (already known from the co-brand header) to **label** people same-company stakeholder vs external / personal-email — an analytics label, for free, no hard gate.
 
-**Seller side — flat team edit (Phase 1).** Anyone on the seller workspace can edit any deal room (matches Pitch's shared-workspace model). Trumpet and HubSpot default *tighter* (owner-scoped, opt into team sharing) to stop reps clobbering each other's live deals at scale — so **owner-scoping is the E2 lever** if large teams ask. Cheap to tighten later, painful to loosen, so ship flat.
+**The rules we deliberately DON'T have** (the point of "flat" — every one of these is an intentional absence, not an oversight):
+
+```
+✗ no buyer login / account                    ✗ no per-buyer roles (champion = label, not access)
+✗ no auth to tick a step                       ✗ no champion-only or owner-only ticking
+✗ no per-seat / owner-scoping of rooms          ✗ no approval / publish / lock step before sharing
+✗ no per-asset or per-section visibility        ✗ no internal-only MAP rows        (all → E2 levers)
+```
+
+**Deferred access levers (E2, only if asked for):** owner-scoping of rooms (Trumpet/HubSpot default, to stop large teams clobbering live deals) · per-step owners so only the assigned person ticks (splits seller-side vs buyer-side steps) · internal-only MAP rows · timing of the hard gates (email-verify / allowlist / password) into V1.5 vs V2. All are **tighten-later** moves — flat is cheap to constrain, painful to loosen, so Phase 1 ships flat.
 
 **The hard email gate (reference · Pitch, 21 Jul 2026).** The opt-in top of the friction-dial: when a room requires an email, the buyer hits a full-screen threshold *before* the room renders. Pitch's version:
 
