@@ -65,9 +65,9 @@ Developer handoff for `explorations/mani/pricing/v7.html`. v7 is v6.2 plus a pla
 6. Refresh data across decks in one click (tooltip)
 7. Custom brand kit and moods, built for you (tooltip)
 8. Full premium template library
-9. Organize decks into projects
-10. View tracking & analytics
-11. Audience report on how each deck performs
+9. Advanced tracking and analytics
+10. Audience report on how each deck performs
+11. Early access to beta features
 12. Priority support, straight to our Product Head
 
 Neither Pro nor Gold uses an "All X features, plus:" label; every point is listed explicitly.
