@@ -10,6 +10,7 @@ Developer handoff for `explorations/mani/pricing/v7.html`. v7 is v6.2 plus a pla
 - Card heights hug content: cards end 60px below their last feature point. All three tops align.
 - Feature points rewritten on all cards (final lists below), three Gold points carry tooltips.
 - Gold card illustration is the gold rocket (embedded base64, `.illus-gold`).
+- Credit counts are emphasized: 26px extra-bold gradient number (`.cred-num`, Brand Blue gradient on Basic and Pro; `.cred-num--gold` adds a slow-shimmer gold gradient on Gold). The sparkle icon next to a gradient count renders at 22px.
 
 ## Plan-count tab behavior
 
