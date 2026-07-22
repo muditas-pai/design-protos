@@ -1,6 +1,6 @@
 # Deal Room — grounding
 
-**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 21 Jul 2026
+**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 22 Jul 2026
 
 The **deal room** itself: a per-deal, branded container that wraps a PAI deck + supporting assets + a Mutual Action Plan into one link. Engagement analytics is its own project — the room *consumes* it. See the [Deck Analytics grounding](../deck-analytics/grounding.html).
 
@@ -344,25 +344,67 @@ building  shared   seller shelves it manually (read-only record)
 
 ```
 a single ordered list of steps ·  each step: a title + done/not-done
-seller edits the list · anyone in the room can tick a step
+seller edits the list · a viewer can tick a step, but ticking is attributable
+(the tick captures who — see Access & roles → "ticking = the moment identity is required")
 ```
 
-E2 adds the rich model: per-step owner · due date · BLOCKED state · internal-only visibility · comments.
+E2 adds the rich model: per-step owner · due date · BLOCKED state · internal-only visibility · comments. Once steps have **owners**, only the assigned person completes their step, and seller-side steps ("Send security docs" — rep ticks) split from buyer-side steps ("Complete internal review" — buyer ticks).
 
-### Access & roles (flat buyer access — matches the norm)
+### Access & roles (the governance boundary is look ⟷ act, not champion ⟷ viewer)
 
-Access default = **Level 1 skippable soft name prompt** (friction dial shared with [Deck Analytics](../deck-analytics/grounding.html); hard gates opt-in). Buyer side is **one flat tier** — anyone with the link views *and* interacts.
+Access default = **Level 1 skippable soft name prompt** (friction dial shared with [Deck Analytics](../deck-analytics/grounding.html); hard gates opt-in). Buyer side is **one flat tier** — anyone with the link views *and* interacts. **No buyer ever logs into PAI** (confirmed universal norm — [see benchmark](#roles--access-benchmark-22-jul-2026)).
+
+But "flat interaction" does **not** mean anonymous ticking. The governance line is drawn between **viewing** (frictionless, anonymous OK) and **acting** (must be attributable to a person):
 
 ```
                         │ SELLER │ ANY BUYER-SIDE VIEWER (flat)
 ────────────────────────┼────────┼──────────────────────────────
-view room + assets      │   ✓    │   ✓
-view next steps         │   ✓    │   ✓
-tick a step             │   ✓    │   ✓
+view room + assets      │   ✓    │   ✓   (anonymous is fine)
+view next steps         │   ✓    │   ✓   (anonymous is fine)
+tick a step             │   ✓    │   ✓   ← but the tick captures WHO (see below)
 edit content / steps    │   ✓    │   ✗
 archive / clone room    │   ✓    │   ✗
 ```
+
 Champion vs committee is an *analytics label*, not an access tier. (Internal-only rows arrive with the rich MAP in E2.)
+
+**Ticking = the moment identity is required (the Phase 1 governance model).** Governance in a no-login world isn't a role gate or a login — it's **attribution**. You don't gate *who* is allowed to tick up front; you make every tick *attributable* after the fact. Viewing stays anonymous; the act of ticking is what triggers identity capture, just-in-time, at the point of consequence rather than at the door:
+
+```
+Anonymous viewer taps a checkbox
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│  You're marking "Security review" done.      │   ← just-in-time prompt
+│  Who should we say completed it?             │     (name; email if the dial wants)
+│  [ Name ______ ]                             │     remembered for the visit
+└─────────────────────────────────────────────┘
+        │
+        ▼
+☑ Security review · completed by Sam (Meridian) · 3 Jul   ← stamped · visible · reversible
+```
+
+Why this beats both alternatives:
+
+- **vs. flat anonymous ticking** — closes the accountability hole (a forwarded link can no longer tick as a ghost; every tick is named + timestamped, visible to the seller and in analytics).
+- **vs. champion-only ticking** — a champion-only gate breaks the room's whole job (the champion circulates it so committee members act). No incumbent enforces it. Look-vs-act keeps committee action open while still naming who acted.
+- **Reversible + auditable** — a tick isn't destructive; the seller (and the person who ticked) can un-tick. Lower stakes than a hard gate implies, which is why door-level gating is overkill.
+- **The identity captured at first tick is the same one that powers the domain-inference label** (§ below) — so ticking naturally sorts people into same-company stakeholder vs external.
+
+**The seller's ticking dial (Share panel, next to the viewing dial).** How much identity a tick demands is the seller's call:
+
+```
+WHO CAN TICK           friction
+─────────────────────  ────────
+Anyone (just a name)   ● default   ← low, but every tick is still named
+Verified email                     ← medium
+Only the buyer domain              ← high (locks out personal emails / forwards)
+Only the step's owner  (E2)        ← needs the rich MAP (per-step owners)
+```
+
+**Defining "the buyer team" — infer, don't gate.** Don't force a work-email domain to define who's on the buyer side. Default stays anonymous / soft name. When a seller *does* turn on email capture, match the entered domain against the buyer company (already known from the co-brand header) to label people **same-company stakeholder** vs **external / personal-email** — an analytics label, for free, with no hard gate. Anonymous stays the default; the seller who wants attribution turns the dial up.
+
+**Seller side — flat team edit (Phase 1).** Anyone on the seller workspace can edit any deal room (matches Pitch's shared-workspace model). Trumpet and HubSpot default *tighter* (owner-scoped, opt into team sharing) to stop reps clobbering each other's live deals at scale — so **owner-scoping is the E2 lever** if large teams ask. Cheap to tighten later, painful to loosen, so ship flat.
 
 **The hard email gate (reference · Pitch, 21 Jul 2026).** The opt-in top of the friction-dial: when a room requires an email, the buyer hits a full-screen threshold *before* the room renders. Pitch's version:
 
@@ -416,6 +458,19 @@ Opinionated + templated (Pitch mold), **not** a drag-and-drop webpage builder (Q
 
 Design north star **Pitch**. **Recapped/Recall** = MAP mechanics. **Dock** = reference for the *deferred* scope (School B, order forms), not V1. Anti-examples: Qwilr/Trumpet/Flowla (builders). DocSend lives in Deck Analytics.
 
+### Roles & access benchmark (22 Jul 2026)
+
+Benchmarked Pitch, HubSpot, Trumpet, Aligned on buyer access + who-can-tick + seller/team scope. **Three things are unanimous:** no buyer ever logs into the vendor's product (anonymous link is the floor); identity (email/domain) is an opt-in dial the seller turns up, never forced by default; interaction (tick/comment/upload) is not gated behind a *role* — nobody restricts ticking to "the champion."
+
+| | Buyer login? | Identity gates (opt-in, on top of anon) | Who ticks MAP steps | Champion vs others |
+|---|---|---|---|---|
+| **Pitch** | Never | email · passcode · expiry (no domain on view links) | view-only on open links; comment needs a guest invite | no buyer-side roles |
+| **Trumpet** | Never | No-email / Email / Verified-email · password · expiry · per-recipient links | **any viewer, no account**; each step has an owner (buyer or seller); "Control permissions" setting | no formal champion role |
+| **HubSpot** | Never | email-gate only (ties view → CRM contact); no passcode/domain | **native: none** — buyer interactivity is all third-party (Arrows/GetAccept) | none native |
+| **Aligned** | Never | password · email-verify · email/domain whitelist · SSO (ent) | **two-sided MAP** — both sides assign & complete tasks, no login | **champion is first-class** (champion workflows), surfaces known vs new stakeholders; not a hard gate |
+
+**What we took from it:** confirmed no-login for buyers; kept the flat buyer tier; but moved the governance boundary to **look ⟷ act** (ticking captures identity) rather than leave ticking anonymous — a genuinely better default than the flat benchmark, not a compromise. Seller side: flat team edit (Pitch model) for Phase 1; owner-scoping (Trumpet/HubSpot default) is the E2 lever.
+
 ---
 
 ## Decided (locked calls)
@@ -429,9 +484,11 @@ Design north star **Pitch**. **Recapped/Recall** = MAP mechanics. **Dock** = ref
 | **Brand lock** | Existing Brand Kit feature; not re-scoped. |
 | **Room lifecycle** | Minimal: Draft → Active → Archived (+ clone). No Won/Lost/reason in Phase 1 (→ E2); "quiet" is a passive age hint, not a state. |
 | **Room creation point** | Default at demo → proposal boundary; power users earlier. |
-| **MAP (next steps)** | **Simplified to a single checklist** for Phase 1: title + done, seller edits, anyone ticks. Rich model (owners · due · blocked · internal-only · comments) → E2. |
+| **MAP (next steps)** | **Simplified to a single checklist** for Phase 1: title + done, seller edits. Rich model (owners · due · blocked · internal-only · comments) → E2. |
+| **Who can tick a step** | **Look ⟷ act boundary:** viewing is anonymous-OK; **ticking captures identity** (name; email per dial), stamped + reversible. Not champion-only, not anonymous. Seller has a ticking dial (anyone-named → verified email → buyer domain → step owner [E2]). |
 | **Room anatomy** | Phase 1 chrome = co-brand header · title + description · presence · hero + content list · next steps · contact card. Optional widgets (book-a-meeting, video, CTA, FAQ, testimonials, security, team, comments, timeline) → Phase 2. |
-| **Buyer-side roles** | Flat — match the norm; champion = analytics label. |
+| **Buyer-side roles** | Flat — match the norm; champion = analytics label. "Buyer team" is **inferred** (email domain vs co-brand buyer), never a hard gate. No buyer login. |
+| **Seller-side roles** | **Flat team edit** (Pitch model) for Phase 1 — anyone on the workspace edits any room. Owner-scoping → E2 lever. |
 | **Design approach** | Opinionated + templated, NOT a page builder. |
 | **Dashboard home** | Own **Deal rooms** tab; tiles → room detail. |
 | **Entry points** | Editor Share / deck menu + dashboard; not the create flow. |
