@@ -125,6 +125,10 @@
     .vhead .r, .vrow .r { text-align: right; }
     .vrow { padding: 9px 8px; border-radius: 8px; transition: background 120ms var(--ease-out-strong); }
     .vrow:hover { background: var(--bg-secondary); }
+    /* known-viewer / anonymous group divider */
+    .vdiv { display: flex; align-items: center; gap: 10px; padding: 12px 8px 6px; }
+    .vdiv span { color: var(--text-tertiary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+    .vdiv::after { content: ""; flex: 1; height: 1px; background: var(--border-secondary); }
     .vwr { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .av { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 600; color: #fff; box-shadow: 0 0 0 1px rgba(11,15,20,0.06); }
     .av.anon { background: var(--bg-quaternary); color: var(--text-tertiary); }
@@ -245,7 +249,7 @@
                 <span>Viewer</span><span class="r">Last opened</span><span class="r" id="vcolHead">Slides viewed</span><span class="r">Location</span>
               </div>
               <div id="viewers"></div>
-              <div class="morerow"><button class="button-style button-small button-ghost">+ 30 more viewers</button></div>
+              <div class="morerow"><button class="button-style button-small button-ghost">+ 29 more anonymous visitors</button></div>
             </div>
           </div>
 
@@ -445,15 +449,17 @@
         if (marker) marker.style.opacity = "0";
       });
     }
-    // ---- viewers (named champion, a NEW forwarded viewer, anonymous) ----
+    // ---- viewers — known-first, then anonymous (most viewers on a published deck) ----
+    // "anonymous" still carries location + device + engagement; each row gets a geo-led handle
     // each carries the per-person value for every metric; the table shows the one for the active tab
     var viewers = [
       { nm: "Sarah Chen", em: "sarah.chen@acme.com", col: "#0055ED", init: "SC", last: "2h ago", seen: 12, opens: 5, time: "5:40", loc: "San Francisco" },
       { nm: "Michael Reeves", em: "m.reeves@acme.com", col: "#7C3AED", init: "MR", last: "1h ago", seen: 8, opens: 1, time: "2:18", loc: "New York", isNew: true },
-      { anon: true, last: "Today, 11:40", seen: 5, opens: 2, time: "1:46", loc: "London" },
       { nm: "Priya Nair", em: "priya@acme.com", col: "#DB2777", init: "PN", last: "Yesterday", seen: 12, opens: 3, time: "4:55", loc: "Bengaluru" },
-      { anon: true, last: "Yesterday", seen: 3, opens: 1, time: "0:52", loc: "Berlin" },
+      { anon: true, last: "Today, 11:40", seen: 5, opens: 2, time: "1:46", loc: "London", device: "Chrome · macOS", isNew: true },
+      { anon: true, last: "Yesterday", seen: 3, opens: 1, time: "0:52", loc: "Berlin", device: "Safari · iPhone" },
     ];
+    var anonTotal = 31;   // most of the audience on a published deck
     function metricCell(v) {
       if (activeMetric === "time") {
         return '<div class="vmetric r"><b>' + v.time + '</b></div>';
@@ -464,16 +470,22 @@
       var pct = Math.round(v.seen / 12 * 100);   // completion
       return '<div class="vslides r" style="justify-content:flex-end;"><div class="mini"><i style="width:' + pct + '%"></i></div><small>' + v.seen + '/12</small></div>';
     }
+    function rowHTML(v) {
+      var badge = v.isNew ? '<span class="newbadge"><i class="ph-bold ph-arrow-bend-double-up-right"></i>New</span>' : '';
+      var who = v.anon
+        ? '<div class="vwr"><div class="av anon"><i class="ph ph-globe-simple"></i></div><div class="who"><div class="nm text-body-base-medium text-text-primary"><span>Visitor from ' + v.loc + '</span>' + badge + '</div><div class="em">' + v.device + '</div></div></div>'
+        : '<div class="vwr"><div class="av" style="background:' + v.col + '">' + v.init + '</div><div class="who"><div class="nm text-body-base-medium text-text-primary"><span>' + v.nm + '</span>' + badge + '</div><div class="em">' + v.em + '</div></div></div>';
+      return '<div class="vrow">' + who +
+        '<div class="vtime r">' + v.last + '</div>' +
+        metricCell(v) +
+        '<div class="vloc r"><i class="ph ph-map-pin"></i>' + v.loc + '</div></div>';
+    }
     function renderViewers() {
-      document.getElementById("viewers").innerHTML = viewers.map(function (v) {
-        var who = v.anon
-          ? '<div class="vwr"><div class="av anon"><i class="ph ph-user"></i></div><div class="who"><div class="nm text-body-base-medium text-text-primary"><span>Anonymous viewer</span></div><div class="em">No name provided</div></div></div>'
-          : '<div class="vwr"><div class="av" style="background:' + v.col + '">' + v.init + '</div><div class="who"><div class="nm text-body-base-medium text-text-primary"><span>' + v.nm + '</span>' + (v.isNew ? '<span class="newbadge"><i class="ph-bold ph-arrow-bend-double-up-right"></i>New</span>' : '') + '</div><div class="em">' + v.em + '</div></div></div>';
-        return '<div class="vrow">' + who +
-          '<div class="vtime r">' + v.last + '</div>' +
-          metricCell(v) +
-          '<div class="vloc r"><i class="ph ph-map-pin"></i>' + v.loc + '</div></div>';
-      }).join("");
+      var known = viewers.filter(function (v) { return !v.anon; });
+      var anon  = viewers.filter(function (v) { return v.anon; });
+      var html = known.map(rowHTML).join("");
+      if (anon.length) html += '<div class="vdiv"><span>Anonymous · ' + anonTotal + '</span></div>' + anon.map(rowHTML).join("");
+      document.getElementById("viewers").innerHTML = html;
     }
 
     showMetric("views", document.querySelector(".tile"));   // initial paint (chart + table together)
