@@ -1,6 +1,6 @@
 # Deck Analytics — grounding
 
-**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 21 Jul 2026
+**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 22 Jul 2026
 
 Engagement analytics for **any shared deck, on any channel**. Analytics is the engine; the [Deal Room](../deal-room/grounding.html) is one consumer of it. This doc owns the tracked-link + identity + event-capture + dashboard layer.
 
@@ -127,6 +127,7 @@ TIMELINE            opens over time
 
 - **Anonymous / public share** → show Summary + Per-slide + Source/Geo + Timeline; hide the viewer list (no identities to show).
 - **Named audience** → add the Viewers list + per-person on top.
+- **Per-viewer drill-in** → a viewer row is tappable → a person-scoped screen with the **same three tiles/charts** re-scoped to them (their sessions · their per-slide Viewed/Not-viewed · their per-slide dwell) + Back. Gamma-style, adapted to the modal. See *Reference: Gamma analytics → Per-viewer detail*.
 
 *(Cut for Phase 1: a standalone drop-off curve — per-slide dwell + completion already tell that story.)*
 
@@ -273,6 +274,14 @@ Gamma's live implementation, captured 21 Jul 2026. Gamma is **per-DECK, not per-
 
 ![Gamma — card engagement (per-slide)](assets/gamma-analytics-card-engagement.png)
 
+**Per-viewer detail (the drill-in)** — clicking a viewer opens a dedicated **per-person page** (Back button + close X). The header makes the **viewer the subject**: avatar + name + email on the left, **Last opened** ("Today at 4:18 pm") on the right, then a summary line **"Viewed 15/15 cards across all sessions."** Below it, the **same per-card engagement** as the aggregate Card-engagement tab, but scoped to this one person: a **"Less time spent ←→ More time spent"** relative bar per card, un-viewed cards greyed with an eye-off. So the drill-in **reuses the deck's chart vocabulary, re-scoped to the individual** — not a different screen, the same one filtered to a person.
+
+![Gamma — per-viewer detail page](assets/gamma-analytics-viewer-detail.png)
+
+_Screenshot pending: save the PNG to `assets/gamma-analytics-viewer-detail.png` and it'll embed here (the paste's temp file was already cleared)._
+
+**We adopted this** as the modal's **per-viewer drill-in** (built 22 Jul 2026): tap a viewer row → push to a person-scoped screen with the same three tiles/charts re-scoped to them — Views = their sessions over time, Completion = per-slide **Viewed / Not-viewed** coverage, Median time = their per-slide dwell (un-viewed slides greyed, eye-off) — plus a Back button. Gamma navigates to a full page; in our 760px modal it's a **push/pop**. The **left-rail master-detail** alternative (an "All viewers" item on top, one row per person, graphs re-rendering on select) is the better fit for the **future full-page dashboard Analytics tab**, where there's horizontal room for a persistent rail.
+
 Takeaways vs our scope: Gamma frames completion as **"cards viewed,"** shows viewers **named-or-anonymous** (same as our default), splits **page-level vs card-level** (≈ our summary vs per-slide), and **paywalls per-viewer identity** — a monetization cue worth noting. Its **one-link, per-deck** shape is what we adopted for Phase 1; per-link (Pitch-style) is our Phase 2.
 
 ---
@@ -328,6 +337,7 @@ Gates fight forwarding (the best signal), so V1 keeps them **opt-in**, defaults 
 | **Two contexts, two surfaces** | The deck's own link (published, mostly aggregate) + the deal room (per-person). Not two links on one deck. |
 | **Phase 1 metric set** | views · unique viewers · per-slide dwell · completion (slides viewed) · revisit · new-viewer(forward). |
 | **Deep view** | Per-deck: summary tiles + per-slide dwell + viewer list (when identity) + source/geo (public) + timeline. Panels adapt to identity. |
+| **Per-viewer drill-in** | Tap a viewer → person-scoped screen, same three tiles/charts re-scoped (sessions · per-slide Viewed/Not-viewed · per-slide dwell) + Back. Gamma-style (see reference). Push/pop in the modal; **left-rail** master-detail on the future full-page dashboard tab. |
 | **Source / geo** | **Kept** in Phase 1 (the Marketing/public value; shows on public shares). |
 | **Drop-off curve** | **Cut** from Phase 1 — per-slide dwell + completion cover it (→ Phase 2). |
 | **Notifications** | Phase 1 = first-open + new-viewer, in-app 🔔 + email. |
