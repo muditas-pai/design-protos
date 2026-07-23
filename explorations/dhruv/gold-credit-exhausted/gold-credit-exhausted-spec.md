@@ -57,53 +57,56 @@ local Pro pricing before this goes out, so the offer doesn't read as a downgrade
 | On expiry | Falls back to the normal upgrade path at list price. Don't quietly keep honouring the discount — the timer has to mean something |
 | On dismiss | The hour keeps running; a quiet bottom-right banner carries the remaining time so a reflex dismiss doesn't burn the window |
 
-## Copy
+## The modal
+
+Same anatomy as the close-intent nudge on `key-screens/pricing.html` — a wide, plain box that says one
+thing. Eyebrow strip (700 × 36) slides out from behind a 720 × 468 box; feature list on the left,
+preview on the right, one full-width CTA. 4px corners throughout, no secondary button — the X closes it.
 
 ```
-Setup       {decks} decks in, {firstName} —
-Payoff      you've been on a roll.
+Eyebrow     🎁  {decks} decks in — here's 40% off Gold, just for you, for the next hour.
 
-Body        And you're at the end of your credits. Gold gives you 50,000 —
-            enough to keep building without watching the meter.
+Title       Get 40% off Gold and stop watching the credit meter
+            ("40% off Gold" in Brand Blue)
 
-Offer strip Gold · 50,000 credits            [LIMITED]
-            40% off — because you've built so much with us
+Left        50,000 credits          ← selected by default
+              Build every day for a year without running out.
+            Advanced AI models · Analytics · Shared knowledge base ·
+            Invite team members · Projects
 
-Timer       Your discount is live for [59:47]
+Preview     Credits: your plan's bar at {credits_left}, Gold's bar at 50,000,
+            with "Roughly {decks} decks so far. Gold covers that pace for a year."
+            Each other feature swaps the preview card.
 
-Primary     Get Gold — 40% off
-Secondary   Maybe later
-
-Footnote    Your remaining credits carry over.
-            Offer ends one hour after you see this.
+CTA         Get Gold — 40% off
+Note        Ends in [59:47] · your remaining credits carry over
 ```
 
-**Near-exhausted variant:** the body reads "you're *near* the end of your credits" when the balance is
-above zero. Everything else is identical — one modal covers both states.
+**Near-exhausted variant:** the preview's current-plan number shows their actual balance instead of
+zero. Nothing else changes — one modal covers both states.
 
-**Expired variant:** offer strip goes neutral and reads "The 40% window has closed — Gold is at list
-price", the tag flips to `ENDED`, the timer line becomes "Your discount expired", and the CTA becomes
-"See Gold plans".
+**Expired variant:** eyebrow goes neutral and reads "Your 40% off Gold window has closed — Gold is back
+at list price", the title drops the discount, and the CTA becomes "See Gold plans" in navy.
 
 ## Tokens
 
 | Token | Source | Fallback |
 |---|---|---|
-| `{decks}` | Lifetime completed decks (`doc_create_new_finish`, distinct docId) | Drop the number: "You've built a lot of decks" |
-| `{firstName}` | Profile first name | Drop the name and the comma |
+| `{decks}` | Lifetime completed decks (`doc_create_new_finish`, distinct docId) | Drop the count from the eyebrow: "Here's 40% off Gold, just for you, for the next hour" |
+| `{credits_left}` | Current balance (`is_gpt3_workspace_credits.credit ÷ 100`) | Show 0 — everyone in this cohort is at or near it |
 | `[timer]` | Counts down from 60:00 against the stored show-time | Use the words "for the next hour" — never ship a frozen clock |
 
 ## Visual language
 
-- **Brand Blue `#005EFF` carries the offer** — CTA, offer strip, timer chip. This is a growth surface,
-  so Brand Blue does the work; navy stays on supporting chrome.
-- **Orange appears exactly once**, on the `LIMITED` tag. That's the brand's attention-tag job and the
-  only orange on the surface.
-- **Setup/payoff headline** — light grey setup line carrying the deck count, bold dark payoff under it.
-- **Real product, casually stacked** — four slide thumbnails fanned at the top stand for the decks
-  they've built. No abstract illustration, no AI metaphor.
-- **Tight corners** — 12px modal, 10px offer strip, 8px buttons, 4–5px tags.
-- **One emphatic action.** Primary is Brand Blue filled; "Maybe later" is ghost.
+- **Brand Blue `#005EFF` carries the offer** — the CTA, the discount in the title, the Gold bar in the
+  preview. This is a growth surface, so Brand Blue does the work; navy stays on supporting chrome.
+  (Note: the shipped close-nudge on the pricing key screen uses a navy CTA. Worth settling which is
+  right before build — the visual-language guidance says Brand Blue for upgrade actions.)
+- **Simple over decorated.** One idea per region: strip states the offer, title states the outcome,
+  list states what's included, preview shows one of them, CTA does the thing. Nothing else.
+- **Tight corners** — 4px on the box, strip, CTA and feature rows, matching the key screen.
+- **One emphatic action.** The Brand Blue CTA is the only button; the X handles "not now".
+- **One emoji, in one place** — the 🎁 on the strip. It becomes ⏳ when the offer expires.
 
 ## Build notes
 
