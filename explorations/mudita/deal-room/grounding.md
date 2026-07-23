@@ -70,6 +70,48 @@ US:   the deck is a LIVE NATIVE object, in an OPINIONATED templated room
 
 ---
 
+## Feature matrix — jobs-to-be-done across incumbents
+
+The whole competitor set on one grid, by **job to be done** (researched 23 Jul 2026). The last column is **PAI Phase 1** — deliberately the narrowest room. Read the `✗→E2 / ✗→V2` marks as *roadmap, not gap*.
+
+**Legend:** ✓ has it · ◐ partial / tier-locked / basic · ✗ no · ? unconfirmed · →E2 / →V2 = on our roadmap, not Phase 1.
+
+| Job to be done | Trumpet | Aligned | Dock | GetAccept | Recapped¹ | Flowla | Pitch² | **PAI · P1** |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| One link per deal (the room) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | **✓** |
+| **Make the deck itself** (native authoring) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | **✓** |
+| Bundle content (PDF · video · links · embeds) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Drag-drop page builder | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✗ᵈ |
+| Mutual Action Plan (shared checklist) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✓ |
+| Rich MAP (owners · due dates · buyer-assigned) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗→E2 |
+| Timeline / Gantt view | ◐ | ? | ◐ | ◐ | ✓ | ✓ | ✗ | ✗ |
+| Engagement analytics (per-viewer) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Buyer no-login access | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Access gates (passcode · email · domain) | ✓ | ✓ | ✓ | ✓ | ◐ | ✓ | ✓ | ◐ |
+| E-sign / order forms / quotes | ◐ | ◐ | ✓ | ✓ | ◐ | ◐ | ✗ | ✗→E2 |
+| CRM sync (Salesforce · HubSpot, 2-way) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗→V2 |
+| Post-sale / onboarding portal | ✓ | ◐ | ✓ | ◐ | ✓ | ✓ | ✗ | ✗ᵃ |
+| Templates (reusable rooms / MAPs) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ |
+| Buyer invites own colleagues | ◐ | ◐ | ✓ | ✓ | ✓ | ✓ | ✗ | ◐ |
+| Comments / two-sided collab | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✗→E2 |
+| White-label / custom domain | ✓ | ◐ | ✓ | ◐ | ◐ | ✓ | ◐ | ◐ |
+
+¹ **Recapped is winding down** (shuts 31 Jul 2026, not taking new customers) — kept as a MAP-model reference, not a live threat.
+² **Pitch is a deck-maker with a light "Rooms" layer, not a full DSR** — it's the design-side reference, which is why it's ✗ across the deal-workflow rows.
+ᵈ ᵃ PAI ✗ by *decision*, not gap: **no page-builder** (opinionated template, not a builder) and **School A only** (freeze + clone, no year-round portal).
+
+**What the grid says (the JTBD reading):**
+
+- **MAP is table-stakes, not a wedge.** Every real DSR ships a rich MAP — it's the price of entry, not a differentiator. Our Phase-1 simple checklist is deliberately behind here; **rich MAP is our clearest E2 catch-up**.
+- **"Make the deck itself" is ours alone — with Pitch.** Every DSR bundles a deck they can't author; only **Pitch and PAI** create it natively. That single row *is* the wedge. And Pitch has the deck but almost none of the deal workflow (✗ down its column), so **PAI is the only one positioned to hold both halves**.
+- **A real timeline/Gantt is rare** — only **Flowla and Recapped** truly ship one; the rest fake it with a calendar or milestone view. Low priority for us.
+- **E-sign + quotes/CPQ is where GetAccept and Dock lead** — the "close the paperwork" job, a heavy Phase-2+ lift we've correctly parked.
+- **CRM sync is universal among DSRs and absent in the deck-makers** — it's the diagonal step onto the platform axis (see [Positioning](#positioning-2x2)); V2 for us.
+
+**The one-column story:** PAI Phase 1 is intentionally the *narrowest* room — native deck + simple MAP + analytics + no-login — with a hard **no** on the platform surface (page-builder, rich MAP, e-sign, CRM, portal). Those ✗ marks are the thesis, not the backlog: win the creation corner first, add workflow later.
+
+---
+
 ## Positioning (2×2)
 
 A reference frame for where PAI sits and where these features move us. Axes chosen so **revenue is deliberately not one** (it's a lagging output, not a position):
