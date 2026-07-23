@@ -52,7 +52,7 @@ Developer handoff for `explorations/mani/pricing/v7.html`. v7 is v6.2 plus a pla
 2. Advanced AI models and agents
 3. Export to PowerPoint and Google Slides (2-card tab only)
 4. Create slides from PPT import, up to 60 slides
-5. Brand kit: your fonts, colors and logo
+5. Use your brand's font, colors and logo
 6. Full premium template library
 7. Organize decks into projects
 8. View tracking & analytics
@@ -69,7 +69,7 @@ Developer handoff for `explorations/mani/pricing/v7.html`. v7 is v6.2 plus a pla
 9. Advanced tracking and analytics
 10. Audience report on how each deck performs
 11. Early access to beta features
-12. Priority support, straight to our Product Head
+12. Priority support, with direct access to our Head of Product
 
 Neither Pro nor Gold uses an "All X features, plus:" label; every point is listed explicitly.
 
