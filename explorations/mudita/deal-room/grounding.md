@@ -1,6 +1,6 @@
 # Deal Room — grounding
 
-**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 22 Jul 2026
+**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 23 Jul 2026
 
 The **deal room** itself: a per-deal, branded container that wraps a PAI deck + supporting assets + a Mutual Action Plan into one link. Engagement analytics is its own project — the room *consumes* it. See the [Deck Analytics grounding](../deck-analytics/grounding.html).
 
@@ -195,6 +195,62 @@ The deck is native; everything else is an attachment. Analytics we can capture v
 | **Document** | docx / pptx / xlsx as a downloadable file | opened / downloaded |
 
 *(Later: native pricing table, e-sign order form — Phase 2.)*
+
+---
+
+## In-room analytics
+
+Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.html), not a separate engine** — the room *consumes* it and adds two axes: **resources** (a room holds many artifacts, not one deck) and the **buying group + MAP**. The question shifts from *"did the deck land?"* to **"is this deal moving?"**
+
+### Three levels — room → resource → slide
+
+```
+ROOM (the deal)   →   RESOURCE (deck · file · link · video)   →   SLIDE
+deal momentum,        per-artifact engagement                     per-slide dwell
+MAP progress,         (opened? how long? by whom?)                 └─ IS the Deck
+the buying group                                                      Analytics view
+```
+
+Room analytics is Deck Analytics **one level up**. Click a deck resource inside the room → you land in the exact per-slide / per-viewer deep view we already built. The room level answers *which of the room's N things* the buyer engaged; the deck view is the drill-down. **So the deck engine must compose upward — that's the one thing scoping now protects.**
+
+### The metric shift — momentum, not just engagement
+
+A public deck asks "reach + engagement." A room asks "is the deal progressing." So the **hero signals change**:
+
+```
+HERO (room-level)     recency (last touch) · breadth (# people / # companies
+                      engaged = multi-threading) · MAP progress (steps done/stalled)
+SUPPORTING            per-resource engagement · per-slide dwell · completion
+                      (the Deck-Analytics metrics, demoted to detail)
+```
+
+This is the DSR scoreboard (Trumpet · Aligned) — and it's our **wedge**, not table-stakes.
+
+### The audience is the buying group
+
+A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*). So the viewer list becomes the **committee**, rolled up **by person and by company**.
+
+- **"New viewer" flips meaning.** On a public deck a new viewer is noise (we dropped that badge). In a **room**, a new person = the **champion looped in a colleague = multi-threading** — a *positive* deal signal, worth surfacing. Same event, opposite value, because a room has an intended audience and a public deck doesn't.
+- **Identity-forward defaults.** Rooms lean toward known identity (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in the Deck Analytics grounding). The access friction-dial sits higher here than on a public deck.
+
+### MAP as a first-class metric
+
+The Mutual Action Plan isn't content — its **progress is deal-health**: steps done vs stalled, who's the blocker, time-in-stage. Trackable natively in the room, no deck involved. (Phase 1 MAP is the simple checklist; richer per-step owners/dates are Phase 2 — see below.)
+
+### Reuse vs new
+
+```
+REUSE (already built)   metric engine · per-slide charts · per-viewer drill-in ·
+                        identity/anonymous model · the SIDE-PANEL master-detail
+                        (its left rail maps cleanly onto a small known buying group)
+NEW for rooms           a RESOURCES panel (per-artifact engagement, per the content
+                        table above) · a MAP-progress panel · buying-group roll-up
+                        (by company) · the momentum framing
+```
+
+### Phasing
+
+Deck Analytics is the locked **"ships first, standalone"** call; room analytics is the **wedge but comes after** (the room beyond the checklist MAP is Phase 2 anyway). **Scoping it now is planning, not a build commitment** — the point is to keep the deck engine composing upward, so the room is a wrapper, never a rebuild.
 
 ---
 
