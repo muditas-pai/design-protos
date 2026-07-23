@@ -52,7 +52,7 @@ Developer handoff for `explorations/mani/pricing/v7.html`. v7 is v6.2 plus a pla
 2. Advanced AI models and agents
 3. Export to PowerPoint and Google Slides (2-card tab only)
 4. Create slides from PPT import, up to 60 slides
-5. Use your brand's font, colors and logo
+5. Brand kit: Use your brand's font, colors and logo
 6. Full premium template library
 7. Organize decks into projects
 8. View tracking & analytics
