@@ -278,13 +278,12 @@ The deck is native; everything else is an attachment. Analytics we can capture v
 
 Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.html), not a separate engine** — the room *consumes* it. But the room has **one user (the AE running the deal) with one question: "is this deal moving, and what do I do next?"** Scope everything to that; import nothing from Deck Analytics that doesn't serve it.
 
-### Phase 1 = three panels
+### Phase 1 = two panels + a drill-in
 
 ```
 1  DEAL HEALTH   is it moving?   →  last active (+ a momentum sparkline) ·
-                                    people engaged / breadth · steps done, # blocked
-2  NEXT STEPS    what's next?    →  the MAP checklist, the stalled step flagged
-3  BUYING GROUP  who's engaged?  →  the committee, grouped by company; drill into
+                                    people engaged / breadth · resources opened
+2  BUYING GROUP  who's engaged?  →  the committee, grouped by company; drill into
                                     one person to see what THEY opened
 ```
 
@@ -298,6 +297,7 @@ Room analytics is where it's tempting to bolt all of Deck Analytics on, one leve
 - **✂ Room-level per-resource engagement panel** (median time / watch % / bars per artifact) → *which* resources someone opened is a per-**person** signal ("IT opened the security doc"), so it lives in the **drill-in**, not a room aggregate.
 - **✂ Per-slide nesting.** The room screen stops at the **resource**. Per-slide dwell is the **deck's own** analytics — reachable by opening the deck, not nested into the room. The three levels (room → resource → slide) still exist; the room *screen* just doesn't try to show all three at once.
 - **✂ Key-takeaways card** → it only restated the MAP (the blocked step) and the buying group (multi-threading). Let those two carry the signal.
+- **✂ Next-steps / MAP panel.** The MAP is the room's **own content** — the seller sees and manages it *in the room*, so re-rendering the checklist in analytics is pure duplication. The only MAP-derived thing that's genuinely analytics (not visible in the room) is **time-in-stage** — "this step has been stalled 5 days" — which can surface as a small alert if it ever earns its place; the checklist never does.
 
 ### The buying group
 
@@ -306,9 +306,9 @@ A room is shared with a **small, known set** (~6–10 people, one account — se
 - **"New viewer" flips to positive.** On a public deck a new viewer is noise (we dropped that badge). In a **room** a new person = the **champion looped in a colleague = multi-threading** — a deal signal worth a small badge. Same event, opposite value.
 - **Identity-forward defaults** (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in Deck Analytics). The friction-dial sits higher than a public deck.
 
-### The MAP is deal-health
+### The MAP lives in the room, not in analytics
 
-The Mutual Action Plan isn't content — its **progress is the deal**: steps done vs stalled, who's the blocker, time-in-stage. Native to the room, no deck involved. Phase 1 MAP is the simple checklist; per-step owners/dates are Phase 2.
+The Mutual Action Plan's *progress* is deal-health — but the checklist itself is **room content the seller already sees and manages in the room**, so analytics doesn't duplicate it. The one MAP-derived signal that's genuinely analytics (the room doesn't compute it) is **time-in-stage** — "this step has been stalled 5 days." That can surface as a small alert if it earns its place; the full checklist never does.
 
 ### Reuse + phasing
 
