@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
-  <title>Deal room analytics — chart on top, buying group below — deal-room proto</title>
+  <title>Deal room analytics — deal health, next steps, buying group — deal-room proto</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,7 +29,7 @@
     /* ---- modal shell ---- */
     .wrap { position: relative; min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
     .modal {
-      position: relative; width: 100%; max-width: 780px; max-height: calc(100vh - 80px);
+      position: relative; width: 100%; max-width: 720px; max-height: calc(100vh - 80px);
       display: flex; flex-direction: column; background: var(--bg-elevated);
       border-radius: 10px; box-shadow: var(--shadow-elevation-03); overflow: hidden;
       animation: pop 340ms var(--ease-out-strong) both;
@@ -42,9 +42,10 @@
     .thumb { width: 44px; height: 44px; border-radius: 8px; flex: none; box-shadow: 0 0 0 1px rgba(11,15,20,0.10);
       background: linear-gradient(135deg, #0A1925 0%, #1C3550 60%, #284B71 100%); position: relative; display: grid; place-items: center; }
     .thumb i { color: #fff; font-size: 20px; opacity: .95; }
-    .thumb .dot { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 2px var(--bg-elevated); }
     .atitle { flex: 1; min-width: 0; }
-    .atitle .aname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .atitle .aname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 9px; }
+    .status { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #15803D; background: rgba(22,163,74,0.12); padding: 3px 8px; border-radius: 999px; }
+    .status i { font-size: 8px; }
     .aactions { display: flex; align-items: center; gap: 8px; flex: none; }
     .iconbtn { position: relative; width: 34px; height: 34px; border: 0; background: transparent; border-radius: 6px; color: var(--text-secondary);
       display: grid; place-items: center; cursor: pointer; font-size: 18px; transition: background 140ms var(--ease-out-strong), color 140ms, transform 140ms var(--ease-out-strong); }
@@ -59,66 +60,20 @@
     @keyframes screenIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) { .ascreen { animation: none; } }
 
-    /* momentum stat tiles */
+    /* ---- deal-health tiles ---- */
     .tiles { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border-secondary); border-radius: 7px; overflow: hidden; }
-    .stat-tile { padding: 12px 14px; border-right: 1px solid var(--border-secondary); }
+    .stat-tile { padding: 12px 14px; border-right: 1px solid var(--border-secondary); min-width: 0; }
     .stat-tile:last-child { border-right: 0; }
-    .stat-tile .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
-    .stat-tile .n .pct { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+    .stat-tile .n { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .stat-tile .n .sm { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
     .stat-tile .n-sub { font-size: 11.5px; font-weight: 500; color: var(--text-tertiary); }
-    .stat-tile .l { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+    .stat-tile .l { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--text-secondary); font-size: 12.5px; font-weight: 500; }
     .stat-tile .l i { font-size: 13px; color: var(--text-tertiary); }
+    .stat-tile .l .blocked { color: #B78100; }
+    .spark { height: 26px; margin-bottom: 6px; }
+    .spark svg { display: block; width: 100%; height: 26px; }
 
-    /* chart */
-    .chart { margin-top: 14px; position: relative; }
-    .chart svg { width: 100%; height: auto; display: block; }
-    .ctip { position: absolute; pointer-events: none; z-index: 5; transform: translate(-50%, calc(-100% - 10px));
-      background: var(--bg-primary-inverted); color: #fff; padding: 6px 9px; border-radius: 6px;
-      font-size: 12px; line-height: 1.35; white-space: nowrap; box-shadow: var(--shadow-elevation-03); }
-    .ctip[hidden] { display: none; }
-    .ctip b { font-weight: 600; }
-    .ctip::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--bg-primary-inverted); }
-
-    /* key takeaways */
-    .takeaways { display: flex; flex-direction: column; gap: 9px; padding: 12px 14px; border: 1px solid var(--border-secondary); border-radius: 7px; background: var(--bg-secondary); }
-    .tk { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.4; color: var(--text-primary); text-wrap: pretty; }
-    .tk i { font-size: 15px; color: var(--text-secondary); flex: none; margin-top: 1px; }
-    .tk i.good { color: #0055ED; } .tk i.warn { color: #B78100; }
-    .tk b { font-weight: 600; }
-
-    /* resource rows */
-    .res { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 7px; transition: background 120ms var(--ease-out-strong); }
-    .res.tappable { cursor: pointer; }
-    .res.tappable:hover { background: var(--bg-secondary); }
-    .ricon { width: 38px; height: 38px; flex: none; border-radius: 7px; background: var(--bg-secondary); display: grid; place-items: center; color: var(--text-secondary); font-size: 19px; }
-    .ricon.deck { background: #0A1925; color: #fff; }
-    .rbody { flex: 1; min-width: 0; }
-    .rname2 { display: flex; align-items: center; gap: 7px; }
-    .rname2 span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 13.5px; font-weight: 500; }
-    .rmeta2 { color: var(--text-tertiary); font-size: 12px; margin-top: 1px; }
-    .hero-badge { flex: none; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #B45309; background: rgba(240,177,0,0.14); padding: 2px 6px; border-radius: 4px; }
-    .rengage { flex: none; display: flex; align-items: center; gap: 14px; }
-    .rstat2 { text-align: right; }
-    .rstat2 .big { color: var(--text-primary); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-    .rstat2 .ppl { color: var(--text-tertiary); font-size: 11.5px; display: inline-flex; align-items: center; gap: 3px; margin-top: 1px; justify-content: flex-end; }
-    .rbar { width: 62px; height: 6px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
-    .rbar > i { display: block; height: 100%; background: #0055ED; border-radius: 3px; }
-    .rcaret { color: var(--text-tertiary); font-size: 15px; transition: transform 160ms var(--ease-out-strong); }
-    .res.open .rcaret { transform: rotate(90deg); }
-    .deck-dwell { padding: 4px 10px 8px 60px; }
-    .deck-dwell[hidden] { display: none; }
-
-    /* per-slide bars (deck drill-in) */
-    .slide { display: grid; grid-template-columns: 20px 1fr 120px 48px; align-items: center; gap: 10px; padding: 4px 0; }
-    .slide .idx { color: var(--text-tertiary); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
-    .slide .ti { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 12.5px; }
-    .track { height: 7px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
-    .fill { height: 100%; border-radius: 3px; background: #0055ED; }
-    .slide .tm { text-align: right; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
-    .slide.low .ti, .slide.low .idx { color: var(--text-tertiary); }
-    .slide.low .fill { background: #AEB6C2; }
-
-    /* next steps (MAP) */
+    /* ---- next steps (MAP) ---- */
     .step { display: flex; align-items: center; gap: 11px; padding: 9px 8px; border-radius: 7px; }
     .step .box { width: 19px; height: 19px; flex: none; border-radius: 5px; display: grid; place-items: center; font-size: 12px; }
     .step.done .box { background: #16A34A; color: #fff; }
@@ -130,8 +85,8 @@
     .stext .sw { color: var(--text-tertiary); font-size: 12px; margin-top: 1px; }
     .sflag { flex: none; font-size: 11px; font-weight: 600; color: #B45309; background: rgba(240,177,0,0.14); padding: 3px 8px; border-radius: 999px; }
 
-    /* buying group table */
-    .bhead, .brow { display: grid; grid-template-columns: minmax(0,1fr) 104px 96px 60px; align-items: center; gap: 10px; }
+    /* ---- buying group table ---- */
+    .bhead, .brow { display: grid; grid-template-columns: minmax(0,1fr) 108px 100px; align-items: center; gap: 10px; }
     .bhead { padding: 0 8px 8px; border-bottom: 1px solid var(--border-secondary); }
     .bhead span { color: var(--text-tertiary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
     .bhead .r, .brow .r { text-align: right; }
@@ -142,17 +97,16 @@
     .bwho .nm { display: flex; align-items: center; gap: 5px; }
     .bwho .nm span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 13.5px; font-weight: 500; }
     .bwho .rl { color: var(--text-tertiary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .newdot { width: 7px; height: 7px; border-radius: 50%; background: #0055ED; flex: none; }
+    .newpill { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+      color: #0055ED; background: rgba(0,85,237,0.12); padding: 2px 6px; border-radius: 4px; }
     .blast { color: var(--text-secondary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-    .bres { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
-    .bres .mini { width: 44px; height: 6px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
-    .bres .mini > i { display: block; height: 100%; background: #0055ED; border-radius: 3px; }
-    .bres small { color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
-    .btime { color: var(--text-secondary); font-size: 12.5px; font-variant-numeric: tabular-nums; text-align: right; }
-    .bdiv { display: flex; align-items: center; gap: 10px; padding: 12px 8px 6px; }
+    .bengage { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+    .bengage .mini { width: 48px; height: 6px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
+    .bengage .mini > i { display: block; height: 100%; background: #0055ED; border-radius: 3px; }
+    .bengage small { color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+    .bdiv { display: flex; align-items: center; gap: 10px; padding: 13px 8px 6px; }
     .bdiv span { color: var(--text-tertiary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
     .bdiv::after { content: ""; flex: 1; height: 1px; background: var(--border-secondary); }
-    .morerow { text-align: center; padding: 12px 0 2px; }
 
     /* shared avatar */
     .av { border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 600; color: #fff; box-shadow: 0 0 0 1px rgba(11,15,20,0.06); width: 30px; height: 30px; font-size: 12px; }
@@ -172,17 +126,18 @@
     .pwho { min-width: 0; }
     .pname { display: flex; align-items: center; gap: 8px; }
     .pname .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 17px; font-weight: 600; }
-    .champ { flex: none; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #0055ED; background: rgba(0,85,237,0.12); padding: 2px 7px; border-radius: 4px; }
+    .newpill.lg { font-size: 10px; }
     .pmeta { color: var(--text-tertiary); font-size: 13px; margin-top: 1px; }
     .plast { text-align: right; flex: none; }
     .plast .pl { color: var(--text-primary); font-size: 14px; font-weight: 500; margin-top: 2px; }
     .psum { margin: 14px 0 0; color: var(--text-secondary); font-size: 13px; }
-    .pres { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 11px; padding: 8px 6px; }
-    .pres .ricon { width: 30px; height: 30px; font-size: 16px; border-radius: 6px; }
+    .pres { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 11px; padding: 8px 6px; }
+    .rico { width: 30px; height: 30px; flex: none; border-radius: 6px; background: var(--bg-secondary); display: grid; place-items: center; color: var(--text-secondary); font-size: 16px; }
+    .rico.deck { background: #0A1925; color: #fff; }
     .pres .rn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 13px; }
     .pres.off .rn { color: var(--text-tertiary); }
-    .pres.off .ricon { background: var(--bg-secondary); color: var(--text-tertiary); }
-    .pres.off .ricon.deck { background: var(--bg-tertiary); color: var(--text-tertiary); }
+    .pres.off .rico { background: var(--bg-secondary); color: var(--text-tertiary); }
+    .pres.off .rico.deck { background: var(--bg-tertiary); color: var(--text-tertiary); }
     .popen { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-tertiary); }
     .popen.yes { color: #16A34A; }
     .popen i { font-size: 14px; }
@@ -207,10 +162,10 @@
 
         <!-- HEADER -->
         <div class="m-head">
-          <div class="thumb"><i class="ph ph-door-open"></i><span class="dot"></span></div>
+          <div class="thumb"><i class="ph ph-door-open"></i></div>
           <div class="atitle">
-            <div class="aname text-body-lg-semibold text-text-primary">Acme Corp deal room</div>
-            <div class="text-body-sm-regular text-text-tertiary">Analytics · Opened 12 days ago · 6 resources</div>
+            <div class="aname text-body-lg-semibold text-text-primary">Acme Corp deal room <span class="status"><i class="ph-fill ph-circle"></i>Active</span></div>
+            <div class="text-body-sm-regular text-text-tertiary">Opened 12 days ago · 6 resources shared</div>
           </div>
           <div class="aactions">
             <button class="button-style button-medium button-secondary"><i class="ph ph-link"></i>&nbsp;Share room</button>
@@ -219,42 +174,37 @@
         </div>
 
         <div class="body">
-          <!-- ===== LIST SCREEN (room) ===== -->
+          <!-- ===== ROOM ===== -->
           <div class="ascreen" id="listScreen">
 
+            <!-- deal health: is it moving? -->
             <div class="tiles">
-              <div class="stat-tile"><div class="n">2h<span class="pct"> ago</span></div><div class="l"><i class="ph ph-pulse"></i>Last active</div></div>
-              <div class="stat-tile"><div class="n">6 <span class="n-sub">of ~10 · 2 co.</span></div><div class="l"><i class="ph ph-users-three"></i>People engaged</div></div>
-              <div class="stat-tile"><div class="n">2<span class="pct"> / 5</span></div><div class="l"><i class="ph ph-list-checks"></i>Next steps done</div></div>
+              <div class="stat-tile">
+                <div class="spark" id="spark"></div>
+                <div class="n">2h<span class="sm"> ago</span></div>
+                <div class="l"><i class="ph ph-pulse"></i>Last active</div>
+              </div>
+              <div class="stat-tile">
+                <div class="n">6 <span class="n-sub">of ~10</span></div>
+                <div class="l"><i class="ph ph-users-three"></i>Engaged · 2 companies</div>
+              </div>
+              <div class="stat-tile">
+                <div class="n">2<span class="sm"> / 5</span></div>
+                <div class="l"><i class="ph ph-list-checks"></i>Steps · <span class="blocked">1 blocked</span></div>
+              </div>
             </div>
 
-            <div class="chart" id="chartWrap">
-              <div id="roomChart"></div>
-              <div class="ctip" id="chartTip" hidden></div>
-            </div>
-
-            <p class="sec-label text-overline-small">Key takeaways</p>
-            <div class="takeaways">
-              <div class="tk"><i class="ph-fill ph-arrows-split good"></i><span><b>David Kim</b> (IT) and <b>Jordan Blake</b> (Meridian Legal) were looped in: the deal is multi-threading across <b>2 companies</b>.</span></div>
-              <div class="tk"><i class="ph-fill ph-warning-circle warn"></i><span><b>Security review</b> is the blocked step, waiting <b>5 days</b> on IT.</span></div>
-              <div class="tk"><i class="ph ph-target"></i><span><b>Platform Overview</b> and the <b>case study</b> are the most-engaged resources.</span></div>
-            </div>
-
-            <p class="sec-label text-overline-small">Resources &nbsp;·&nbsp; 6</p>
-            <div id="resList"></div>
-
-            <p class="sec-label text-overline-small">Next steps &nbsp;·&nbsp; 2 of 5 done</p>
+            <!-- what's next: the MAP -->
+            <p class="sec-label text-overline-small">Next steps</p>
             <div id="mapList"></div>
 
-            <p class="sec-label text-overline-small">Buying group &nbsp;·&nbsp; 6 people</p>
-            <div class="bhead">
-              <span>Person</span><span class="r">Last active</span><span class="r">Resources</span><span class="r">Time</span>
-            </div>
+            <!-- who's engaged: the buying group -->
+            <p class="sec-label text-overline-small">Buying group &nbsp;·&nbsp; 6 people, 2 companies</p>
+            <div class="bhead"><span>Person</span><span class="r">Last active</span><span class="r">Engaged</span></div>
             <div id="groupList"></div>
-            <div class="morerow"><button class="button-style button-small button-ghost">+ 2 more visitors</button></div>
           </div>
 
-          <!-- ===== PERSON SCREEN (drill-in) ===== -->
+          <!-- ===== PERSON DRILL-IN ===== -->
           <div class="ascreen" id="personScreen" hidden>
             <button class="backbtn" onclick="closePerson()"><i class="ph ph-arrow-left"></i>Back to the buying group</button>
             <div class="phead">
@@ -265,7 +215,7 @@
               <div class="plast"><div class="sec-label first text-overline-small">Last active</div><div class="pl" id="phLast"></div></div>
             </div>
             <div class="psum" id="phSum"></div>
-            <p class="sec-label text-overline-small">Resources opened &nbsp;·&nbsp; <span id="pResCount"></span></p>
+            <p class="sec-label text-overline-small">What they opened &nbsp;·&nbsp; <span id="pResCount"></span></p>
             <div id="pResList"></div>
           </div>
         </div>
@@ -278,98 +228,32 @@
   </div>
 
   <script>
-    // ---- deck per-slide dwell (for the hero-resource drill-in) ----
-    var slides = [
-      { t: "Cover", s: 22 }, { t: "The problem", s: 41 }, { t: "Why now", s: 33 },
-      { t: "Product overview", s: 68 }, { t: "How it works", s: 74 }, { t: "Live demo", s: 118 },
-      { t: "Results: 3.2× faster decks", s: 96 }, { t: "Pricing", s: 142 },
-      { t: "Security & compliance", s: 51 }, { t: "Roadmap", s: 38 },
-      { t: "The team", s: 12, low: true }, { t: "Next steps", s: 9, low: true },
-    ];
-    var smax = Math.max.apply(null, slides.map(function (d) { return d.s; }));
-    function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return m ? (m + ":" + String(r).padStart(2, "0")) : (r + "s"); }
-    function timeBars() {
-      return slides.map(function (d, i) {
-        return '<div class="slide' + (d.low ? " low" : "") + '"><div class="idx">' + (i + 1) + '</div><div class="ti">' + d.t + '</div>' +
-          '<div class="track"><div class="fill" style="width:' + Math.round(d.s / smax * 100) + '%"></div></div><div class="tm">' + fmt(d.s) + '</div></div>';
-      }).join("");
-    }
-
-    // ---- room activity over time (the chart on top) ----
-    var days = ["Jul 13", "14", "15", "16", "17", "18", "19", "20", "21"];
-    function dlabel(i) { var d = days[i]; return /[A-Za-z]/.test(d) ? d : "Jul " + d; }
-    var roomActivity = [3, 6, 4, 2, 1, 14, 9, 7, 11];   // opens across the whole room per day
-
-    var CW = 700, CH = 168, PL = 30, PR = 12, PT = 12, PB = 26, PW = CW - PL - PR, PH = CH - PT - PB;
-    function niceMax(m) { var step = m > 40 ? 10 : (m > 15 ? 5 : 2); return Math.max(step, Math.ceil(m / step) * step); }
-    function gx(i, n) { return PL + i * PW / (n - 1); }
-    function gy(v, mx) { return PT + (1 - v / mx) * PH; }
-    function grid(mx) {
-      return [0, mx / 2, mx].map(function (g) {
-        return '<line x1="' + PL + '" y1="' + gy(g, mx) + '" x2="' + (CW - PR) + '" y2="' + gy(g, mx) + '" stroke="rgba(11,15,20,0.08)" stroke-dasharray="3 4"/>' +
-          '<text x="' + (PL - 6) + '" y="' + (gy(g, mx) + 3.5) + '" text-anchor="end" font-size="10" fill="#a3a3a3">' + g + '</text>';
-      }).join("");
-    }
-    function xlabels() {
-      var n = days.length;
-      return days.map(function (l, i) { return '<text x="' + gx(i, n) + '" y="' + (CH - 7) + '" text-anchor="middle" font-size="10" fill="#a3a3a3">' + l + '</text>'; }).join("");
-    }
-    function renderRoomChart() {
-      var vals = roomActivity, n = vals.length, mx = niceMax(Math.max.apply(null, vals));
-      var bw = Math.min(30, PW / n * 0.55);
-      var pts = vals.map(function (v, i) { return { x: gx(i, n), y: gy(v, mx) }; });
-      var bars = pts.map(function (p) { var h = PT + PH - p.y; return '<rect x="' + (p.x - bw / 2) + '" y="' + p.y + '" width="' + bw + '" height="' + Math.max(0, h) + '" rx="3" fill="#0055ED"/>'; }).join("");
-      var svg = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="Room activity over time">' + grid(mx) + bars + xlabels() +
-        '<line class="cross" x1="0" y1="' + PT + '" x2="0" y2="' + (PT + PH) + '" stroke="rgba(11,15,20,0.22)" stroke-dasharray="3 3" style="opacity:0"/>' +
-        '<circle class="marker" r="4" fill="#0055ED" stroke="#fff" stroke-width="2" style="opacity:0"/></svg>';
-      document.getElementById("roomChart").innerHTML = svg;
-      wireHover(pts);
-    }
-    function wireHover(pts) {
-      var tip = document.getElementById("chartTip"); tip.hidden = true;
-      var svg = document.getElementById("roomChart").querySelector("svg"); if (!svg) return;
-      var cross = svg.querySelector(".cross"), marker = svg.querySelector(".marker");
-      svg.addEventListener("mousemove", function (e) {
-        var r = svg.getBoundingClientRect();
-        var vbx = (e.clientX - r.left) / r.width * CW, idx = 0, best = 1e9;
-        for (var i = 0; i < pts.length; i++) { var dd = Math.abs(pts[i].x - vbx); if (dd < best) { best = dd; idx = i; } }
-        var p = pts[idx];
-        cross.setAttribute("x1", p.x); cross.setAttribute("x2", p.x); cross.style.opacity = "1";
-        marker.setAttribute("cx", p.x); marker.setAttribute("cy", p.y); marker.style.opacity = "1";
-        tip.innerHTML = '<b>' + dlabel(idx) + '</b> · ' + roomActivity[idx] + ' opens'; tip.hidden = false;
-        tip.style.left = (p.x / CW * r.width) + "px"; tip.style.top = (p.y / CH * r.height) + "px";
-      });
-      svg.addEventListener("mouseleave", function () { tip.hidden = true; cross.style.opacity = "0"; marker.style.opacity = "0"; });
-    }
-
-    // ---- resources ----
+    // resources are only named here so the per-person drill-in can label what they opened
     var resources = [
-      { name: "Platform Overview", type: "deck", icon: "ph-projector-screen-chart", hero: true, big: "4:12 median", meta: "12 slides · per-slide dwell", people: 7, bar: 0.95 },
-      { name: "Acme × PAI case study", type: "pdf", icon: "ph-file-pdf", big: "1:38 median", meta: "6-page PDF", people: 5, bar: 0.68 },
-      { name: "Pricing & packaging", type: "pdf", icon: "ph-file-pdf", big: "2:05 median", meta: "3-page PDF", people: 4, bar: 0.55 },
-      { name: "2-min product tour", type: "video", icon: "ph-play-circle", big: "62% watched", meta: "2:00 video", people: 6, bar: 0.62 },
-      { name: "Security overview", type: "pdf", icon: "ph-file-pdf", big: "0:54 median", meta: "8-page PDF", people: 3, bar: 0.30 },
-      { name: "Book a technical deep-dive", type: "link", icon: "ph-calendar-plus", big: "4 clicks", meta: "Scheduling link", people: 3, bar: 0.18 },
+      { name: "Platform Overview", type: "deck", icon: "ph-projector-screen-chart" },
+      { name: "Acme × PAI case study", type: "pdf", icon: "ph-file-pdf" },
+      { name: "Pricing & packaging", type: "pdf", icon: "ph-file-pdf" },
+      { name: "2-min product tour", type: "video", icon: "ph-play-circle" },
+      { name: "Security overview", type: "pdf", icon: "ph-file-pdf" },
+      { name: "Book a technical deep-dive", type: "link", icon: "ph-calendar-plus" },
     ];
-    function resRow(r) {
-      var isDeck = r.type === "deck";
-      var hero = r.hero ? '<span class="hero-badge">Hero</span>' : '';
-      var caret = isDeck ? '<i class="ph ph-caret-right rcaret"></i>' : '';
-      var row = '<div class="res' + (isDeck ? ' tappable' : '') + '" ' + (isDeck ? 'onclick="toggleDeck(this)"' : '') + '>' +
-        '<div class="ricon' + (isDeck ? ' deck' : '') + '"><i class="ph ' + r.icon + '"></i></div>' +
-        '<div class="rbody"><div class="rname2"><span>' + r.name + '</span>' + hero + '</div><div class="rmeta2">' + r.meta + '</div></div>' +
-        '<div class="rengage"><div class="rstat2"><div class="big">' + r.big + '</div><div class="ppl"><i class="ph ph-user"></i>' + r.people + ' people</div></div>' +
-        '<div class="rbar"><i style="width:' + Math.round(r.bar * 100) + '%"></i></div>' + caret + '</div></div>';
-      if (isDeck) row += '<div class="deck-dwell" hidden>' + timeBars() + '</div>';
-      return row;
-    }
-    function toggleDeck(el) {
-      el.classList.toggle("open");
-      var d = el.nextElementSibling;
-      if (d && d.classList.contains("deck-dwell")) d.hidden = !el.classList.contains("open");
-    }
 
-    // ---- MAP ----
+    // ---- momentum sparkline (opens/day, last 9 days) ----
+    (function () {
+      var vals = [3, 6, 4, 2, 1, 5, 9, 7, 11], w = 132, h = 26, pad = 3, n = vals.length, mx = Math.max.apply(null, vals);
+      var pts = vals.map(function (v, i) { var x = pad + i * (w - 2 * pad) / (n - 1); var y = h - pad - (v / mx) * (h - 2 * pad); return { x: x, y: y }; });
+      var pstr = pts.map(function (p) { return p.x.toFixed(1) + "," + p.y.toFixed(1); }).join(" ");
+      var area = "M" + pts[0].x.toFixed(1) + "," + (h - pad) + " L" + pstr.replace(/ /g, " L") + " L" + pts[n - 1].x.toFixed(1) + "," + (h - pad) + " Z";
+      var last = pts[n - 1];
+      document.getElementById("spark").innerHTML =
+        '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+        '<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0055ED" stop-opacity="0.16"/><stop offset="1" stop-color="#0055ED" stop-opacity="0"/></linearGradient></defs>' +
+        '<path d="' + area + '" fill="url(#sg)"/>' +
+        '<polyline points="' + pstr + '" fill="none" stroke="#0055ED" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<circle cx="' + last.x.toFixed(1) + '" cy="' + last.y.toFixed(1) + '" r="2.4" fill="#0055ED"/></svg>';
+    })();
+
+    // ---- the MAP (what's next) ----
     var nextSteps = [
       { step: "Intro & discovery call", state: "done", sub: "Sarah Chen · Jul 12" },
       { step: "Share deck with the team", state: "done", sub: "Sarah Chen · Jul 18" },
@@ -377,34 +261,30 @@
       { step: "Pricing approval", state: "pending", sub: "Economic buyer, not yet identified" },
       { step: "Contract & kickoff", state: "pending", sub: "" },
     ];
-    function renderMap() {
-      document.getElementById("mapList").innerHTML = nextSteps.map(function (s) {
-        var box = s.state === "done" ? '<i class="ph-bold ph-check"></i>' : (s.state === "stalled" ? '<i class="ph ph-warning"></i>' : '');
-        var flag = s.flag ? '<span class="sflag">' + s.flag + '</span>' : '';
-        return '<div class="step ' + s.state + '"><div class="box">' + box + '</div>' +
-          '<div class="stext"><div class="st">' + s.step + '</div>' + (s.sub ? '<div class="sw">' + s.sub + '</div>' : '') + '</div>' + flag + '</div>';
-      }).join("");
-    }
+    document.getElementById("mapList").innerHTML = nextSteps.map(function (s) {
+      var box = s.state === "done" ? '<i class="ph-bold ph-check"></i>' : (s.state === "stalled" ? '<i class="ph ph-warning"></i>' : '');
+      var flag = s.flag ? '<span class="sflag">' + s.flag + '</span>' : '';
+      return '<div class="step ' + s.state + '"><div class="box">' + box + '</div>' +
+        '<div class="stext"><div class="st">' + s.step + '</div>' + (s.sub ? '<div class="sw">' + s.sub + '</div>' : '') + '</div>' + flag + '</div>';
+    }).join("");
 
-    // ---- the buying group ----
+    // ---- the buying group (who's engaged) ----
     var people = [
-      { nm: "Sarah Chen", role: "VP Engineering · Acme Corp", company: "Acme Corp", init: "SC", col: "#0055ED", champ: true, last: "2h ago", sessions: 5, time: "14:20", seen: 12, opened: [0,1,2,3,4] },
-      { nm: "Priya Nair", role: "Product Lead · Acme Corp", company: "Acme Corp", init: "PN", col: "#DB2777", last: "Yesterday", sessions: 3, time: "9:05", seen: 12, opened: [0,1,2] },
-      { nm: "David Kim", role: "IT / Security · Acme Corp", company: "Acme Corp", init: "DK", col: "#059669", isNew: true, last: "3h ago", sessions: 2, time: "3:40", seen: 6, opened: [0,4] },
-      { nm: "Michael Reeves", role: "Staff Engineer · Acme Corp", company: "Acme Corp", init: "MR", col: "#7C3AED", last: "1h ago", sessions: 1, time: "2:18", seen: 8, opened: [0,3] },
-      { nm: "Jordan Blake", role: "Legal advisor · Meridian Legal", company: "Meridian Legal", init: "JB", col: "#D97706", isNew: true, last: "Today", sessions: 1, time: "1:12", seen: 3, opened: [2] },
-      { anon: true, role: "Chrome · London", company: "Anonymous", loc: "London", device: "Chrome", last: "Yesterday", sessions: 1, time: "0:48", seen: 4, opened: [0] },
+      { nm: "Sarah Chen", role: "VP Engineering · Acme Corp", company: "Acme Corp", init: "SC", col: "#0055ED", champ: true, last: "2h ago", sessions: 5, time: "14:20", seen: 12, opened: [0,1,2,3,4], eng: 0.95 },
+      { nm: "Priya Nair", role: "Product Lead · Acme Corp", company: "Acme Corp", init: "PN", col: "#DB2777", last: "Yesterday", sessions: 3, time: "9:05", seen: 12, opened: [0,1,2], eng: 0.7 },
+      { nm: "David Kim", role: "IT / Security · Acme Corp", company: "Acme Corp", init: "DK", col: "#059669", isNew: true, last: "3h ago", sessions: 2, time: "3:40", seen: 6, opened: [0,4], eng: 0.42 },
+      { nm: "Michael Reeves", role: "Staff Engineer · Acme Corp", company: "Acme Corp", init: "MR", col: "#7C3AED", last: "1h ago", sessions: 1, time: "2:18", seen: 8, opened: [0,3], eng: 0.28 },
+      { nm: "Jordan Blake", role: "Legal advisor · Meridian Legal", company: "Meridian Legal", init: "JB", col: "#D97706", isNew: true, last: "Today", sessions: 1, time: "1:12", seen: 3, opened: [2], eng: 0.2 },
+      { anon: true, role: "Chrome · London", company: "Anonymous", loc: "London", device: "Chrome", last: "Yesterday", sessions: 1, time: "0:48", seen: 4, opened: [0], eng: 0.15 },
     ];
     function groupRow(p, i) {
       var av = p.anon ? '<div class="av anon"><i class="ph ph-globe-simple"></i></div>' : '<div class="av" style="background:' + p.col + '">' + p.init + '</div>';
       var name = p.anon ? "Anonymous visitor" : p.nm;
-      var dot = p.isNew ? '<span class="newdot" title="Newly looped in"></span>' : '';
-      var pct = Math.round(p.opened.length / resources.length * 100);
+      var pill = p.isNew ? '<span class="newpill"><i class="ph-bold ph-arrow-bend-double-up-right"></i>New</span>' : '';
       return '<div class="brow" role="button" tabindex="0" onclick="openPerson(' + i + ')">' +
-        '<div class="bwho">' + av + '<div class="who"><div class="nm"><span>' + name + '</span>' + dot + '</div><div class="rl">' + p.role + '</div></div></div>' +
+        '<div class="bwho">' + av + '<div class="who"><div class="nm"><span>' + name + '</span>' + pill + '</div><div class="rl">' + p.role + '</div></div></div>' +
         '<div class="blast r">' + p.last + '</div>' +
-        '<div class="bres r"><div class="mini"><i style="width:' + pct + '%"></i></div><small>' + p.opened.length + '/' + resources.length + '</small></div>' +
-        '<div class="btime r">' + p.time + '</div></div>';
+        '<div class="bengage r"><div class="mini"><i style="width:' + Math.round(p.eng * 100) + '%"></i></div><small>' + p.time + '</small></div></div>';
     }
     function renderGroup() {
       var companies = [];
@@ -419,22 +299,25 @@
       people.forEach(function (p, i) { if (p.anon) html += groupRow(p, i); });
       document.getElementById("groupList").innerHTML = html;
     }
+    renderGroup();
 
-    // ---- person drill-in ----
+    // ---- per-person drill-in: what did THEY open ----
     function openPerson(i) {
       var p = people[i];
       var av = document.getElementById("phAv");
       if (p.anon) { av.className = "av anon"; av.style.background = ""; av.innerHTML = '<i class="ph ph-globe-simple"></i>'; }
       else { av.className = "av"; av.style.background = p.col; av.textContent = p.init; }
-      document.getElementById("phName").innerHTML = '<span class="nm">' + (p.anon ? "Anonymous visitor" : p.nm) + '</span>' + (p.champ ? '<span class="champ">Champion</span>' : '') + (p.isNew ? '<span class="newdot" title="Newly looped in"></span>' : '');
+      document.getElementById("phName").innerHTML = '<span class="nm">' + (p.anon ? "Anonymous visitor" : p.nm) + '</span>' +
+        (p.champ ? '<span class="newpill lg" style="color:#0055ED;background:rgba(0,85,237,0.12);">Champion</span>' : '') +
+        (p.isNew ? '<span class="newpill lg"><i class="ph-bold ph-arrow-bend-double-up-right"></i>New</span>' : '');
       document.getElementById("phMeta").textContent = p.role;
       document.getElementById("phLast").textContent = p.last;
-      document.getElementById("phSum").textContent = p.sessions + (p.sessions === 1 ? " session" : " sessions") + " · " + p.time + " in room · opened " + p.opened.length + " of " + resources.length + " resources";
-      document.getElementById("pResCount").textContent = p.opened.length + " / " + resources.length;
+      document.getElementById("phSum").textContent = p.sessions + (p.sessions === 1 ? " session" : " sessions") + " · " + p.time + " in room";
+      document.getElementById("pResCount").textContent = p.opened.length + " of " + resources.length;
       document.getElementById("pResList").innerHTML = resources.map(function (r, ri) {
         var open = p.opened.indexOf(ri) >= 0;
-        var note = (r.type === "deck" && open) ? ('viewed ' + p.seen + '/12 slides') : "Opened";
-        return '<div class="pres' + (open ? '' : ' off') + '"><div class="ricon' + (r.type === "deck" ? ' deck' : '') + '"><i class="ph ' + r.icon + '"></i></div>' +
+        var note = (r.type === "deck" && open) ? ("viewed " + p.seen + "/12 slides") : "Opened";
+        return '<div class="pres' + (open ? '' : ' off') + '"><div class="rico' + (r.type === "deck" ? ' deck' : '') + '"><i class="ph ' + r.icon + '"></i></div>' +
           '<div class="rn">' + r.name + '</div>' +
           (open ? '<div class="popen yes"><i class="ph-fill ph-check-circle"></i>' + note + '</div>'
                 : '<div class="popen"><i class="ph ph-eye-slash"></i>Not opened</div>') + '</div>';
@@ -451,12 +334,6 @@
 
     function closeModal() { document.getElementById("modal").style.display = "none"; document.querySelector(".scrim").style.opacity = ".5"; document.getElementById("reopen").classList.add("show"); }
     function openModal() { document.getElementById("modal").style.display = "flex"; document.querySelector(".scrim").style.opacity = "1"; document.getElementById("reopen").classList.remove("show"); }
-
-    // init
-    renderRoomChart();
-    document.getElementById("resList").innerHTML = resources.map(resRow).join("");
-    renderMap();
-    renderGroup();
   </script>
 </body>
 </html>
