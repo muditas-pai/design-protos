@@ -33,6 +33,15 @@ your advocate   controls budget,   will use PAI;
 
 The room's job is to travel from the champion outward to the committee (avg ~6–10 people), especially the unseen economic buyer. The Mutual Action Plan is how the champion sells internally.
 
+**Who exactly — first-timers, not mature sales teams (positioning · Dhruv ✓ 23 Jul 2026).** We are **not** building a sales-enablement tool, and **not** positioning against mature deal rooms (Showpad, Trumpet, Aligned). Pitch's own "rooms" positioning gave no compelling reason-to-choose, and there's no point fighting the mature DSRs on their turf. Our user has **never used a deal room** — their current workflow is: finish a presentation, send a PDF attachment. The deal room is the **natural next step after building a deck**: bundle the resources into one neat package and keep track of what happens next.
+
+```
+TODAY:  build deck → send a PDF attachment → lose the thread
+OURS:   build deck → wrap in a room → share one link → see what happens next
+```
+
+So the target is the **first-time deal-room user, reached from the deck** — not the mature AE shopping for a DSR. The champion → committee model above still holds; it just plays out for a team doing this for the first time. (See [Positioning](#positioning-2x2) for the market whitespace this sits in, and [Tiering](#tiering--packaging) for how packaging mirrors this logic.)
+
 ---
 
 ## Who are the incumbents?
@@ -142,6 +151,31 @@ Y — single artifact (point tool) ⟷   whole deal / revenue workflow (platform
 
 - **Analytics = table-stakes, not a wedge.** Gamma, Beautiful.ai and Qwilr already track — the creation corner has slid right into analytics. Ship it to complete the make→share→track loop and not look dated, but it won't differentiate PAI *from them*. (Beautiful.ai has even added Salesforce — the first step onto the diagonal.)
 - **The Deal Room IS the wedge.** No deck-maker has a room + MAP; it's creation-side whitespace, *and* the move the DSRs can't easily counter (no native deck). PAI and the DSRs approach that space from **opposite corners** — they have the workflow but can't make a deck; we make the deck and add the workflow. Creation is the harder half to bolt on, so the creation corner is the stronger launch position.
+
+---
+
+## Tiering & packaging
+
+Packaging mirrors the **first-timers, reached from the deck** logic ([Who is this for?](#who-is-this-for)): let people *experience* a room before asking them to pay, then scale by volume, then by CRM.
+
+```
+FREE   1 room            they have to experience it to know what it is
+PRO    N rooms           the room becomes a routine part of sharing work
+GOLD   unlimited rooms   + CRM integration (pre-fill the room · share analytics)
+```
+
+| Tier | Rooms | CRM |
+|---|---|---|
+| **Free** | 1 (the taste) | — |
+| **Pro** | N | — |
+| **Gold** | unlimited | pre-fill room from CRM + share analytics |
+
+**Expected outcome:**
+
+- Conversion for Sales & Leadership personas goes up.
+- If the room is Gold-gated → AOV goes up.
+
+**Open question (raised 23 Jul 2026):** it's not obvious why a CRM-using, more mature buyer would want such a *lightweight* deal room — so the pull of the Gold + CRM tier is unproven. Watch whether CRM pre-fill is a genuine draw or just a checkbox.
 
 ---
 
@@ -588,6 +622,8 @@ Benchmarked Pitch, HubSpot, Trumpet, Aligned on buyer access + who-can-tick + se
 | Question | Decision |
 |---|---|
 | **Roles** | Sales only (AE). SE / CS adjacent, Phase 2. |
+| **Target user** | **First-time deal-room users, reached from the deck** (current workflow = send a PDF). NOT mature sales teams, NOT a sales-enablement tool, NOT positioned against Showpad / Trumpet. (Dhruv ✓ 23 Jul 2026.) |
+| **Tiering** | Free = 1 room · Pro = N rooms · Gold = unlimited + CRM pre-fill / shared analytics. Goal: conversion up; AOV up if Gold-gated. Open: does CRM pull a mature buyer to a lightweight room? |
 | **Analytics** | Its own project; the room consumes a room-scoped slice. |
 | **Salesforce sync** | V2, all tiers. V1 stands alone. |
 | **Post-sale model** | School A (freeze + clone). Not the School B year-round hub. |
