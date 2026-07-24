@@ -283,8 +283,8 @@ Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.h
 ```
 1  DEAL HEALTH   is it moving?   →  last active (+ a momentum sparkline) ·
                                     people engaged / breadth · resources opened
-2  BUYING GROUP  who's engaged?  →  the committee, grouped by company; drill into
-                                    one person to see what THEY opened
+2  BUYING GROUP  who's engaged?  →  the committee as a flat list (company shown
+                                    per person); drill into one to see what they opened
 ```
 
 Layout is the deck-analytics **modal** (health on top, buying-group table below, tap a row to drill in) — **not** a master-detail rail. Prototype: `room-analytics.html`.
@@ -301,7 +301,7 @@ Room analytics is where it's tempting to bolt all of Deck Analytics on, one leve
 
 ### The buying group
 
-A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*), so the viewer list is the **committee**, grouped **by company**.
+A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*), so the viewer list is the **committee** — a flat list with each person's **company shown on their row** (multi-company = multi-threading, without needing group headers).
 
 - **"New viewer" flips to positive.** On a public deck a new viewer is noise (we dropped that badge). In a **room** a new person = the **champion looped in a colleague = multi-threading** — a deal signal worth a small badge. Same event, opposite value.
 - **Identity-forward defaults** (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in Deck Analytics). The friction-dial sits higher than a public deck.
