@@ -281,10 +281,11 @@ Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.h
 ### Phase 1 = two panels + a drill-in
 
 ```
-1  DEAL HEALTH   is it moving?   →  last active (+ a momentum sparkline) ·
-                                    people engaged / breadth · resources opened
-2  BUYING GROUP  who's engaged?  →  the committee as a flat list (company shown
-                                    per person); drill into one to see what they opened
+1  DEAL HEALTH   is it moving?   →  last active · people engaged / breadth ·
+                                    resources opened
+2  BUYING GROUP  who's engaged?  →  the committee as a flat list (name + email,
+                                    company from the domain); drill into one to
+                                    see what they opened
 ```
 
 Layout is the deck-analytics **modal** (health on top, buying-group table below, tap a row to drill in) — **not** a master-detail rail. Prototype: `room-analytics.html`.
@@ -293,7 +294,7 @@ Layout is the deck-analytics **modal** (health on top, buying-group table below,
 
 Room analytics is where it's tempting to bolt all of Deck Analytics on, one level up. We didn't. Each of these failed the *"does the AE need it to decide?"* test:
 
-- **✂ Room-level activity chart** (opens over time) → recency is answered by *"last active: 2h ago"*; the only thing a chart adds is trend, which a **tiny sparkline** carries without a panel.
+- **✂ Room-level activity chart** (opens over time) → recency is answered by *"last active: 2h ago"*; the only thing a chart adds is trend, which didn't justify even a sparkline (it wasn't interactive, and "last active" already answers *is it warm*).
 - **✂ Room-level per-resource engagement panel** (median time / watch % / bars per artifact) → *which* resources someone opened is a per-**person** signal ("IT opened the security doc"), so it lives in the **drill-in**, not a room aggregate.
 - **✂ Per-slide nesting.** The room screen stops at the **resource**. Per-slide dwell is the **deck's own** analytics — reachable by opening the deck, not nested into the room. The three levels (room → resource → slide) still exist; the room *screen* just doesn't try to show all three at once.
 - **✂ Key-takeaways card** → it only restated the MAP (the blocked step) and the buying group (multi-threading). Let those two carry the signal.
@@ -301,7 +302,9 @@ Room analytics is where it's tempting to bolt all of Deck Analytics on, one leve
 
 ### The buying group
 
-A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*), so the viewer list is the **committee** — a flat list with each person's **company shown on their row** (multi-company = multi-threading, without needing group headers).
+A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*), so the viewer list is the **committee** — a flat list, one row per person.
+
+**What identity we actually have:** the room's email gate gives us **name + email**, and **company falls out of the email domain** (acme.com vs meridianlegal.com → cross-company = multi-threading). We do **not** have **roles / titles** — those need enrichment (Clearbit/LinkedIn) or the seller tagging people, so Phase 1 shows email, not a job title. Don't invent roles we can't capture.
 
 - **"New viewer" flips to positive.** On a public deck a new viewer is noise (we dropped that badge). In a **room** a new person = the **champion looped in a colleague = multi-threading** — a deal signal worth a small badge. Same event, opposite value.
 - **Identity-forward defaults** (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in Deck Analytics). The friction-dial sits higher than a public deck.
