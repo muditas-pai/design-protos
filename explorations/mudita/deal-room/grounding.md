@@ -290,6 +290,8 @@ Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.h
 
 Layout is the deck-analytics **modal** (health on top, buying-group table below, tap a row to drill in) — **not** a master-detail rail. The header shows the **co-brand** (seller × buyer logos). Prototype: `room-analytics.html`.
 
+**Visual language** follows the updated deck-analytics design (product Figma, JAS working file): a **layered shell** (grey tray holding the header + a white content card), **24px regular** stat numbers (not bold), **light→blue gradient** magnitude bars (`#A3D3FF → #005EFF → #01358E`, windowed so longer bars reveal the darker end), **rounded-square avatars** (initials for known people, a **pastel smiley** for anonymous visitors), and 10px overline column headers.
+
 **Affordance discipline:** the deal-health stats are **read-only** — a plain KPI strip, *not* the deck's tappable tab-tiles (no enclosing card, no hover, no cursor). The only tappable thing is a **buying-group row** (it drills in), signalled by a hover highlight + chevron. Rule: don't give non-interactive things tappable chrome, and do give interactive things an affordance — so the two never get confused.
 
 ### Scope discipline — what we deliberately cut
