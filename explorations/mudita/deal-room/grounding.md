@@ -308,7 +308,7 @@ Room analytics is where it's tempting to bolt all of Deck Analytics on, one leve
 
 A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*), so the viewer list is the **committee** — a flat list, one row per person.
 
-**What identity we actually have:** the room's email gate gives us **name + email**, and **company falls out of the email domain** (acme.com vs meridianlegal.com → cross-company = multi-threading). We do **not** have **roles / titles** — those need enrichment (Clearbit/LinkedIn) or the seller tagging people, so Phase 1 shows email, not a job title. Don't invent roles we can't capture.
+**What identity we actually have:** the room's email gate gives us **name + email**, and **company falls out of the email domain** (acme.com vs meridianlegal.com → cross-company = multi-threading). We do **not** have **roles / titles** — those need enrichment (Clearbit/LinkedIn) or the seller tagging people, so Phase 1 shows email, not a job title. Don't invent roles we can't capture. **Same rule for committee size:** we know who *engaged* (and their company, via domain) but not who was invited-and-hasn't-opened, so the "engaged" stat is a **count + company spread** ("6 people · 2 companies"), never a fraction of an assumed total ("6 / 10").
 
 - **"New viewer" flips to positive.** On a public deck a new viewer is noise (we dropped that badge). In a **room** a new person = the **champion looped in a colleague = multi-threading** — a deal signal worth a small badge. Same event, opposite value.
 - **Identity-forward defaults** (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in Deck Analytics). The friction-dial sits higher than a public deck.
