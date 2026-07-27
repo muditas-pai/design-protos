@@ -133,6 +133,22 @@
     .cov .track { width: 90px; height: 8px; border-radius: 4px; background: var(--bg-quaternary); overflow: hidden; }
     .cov .track > i { display: block; height: 8px; border-radius: 4px; background-image: linear-gradient(90deg, #A3D3FF 0%, #005EFF 60%, #01358E 100%); background-repeat: no-repeat; background-position: left center; }
     .cov small { color: var(--text-primary); font-size: 13px; font-variant-numeric: tabular-nums; }
+    /* native presentation gets the rich per-slide time; other resources are click/open */
+    .deckcard { border: 1px solid var(--border-secondary); border-radius: 8px; overflow: hidden; margin: 8px 0; }
+    .deckhead { display: flex; align-items: center; gap: 12px; padding: 11px 12px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-secondary); }
+    .deckhead .rn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; font-weight: 500; overflow: hidden; }
+    .native { flex: none; font-size: 10px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: #0055ED; background: rgba(0,85,237,0.10); padding: 2px 7px; border-radius: 4px; }
+    .dsummary { flex: none; color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .dbreak { padding: 8px 14px 12px; }
+    .dslide { display: grid; grid-template-columns: 18px 1fr 130px 46px; align-items: center; gap: 10px; padding: 4px 0; }
+    .dslide .di { color: var(--text-tertiary); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+    .dslide .dt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 13px; }
+    .dbar { height: 8px; border-radius: 4px; background: var(--bg-quaternary); overflow: hidden; }
+    .dbar > i { display: block; height: 8px; border-radius: 4px; background-image: linear-gradient(90deg, #A3D3FF 0%, #005EFF 60%, #01358E 100%); background-repeat: no-repeat; background-position: left center; }
+    .dslide .dv { text-align: right; color: var(--text-primary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+    .dnote { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
+    .dnote i { font-size: 14px; color: var(--text-tertiary); }
+    .dnote.ok i { color: #16A34A; }
     .nopills { display: flex; flex-wrap: wrap; gap: 7px; }
     .nopill { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-secondary); background: var(--bg-tertiary); padding: 5px 10px; border-radius: 6px; }
     .nopill i { font-size: 14px; }
@@ -179,7 +195,7 @@
             <div class="kpis">
               <div class="kpi">
                 <div class="n">2h ago</div>
-                <div class="l"><i class="ph ph-pulse"></i>Last active</div>
+                <div class="l"><i class="ph ph-pulse"></i>Last viewed</div>
               </div>
               <div class="kpi">
                 <div class="n">6<span class="sm"> people</span></div>
@@ -195,7 +211,7 @@
             <div class="tablewrap">
               <div class="bhead">
                 <span class="lbl">Buying group</span>
-                <div class="right"><span class="lbl">Last active</span><span class="lbl">Time</span></div>
+                <div class="right"><span class="lbl">Last viewed</span><span class="lbl">Time</span></div>
               </div>
               <div id="groupList"></div>
             </div>
@@ -210,7 +226,7 @@
                   <div class="av" id="phAv"></div>
                   <div class="pwho"><div class="pname" id="phName"></div><div class="pmeta" id="phMeta"></div></div>
                 </div>
-                <div class="plast"><div class="ll">Last active</div><div class="pl" id="phLast"></div></div>
+                <div class="plast"><div class="ll">Last viewed</div><div class="pl" id="phLast"></div></div>
               </div>
               <div class="pstats" id="pStats"></div>
               <p class="sec-label" style="margin-top:22px;">What they opened &nbsp;·&nbsp; <span id="pResCount"></span></p>
@@ -246,13 +262,32 @@
 
     // in a room we capture name + email (the email gate); company comes from the domain.
     var people = [
-      { nm: "Sarah Chen", email: "sarah.chen@acme.com", init: "SC", col: "#0055ED", champ: true, last: "2h ago", sessions: 5, time: "14:20", seen: 12, opened: [0,1,2,3,4] },
-      { nm: "Priya Nair", email: "priya.nair@acme.com", init: "PN", col: "#DB2777", last: "Yesterday", sessions: 3, time: "9:05", seen: 12, opened: [0,1,2] },
-      { nm: "David Kim", email: "david.kim@acme.com", init: "DK", col: "#059669", isNew: true, last: "3h ago", sessions: 2, time: "3:40", seen: 6, opened: [0,4] },
-      { nm: "Michael Reeves", email: "m.reeves@acme.com", init: "MR", col: "#7C3AED", last: "1h ago", sessions: 1, time: "2:18", seen: 8, opened: [0,3] },
-      { nm: "Jordan Blake", email: "jordan@meridianlegal.com", init: "JB", col: "#D97706", isNew: true, last: "Today", sessions: 1, time: "1:12", seen: 3, opened: [2] },
-      { anon: true, loc: "London", device: "Chrome · MacOS", last: "Yesterday", sessions: 1, time: "0:48", seen: 4, opened: [0] },
+      { nm: "Sarah Chen", email: "sarah.chen@acme.com", init: "SC", col: "#0055ED", champ: true, last: "2h ago", sessions: 5, time: "14:20", seen: 12, pf: 1.15, opened: [0,1,2,3,4] },
+      { nm: "Priya Nair", email: "priya.nair@acme.com", init: "PN", col: "#DB2777", last: "Yesterday", sessions: 3, time: "9:05", seen: 12, pf: 1.05, opened: [0,1,2] },
+      { nm: "David Kim", email: "david.kim@acme.com", init: "DK", col: "#059669", isNew: true, last: "3h ago", sessions: 2, time: "3:40", seen: 6, pf: 0.85, opened: [0,4] },
+      { nm: "Michael Reeves", email: "m.reeves@acme.com", init: "MR", col: "#7C3AED", last: "1h ago", sessions: 1, time: "2:18", seen: 8, pf: 0.95, opened: [0,3] },
+      { nm: "Jordan Blake", email: "jordan@meridianlegal.com", init: "JB", col: "#D97706", isNew: true, last: "Today", sessions: 1, time: "1:12", seen: 3, pf: 0.7, opened: [2] },
+      { anon: true, loc: "London", device: "Chrome · MacOS", last: "Yesterday", sessions: 1, time: "0:48", seen: 4, pf: 0.8, opened: [0] },
     ];
+    // the native (presentations.ai) deck is the ONE resource where we have per-slide time.
+    var deckSlides = ["Cover", "The problem", "Why now", "Product overview", "How it works", "Live demo", "Results: 3.2× faster decks", "Pricing", "Security & compliance", "Roadmap", "The team", "Next steps"];
+    var slideBase = [22, 41, 33, 68, 74, 118, 96, 142, 51, 38, 12, 9];
+    function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return m ? (m + ":" + String(r).padStart(2, "0")) : (r + "s"); }
+    function slideTimes(p) { var t = []; for (var i = 0; i < p.seen; i++) t.push(Math.max(3, Math.round(slideBase[i] * (p.pf || 1)))); return t; }
+    function deckTotal(p) { return slideTimes(p).reduce(function (a, b) { return a + b; }, 0); }
+    function deckBreakdown(p) {
+      var t = slideTimes(p), mx = Math.max.apply(null, t);
+      var rows = t.map(function (v, i) {
+        var pct = Math.round(v / mx * 100);
+        return '<div class="dslide"><span class="di">' + (i + 1) + '</span><span class="dt">' + deckSlides[i] + '</span>' +
+          '<span class="dbar"><i style="width:' + pct + '%;background-size:' + (10000 / pct) + '% 100%"></i></span>' +
+          '<span class="dv">' + fmt(v) + '</span></div>';
+      }).join("");
+      var note = p.seen < 12
+        ? '<div class="dnote"><i class="ph ph-arrow-down"></i>Dropped off after slide ' + p.seen + ' of 12</div>'
+        : '<div class="dnote ok"><i class="ph-fill ph-check-circle"></i>Viewed all 12 slides</div>';
+      return '<div class="dbreak">' + rows + note + '</div>';
+    }
     function psub(p) { return p.anon ? p.device : p.email; }
     function avatar(p, cls) {
       if (p.anon) return '<div class="av smiley ' + (cls || '') + '"><i class="ph-fill ph-smiley"></i></div>';
@@ -283,10 +318,17 @@
       document.getElementById("pResCount").textContent = p.opened.length + " of " + resources.length;
       document.getElementById("pOpened").innerHTML = p.opened.map(function (ri) {
         var r = resources[ri];
-        var detail = (r.type === "deck")
-          ? '<div class="cov">' + covBar(Math.round(p.seen / 12 * 100)) + '<small>' + p.seen + '/12 slides</small></div>'
-          : '<span class="okchip"><i class="ph-fill ph-check-circle"></i>Opened</span>';
-        return '<div class="orow"><div class="rico' + (r.type === "deck" ? " deck" : "") + '"><i class="ph ' + r.icon + '"></i></div><div class="rn">' + r.name + '</div>' + detail + '</div>';
+        if (r.type === "deck") {
+          // native deck: the only resource with per-slide time
+          return '<div class="deckcard"><div class="deckhead">' +
+            '<div class="rico deck"><i class="ph ' + r.icon + '"></i></div>' +
+            '<div class="rn">' + r.name + ' <span class="native">Presentation</span></div>' +
+            '<span class="dsummary">' + p.seen + '/12 slides · ' + fmt(deckTotal(p)) + '</span></div>' +
+            deckBreakdown(p) + '</div>';
+        }
+        // everything else: click and open
+        return '<div class="orow"><div class="rico"><i class="ph ' + r.icon + '"></i></div><div class="rn">' + r.name + '</div>' +
+          '<span class="okchip"><i class="ph-fill ph-check-circle"></i>Opened</span></div>';
       }).join("");
       var notIdx = resources.map(function (_, ri) { return ri; }).filter(function (ri) { return p.opened.indexOf(ri) < 0; });
       document.getElementById("pNot").innerHTML = notIdx.length
