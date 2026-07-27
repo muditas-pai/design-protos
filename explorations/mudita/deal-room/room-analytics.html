@@ -60,18 +60,20 @@
     @keyframes screenIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) { .ascreen { animation: none; } }
 
-    /* ---- deal-health tiles ---- */
-    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border-secondary); border-radius: 7px; overflow: hidden; }
-    .stat-tile { padding: 12px 14px; border-right: 1px solid var(--border-secondary); min-width: 0; }
-    .stat-tile:last-child { border-right: 0; }
-    .stat-tile .n { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
-    .stat-tile .n .sm { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
-    .stat-tile .n-sub { font-size: 11.5px; font-weight: 500; color: var(--text-tertiary); }
-    .stat-tile .l { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--text-secondary); font-size: 12.5px; font-weight: 500; }
-    .stat-tile .l i { font-size: 13px; color: var(--text-tertiary); }
+    /* ---- deal-health KPIs: read-only, deliberately NOT the tappable tab-tile chrome ----
+       no enclosing card, no hover, no cursor — a plain stat strip with hairline dividers. */
+    .kpis { display: flex; align-items: stretch; margin: 2px 0 6px; }
+    .kpi { flex: 1; min-width: 0; padding: 2px 18px; }
+    .kpi:first-child { padding-left: 4px; }
+    .kpi + .kpi { border-left: 1px solid var(--border-secondary); }
+    .kpi .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .kpi .n .sm { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+    .kpi .n-sub { font-size: 11.5px; font-weight: 500; color: var(--text-tertiary); }
+    .kpi .l { display: flex; align-items: center; gap: 5px; margin-top: 4px; color: var(--text-secondary); font-size: 12.5px; font-weight: 500; }
+    .kpi .l i { font-size: 13px; color: var(--text-tertiary); }
 
     /* ---- buying group table ---- */
-    .bhead, .brow { display: grid; grid-template-columns: minmax(0,1fr) 108px 100px; align-items: center; gap: 10px; }
+    .bhead, .brow { display: grid; grid-template-columns: minmax(0,1fr) 104px 96px 14px; align-items: center; gap: 10px; }
     .bhead { padding: 0 8px 8px; border-bottom: 1px solid var(--border-secondary); margin-top: 22px; }
     .bhead span { color: var(--text-tertiary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
     .bhead .r, .brow .r { text-align: right; }
@@ -89,6 +91,9 @@
     .bengage .mini { width: 48px; height: 6px; border-radius: 3px; background: var(--bg-tertiary); overflow: hidden; }
     .bengage .mini > i { display: block; height: 100%; background: #0055ED; border-radius: 3px; }
     .bengage small { color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+    .bchev { color: var(--text-tertiary); font-size: 14px; justify-self: end; opacity: 0; transition: opacity 120ms var(--ease-out-strong); }
+    .brow:hover .bchev { opacity: 0.55; }
+    .brow:active { background: var(--bg-tertiary); }
 
     /* shared avatar */
     .av { border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 600; color: #fff; box-shadow: 0 0 0 1px rgba(11,15,20,0.06); width: 30px; height: 30px; font-size: 12px; }
@@ -169,24 +174,24 @@
           <!-- ===== ROOM ===== -->
           <div class="ascreen" id="listScreen">
 
-            <!-- deal health: is it moving? -->
-            <div class="tiles">
-              <div class="stat-tile">
+            <!-- deal health: is it moving? (read-only KPI strip, not tabs) -->
+            <div class="kpis">
+              <div class="kpi">
                 <div class="n">2h<span class="sm"> ago</span></div>
                 <div class="l"><i class="ph ph-pulse"></i>Last active</div>
               </div>
-              <div class="stat-tile">
+              <div class="kpi">
                 <div class="n">6 <span class="n-sub">of ~10</span></div>
                 <div class="l"><i class="ph ph-users-three"></i>Engaged · 2 companies</div>
               </div>
-              <div class="stat-tile">
+              <div class="kpi">
                 <div class="n">5<span class="sm"> / 6</span></div>
                 <div class="l"><i class="ph ph-folder-open"></i>Resources opened</div>
               </div>
             </div>
 
             <!-- who's engaged: the buying group -->
-            <div class="bhead"><span>Person</span><span class="r">Last active</span><span class="r">Engaged</span></div>
+            <div class="bhead"><span>Person</span><span class="r">Last active</span><span class="r">Engaged</span><span></span></div>
             <div id="groupList"></div>
           </div>
 
@@ -244,7 +249,8 @@
       return '<div class="brow" role="button" tabindex="0" onclick="openPerson(' + i + ')">' +
         '<div class="bwho">' + av + '<div class="who"><div class="nm"><span>' + name + '</span>' + pill + '</div><div class="rl">' + psub(p) + '</div></div></div>' +
         '<div class="blast r">' + p.last + '</div>' +
-        '<div class="bengage r"><div class="mini"><i style="width:' + Math.round(p.eng * 100) + '%"></i></div><small>' + p.time + '</small></div></div>';
+        '<div class="bengage r"><div class="mini"><i style="width:' + Math.round(p.eng * 100) + '%"></i></div><small>' + p.time + '</small></div>' +
+        '<i class="ph ph-caret-right bchev"></i></div>';
     }
     function renderGroup() {
       document.getElementById("groupList").innerHTML = people.map(groupRow).join("");

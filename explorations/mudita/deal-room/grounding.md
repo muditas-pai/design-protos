@@ -288,7 +288,9 @@ Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.h
                                     see what they opened
 ```
 
-Layout is the deck-analytics **modal** (health on top, buying-group table below, tap a row to drill in) — **not** a master-detail rail. Prototype: `room-analytics.html`.
+Layout is the deck-analytics **modal** (health on top, buying-group table below, tap a row to drill in) — **not** a master-detail rail. The header shows the **co-brand** (seller × buyer logos). Prototype: `room-analytics.html`.
+
+**Affordance discipline:** the deal-health stats are **read-only** — a plain KPI strip, *not* the deck's tappable tab-tiles (no enclosing card, no hover, no cursor). The only tappable thing is a **buying-group row** (it drills in), signalled by a hover highlight + chevron. Rule: don't give non-interactive things tappable chrome, and do give interactive things an affordance — so the two never get confused.
 
 ### Scope discipline — what we deliberately cut
 
