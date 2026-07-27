@@ -281,7 +281,7 @@ Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.h
 ### Phase 1 = two panels + a drill-in
 
 ```
-1  DEAL HEALTH   is it moving?   →  last active · people engaged (headcount) ·
+1  DEAL HEALTH   is it moving?   →  last active · people viewed (headcount) ·
                                     resources opened
 2  BUYING GROUP  who's engaged?  →  the committee as a flat list (name + email;
                                     domain = internal vs external, not a company
@@ -308,7 +308,7 @@ Room analytics is where it's tempting to bolt all of Deck Analytics on, one leve
 
 A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*), so the viewer list is the **committee** — a flat list, one row per person.
 
-**What identity we actually have:** the room's email gate gives us **name + email**. The **domain** tells us **internal vs external** — acme.com = the buyer (known from the co-brand header), meridianlegal.com = someone outside it — which *is* the multi-threading signal. It does **not** give a company **name** (a domain needs enrichment to resolve, and free domains map to no company), so **never display a company name** or a named-company count ("2 companies"). We also don't have **roles / titles** (Phase 1 shows email, not a job title), and we don't know who was invited-but-hasn't-opened, so the "engaged" stat is a plain **headcount** ("6 people"), **never a fraction of an assumed total** ("6 / 10"). Rule: don't invent identity we can't capture; flag multi-threading **per person** (external domain, or newly appeared), not as named companies.
+**What identity we actually have:** the room's email gate gives us **name + email**. The **domain** tells us **internal vs external** — acme.com = the buyer (known from the co-brand header), meridianlegal.com = someone outside it — which *is* the multi-threading signal. It does **not** give a company **name** (a domain needs enrichment to resolve, and free domains map to no company), so **never display a company name** or a named-company count ("2 companies"). We also don't have **roles / titles** (Phase 1 shows email, not a job title), and we don't know who was invited-but-hasn't-opened, so the top-line stat is a plain **viewer headcount** ("6 people viewed"), not an "engaged" judgment we don't measure and **never a fraction of an assumed total** ("6 / 10"). Per-person engagement *depth* lives in the table's time column. Rule: don't invent identity we can't capture; flag multi-threading **per person** (external domain, or newly appeared), not as named companies.
 
 - **"New viewer" flips to positive.** On a public deck a new viewer is noise (we dropped that badge). In a **room** a new person = the **champion looped in a colleague = multi-threading** — a deal signal worth a small badge. Same event, opposite value.
 - **Identity-forward defaults** (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in Deck Analytics). The friction-dial sits higher than a public deck.
