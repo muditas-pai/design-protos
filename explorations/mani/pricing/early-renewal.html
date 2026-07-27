@@ -22,8 +22,8 @@
   }
 
   /* Demo-only state switch, top-left of the page */
+  .demo-bar { position: fixed; top: 20px; left: 20px; z-index: 60; display: flex; gap: 10px; }
   .demo-seg {
-    position: fixed; top: 20px; left: 20px; z-index: 60;
     display: inline-flex; gap: 2px; padding: 3px;
     background: rgba(255,255,255,.12); border-radius: 8px;
   }
@@ -199,6 +199,49 @@
   .stripe-row a { color: #667085; text-decoration: none; }
   .stripe-row a:hover { text-decoration: underline; }
 
+  .stripe-panel { display: flex; flex-direction: column; flex: 1; }
+  .paddle-panel { display: none; }
+  body.pay-paddle .stripe-panel { display: none; }
+  body.pay-paddle .paddle-panel { display: flex; flex-direction: column; flex: 1; }
+  .paddle-panel h2 { margin-bottom: 20px; }
+  .pp-box { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #fff; }
+  .pp-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .pp-plan { font-size: 14.5px; font-weight: 700; }
+  .pp-off b { color: #067647; font-weight: 700; }
+  .pp-sub { margin-top: 6px; font-size: 13px; color: #667085; }
+  .pp-divider { border-bottom: 1px solid #e5e7eb; margin: 14px 0; }
+  .pp-due { font-size: 14px; font-weight: 700; }
+  .pp-card-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; font-size: 13px; color: #344054; font-weight: 500;
+  }
+  .pp-card-row i { font-size: 17px; color: #667085; }
+  .pp-change {
+    margin-left: auto; border: 0; background: none; cursor: pointer;
+    font: 600 12.5px 'Inter', sans-serif; color: #0055ED;
+  }
+  .pp-change:hover { text-decoration: underline; }
+  .pp-agree {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin-top: 16px; font-size: 13px; color: #344054; line-height: 1.45; cursor: pointer;
+  }
+  .pp-agree input { accent-color: #0A1925; width: 15px; height: 15px; margin-top: 2px; flex: none; }
+  .pp-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  .pp-cancel {
+    height: 42px; padding: 0 18px; border-radius: 8px; cursor: pointer;
+    background: #fff; border: 1px solid #d0d5dd;
+    font: 600 13.5px 'Inter', sans-serif; color: #344054;
+  }
+  .pp-cancel:hover { background: #f7f8fa; }
+  .pp-confirm {
+    height: 42px; padding: 0 20px; border-radius: 8px; border: 0; cursor: pointer;
+    background: linear-gradient(180deg, #1c3550 0%, #0A1925 100%);
+    color: #fff; font: 700 13.5px 'Inter', sans-serif;
+    transition: background .15s ease, transform .16s ease;
+  }
+  .pp-confirm:hover { background: linear-gradient(180deg, #2f4763 0%, #23303B 100%); transform: translateY(-1px); }
+  .paddle-panel .stripe-row { margin-top: auto; padding-top: 16px; }
+
   @media (max-width: 900px) {
     .modal-card { grid-template-columns: 1fr; }
     .left { border-right: 0; border-bottom: 1px solid #ececec; }
@@ -207,9 +250,15 @@
 </head>
 <body class="state-zero">
 
-  <div class="demo-seg" role="tablist" aria-label="Demo state">
-    <button type="button" class="is-active" data-state="zero">0 credits</button>
-    <button type="button" data-state="low">1,000 credits left</button>
+  <div class="demo-bar">
+    <div class="demo-seg" role="tablist" aria-label="Demo state">
+      <button type="button" class="is-active" data-state="zero">0 credits</button>
+      <button type="button" data-state="low">1,000 credits left</button>
+    </div>
+    <div class="demo-seg" id="provider-seg" role="tablist" aria-label="Payment provider">
+      <button type="button" class="is-active" data-provider="stripe">Stripe</button>
+      <button type="button" data-provider="paddle">Paddle</button>
+    </div>
   </div>
 
   <div class="modal-wrap">
@@ -272,6 +321,7 @@
 
       <!-- Right: payment -->
       <div class="right">
+        <div class="stripe-panel">
         <h2>Payment Method</h2>
 
         <div class="pay-tabs">
@@ -318,6 +368,48 @@
           <a href="#">Terms</a>
           <a href="#">Privacy</a>
         </div>
+        </div>
+
+        <!-- Paddle: saved card, one-click confirm -->
+        <div class="paddle-panel">
+          <h2 id="pp-title">Renew Silver</h2>
+
+          <div class="pp-box">
+            <div class="pp-line">
+              <span class="pp-plan"><span id="pp-plan">Silver Plan</span><span class="pp-off" id="pp-off" hidden> - <b>50% off</b></span></span>
+              <span class="pp-price"><span class="strike" id="pp-strike" hidden>US$1,200</span><span class="price" id="pp-amount">US$240</span></span>
+            </div>
+            <div class="pp-sub" id="pp-credits">Full plan credits unlock (5,000)</div>
+            <div class="pp-divider"></div>
+            <div class="pp-line">
+              <span class="pp-due">Due today:</span>
+              <span class="price" id="pp-due">US$240</span>
+            </div>
+          </div>
+
+          <div class="pp-card-row">
+            <i class="ph ph-credit-card"></i>
+            <span>Visa &bull;&bull;&bull;&bull; 4242</span>
+            <button type="button" class="pp-change">Change</button>
+          </div>
+
+          <label class="pp-agree">
+            <input type="checkbox" checked />
+            <span>I agree to the Terms. Renews at <b id="pp-renew">US$240/year</b> on Jul 27, 2027</span>
+          </label>
+
+          <div class="pp-actions">
+            <button type="button" class="pp-cancel">Cancel</button>
+            <button type="button" class="pp-confirm" id="pp-confirm">Confirm Payment</button>
+          </div>
+
+          <div class="stripe-row">
+            <span>Powered by <span class="stripe-word">paddle</span></span>
+            <span class="sep">|</span>
+            <a href="#">Terms</a>
+            <a href="#">Privacy</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -325,8 +417,14 @@
 <script>
   (function () {
     const PLANS = {
-      pro:  { label: 'Silver renewal',  credits: '5,000 credits',  total: '$240' },
-      gold: { label: 'Gold upgrade',    credits: '50,000 credits', total: '$600' }
+      pro:  { label: 'Silver renewal', credits: '5,000 credits',  total: '$240',
+              ppTitle: 'Renew Silver',   ppPlan: 'Silver Plan', off: false,
+              strike: '', amount: 'US$240', ppCredits: 'Full plan credits unlock (5,000)',
+              due: 'US$240', renew: 'US$240/year' },
+      gold: { label: 'Gold upgrade',   credits: '50,000 credits', total: '$600',
+              ppTitle: 'Upgrade to Gold', ppPlan: 'Gold Plan', off: true,
+              strike: 'US$1,200', amount: 'US$600', ppCredits: 'Full plan credits unlock (50,000)',
+              due: 'US$600', renew: 'US$1,200/year' }
     };
     const cards = document.querySelectorAll('.plan');
     const sumPlan = document.getElementById('sum-plan');
@@ -343,6 +441,25 @@
         sumCredits.textContent = p.credits;
         sumTotal.textContent = p.total;
         payBtn.textContent = 'Pay ' + p.total;
+        document.getElementById('pp-title').textContent = p.ppTitle;
+        document.getElementById('pp-plan').textContent = p.ppPlan;
+        document.getElementById('pp-off').hidden = !p.off;
+        const strikeEl = document.getElementById('pp-strike');
+        strikeEl.hidden = !p.strike;
+        strikeEl.textContent = p.strike;
+        document.getElementById('pp-amount').textContent = p.amount;
+        document.getElementById('pp-credits').textContent = p.ppCredits;
+        document.getElementById('pp-due').textContent = p.due;
+        document.getElementById('pp-renew').textContent = p.renew;
+      });
+    });
+
+    // Payment provider toggle: Stripe (full form) vs Paddle (saved card, one-click)
+    const provSeg = document.getElementById('provider-seg');
+    provSeg.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        provSeg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+        document.body.classList.toggle('pay-paddle', btn.dataset.provider === 'paddle');
       });
     });
 
