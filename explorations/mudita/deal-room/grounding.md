@@ -278,21 +278,23 @@ The deck is native; everything else is an attachment. Analytics we can capture v
 
 Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.html), not a separate engine** — the room *consumes* it. But the room has **one user (the AE running the deal) with one question: "is this deal moving, and what do I do next?"** Scope everything to that; import nothing from Deck Analytics that doesn't serve it.
 
-### Phase 1 = two panels + a drill-in
+### Phase 1 = three tabs (each metric is a tab)
+
+The three top-line stats double as **tabs** (like the deck's metric tabs) — so all three are tappable, none is a false affordance:
 
 ```
-1  DEAL HEALTH   is it moving?   →  last active · people viewed (headcount) ·
-                                    resources opened
-2  BUYING GROUP  who's engaged?  →  the committee as a flat list (name + email;
-                                    domain = internal vs external, not a company
-                                    name); drill into one to see what they opened
+[ 2h ago · Last viewed ]   [ 6 people · Viewed ]   [ 5/6 · Resources opened ]
+   views-over-time graph      the buying-group table   the resource list
+   (busy early vs now?)       (name+email; domain =    (native deck expands to
+                               internal/external)       per-slide time; others
+                                                         = click-and-open)
 ```
 
-Layout is the deck-analytics **modal** (health on top, buying-group table below, tap a row to drill in) — **not** a master-detail rail. The header shows the **co-brand** (seller × buyer logos). Prototype: `room-analytics.html`.
+**Per-person = inline expand, not a navigation.** Tapping a viewer row in the **Viewed** tab **expands it in place** (accordion) — a tidy, sectioned detail (engagement line → the native deck's per-slide time as a compact heat strip + drop-off → other resources as chips). No push to a separate screen: navigating *inside* a tab reads as a dead-end, and the old drill-in was an untidy grab-bag. The header shows the **co-brand** (seller × buyer logos). Prototype: `room-analytics.html`.
 
 **Visual language** follows the updated deck-analytics design (product Figma, JAS working file): a **layered shell** (grey tray holding the header + a white content card), **24px regular** stat numbers (not bold), **light→blue gradient** magnitude bars (`#A3D3FF → #005EFF → #01358E`, windowed so longer bars reveal the darker end), **rounded-square avatars** (initials for known people, a **pastel smiley** for anonymous visitors), and 10px overline column headers.
 
-**Affordance discipline:** the deal-health stats are **read-only** — a plain KPI strip, *not* the deck's tappable tab-tiles (no enclosing card, no hover, no cursor). The only tappable thing is a **buying-group row** (it drills in), signalled by a hover highlight + chevron. Rule: don't give non-interactive things tappable chrome, and do give interactive things an affordance — so the two never get confused.
+**Affordance discipline:** earlier the three stats were a read-only KPI strip, which read as tappable but wasn't — a false affordance ("if one's tappable they all should be"). The fix was to make them **all tabs** (underline-active, like the deck), so every one *is* interactive. Everything else that's tappable — a viewer row (expands), the native-deck resource (expands) — gets a hover state + chevron. Rule: don't give non-interactive things tappable chrome; give interactive things an affordance; and if a set looks uniform, make the whole set behave uniformly.
 
 ### Scope discipline — what we deliberately cut
 
