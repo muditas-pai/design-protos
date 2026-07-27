@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upload modal · Option A · Tabs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Roboto+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  :root{
+    --navy:#0A1925;
+    --navy-grad:linear-gradient(180deg,#1c3550 0%,#0A1925 100%);
+    --navy-grad-hover:linear-gradient(180deg,#2f4763 0%,#23303B 100%);
+    --ink:#171717; --ink2:#525252; --ink3:#a3a3a3;
+    --border:rgba(26,26,26,.20); --border-soft:rgba(26,26,26,.10);
+    --selected:#f2f5f9; --success:#16a34a;
+    --shadow-card:0 1px 2px 0 rgba(0,0,0,.08),0 4px 10px 0 rgba(0,0,0,.06);
+    --font:'Inter',system-ui,sans-serif; --cond:'Roboto Condensed',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100vh;
+    background:radial-gradient(120% 120% at 50% 0%,#20364d 0%,#0A1925 60%);display:grid;place-items:center;padding:24px}
+  button{font-family:inherit}
+
+  .modal-shell{position:relative;width:min(620px,calc(100vw - 32px));
+    animation:pop .5s cubic-bezier(.2,.8,.2,1) both;filter:drop-shadow(0 24px 48px rgba(0,0,0,.4))}
+  @keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-close{position:absolute;top:0;right:-52px;width:36px;height:36px;border-radius:999px;border:1px solid var(--border-soft);
+    background:#fff;color:var(--ink);cursor:pointer;display:grid;place-items:center;box-shadow:0 2px 8px rgba(10,25,37,.14)}
+  .modal-close:hover{background:#f5f5f5}
+  @media (max-width:720px){.modal-close{top:-48px;right:0}}
+
+  .panel{background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(10,25,37,.28);padding:clamp(24px,3vw,36px);
+    max-height:92vh;overflow:auto}
+  .panel-head h1{font-size:clamp(21px,2.4vw,26px);font-weight:700;letter-spacing:-.02em;color:var(--navy);line-height:1.2}
+  .panel-head p{margin-top:6px;font-size:14px;color:var(--ink2)}
+
+  /* Source tabs */
+  .tabs{display:flex;gap:6px;background:#f4f5f7;border-radius:10px;padding:5px;margin-top:22px}
+  .tab{flex:1;appearance:none;border:none;background:none;cursor:pointer;padding:10px 8px;border-radius:7px;font-family:inherit;
+    font-size:13.5px;font-weight:600;color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.15s ease}
+  .tab i{font-size:16px}
+  .tab:hover{color:var(--ink)}
+  .tab.active{background:#fff;color:var(--navy);box-shadow:var(--shadow-card)}
+
+  .pane{display:none;margin-top:18px}
+  .pane.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* Dropzone — clearer action */
+  .dropzone{border:1.5px dashed var(--border);border-radius:12px;padding:34px 20px;text-align:center;background:#fafafa;position:relative;transition:.15s ease}
+  .dropzone:hover,.dropzone.is-drag{border-color:var(--navy);background:#f2f5f9}
+  .dz-icon{width:52px;height:52px;border-radius:999px;background:#fff;border:1px solid var(--border-soft);display:grid;place-items:center;margin:0 auto 12px;color:var(--navy)}
+  .dz-icon i{font-size:24px}
+  .dz-ttl{font-size:15px;font-weight:700;color:var(--ink)}
+  .dz-sub{font-size:12.5px;color:var(--ink2);margin-top:3px}
+  .dz-btn{margin-top:14px;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px;border-radius:7px;
+    background:var(--navy-grad);color:#fff;font-size:13.5px;font-weight:700;border:none;cursor:pointer}
+  .dz-btn:hover{background:var(--navy-grad-hover)}
+  .dz-fmt{margin-top:12px;font-family:var(--cond);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)}
+  .dropzone input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+  .file-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:8px;margin-top:12px}
+  .file-card .ficon{width:36px;height:36px;border-radius:6px;background:#f0fdf4;color:var(--success);display:grid;place-items:center;flex:0 0 auto}
+  .file-card .fname{font-size:13.5px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .file-card .fmeta{font-size:12px;color:var(--ink2)}
+  .file-card .frm{background:none;border:none;color:var(--ink3);cursor:pointer;padding:6px;border-radius:4px;font-size:16px}
+  .file-card .frm:hover{color:var(--ink);background:#f5f5f5}
+
+  .input{width:100%;border:1px solid var(--border);border-radius:7px;background:#fff;padding:12px 13px;font-family:inherit;font-size:14px;color:var(--ink);outline:none;transition:.15s ease}
+  .input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(10,25,37,.08)}
+  .hint{font-size:12.5px;color:var(--ink2);margin-top:8px;display:flex;gap:6px;align-items:flex-start}
+  .hint i{color:var(--ink3);font-size:14px;margin-top:1px}
+
+  /* My presentations grid */
+  .deck-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:520px){.deck-grid{grid-template-columns:repeat(2,1fr)}}
+  .deck{position:relative;border:1.5px solid var(--border-soft);border-radius:9px;overflow:hidden;cursor:pointer;background:#fff;text-align:left;padding:0;transition:.15s ease}
+  .deck:hover{border-color:var(--ink3)}
+  .deck.sel{border-color:var(--navy);box-shadow:0 0 0 3px rgba(10,25,37,.10)}
+  .deck-thumb{aspect-ratio:16/10;background:#eef2f6;position:relative;overflow:hidden}
+  .deck-thumb .bar{position:absolute;height:6px;border-radius:3px;background:rgba(10,25,37,.18)}
+  .deck-meta{padding:8px 10px}
+  .deck-name{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deck-sub{font-size:11px;color:var(--ink3);margin-top:1px}
+  .deck-check{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:999px;background:var(--navy);color:#fff;display:none;place-items:center;font-size:12px}
+  .deck.sel .deck-check{display:grid}
+
+  /* Message / outline */
+  .mo{margin-top:24px;border-top:1px solid var(--border-soft);padding-top:20px}
+  .mo-lbl{font-size:13.5px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
+  .mo-lbl .opt{font-weight:500;color:var(--ink3);font-size:12.5px}
+  .mo-seg{display:inline-flex;gap:4px;background:#f4f5f7;border-radius:8px;padding:4px;margin:10px 0}
+  .mo-seg button{appearance:none;border:none;background:none;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink2);padding:6px 12px;border-radius:6px;display:inline-flex;align-items:center;gap:6px}
+  .mo-seg button.active{background:#fff;color:var(--navy);box-shadow:var(--shadow-card)}
+  .textarea{width:100%;border:1px solid var(--border);border-radius:8px;background:#fff;padding:12px 13px;font-family:inherit;font-size:14px;color:var(--ink);outline:none;resize:vertical;min-height:96px;line-height:1.55;transition:.15s ease}
+  .textarea:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(10,25,37,.08)}
+
+  .btn-pay{width:100%;margin-top:24px;height:48px;border:none;border-radius:8px;background:var(--navy-grad);color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.15s ease}
+  .btn-pay:hover{background:var(--navy-grad-hover)}
+  .btn-pay i{transition:transform .2s ease}
+  .btn-pay:hover i{transform:translateX(3px)}
+  .btn-pay:disabled{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+  <div class="modal-shell">
+    <button class="modal-close" aria-label="Close"><i class="ph ph-x"></i></button>
+    <div class="panel">
+      <div class="panel-head">
+        <h1>Start your project</h1>
+        <p>Give us something to work from. An expert designs every slide, start to finish.</p>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-pane="upload"><i class="ph-bold ph-upload-simple"></i>Upload</button>
+        <button class="tab" data-pane="link"><i class="ph-bold ph-link-simple"></i>Share a link</button>
+        <button class="tab" data-pane="mine"><i class="ph-bold ph-stack"></i>My presentations</button>
+      </div>
+
+      <!-- Upload -->
+      <div class="pane active" data-pane="upload">
+        <div class="dropzone" id="dz">
+          <div class="dz-icon"><i class="ph-bold ph-upload-simple"></i></div>
+          <div class="dz-ttl">Drag &amp; drop your deck</div>
+          <div class="dz-sub">or use the button below</div>
+          <button class="dz-btn" type="button" onclick="document.getElementById('file').click()"><i class="ph-bold ph-folder-open"></i>Browse files</button>
+          <div class="dz-fmt">.PPTX · .PDF · .KEY · .ZIP · one file</div>
+          <input type="file" id="file" accept=".pptx,.pdf,.key,.zip">
+        </div>
+        <div id="filecard"></div>
+      </div>
+
+      <!-- Link -->
+      <div class="pane" data-pane="link">
+        <input class="input" type="url" id="link" placeholder="https://docs.google.com/presentation/..." />
+        <div class="hint"><i class="ph-bold ph-info"></i>Paste a Google Slides, Notion, Figma, or Canva link. We handle the rest.</div>
+      </div>
+
+      <!-- My presentations -->
+      <div class="pane" data-pane="mine">
+        <div class="deck-grid" id="grid"></div>
+      </div>
+
+      <!-- Message / outline -->
+      <div class="mo">
+        <div class="mo-lbl">Add context <span class="opt">optional, but it helps a lot</span></div>
+        <div class="mo-seg" id="seg">
+          <button class="active" data-mode="message"><i class="ph-bold ph-chat-teardrop-text"></i>Message</button>
+          <button data-mode="outline"><i class="ph-bold ph-list-numbers"></i>Outline</button>
+        </div>
+        <textarea class="textarea" id="mo" placeholder="Tell us the goal, audience, and anything to keep or avoid..."></textarea>
+      </div>
+
+      <button class="btn-pay" id="pay" disabled>Proceed to payment <i class="ph-bold ph-arrow-right"></i></button>
+    </div>
+  </div>
+
+<script>
+  const decks = [
+    {n:'Q3 Board Update', s:'Edited 2d ago', c:'#dbe4ee'},
+    {n:'Acme Pitch v4', s:'Edited 1w ago', c:'#e7dede'},
+    {n:'Product Roadmap', s:'Edited 3w ago', c:'#dde7e0'},
+    {n:'Sales Kickoff', s:'Edited 1mo ago', c:'#e6e1ef'},
+    {n:'Investor Memo', s:'Edited 2mo ago', c:'#efe7dd'},
+    {n:'Onboarding 101', s:'Edited 3mo ago', c:'#dee9ef'}
+  ];
+  const grid = document.getElementById('grid');
+  grid.innerHTML = decks.map((d,i)=>`
+    <button class="deck" data-i="${i}">
+      <div class="deck-thumb" style="background:${d.c}">
+        <span class="bar" style="left:10%;top:22%;width:52%"></span>
+        <span class="bar" style="left:10%;top:42%;width:70%;opacity:.6"></span>
+        <span class="bar" style="left:10%;top:58%;width:38%;opacity:.6"></span>
+      </div>
+      <div class="deck-meta"><div class="deck-name">${d.n}</div><div class="deck-sub">${d.s}</div></div>
+      <span class="deck-check"><i class="ph-bold ph-check"></i></span>
+    </button>`).join('');
+
+  const state = {source:null};
+  const pay = document.getElementById('pay');
+  const refresh = ()=>{ pay.disabled = !state.source; };
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelector(`.pane[data-pane="${t.dataset.pane}"]`).classList.add('active');
+  }));
+
+  // File
+  const file = document.getElementById('file');
+  file.addEventListener('change',()=>{
+    if(!file.files.length) return;
+    const f = file.files[0];
+    document.getElementById('filecard').innerHTML = `
+      <div class="file-card">
+        <span class="ficon"><i class="ph-fill ph-check-circle"></i></span>
+        <span class="fname">${f.name}</span>
+        <span class="fmeta">${(f.size/1048576).toFixed(1)} MB</span>
+        <button class="frm" onclick="this.closest('.file-card').remove();window._clearSrc()"><i class="ph ph-x"></i></button>`;
+    state.source='file'; refresh();
+  });
+  window._clearSrc = ()=>{ state.source=null; refresh(); };
+
+  // Link
+  document.getElementById('link').addEventListener('input',e=>{
+    state.source = e.target.value.trim() ? 'link' : null; refresh();
+  });
+
+  // Decks
+  grid.querySelectorAll('.deck').forEach(d=>d.addEventListener('click',()=>{
+    const was = d.classList.contains('sel');
+    grid.querySelectorAll('.deck').forEach(x=>x.classList.remove('sel'));
+    if(!was){ d.classList.add('sel'); state.source='deck'; } else { state.source=null; }
+    refresh();
+  }));
+
+  // Message / outline toggle
+  const mo = document.getElementById('mo');
+  document.querySelectorAll('#seg button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    mo.placeholder = b.dataset.mode==='outline'
+      ? '1. Title slide\n2. The problem\n3. Our solution\n4. Traction\n5. Ask'
+      : 'Tell us the goal, audience, and anything to keep or avoid...';
+  }));
+
+  document.querySelector('.modal-close').addEventListener('click',()=>alert('(demo) close'));
+</script>
+
+<script type="importmap">
+{ "imports": { "agentation": "https://esm.sh/agentation" } }
+</script>
+<script type="module">
+  import { mountAgentation } from 'agentation';
+  mountAgentation();
+</script>
+</body>
+</html>
