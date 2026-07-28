@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>agentation glue harness</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:#0f1115; color:#e6e8ee; }
+  nav { padding:14px 20px; background:#171a21; display:flex; gap:10px; align-items:center; }
+  nav a { color:#8ab4ff; text-decoration:none; padding:6px 12px; border-radius:6px; background:#20242e; }
+  nav a.active { background:#2d63c8; color:#fff; }
+  main { padding:28px 20px 140px; max-width:1000px; }
+  h1 { margin:0 0 18px; font-size:22px; }
+  .card { background:#1b1f28; border:1px solid #2a2f3a; border-radius:10px;
+          padding:18px 20px; margin:16px 0; }
+  .target { background:#243040; border:1px solid #3a4a63; border-radius:8px;
+            padding:16px 18px; margin:12px 0; }
+  #sidebar { margin-top:24px; padding:12px; border:1px dashed #556; border-radius:8px; }
+  .spacer { height:60px; }
+  .tall { height:1400px; }
+  .tools { position:fixed; right:12px; top:60px; z-index:100; background:#12161d;
+           border:1px solid #333; border-radius:8px; padding:10px; width:210px; }
+  .tools button { display:block; width:100%; margin:4px 0; padding:6px;
+                  background:#2a3140; color:#dfe4ee; border:1px solid #3a4354;
+                  border-radius:5px; cursor:pointer; font-size:12px; }
+  .wrapper-added { padding:14px; border:2px solid #b45; border-radius:8px; }
+  .renamed-skin { margin-top:96px; padding:30px 18px; background:#2f2440; border-color:#6a4a8a; }
+</style>
+</head>
+<body>
+<nav id="nav">
+  <a href="/a" data-nav>/a</a>
+  <a href="/b" data-nav>/b</a>
+  <a href="/c" data-nav>/c</a>
+  <span id="pathlabel" style="margin-left:auto;font:12px monospace;color:#8a90a0"></span>
+</nav>
+
+<main id="app"></main>
+
+<div id="stickybar" data-ref="sticky-cta" style="position:fixed;left:0;bottom:0;width:100%;
+     background:#3a2a5a;border-top:1px solid #6a4a8a;padding:14px 20px;z-index:50;">
+  Fixed footer CTA (position:fixed target)
+</div>
+
+<div class="tools">
+  <button id="btn-move">move to new parent</button>
+  <button id="btn-wrap">wrap in a div</button>
+  <button id="btn-rename">rename classes</button>
+  <button id="btn-delref">delete data-ref</button>
+</div>
+
+<script type="module">
+// ---------------------------------------------------------------- routes
+const ROUTES = {
+  '/a': `
+    <h1>Route A</h1>
+    <div class="card" id="hostA">
+      <p>Primary target on route A.</p>
+      <div class="target alpha-original" data-ref="hero-cta" id="el-hero">
+        Hero CTA — the annotated element
+      </div>
+      <div class="target" data-ref="sub-note">Secondary note on A</div>
+    </div>
+    <div class="spacer"></div>
+    <div id="sidebar">relocation host (initially empty)</div>
+    <div class="tall"></div>
+    <div class="target" data-ref="deep-target" id="el-deep">Deep target (needs scrolling)</div>
+    <div class="tall"></div>`,
+  '/b': `
+    <h1>Route B</h1>
+    <div class="card" id="hostB">
+      <div class="target beta-original" data-ref="pricing-box" id="el-price">
+        Pricing box on route B
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div id="sidebar">relocation host</div>`,
+  '/c': `
+    <h1>Route C</h1>
+    <div class="card" id="hostC">
+      <div class="target" data-ref="footer-link" id="el-foot">Footer link on route C</div>
+    </div>
+    <div class="spacer"></div>
+    <div id="sidebar">relocation host</div>`,
+};
+
+function render() {
+  const p = location.pathname;
+  document.getElementById('app').innerHTML = ROUTES[p] || ROUTES['/a'];
+  document.getElementById('pathlabel').textContent = p;
+  document.querySelectorAll('[data-nav]').forEach(a =>
+    a.classList.toggle('active', a.getAttribute('href') === p));
+  applyMutations();
+}
+
+// ------------------------------------------------- persistent mutations
+// Stored in sessionStorage so they survive the reload the tests do.
+const MKEY = 'harness-mutations';
+const getMut = () => { try { return JSON.parse(sessionStorage.getItem(MKEY)) || []; } catch { return []; } };
+const setMut = (m) => sessionStorage.setItem(MKEY, JSON.stringify(m));
+window.__addMutation = (m) => { const l = getMut(); l.push(m); setMut(l); applyMutations(); };
+window.__clearMutations = () => sessionStorage.removeItem(MKEY);
+
+function primary() {
+  return document.querySelector('#el-hero, #el-price, #el-foot');
+}
+
+function applyMutations() {
+  for (const m of getMut()) {
+    const el = primary();
+    if (!el && m !== 'fatbar') continue;
+    if (m === 'move') {
+      const sb = document.getElementById('sidebar');
+      if (sb && el.parentElement !== sb) sb.appendChild(el);
+    } else if (m === 'wrap') {
+      if (!el.parentElement.classList.contains('wrapper-added')) {
+        const w = document.createElement('div');
+        w.className = 'wrapper-added';
+        w.innerHTML = '<p>injected wrapper heading that pushes things down</p>';
+        el.parentElement.insertBefore(w, el);
+        w.appendChild(el);
+      }
+    } else if (m === 'rename') {
+      el.className = 'renamed-skin renamed-' + Math.abs(hash(location.pathname));
+    } else if (m === 'fatbar') {
+      const b = document.getElementById('stickybar');
+      if (b) b.style.padding = '60px 20px';
+    } else if (m === 'delref') {
+      el.removeAttribute('data-ref');
+    }
+  }
+}
+const hash = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7);
+
+document.getElementById('btn-move').onclick   = () => window.__addMutation('move');
+document.getElementById('btn-wrap').onclick   = () => window.__addMutation('wrap');
+document.getElementById('btn-rename').onclick = () => window.__addMutation('rename');
+document.getElementById('btn-delref').onclick = () => window.__addMutation('delref');
+
+// ------------------------------------------------------------- router
+function go(path) {
+  if (location.pathname === path) return;
+  history.pushState({}, '', path);
+  render();
+  if (window.__glue) window.__glue.navigate(path);   // G1: router tells the glue
+}
+document.getElementById('nav').addEventListener('click', (e) => {
+  const a = e.target.closest('[data-nav]');
+  if (!a) return;
+  e.preventDefault();
+  go(a.getAttribute('href'));
+});
+window.addEventListener('popstate', render);
+window.__go = go;
+render();
+
+// ------------------------------------------------------- mount agentation
+const USE_GLUE = new URLSearchParams(location.search).get('glue') === '1';
+window.__useGlue = USE_GLUE;
+
+const [{ Agentation }, React, { createRoot }] = await Promise.all([
+  import('https://esm.sh/agentation@3?deps=react@18,react-dom@18'),
+  import('https://esm.sh/react@18'),
+  import('https://esm.sh/react-dom@18/client'),
+]);
+
+const host = document.createElement('div');
+host.id = 'agentation-root';
+document.body.appendChild(host);
+
+if (USE_GLUE) {
+  const { createAgentationGlue } = await import('/agentation-glue.js');
+  const glue = createAgentationGlue({
+    React, createRoot, Agentation, container: host,
+    patchHistory: false,   // this app calls glue.navigate() itself
+  });
+  window.__glue = glue;
+  await glue.mount();
+} else {
+  // BASELINE: exactly what agentation's own docs tell you to do.
+  createRoot(host).render(React.createElement(Agentation, {}));
+}
+window.__ready = true;
+</script>
+</body>
+</html>
