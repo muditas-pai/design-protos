@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design harness — system diagram</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0A1925; --ink2: #4A5B6A; --ink3: #8494B4;
+    --line: #E1E7EC;
+    --navy: #1C3550; --blue: #0043B8; --orange: #E64A00; --green: #0E8A4D;
+    --red: #C93A2B; --violet: #6B3FA0; --gray: #A6B3BE;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; color: var(--ink); font-family: "Inter", system-ui, sans-serif; }
+  .page { max-width: 1870px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--ink2); font-size: 13px; margin: 0 0 6px; max-width: 104ch; }
+  .hint { color: var(--ink3); font-size: 11.5px; margin: 0 0 18px; }
+
+  #canvas { position: relative; width: 1790px; height: 1980px; }
+  #wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .box { position: absolute; border-radius: 10px; background: #fff; border: 1.5px solid var(--line);
+    padding: 9px 13px; cursor: grab; user-select: none; -webkit-user-select: none;
+    box-shadow: 0 1px 3px rgba(10,25,37,.06); }
+  .box:active { cursor: grabbing; box-shadow: 0 4px 14px rgba(10,25,37,.13); }
+  .box .t { font-weight: 700; font-size: 12.5px; pointer-events: none; }
+  .box .d { font-size: 11px; color: var(--ink2); line-height: 1.45; margin-top: 2px; pointer-events: none; }
+  .box .rw { font-size: 10px; color: var(--ink3); margin-top: 4px; pointer-events: none; }
+
+  .file { width: 218px; border-color: #B9CFF3; background: #F7FAFF; }
+  .file .t { color: var(--blue); font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .file.dayone { border-style: dashed; }
+  .file .day { font-size: 9.5px; font-weight: 700; color: var(--orange); margin-top: 5px;
+    text-transform: uppercase; letter-spacing: .04em; pointer-events: none; }
+  .brief { width: 218px; border: 2px solid #C6B0E8; background: #FBF8FF; }
+  .brief .t { color: var(--violet); font-size: 12.5px; }
+  .step { width: 380px; }
+  .step .n { display: inline-block; background: var(--navy); color: #fff; font-size: 10px;
+    font-weight: 700; border-radius: 5px; padding: 1px 7px; margin-right: 7px; }
+  .verify { border-color: #EFBDB5; background: #FDF7F6; }
+  .verify .n { background: var(--red); }
+  .pverify { border-color: #D6C4EE; background: #FBF8FF; }
+  .pverify .n { background: var(--violet); }
+  .gate { width: 380px; border: 2px solid var(--orange); background: #FFF6F0; }
+  .gate .t { color: var(--orange); }
+  .runframe { position: absolute; border: 2px solid #F3B79B; border-radius: 14px; pointer-events: none; }
+  .runlabel { position: absolute; font-size: 12px; font-weight: 700; color: var(--orange);
+    background: #fff; padding: 0 8px; pointer-events: none; }
+  .judgeframe { position: absolute; border: 1.5px dashed #B9A2D8; border-radius: 12px; pointer-events: none; }
+  .judgelabel { position: absolute; font-size: 11px; font-weight: 700; color: var(--violet);
+    background: #fff; padding: 0 8px; pointer-events: none; }
+  .you-box, .harvest-box { width: 380px; border: 2px solid var(--orange); background: #FFF6F0; }
+  .you-box .t, .harvest-box .t { color: var(--orange); }
+  .side-box { width: 250px; border-color: #A9D8BC; background: #F4FBF7; }
+  .side-box .t { color: var(--green); }
+  .harvest-side { width: 250px; border-color: #F5C4A8; background: #FFF9F5; }
+  .harvest-side .t { color: var(--orange); }
+  .correct { width: 250px; border: 2px solid #E4C9C4; background: #FDF7F6; }
+  .correct .t { color: var(--red); }
+  .note { width: 218px; border-style: dashed; }
+
+  .legend { display: flex; gap: 18px; font-size: 11.5px; color: var(--ink2); flex-wrap: wrap; margin-top: 12px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .sw { width: 20px; border-top: 3px solid; }
+  .sw.dash { border-top-style: dashed; border-top-width: 2px; }
+  .bx { width: 15px; height: 11px; border-radius: 3px; border: 1.5px solid; }
+  .legend .grp { width: 100%; height: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Design harness — all parts</h1>
+  <p class="sub">A brief says what to solve; the assets on the left say how it should look and what real content goes in it. You ratify the requirements before anything is built. Two judges then attack the result in parallel — one on the picture, one on the requirements — a single step merges their verdicts, and your decisions write back into the assets so the next build starts smarter.</p>
+  <p class="hint">Drag any box — connections follow.</p>
+
+  <div id="canvas">
+    <svg id="wires"></svg>
+
+    <div class="runframe" id="runframe"></div>
+    <div class="runlabel" id="runlabel">SKILL: pai-build · you invoke it · every design build goes through it (stated in CLAUDE.md — prompt text, not enforcement)</div>
+    <div class="judgeframe" id="judgeframe"></div>
+    <div class="judgelabel" id="judgelabel">run in parallel on the same draft · neither sees the other's findings</div>
+
+    <!-- the brief + assets -->
+    <div class="box note" id="invnote" style="left:430px;top:30px">
+      <div class="d">an <b>investigation</b> is a finding, not a brief. Someone turns it into a spec by hand first — the harness never invents requirements out of a conclusion</div>
+    </div>
+    <div class="box brief" id="brief" style="left:430px;top:132px">
+      <div class="t">THE BRIEF</div>
+      <div class="d">a feature spec in promoted/features/, or a PRD — the problem this screen solves, who for, and what counts as solved</div>
+    </div>
+    <div class="box note" id="quickref" style="left:430px;top:258px">
+      <div class="d"><b>pai-visual-language § Quick reference</b> — the surface × register list. No separate taxonomy file; a fork of a maintained file in the same repo is the drift this harness exists to cure</div>
+    </div>
+    <div class="box file dayone" id="reqtemplate" style="left:430px;top:390px">
+      <div class="t">requirements-template.md</div>
+      <div class="d">defaults every brief inherits — only things no check already covers: free-plan behaviour, the empty case, what happens after the primary action</div>
+      <div class="day">day 1 · seed by hand</div>
+    </div>
+    <div class="box file dayone" id="content" style="left:430px;top:524px">
+      <div class="t">content.md</div>
+      <div class="d">the real strings and numbers — plan names, prices, limits, error copy. Carries owner + as_of; the lint checks every visible number against it verbatim</div>
+      <div class="day">day 1 · seed by hand</div>
+    </div>
+    <div class="box file" id="tokens" style="left:430px;top:668px">
+      <div class="t">design-system/</div>
+      <div class="d">pai.css (tokens + class vocabulary) · components.html · template.html — the only vocabulary, linked by relative path, never copied. Owned, PR-gated</div>
+    </div>
+    <div class="box file dayone" id="goodex" style="left:430px;top:792px">
+      <div class="t">exemplars.json</div>
+      <div class="d">one row per exemplar — path, surface, register, origin human/generated, as_of, still_valid. A file not listed here is never an anchor</div>
+      <div class="day">day 1 · seed by hand</div>
+    </div>
+    <div class="box file" id="rules" style="left:430px;top:936px">
+      <div class="t">pai-visual-language/</div>
+      <div class="d">the style in prose, and the anti-pattern table that <b>is</b> the design judge's rubric — a rejection becomes a row here, pointing at the file where it already sits</div>
+    </div>
+    <div class="box file dayone" id="lintscript" style="left:430px;top:1076px">
+      <div class="t">lint/pai-lint.py</div>
+      <div class="d">everything checkable without judgment. Unscoped checks run everywhere; a check narrowed to a surface is harvest walking one back. Reports which families are unwritten, so a thin lint never reads as a pass</div>
+      <div class="day">day 1 · source checks · the rest as you go</div>
+    </div>
+
+    <!-- build run -->
+    <div class="box step pverify" id="frame" style="left:790px;top:216px">
+      <div class="t"><span class="n">0</span>FRAME THE BRIEF</div>
+      <div class="d">preflight the assets — a missing one halts the run, it never degrades silently. Then turn the doc into a numbered <b>requirements checklist</b>, inheriting the template's defaults. Anything not decidable from a picture or the code is marked <b>not checkable</b> rather than fudged</div>
+      <div class="rw">writes → requirements.json</div>
+    </div>
+    <div class="box gate" id="gate" style="left:790px;top:386px">
+      <div class="t">YOU RATIFY — surface · register · the checklist</div>
+      <div class="d">a minute or two, honestly, before a line is generated — plus what came from the template and what is <b>not checkable</b>, because a checklist that cannot fail should be visible before you approve it</div>
+      <div class="rw">the only stop that waits for you · every other human moment ends the run instead · past rulings replayed here</div>
+    </div>
+    <div class="box step" id="retrieve" style="left:790px;top:530px">
+      <div class="t"><span class="n">1</span>RETRIEVE</div>
+      <div class="d">up to 3 anchors on exact surface + register, widening to surface, then register, if fewer than two hit. At least one human-made anchor whenever one exists; none at all is printed as an <b>unanchored run</b></div>
+    </div>
+    <div class="box step" id="generate" style="left:790px;top:642px">
+      <div class="t"><span class="n">2</span>GENERATE</div>
+      <div class="d">build against the ratified checklist, <b>few-shot on the anchors</b>, starting from template.html — tokens only. A number content.md cannot resolve is emitted as <code>{{content:key}}</code> and halts the run, never invented</div>
+    </div>
+    <div class="box step verify" id="lint" style="left:790px;top:770px">
+      <div class="t"><span class="n">3</span>LINT · two phases</div>
+      <div class="d"><b>source</b>, before render: starts from template.html, no inline styles, no colour or spacing literals, no placeholder text. <b>rendered</b>, after step 4, once per state: numbers and prices against content.md, component markup, three a11y checks</div>
+      <div class="rw">a source failure short-circuits — no render, no judges, no pass spent</div>
+    </div>
+    <div class="box step verify" id="render" style="left:790px;top:900px">
+      <div class="t"><span class="n">4</span>RENDER THE STATES</div>
+      <div class="d">Playwright, DPR 1, at 390 and 1440. Every state the checklist names. A state with a click path is <b>driven through the UI</b> — the renderer tried it, so the renderer decides reachability, and neither judge is asked to guess</div>
+    </div>
+    <div class="box step verify" id="designjudge" style="left:790px;top:1052px">
+      <div class="t"><span class="n">5</span>DESIGN JUDGE — does it look right?</div>
+      <div class="d">fresh agent — the pictures, the rubric rows that load for this run, and the exact anchors retrieve used. Never the brief, the checklist, the code, or the build reasoning</div>
+      <div class="rw">every finding located, and blocking or advisory · the anchor verdict is advisory — direction is yours</div>
+    </div>
+    <div class="box step pverify" id="productjudge" style="left:790px;top:1188px">
+      <div class="t"><span class="n">6</span>PRODUCT JUDGE — does it solve the brief?</div>
+      <div class="d">a second fresh agent — the brief, the ratified checklist, content.md, every state, and the code. Never the build reasoning, never the style rules. Per requirement: <b>met / partly / missed</b>. Anything the brief obliges that the checklist never listed <b>halts the run</b> — the list was wrong, so correcting against it is pointless</div>
+    </div>
+    <div class="box step" id="deliver" style="left:790px;top:1400px">
+      <div class="t"><span class="n">7</span>DELIVER</div>
+      <div class="d">the only way out, halts included — clean · budget spent · conflict · checklist bug · content gap · lint stuck. Always names what went <b>unjudged</b> and which checks were never written, so a thin pass never reads as a clean one</div>
+    </div>
+
+    <div class="box correct" id="correct" style="left:1220px;top:800px">
+      <div class="t">CORRECT — on a blocking finding</div>
+      <div class="d">targeted edits, never regenerate. Advisory findings never come here — they ride along to Deliver as a list</div>
+      <div class="rw">one correction, then the whole surface re-verifies</div>
+    </div>
+    <div class="box correct" id="adjudicate" style="left:1220px;top:1072px">
+      <div class="t">ADJUDICATE — merge every verdict</div>
+      <div class="d">lint · renderer · both judges. Delivers only on <b>zero blocking findings</b>. Calls a conflict when two blocking findings oppose each other on the same element — a finding that merely survives a fix is not a conflict. Owns the pass counter and writes the ledger</div>
+    </div>
+
+    <!-- you + harvest -->
+    <div class="box you-box" id="annotate" style="left:380px;top:1596px;width:268px">
+      <div class="t">ANNOTATE — designers, in the browser</div>
+      <div class="d">click an element in any prototype, say what's wrong and what to do instead. The toolbar sends the selector, classes and computed styles with it, so a comment arrives already located. <b>Element-level, and independent of approval</b> — a file can carry open advisory comments and still be the best reference we have</div>
+      <div class="rw">said once, a note · said four times across three surfaces, a rule</div>
+    </div>
+    <div class="box you-box" id="you" style="left:790px;top:1536px">
+      <div class="t">YOU — the taste, and the call on the brief</div>
+      <div class="d"><b>Pick</b> · <b>Reject + why</b> (the why is the payload) · <b>Override</b> a rule · <b>settle</b> a conflict or an obligation the brief implied but the checklist missed</div>
+    </div>
+    <div class="box harvest-box" id="harvest" style="left:790px;top:1656px">
+      <div class="t">HARVEST — pai-build's closing phase</div>
+      <div class="d">opens with one question, always: <b>is this the reference for this surface and register?</b> — the only route that decides what the next build looks like. Then every other learning is routed to exactly one home; <b>you confirm each write</b>, and every write prunes — nothing here only grows. Arrives with what the finding log already counted, not with a memory test</div>
+      <div class="rw">two ladders — style: incident → rule → lint · product: miss → a checklist default. A new rule is born scoped to one surface. Surfaced nothing? It says so and stops</div>
+    </div>
+
+    <!-- side -->
+    <div class="box side-box" id="crazy8s" style="left:1220px;top:40px">
+      <div class="t">crazy8s — divergence</div>
+      <div class="d">8 variants to pick a direction. All get the <b>source</b> checks; the rendered checks and the judges run only on the pick, which then takes the harness from step 0. Your choice of direction outranks the judges</div>
+    </div>
+    <div class="box file" id="reqjson" style="left:1220px;top:216px">
+      <div class="t">requirements.json</div>
+      <div class="d">the ratified checklist — surface · register · anchors · each requirement with its state and how to reach it</div>
+    </div>
+    <div class="box file" id="runjson" style="left:1220px;top:380px">
+      <div class="t">run.json · findings.jsonl</div>
+      <div class="d">what happened — anchors, what was degraded, each pass's counts, the verdict, and your rulings. Every finding is appended to the ledger harvest counts from</div>
+    </div>
+    <div class="box harvest-side" id="sweep" style="left:1220px;top:1536px">
+      <div class="t">CORPUS SWEEP — inside harvest</div>
+      <div class="d">triggered, not remembered: the first build after design-system/ changes, monthly otherwise. Walks everything older than the change; only the token re-sync leaves as a PR</div>
+    </div>
+    <div class="box side-box" id="comppr" style="left:1220px;top:1688px">
+      <div class="t">component PR</div>
+      <div class="d">a snippet you keep rebuilding → proposed to the design-system owner, never ported directly</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="border-color:var(--navy)"></span> build flow</span>
+    <span><span class="sw" style="border-color:var(--violet)"></span> the brief — and the check that it was answered</span>
+    <span><span class="sw" style="border-color:var(--red)"></span> correction loop — the whole surface re-verifies · two passes, the first included</span>
+    <span><span class="sw" style="border-color:var(--orange)"></span> harvest — your decisions written back</span>
+    <span><span class="sw" style="border-color:var(--green)"></span> owned elsewhere — goes out as a PR</span>
+    <span><span class="sw dash" style="border-color:var(--gray)"></span> reads</span>
+    <span class="grp"></span>
+    <span><span class="bx" style="border-color:#B9CFF3;background:#F7FAFF"></span> an asset file</span>
+    <span><span class="bx" style="border-color:#B9CFF3;background:#F7FAFF;border-style:dashed"></span> asset you write by hand before run 1</span>
+    <span><span class="bx" style="border-color:var(--orange);background:#FFF6F0"></span> you, and your decisions</span>
+    <span><span class="bx" style="border-color:var(--line);border-style:dashed"></span> a note, not a step</span>
+  </div>
+</div>
+
+<script>
+const EDGES = [
+  // the brief in
+  { f:'invnote',  t:'brief',    c:'violet', dash:1, l:'by hand, first', labelAbove:1 },
+  { f:'brief',    t:'frame',    c:'violet', l:'the ask' },
+  { f:'frame',    t:'reqjson',  c:'navy' },
+  { f:'frame',    t:'gate',     c:'navy',   l:'the checklist' },
+  { f:'gate',     t:'reqjson',  c:'orange', dash:1, l:'stamped' },
+  { f:'gate',     t:'retrieve', c:'navy',   l:'ratified' },
+  // build flow
+  { f:'retrieve', t:'generate', c:'navy' },
+  { f:'generate', t:'lint',     c:'navy', l:'draft, unseen by you' },
+  { f:'lint',     t:'render',   c:'navy', l:'lint-clean code' },
+  { f:'render',   t:'designjudge',  c:'navy', l:'the pictures' },
+  { f:'render',   t:'productjudge', c:'navy', side:'left', bulge:65, l:'every state + code' },
+  { f:'render',   t:'adjudicate',   c:'red', side:'right', bulge:170, l:'a state it could not reach' },
+  // the join
+  { f:'designjudge',  t:'adjudicate', c:'red' },
+  { f:'productjudge', t:'adjudicate', c:'violet' },
+  { f:'adjudicate', t:'correct', c:'red', l:'blocking findings' },
+  { f:'adjudicate', t:'runjson', c:'gray', dash:1, side:'right', bulge:200 },
+  { f:'adjudicate', t:'deliver', c:'navy', side:'left', bulge:95, labelAbove:1, l:'zero blocking findings · or the budget is spent' },
+  { f:'adjudicate', t:'deliver', c:'orange', side:'right', bulge:130, l:'conflict — ends the run, with a verdict', sides:['r','r'] },
+  { f:'lint',     t:'correct',  c:'red', side:'right', bulge:40 },
+  { f:'productjudge', t:'deliver', c:'violet', side:'left', bulge:125, l:'the brief obliged something the list missed — halt' },
+  { f:'correct',  t:'lint',     c:'red', side:'right', bulge:80, labelAbove:1, l:'one correction · then the whole surface re-verifies' },
+  { f:'deliver',  t:'you',      c:'navy' },
+  { f:'you',      t:'harvest',  c:'navy', l:'the session ends here' },
+  // harvest write-back
+  { f:'harvest',  t:'goodex',      c:'orange', side:'left', bulge:90,  l:'the closing question — a yes is the newest anchor' },
+  { f:'annotate', t:'harvest',     c:'orange', labelAbove:1, l:'batched, then clustered' },
+  { f:'harvest',  t:'content',     c:'orange', side:'left', bulge:130, l:'a wrong number' },
+  { f:'harvest',  t:'rules',       c:'orange', side:'left', bulge:170, l:'add · amend · scope a rule' },
+  { f:'harvest',  t:'lintscript',  c:'orange', side:'left', bulge:210, l:'rule → a check' },
+  { f:'harvest',  t:'reqtemplate', c:'orange', side:'left', bulge:250, l:'a miss → a default' },
+  { f:'harvest',  t:'brief',       c:'violet', side:'left', bulge:290, l:'the doc was wrong' },
+  { f:'harvest',  t:'sweep',       c:'orange', l:'prune' },
+  { f:'runjson',  t:'harvest',     c:'gray', dash:1, side:'right', bulge:240, l:'what the ledger counted' },
+  { f:'harvest',  t:'comppr',      c:'green' },
+  // side entry
+  { f:'crazy8s',  t:'frame', c:'gray', dash:1, labelAbove:1, l:'the pick — no regenerate' },
+  { f:'crazy8s',  t:'lint',  c:'gray', dash:1, side:'left', bulge:125 },
+  // reads
+  { f:'quickref',    t:'frame',        c:'gray', dash:1 },
+  { f:'reqtemplate', t:'frame',        c:'gray', dash:1 },
+  { f:'reqjson',     t:'generate',     c:'gray', dash:1 },
+  { f:'reqjson',     t:'render',       c:'gray', dash:1 },
+  { f:'reqjson',     t:'productjudge', c:'violet', dash:1, side:'left', bulge:35, l:'the checklist' },
+  { f:'brief',       t:'productjudge', c:'violet', dash:1, side:'left', bulge:330 },
+  { f:'goodex',      t:'retrieve',     c:'gray', dash:1 },
+  { f:'tokens',      t:'generate',     c:'gray', dash:1 },
+  { f:'content',     t:'generate',     c:'gray', dash:1 },
+  { f:'rules',       t:'generate',     c:'gray', dash:1, sides:['r','l'] },
+  { f:'content',     t:'lint',         c:'gray', dash:1, sides:['r','l'] },
+  { f:'lintscript',  t:'lint',         c:'gray', dash:1, sides:['r','l'] },
+  { f:'rules',       t:'designjudge',  c:'gray', dash:1, sides:['r','l'] },
+  { f:'content',     t:'productjudge', c:'gray', dash:1, sides:['r','l'] },
+];
+const COLOR = { navy:'#1C3550', orange:'#E64A00', green:'#0E8A4D', blue:'#0043B8', red:'#C93A2B', violet:'#6B3FA0', gray:'#A6B3BE' };
+const canvas = document.getElementById('canvas');
+const svg = document.getElementById('wires');
+
+function rectOf(id) {
+  const el = document.getElementById(id);
+  return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+}
+function anchor(r, side) {
+  if (side === 'l') return [r.x, r.y + r.h/2];
+  if (side === 'r') return [r.x + r.w, r.y + r.h/2];
+  if (side === 't') return [r.x + r.w/2, r.y];
+  return [r.x + r.w/2, r.y + r.h];
+}
+function pickSides(a, b, pref, forced) {
+  if (forced) return forced;
+  if (pref === 'right') return ['r','r'];
+  if (pref === 'left')  return ['l','l'];
+  const dx = (b.x + b.w/2) - (a.x + a.w/2);
+  const dy = (b.y + b.h/2) - (a.y + a.h/2);
+  if (Math.abs(dy) > Math.abs(dx)) return dy > 0 ? ['b','t'] : ['t','b'];
+  return dx > 0 ? ['r','l'] : ['l','r'];
+}
+function path(p1, p2, sides, bulge) {
+  const [x1,y1] = p1, [x2,y2] = p2;
+  if (sides[0] === 'r' && sides[1] === 'r') {
+    const bx = Math.max(x1,x2) + bulge;
+    return `M ${x1} ${y1} C ${bx} ${y1}, ${bx} ${y2}, ${x2} ${y2}`;
+  }
+  if (sides[0] === 'l' && sides[1] === 'l') {
+    const bx = Math.min(x1,x2) - bulge;
+    return `M ${x1} ${y1} C ${bx} ${y1}, ${bx} ${y2}, ${x2} ${y2}`;
+  }
+  if (sides[0] === 'b' || sides[0] === 't') {
+    const my = (y1 + y2) / 2;
+    return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+  }
+  const mx = (x1 + x2) / 2;
+  return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+}
+function render() {
+  let defs = '<defs>';
+  for (const [name, col] of Object.entries(COLOR))
+    defs += `<marker id="dh-${name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${col}"/></marker>`;
+  defs += '</defs>';
+  let out = defs;
+  for (const e of EDGES) {
+    const a = rectOf(e.f), b = rectOf(e.t);
+    const sides = pickSides(a, b, e.side, e.sides);
+    const p1 = anchor(a, sides[0]), p2 = anchor(b, sides[1]);
+    const bulge = e.bulge !== undefined ? e.bulge : (e.side ? 52 : 40);
+    const d = path(p1, p2, sides, bulge);
+    const col = COLOR[e.c];
+    out += `<path d="${d}" fill="none" stroke="${col}" stroke-width="${e.dash?2:2.5}" ${e.dash?'stroke-dasharray="5 5"':''} marker-end="url(#dh-${e.c})"/>`;
+    if (e.l) {
+      let lx, ly;
+      if (e.labelAbove) { lx = a.x + a.w/2; ly = a.y - 12; }
+      else if (sides[0] === 'r' && sides[1] === 'r') { lx = Math.max(p1[0],p2[0]) + bulge - 12; ly = (p1[1]+p2[1])/2; }
+      else if (sides[0] === 'l' && sides[1] === 'l') { lx = Math.min(p1[0],p2[0]) - bulge - 4; ly = p1[1] - (p1[1]-p2[1]) * 0.72; }
+      else { lx = (p1[0]+p2[0])/2 + 8; ly = (p1[1]+p2[1])/2 - 6; }
+      out += `<text x="${lx}" y="${ly}" fill="${col}" font-size="10.5" font-weight="600" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3.5">${e.l}</text>`;
+    }
+  }
+  svg.innerHTML = out;
+  frames();
+}
+function boundsOf(ids) {
+  let x1=1e9,y1=1e9,x2=0,y2=0;
+  for (const id of ids) {
+    const r = rectOf(id);
+    x1=Math.min(x1,r.x); y1=Math.min(y1,r.y); x2=Math.max(x2,r.x+r.w); y2=Math.max(y2,r.y+r.h);
+  }
+  return {x1,y1,x2,y2};
+}
+function frames() {
+  const b = boundsOf(['frame','gate','retrieve','generate','lint','render','designjudge','productjudge','adjudicate','correct','deliver']);
+  const f = document.getElementById('runframe'), l = document.getElementById('runlabel');
+  f.style.left=(b.x1-16)+'px'; f.style.top=(b.y1-30)+'px';
+  f.style.width=(b.x2-b.x1+32)+'px'; f.style.height=(b.y2-b.y1+46)+'px';
+  l.style.left=(b.x1-2)+'px'; l.style.top=(b.y1-40)+'px';
+
+  const j = boundsOf(['designjudge','productjudge']);
+  const jf = document.getElementById('judgeframe'), jl = document.getElementById('judgelabel');
+  jf.style.left=(j.x1-8)+'px'; jf.style.top=(j.y1-22)+'px';
+  jf.style.width=(j.x2-j.x1+16)+'px'; jf.style.height=(j.y2-j.y1+30)+'px';
+  jl.style.left=(j.x1+4)+'px'; jl.style.top=(j.y1-31)+'px';
+}
+let drag = null;
+canvas.addEventListener('pointerdown', ev => {
+  const box = ev.target.closest('.box');
+  if (!box) return;
+  drag = { box, dx: ev.clientX - box.offsetLeft, dy: ev.clientY - box.offsetTop };
+  box.setPointerCapture(ev.pointerId);
+});
+canvas.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  drag.box.style.left = Math.max(0, ev.clientX - drag.dx) + 'px';
+  drag.box.style.top  = Math.max(0, ev.clientY - drag.dy) + 'px';
+  render();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+render();
+</script>
+</body>
+</html>

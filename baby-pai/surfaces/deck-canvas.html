@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<!-- surface: Slide editor / App  ·  mounts at place=editor slot=main
+     Second surface in a different place — the shell is not single-purpose. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="pai-mount" content="place=editor; slot=main" />
+  <title>Slide canvas · baby-PAI surface</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="../../design-system/pai.css" />
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg-quaternary); color: var(--text-primary);
+      font-family: "Inter", system-ui, sans-serif; font-size: 14px;
+      display: flex; flex-direction: column; overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── the trial banner. Present because the scenario says a banner is open,
+          `warning` and not `info` because card_on_file is false. That
+          distinction is invisible in a lone file. ─────────────────────────── */
+    .banner {
+      display: none; align-items: center; gap: 12px; flex: none;
+      margin: 0 0 12px; padding: 10px 12px; border-radius: 6px;
+      background: color-mix(in srgb, var(--bg-warning) 14%, var(--bg-primary));
+      border: 1px solid color-mix(in srgb, var(--bg-warning) 36%, var(--bg-primary));
+      box-shadow: var(--shadow-elevation-02);
+    }
+    body[data-banner="trial-ending"] .banner { display: flex; }
+    .banner i.lead { font-size: 18px; color: var(--text-warning-secondary); }
+    .banner .txt { flex: 1; min-width: 0; }
+    .banner .txt b { font-weight: 600; }
+    .banner .sub { display: block; color: var(--text-secondary); font-size: 12px; margin-top: 1px; }
+    .banner .x { border: 0; background: transparent; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 4px; }
+
+    /* ── the stage ─────────────────────────────────────────────────────── */
+    .stage-wrap { flex: 1; min-height: 0; display: grid; place-items: center; }
+    .stage {
+      width: 100%; max-width: 940px; aspect-ratio: 16 / 9;
+      background: var(--bg-primary); border-radius: 6px;
+      box-shadow: var(--shadow-elevation-03);
+      padding: 48px 56px; display: flex; flex-direction: column; justify-content: center;
+    }
+    .eyebrow { color: var(--text-tertiary); margin-bottom: 10px; }
+    .stage h1 { margin: 0 0 14px; }
+    .rule { width: 64px; height: 4px; border-radius: 2px; background: var(--bg-brand); margin-bottom: 18px; }
+    .body-copy { color: var(--text-secondary); max-width: 62ch; }
+
+    /* PRO-gated actions are a plan decision, not markup */
+    .toolbar {
+      flex: none; margin-top: 12px; display: flex; justify-content: center; gap: 6px;
+      background: var(--bg-elevated); box-shadow: var(--shadow-elevation-02);
+      border-radius: 6px; padding: 6px; width: fit-content; margin-left: auto; margin-right: auto;
+    }
+    .tool {
+      border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 13px;
+      color: var(--text-primary); height: 30px; padding: 0 10px; border-radius: 4px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .tool:hover { background: var(--bg-elevated-hover); }
+    .tool .pai-badge { margin-left: 2px; }
+    body[data-plan="gold"] .tool .pai-badge,
+    body[data-plan="team"] .tool .pai-badge { display: none; }
+    /* out of credits, the generative tools are visibly spent */
+    body[data-credits="empty"] .tool[data-gen] { opacity: 0.4; pointer-events: none; }
+
+    @media (max-width: 640px) {
+      .stage { padding: 20px 22px; border-radius: 4px; }
+      .stage h1 { font-size: 1.25rem; }
+      .banner .sub { display: none; }
+      .toolbar { padding: 4px; }
+      .tool { padding: 0 7px; font-size: 12px; }
+    }
+  </style>
+</head>
+
+<body class="pai">
+
+  <div class="banner">
+    <i class="ph-fill ph-warning-circle lead"></i>
+    <span class="txt">
+      <b>Your trial ends in <span data-bind="user.trial.days_remaining"></span> days</b>
+      <span class="sub">No card on file — this deck reverts to view-only on <span data-bind="user.trial.ends_on" data-fmt="date"></span>.</span>
+    </span>
+    <button class="button-style button-small button-primary-brand" id="add-card">Add a card</button>
+    <button class="x" id="dismiss-banner" aria-label="Dismiss"><i class="ph ph-x"></i></button>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="stage">
+      <div class="eyebrow text-overline-small" data-bind="user.workspace"></div>
+      <h1 class="text-heading-3xl" data-bind="content.slides.3.title"></h1>
+      <div class="rule"></div>
+      <p class="body-copy text-body-lg-regular">
+        Weekly active venues grew from 4,100 to 11,800 over the last four quarters,
+        with net revenue retention holding above 120% across the top decile of accounts.
+      </p>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="tool" data-gen><i class="ph ph-magic-wand"></i>Regenerate</button>
+    <button class="tool" data-gen><i class="ph ph-text-aa"></i>Rewrite</button>
+    <button class="tool"><i class="ph ph-palette"></i>Theme</button>
+    <button class="tool"><i class="ph ph-chart-bar"></i>Add chart<span class="pai-badge pai-badge-pro">Pro</span></button>
+  </div>
+
+  <script src="../baby-pai.js" data-root=".."></script>
+  <script>
+    /* driven state: dismissing the banner is a real interaction, and the
+       shell hears about it — continuity.on_dismiss names the sibling. */
+    document.addEventListener('baby-pai:ready', function () {
+      var x = document.getElementById('dismiss-banner');
+      if (x) x.addEventListener('click', function () {
+        PAI.set('overlays.banner', null);
+        parent.postMessage({ type: 'pai:state-patch', patch: { 'overlays.banner': null } }, '*');
+      });
+    });
+  </script>
+</body>
+</html>
