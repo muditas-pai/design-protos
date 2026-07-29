@@ -1,16 +1,16 @@
 import InlineMenu from './InlineMenu'
 import { Badge, Button } from '../../ds'
-import { doc, collaborators } from '../../data/deck'
+import { collaborators, figmaDeck } from '../../data/deck'
 
-export default function EditorTopbar() {
+export default function EditorTopbar({ title = figmaDeck.title, onHome }) {
   return (
     <header className="editor-top">
       <InlineMenu>
         <InlineMenu.Group>
-          <InlineMenu.Item iconOnly aria-label="Home" icon={<i className="ph ph-house" />} />
+          <InlineMenu.Item iconOnly aria-label="Home" onClick={onHome} icon={<i className="ph ph-house" />} />
         </InlineMenu.Group>
         <InlineMenu.Group className="editor-docname">
-          <InlineMenu.Item grow>{doc.title}</InlineMenu.Item>
+          <InlineMenu.Item grow title={title}>{title}</InlineMenu.Item>
         </InlineMenu.Group>
       </InlineMenu>
 

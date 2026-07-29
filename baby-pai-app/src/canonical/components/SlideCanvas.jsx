@@ -1,17 +1,18 @@
-import { slide4Content as c, slides } from '../../data/deck'
+import { slide4Content as c, figmaDeck } from '../../data/deck'
 
-/* The open slide. Sized in container-query units (cqw) against the canvas
-   itself, so the whole slide scales proportionally with the viewport the way a
-   real slide does — no JS measuring, no fixed pixel layout. */
-export default function SlideCanvas({ current = 4 }) {
-  const slide = slides.find((s) => s.n === current)
+/* The open slide.
 
-  if (current !== 4) {
-    // the other four slides exist as thumbnails only; show them scaled rather
-    // than pretending they're built
+   One slide in the Figma deck is built as real DOM and sized in container-query
+   units (cqw) against the canvas, so it scales proportionally with no JS
+   measuring. Every other slide — and every slide in a library deck — is a page
+   image, which is honest: they were never built. */
+export default function SlideCanvas({ deck = figmaDeck, current = 1 }) {
+  const slide = deck.slides.find((s) => s.n === current)
+
+  if (deck.richSlide !== current) {
     return (
-      <div className="canvas">
-        <img className="canvas-standin" src={slide?.thumb} alt={slide?.title} />
+      <div className="canvas is-image">
+        {slide && <img className="canvas-standin" src={slide.thumb} alt={slide.title} />}
       </div>
     )
   }

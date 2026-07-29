@@ -147,6 +147,8 @@ export default function App() {
         {[...SCREEN_NAMES].map((s) => (
           <Route key={s} path={`/${s.toLowerCase()}`} element={<Screen name={s} />} />
         ))}
+        {/* a dashboard tile hands its deck to the editor through the slug */}
+        <Route path="/editor/:deckSlug" element={<Screen name="Editor" />} />
         <Route path="/flow/:flowId" element={<CanonicalFlow />} />
         <Route path="/x/:designer/:problem/:variant" element={<ExplorationRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />

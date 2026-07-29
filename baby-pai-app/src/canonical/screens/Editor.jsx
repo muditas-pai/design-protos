@@ -1,25 +1,33 @@
 import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useComponent } from '../../lib/overrides'
+import { resolveDeck } from '../../data/deck'
 
 /* Figma "JAS '26 — Handoff" 334:3043 (Editor - Theme - Font).
-   Four seams, same as the Dashboard: every part is resolved by name so an
-   exploration can replace one without copying the screen. */
+
+   Route is /editor/:deckSlug, and /editor with no slug opens the Figma deck.
+   The slug is how a dashboard tile hands its deck over. */
 export default function Editor() {
   const EditorTopbar = useComponent('EditorTopbar')
   const Filmstrip = useComponent('Filmstrip')
   const SlideCanvas = useComponent('SlideCanvas')
   const EditorToolbar = useComponent('EditorToolbar')
 
-  const [current, setCurrent] = useState(4)
+  const { deckSlug } = useParams()
+  const navigate = useNavigate()
+  const deck = resolveDeck(deckSlug)
+
+  // open on the rich slide when there is one, otherwise the first
+  const [current, setCurrent] = useState(deck.richSlide ?? 1)
   const [view, setView] = useState('strip')
 
   return (
     <div className="editor">
-      <EditorTopbar />
+      <EditorTopbar title={deck.title} onHome={() => navigate('/dashboard')} />
       <div className="editor-body">
-        <Filmstrip current={current} onSelect={setCurrent} view={view} onView={setView} />
+        <Filmstrip deck={deck} current={current} onSelect={setCurrent} view={view} onView={setView} />
         <div className="editor-stage">
-          <SlideCanvas current={current} />
+          <SlideCanvas deck={deck} current={current} />
         </div>
       </div>
       <EditorToolbar />

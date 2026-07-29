@@ -1,7 +1,7 @@
 import InlineMenu from './InlineMenu'
-import { slides } from '../../data/deck'
+import { figmaDeck } from '../../data/deck'
 
-export default function Filmstrip({ current = 4, onSelect, view = 'strip', onView }) {
+export default function Filmstrip({ deck = figmaDeck, current = 1, onSelect, view = 'strip', onView }) {
   return (
     <aside className="filmstrip">
       <InlineMenu className="filmstrip-head">
@@ -31,7 +31,7 @@ export default function Filmstrip({ current = 4, onSelect, view = 'strip', onVie
       </button>
 
       <ol className="filmstrip-list">
-        {slides.map((s) => (
+        {deck.slides.map((s) => (
           <li key={s.n}>
             <button
               className={`slide-thumb${s.n === current ? ' is-current' : ''}`}
@@ -39,7 +39,7 @@ export default function Filmstrip({ current = 4, onSelect, view = 'strip', onVie
               aria-current={s.n === current || undefined}
               aria-label={`Slide ${s.n}: ${s.title}`}
             >
-              <img src={s.thumb} alt="" />
+              <img src={s.thumb} alt="" loading="lazy" />
               <span className="slide-num">{s.n}</span>
             </button>
           </li>

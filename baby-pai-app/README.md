@@ -12,6 +12,23 @@ npm run lint     # the seam rule
 
 ---
 
+## Routes
+
+```
+#/                                index of everything
+#/dashboard                       canonical dashboard
+#/editor                          editor, opens the Figma deck (slide 4 is real DOM)
+#/editor/<deck-slug>              editor, opens a deck from the library
+#/flow/create-deck                canonical flow
+#/x/<designer>/<problem>/<variant>   an exploration
+```
+
+A dashboard tile opens the deck it shows, by handing its slug to the editor.
+Home in the editor goes back. That round trip is the point of stitching the
+screens together rather than shipping them as separate files.
+
+---
+
 ## The design system
 
 `src/ds/` wraps `design-system/pai.css` in React. No styles are declared there —

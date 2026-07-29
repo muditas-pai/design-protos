@@ -6,8 +6,7 @@ import slide5 from '../assets/slide-5.png'
 import collab1 from '../assets/collab-1.png'
 import collab2 from '../assets/collab-2.png'
 import collab3 from '../assets/collab-3.svg'
-
-export const doc = { title: 'Monthly business review' }
+import { deckBySlug } from './deck-library'
 
 export const collaborators = [
   { id: 1, name: 'Priya Nair', avatar: collab1 },
@@ -15,16 +14,43 @@ export const collaborators = [
   { id: 3, name: '+2 others', avatar: collab3, overflow: '+2' },
 ]
 
-export const slides = [
-  { n: 1, thumb: slide1, title: 'Title' },
-  { n: 2, thumb: slide2, title: 'Adoption over time' },
-  { n: 3, thumb: slide3, title: 'Global reach' },
-  { n: 4, thumb: slide4, title: 'Company Overview' },
-  { n: 5, thumb: slide5, title: 'Closing' },
-]
+/* The deck the Editor opens by default. Its slide 4 is built as real DOM from
+   the Figma node rather than shown as an image, which is why it stays the
+   default: it's the one slide where the canvas is a real layout you can
+   inspect and restyle, not a picture of one. */
+export const figmaDeck = {
+  slug: null,
+  title: 'Monthly business review',
+  richSlide: 4,
+  slides: [
+    { n: 1, thumb: slide1, title: 'Title' },
+    { n: 2, thumb: slide2, title: 'Adoption over time' },
+    { n: 3, thumb: slide3, title: 'Global reach' },
+    { n: 4, thumb: slide4, title: 'Company Overview' },
+    { n: 5, thumb: slide5, title: 'Closing' },
+  ],
+}
 
-/* Slide 4, the one open on the canvas. Content only — layout lives in the
-   SlideCanvas component. */
+/* A deck from the library, shaped like the one above. Library decks are page
+   images, so they have no rich slide. */
+function fromLibrary(d) {
+  return {
+    slug: d.slug,
+    title: d.title,
+    richSlide: null,
+    slides: d.pages.map((p) => ({ n: p.n, thumb: p.src, title: `Slide ${p.n}` })),
+  }
+}
+
+/* Editor route resolves its deck through here. An unknown or absent slug falls
+   back to the Figma deck rather than erroring, so /editor always works. */
+export function resolveDeck(slug) {
+  if (!slug) return figmaDeck
+  const d = deckBySlug(slug)
+  return d ? fromLibrary(d) : figmaDeck
+}
+
+/* Slide 4 of the Figma deck. Content only — layout lives in SlideCanvas. */
 export const slide4Content = {
   title: 'Company Overview',
   stats: [

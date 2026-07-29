@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useComponent } from '../../../lib/overrides'
 import { decks } from '../../../data/decks'
 
@@ -18,6 +19,8 @@ function FilesFirstDashboard() {
   const DocumentsHeader = useComponent('DocumentsHeader')
   const DeckCard = useComponent('DeckCard')
 
+  const navigate = useNavigate()
+
   const [tab, setTab] = useState('Recent')
   const [view, setView] = useState('grid')
 
@@ -29,7 +32,9 @@ function FilesFirstDashboard() {
         <section className="files" style={{ paddingTop: 8 }}>
           <DocumentsHeader active={tab} onSelect={setTab} view={view} onView={setView} />
           <div className={`grid grid-${view}`}>
-            {decks.map((d) => <DeckCard key={d.id} deck={d} />)}
+            {decks.map((d) => (
+              <DeckCard key={d.id} deck={d} onOpen={() => navigate(`/editor/${d.id}`)} />
+            ))}
           </div>
         </section>
         <section className="header" style={{ paddingTop: 8 }}>
