@@ -121,6 +121,13 @@ Figma. Nothing has to sit inside Figma, and nothing is a black box.
   API, so critique capture is the node diff for now, not threads.
 - **A frame is not a flow.** States are sibling frames. Anything about motion or
   what-happens-next is out of scope here.
+- **Figma Make was checked and ruled out** (30 Jul). It is a real Vite + React
+  app, so it would solve flows, but `use_figma` does not support Make files and
+  `get_screenshot` refuses them, so the harness cannot drive generation or take
+  its own screenshots. It also builds from shadcn/ui rather than our design
+  system, and the Make kit that would fix that needs an npm package of
+  `uicomponents` which does not exist. Costs the automated loop, buys no brand
+  alignment.
 - **Code Connect is unavailable.** It needs an Organization or Enterprise plan
   and we are on pro, so nothing binds a library component to its React
   counterpart. Grounding matches by name, and promoting a component changes
