@@ -124,6 +124,7 @@
     .q-bar { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
     .q-fill { height: 100%; width: 50%; border-radius: 99px; background: var(--brand); transition: width .3s var(--ease); }
     body.q-zero .q-fill { width: 100%; }
+    body.sc-unlimited .q-bar, body.sc-unlimited .mc-up { display: none; }
     .mc-actions { position: relative; display: flex; gap: 8px; flex: none; }
 
     /* manage popover (dashboard menu style) */
@@ -236,6 +237,7 @@
     <div class="demo-seg" role="tablist" aria-label="Quota demo">
       <button type="button" class="is-active" data-q="left">2 decks left</button>
       <button type="button" data-q="zero">0 left</button>
+      <button type="button" data-q="unlimited">Unlimited plan</button>
     </div>
   </div>
 
@@ -292,9 +294,9 @@
         <div class="member-card">
           <div class="mc-top">
           <div class="mc-plan">
-            <span class="pl-ic"><i class="ph-fill ph-pencil-ruler"></i></span>
-            <b>Studio membership
-              <span class="pl-sub">$2,000/month · renews Aug 30</span>
+            <span class="pl-ic"><i class="ph-fill ph-pen-nib"></i></span>
+            <b><span id="pl-name">Studio membership</span>
+              <span class="pl-sub" id="pl-sub">$2,000/month · renews Aug 30</span>
             </b>
           </div>
           <div class="mc-quota">
@@ -394,21 +396,38 @@
     var DECKS_TOTAL = 4;
     var decksLeft = 2;
 
+    var isUnlimited = false;
     var seg = document.querySelectorAll('.demo-seg button');
     seg.forEach(function (btn) {
       btn.addEventListener('click', function () {
         seg.forEach(function (b) { b.classList.toggle('is-active', b === btn); });
+        isUnlimited = btn.dataset.q === 'unlimited';
         decksLeft = btn.dataset.q === 'zero' ? 0 : 2;
         renderQuota();
       });
     });
 
     function renderQuota() {
+      document.body.classList.toggle('sc-unlimited', isUnlimited);
+      document.body.classList.toggle('q-zero', !isUnlimited && decksLeft === 0);
+      var set = function (id, txt) { document.getElementById(id).textContent = txt; };
+      if (isUnlimited) {
+        // Unlimited: no cap, no meter, no upsell. Always straight to upload.
+        set('pl-name', 'Unlimited membership');
+        set('pl-sub', '$5,000/month · renews Aug 30');
+        set('q-used', 'Unlimited');
+        document.getElementById('q-used').parentNode.childNodes[1].textContent = ' decks a month';
+        set('q-left', '2 in progress · decks run in parallel');
+        set('btn-left', '');
+        return;
+      }
+      set('pl-name', 'Studio membership');
+      set('pl-sub', '$2,000/month · renews Aug 30');
       var used = DECKS_TOTAL - decksLeft;
-      document.body.classList.toggle('q-zero', decksLeft === 0);
-      document.getElementById('q-used').textContent = used + ' of ' + DECKS_TOTAL;
-      document.getElementById('q-left').textContent = decksLeft === 0 ? 'Resets Aug 30' : decksLeft + ' left';
-      document.getElementById('btn-left').textContent = decksLeft === 0 ? '' : '· ' + decksLeft + ' left';
+      set('q-used', used + ' of ' + DECKS_TOTAL);
+      document.getElementById('q-used').parentNode.childNodes[1].textContent = ' decks used this month';
+      set('q-left', decksLeft === 0 ? 'Resets Aug 30' : decksLeft + ' left');
+      set('btn-left', decksLeft === 0 ? '' : '· ' + decksLeft + ' left');
     }
 
     // Manage popover
@@ -440,7 +459,7 @@
     // Quota left -> straight to the upload screen.
     // None left -> the Hire an Expert page with both tabs (buy one-time or upgrade).
     function newProject() {
-      var url = decksLeft > 0
+      var url = (isUnlimited || decksLeft > 0)
         ? '../onboarding/onboarding.html?embed=1'
         : 'hire-an-expert-v6.html';
       openOverlay(url);
