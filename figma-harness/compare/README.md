@@ -1,45 +1,43 @@
-# Two harnesses, drawn at the same fidelity
+# Three harnesses, drawn at the same fidelity
 
-Read `which-substrate.html` first; these two diagrams are its evidence.
+Same logic, same loops, same seven steps. The only difference is where the
+artifact lives. Each diagram carries a **substrate** column and marks its
+**costs**, so they can be read side by side.
 
-Same logic, same loops, same seven steps. The only difference is the
-substrate — and until now the two diagrams weren't comparable, because
-Dhruv's predates baby-PAI and so drew no substrate at all while the Figma
-one drew its substrate in full.
+**Read `which-substrate.html` first.** These diagrams are its evidence.
 
-Both now carry a **substrate** column and mark their **costs**, so the
-comparison is like-for-like.
+| Diagram | |
+|---|---|
+| `harness-with-baby-pai.html` | React prototype · 35 boxes · 5 substrate · 2 costs |
+| `harness-with-figma.html` | Figma · 40 boxes · 4 substrate · 4 costs |
+| `harness-with-pitchdeckdoclist.html` | the live product · 41 boxes · 5 substrate · 4 costs |
 
-| | React prototype (baby-PAI) | Figma |
-|---|---|---|
-| `harness-with-baby-pai.html` | 35 boxes · 5 substrate · 2 costs | |
-| `harness-with-figma.html` | | 40 boxes · 4 substrate · 4 costs |
+## How to read them
 
-## Read them this way
-
-Figma draws **more** costs than the React prototype. That is not the finding. The finding is the
-asymmetry in what the substrate boxes *are*:
+Count of costs is not the finding. What the substrate boxes *are* is:
 
 ```
-The React prototype's substrate boxes are things you must BUILD AND MAINTAIN
-   baby-pai-app · src/ds (a third copy) · ported screens that drift ·
-   an annotation layer written from scratch · dist/ and a deploy action
+React prototype   five things you BUILD AND MAINTAIN
+                  the app · a fourth design-system copy · ported screens
+                  that drift · an annotation layer from scratch · a deploy path
 
-Figma's substrate boxes are things you GET
-   the Figma file · no new design-system copy ·
-   capture as a byproduct · every designer can edit it
+Figma             four things you GET
+                  the file · no new copy · capture as a byproduct ·
+                  every designer can edit it
+
+pitchdeckdoclist  five things you GET
+                  the product itself · zero copies · git as isolation ·
+                  stale screens as free don'ts · it ends as a PR
 ```
 
-Five boxes of work against four boxes of leverage. The React prototype's two
-costs (re-implementation, and an artifact only React authors can edit) sit
-*downstream* of that work.
-
-Figma's four costs are real and none of them are maintenance: no flow state
-across frames, unverifiable reachability, slower round trips, and comments
-that the MCP cannot read. They are capability gaps, not upkeep.
+The React prototype wins no row outright. Everything it offers,
+pitchdeckdoclist does better or as well, and it carries costs neither other
+option has. The real choice is between the other two, and the answer in
+`which-substrate.html` is that it splits by phase: diverge in Figma, converge
+in the product.
 
 ## Everything unmarked is identical
 
 Steps 0 through 7, the gate, two-judge isolation, adjudicate, the conflict
 rule, the pass budget, harvest's closing question, the halt verdicts, the
-day-1 asset set. That is the ~80% both share.
+day-1 asset set. That is the four fifths all three share.
