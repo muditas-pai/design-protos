@@ -157,6 +157,31 @@
       font: 500 12.5px "Inter", sans-serif; cursor: pointer; transition: filter 120ms var(--ease); }
     .mc-up .up-cta:hover { filter: brightness(1.07); }
 
+    /* change-plan modal: upgrades now, downgrades next cycle */
+    .cp-ov { position: fixed; inset: 0; z-index: 90; background: rgba(10,25,37,.5);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; }
+    .cp-ov.show { display: flex; }
+    .cp-card { width: 440px; max-width: 92vw; background: #fff; border-radius: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.3); padding: 24px; }
+    .cp-card h3 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+    .cp-note { font-size: 12.5px; color: var(--fg-2); margin: 0 0 16px; line-height: 1.5; }
+    .cp-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px;
+      border: 1px solid var(--line-strong); border-radius: 8px; background: #fff;
+      cursor: pointer; font-family: inherit; text-align: left;
+      transition: border-color 120ms var(--ease), background 120ms var(--ease); }
+    .cp-row + .cp-row { margin-top: 10px; }
+    .cp-row:hover { background: var(--bg); }
+    .cp-row.current { border-color: var(--ink); cursor: default; }
+    .cp-row b { font-size: 14px; font-weight: 600; }
+    .cp-row .cp-sub { display: block; font-size: 12px; color: var(--fg-2); margin-top: 1px; }
+    .cp-row .cp-price { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--fg-2); white-space: nowrap; }
+    .cp-tag { flex: none; font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase;
+      background: var(--surface-2); color: var(--fg-2); border-radius: 34px; padding: 2px 8px; }
+    .cp-close { margin-top: 16px; width: 100%; height: 38px; border: 0; border-radius: 6px;
+      background: var(--surface-2); color: var(--fg); font: 500 13px "Inter", sans-serif; cursor: pointer; }
+    .cp-close:hover { background: var(--sel); }
+
     /* toast */
     .toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%) translateY(8px);
       z-index: 70; background: #171717; color: #fff; padding: 10px 16px; border-radius: 8px;
@@ -296,7 +321,7 @@
           <div class="mc-plan">
             <span class="pl-ic"><i class="ph-fill ph-pen-nib"></i></span>
             <b><span id="pl-name">Studio membership</span>
-              <span class="pl-sub" id="pl-sub">$2,000/month · renews Aug 30</span>
+              <span class="pl-sub" id="pl-sub">$2,000/month</span>
             </b>
           </div>
           <div class="mc-quota">
@@ -383,6 +408,18 @@
     </main>
   </div>
 
+  <!-- Change plan: upgrade now, downgrade at cycle end -->
+  <div class="cp-ov" id="cp-ov">
+    <div class="cp-card">
+      <h3>Change plan</h3>
+      <p class="cp-note">Upgrades apply immediately. Downgrades take effect at the end of your current cycle (Aug 30). You cannot move down mid cycle.</p>
+      <button class="cp-row" data-tier="1" onclick="pickPlan(1)"><span><b>Essential</b><span class="cp-sub">1 deck a month</span></span><span class="cp-price">$1,000/mo</span></button>
+      <button class="cp-row" data-tier="2" onclick="pickPlan(2)"><span><b>Studio</b><span class="cp-sub">Up to 4 decks a month</span></span><span class="cp-price">$2,000/mo</span></button>
+      <button class="cp-row" data-tier="3" onclick="pickPlan(3)"><span><b>Unlimited</b><span class="cp-sub">Unlimited decks, in parallel</span></span><span class="cp-price">$5,000/mo</span></button>
+      <button class="cp-close" onclick="closeChangePlan()">Close</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
 
   <!-- Overlay: upload screen (quota left) or Hire an Expert page (none left) -->
@@ -414,7 +451,7 @@
       if (isUnlimited) {
         // Unlimited: no cap, no meter, no upsell. Always straight to upload.
         set('pl-name', 'Unlimited membership');
-        set('pl-sub', '$5,000/month · renews Aug 30');
+        set('pl-sub', '$5,000/month');
         set('q-used', 'Unlimited');
         document.getElementById('q-used').parentNode.childNodes[1].textContent = ' decks a month';
         set('q-left', '2 in progress · decks run in parallel');
@@ -422,7 +459,7 @@
         return;
       }
       set('pl-name', 'Studio membership');
-      set('pl-sub', '$2,000/month · renews Aug 30');
+      set('pl-sub', '$2,000/month');
       var used = DECKS_TOTAL - decksLeft;
       set('q-used', used + ' of ' + DECKS_TOTAL);
       document.getElementById('q-used').parentNode.childNodes[1].textContent = ' decks used this month';
@@ -438,12 +475,47 @@
     function manageAction(e, action) {
       e.stopPropagation();
       document.getElementById('mc-actions').classList.remove('open');
-      if (action === 'Change plan') { openOverlay('retainer-checkout.html?plan=studio'); return; }
+      if (action === 'Change plan') { openChangePlan(); return; }
       var msg = action === 'pause' ? 'Membership paused. Your decks and channel stay until Aug 30.'
               : action === 'billing' ? 'Opening billing and invoices...'
               : 'We are sorry to see you go. Check your email to confirm cancellation.';
       showToast(msg);
     }
+    // Change plan rules: up any time, down only at cycle end
+    var TIERS = { 1: 'Essential', 2: 'Studio', 3: 'Unlimited' };
+    function currentTier() { return isUnlimited ? 3 : 2; }
+    function openChangePlan() {
+      var cur = currentTier();
+      document.querySelectorAll('.cp-row').forEach(function (r) {
+        var t = +r.dataset.tier;
+        r.classList.toggle('current', t === cur);
+        var old = r.querySelector('.cp-tag'); if (old) old.remove();
+        if (t === cur) {
+          var tag = document.createElement('span'); tag.className = 'cp-tag'; tag.textContent = 'Current plan';
+          r.appendChild(tag);
+        } else if (t < cur) {
+          var tag2 = document.createElement('span'); tag2.className = 'cp-tag'; tag2.textContent = 'From Aug 30';
+          r.appendChild(tag2);
+        }
+      });
+      document.getElementById('cp-ov').classList.add('show');
+    }
+    function closeChangePlan() { document.getElementById('cp-ov').classList.remove('show'); }
+    function pickPlan(tier) {
+      var cur = currentTier();
+      if (tier === cur) return;
+      closeChangePlan();
+      if (tier > cur) {
+        // upgrade: immediate
+        if (tier === 3) { isUnlimited = true; renderQuota(); }
+        showToast('Upgraded to ' + TIERS[tier] + '. Active immediately.');
+      } else {
+        // downgrade: only at cycle end
+        showToast('You move to ' + TIERS[tier] + ' on Aug 30, when your current cycle ends.');
+        document.getElementById('pl-sub').textContent += ' · switches to ' + TIERS[tier] + ' on Aug 30';
+      }
+    }
+
     var toastTimer;
     function showToast(msg) {
       var t = document.getElementById('toast');
