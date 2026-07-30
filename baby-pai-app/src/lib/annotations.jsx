@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import AnnotationComposer from './AnnotationComposer'
+import { annotationsFor } from './annotation-store'
 
 /* ============================================================================
    Annotations — located judgements, kept in the repo, shown on the screen.
@@ -12,35 +14,11 @@ import { useLocation } from 'react-router-dom'
    Capture records evidence only. Nothing here proposes a home for an
    annotation — that is the analysis pass (`npm run annotations`), deliberately
    separated so the person pinning a note isn't also routing it by gut.
+
+   The store lives in annotation-store.js so this file and the composer can
+   both read it without importing each other.
    ========================================================================== */
 
-const canonicalFiles = import.meta.glob('../canonical/**/*.annotations.json', {
-  eager: true, import: 'default',
-})
-const explorationFiles = import.meta.glob('../explorations/**/*.annotations.json', {
-  eager: true, import: 'default',
-})
-
-function normalise(entries, source, route) {
-  return (Array.isArray(entries) ? entries : []).map((a, i) => ({
-    ...a, source, route, key: `${source}#${a.anchor}#${i}`,
-  }))
-}
-
-export const ALL = [
-  ...Object.entries(canonicalFiles).flatMap(([path, entries]) =>
-    normalise(entries, path.replace(/^\.\.\//, ''), null)),
-  ...Object.entries(explorationFiles).flatMap(([path, entries]) => {
-    const m = path.match(/explorations\/([^/]+)\/([^/]+)\/([^/]+)\.annotations\.json$/)
-    const route = m ? `/x/${m[1]}/${m[2]}/${m[3].toLowerCase()}` : null
-    return normalise(entries, path.replace(/^\.\.\//, ''), route)
-  }),
-]
-
-/* what applies on the route currently open */
-export function annotationsFor(pathname) {
-  return ALL.filter((a) => a.still_valid !== false && (a.route === null || a.route === pathname))
-}
 
 const Ctx = createContext({ open: false })
 export const useAnnotations = () => useContext(Ctx)
@@ -51,6 +29,7 @@ export function AnnotationLayer() {
   const [open, setOpen] = useState(false)
   const [pins, setPins] = useState([])
   const [selected, setSelected] = useState(null)
+  const [composing, setComposing] = useState(null)
   const { pathname } = useLocation()
   const raf = useRef(0)
 
@@ -60,9 +39,9 @@ export function AnnotationLayer() {
       if (e.shiftKey && (e.key === 'C' || e.key === 'c') && !/input|textarea/i.test(e.target.tagName)) {
         e.preventDefault()
         setOpen((v) => !v)
-        setSelected(null)
+        setSelected(null); setComposing(null)
       }
-      if (e.key === 'Escape') { setOpen(false); setSelected(null) }
+      if (e.key === 'Escape') { setSelected(null); setComposing(null) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -107,19 +86,35 @@ export function AnnotationLayer() {
             className={`anno-box${p.notes.length ? '' : ' is-bare'}`}
             style={{ top: p.rect.top, left: p.rect.left, width: p.rect.width, height: p.rect.height }}
           >
-            {p.notes.length > 0 && (
-              <button
-                className={`anno-pin is-${p.notes[0].verdict}`}
-                onClick={() => setSelected(selected?.id === p.id ? null : p)}
-                aria-label={`${p.notes.length} annotation on ${p.id}`}
-              >
-                {p.notes.length}
-              </button>
-            )}
+            <button
+              className={`anno-pin is-${p.notes.length ? p.notes[0].verdict : 'bare'}`}
+              onClick={() => { setSelected(selected?.id === p.id ? null : p); setComposing(null) }}
+              aria-label={p.notes.length ? `${p.notes.length} annotation on ${p.id}` : `annotate ${p.id}`}
+            >
+              {p.notes.length || '+'}
+            </button>
           </div>
         ))}
 
-        {selected && <AnnotationCard pin={selected} onClose={() => setSelected(null)} />}
+        {selected && !composing && (
+          <AnnotationCard
+            pin={selected}
+            onClose={() => setSelected(null)}
+            onAdd={() => setComposing(selected)}
+          />
+        )}
+
+        {composing && (
+          <div className="anno-card is-compose"
+               style={cardPos(composing.rect)}>
+            <AnnotationComposer
+              anchor={composing.id}
+              pathname={pathname}
+              onDone={() => { setComposing(null); setSelected(null) }}
+              onCancel={() => setComposing(null)}
+            />
+          </div>
+        )}
 
         <div className="anno-bar">
           <span className="anno-bar-title">Annotations</span>
@@ -133,11 +128,15 @@ export function AnnotationLayer() {
   )
 }
 
-function AnnotationCard({ pin, onClose }) {
-  const top = Math.min(pin.rect.top, window.innerHeight - 300)
-  const left = Math.min(pin.rect.left + pin.rect.width + 12, window.innerWidth - 372)
+function cardPos(rect) {
+  const top = Math.min(rect.top, window.innerHeight - 420)
+  const left = Math.min(rect.left + rect.width + 12, window.innerWidth - 372)
+  return { top: Math.max(12, top), left: Math.max(12, left) }
+}
+
+function AnnotationCard({ pin, onClose, onAdd }) {
   return (
-    <div className="anno-card" style={{ top: Math.max(12, top), left: Math.max(12, left) }}>
+    <div className="anno-card" style={cardPos(pin.rect)}>
       <div className="anno-card-head">
         <code>{pin.id}</code>
         <button onClick={onClose} aria-label="Close"><i className="ph ph-x" /></button>
@@ -156,6 +155,12 @@ function AnnotationCard({ pin, onClose }) {
           </div>
         </div>
       ))}
+      {pin.notes.length === 0 && <p className="anno-empty">Nobody has judged this element.</p>}
+      <div className="anno-actions">
+        <button className="anno-btn is-primary" onClick={onAdd}>
+          <i className="ph ph-plus" /> Add annotation
+        </button>
+      </div>
     </div>
   )
 }

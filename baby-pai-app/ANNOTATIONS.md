@@ -8,9 +8,14 @@ The point is not comments. It is that the harness has no corpus of *good* and
 *not good* on day one, and no mechanism for a designer's eye to become a rule.
 This is that mechanism.
 
-**Built and running as a spike.** `Shift-C` on any route; `npm run annotations`
-for the review packet; `npm run annotations -- --check` to validate in CI.
-Seeded with 10 annotations across canonical and two deliberate anti-patterns.
+**Built and running as a spike.** `Shift-C` on any route to see and author;
+`npm run annotations` for the review packet; `-- --check` to validate in CI.
+
+In-browser authoring writes straight to the repo. A dev-only Vite middleware
+(`vite-plugin-annotations.js`) accepts a POST and appends to the co-located
+file, so a note you pin becomes a diff you can read in a PR. Paths are
+constrained to `src/**` and `*.annotations.json`, and it is not mounted in a
+build.
 
 ---
 
@@ -191,8 +196,17 @@ lint failure** rather than a mystery.
 
 ## Seeing them
 
-`Shift-C` toggles the overlay on any route. Pins sit on their anchored elements,
-coloured by verdict, and expand to the full note. `Shift-C` again hides them.
+`Shift-C` toggles the overlay on any route. Every anchored element gets a pin:
+coloured by verdict where there are notes, a faint `+` where nobody has judged
+it yet. Clicking opens the notes, and *Add annotation* opens the composer.
+
+The composer asks four things — verdict, what you see, why, and a rule slug
+— plus one scope question: **is this about the component, or this variation?**
+That decides which file it writes to, and it's the same question harvest asks.
+
+It asks nothing about where the annotation should end up. It also soft-warns
+in place when a note trips the observability bar, so the correction happens
+while you're still looking at the screen rather than at review time.
 
 This is the part that makes annotations a design artifact rather than a data
 file: you see what has been judged, and what never has, while looking at the
