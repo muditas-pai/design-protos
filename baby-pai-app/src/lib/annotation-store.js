@@ -29,9 +29,20 @@ export const ALL = [
   }),
 ]
 
+/* Notes written this session. The file watcher ignores *.annotations.json so
+   saving doesn't reload the page, which means the layer has to remember what
+   it just wrote until the next real reload picks it up from disk. */
+const SESSION = []
+let seq = 0
+export function addSession(annotation, route) {
+  SESSION.push({ ...annotation, source: 'session', route, key: `session#${seq++}` })
+}
+
 /* what applies on the route currently open */
 export function annotationsFor(pathname) {
-  return ALL.filter((a) => a.still_valid !== false && (a.route === null || a.route === pathname))
+  return [...ALL, ...SESSION].filter(
+    (a) => a.still_valid !== false && (a.route == null || a.route === pathname),
+  )
 }
 
 /* slugs already in use, so the composer can offer them and build a count */

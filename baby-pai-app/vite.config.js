@@ -11,5 +11,10 @@ export default defineConfig({
   build: { outDir: 'dist', emptyOutDir: true },
   // the app imports ../design-system/pai.css directly rather than copying it,
   // so the dev server has to be allowed to read one level up
-  server: { fs: { allow: ['..'] } },
+  server: {
+    fs: { allow: ['..'] },
+    // writing an annotation must not reload the page out from under you —
+    // the layer keeps its own session copy until the next real reload
+    watch: { ignored: ['**/*.annotations.json'] },
+  },
 })

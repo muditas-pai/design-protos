@@ -66,6 +66,32 @@ concept, no contradiction.
 
 ## An annotation
 
+Capture writes a small core. Everything else is added later by the analysis
+pass, so an annotation grows rather than arriving complete.
+
+```json
+{
+  "at": {
+    "region": "sidebar.workspace",
+    "selector": "#root > div.app > aside.sidebar > nav.nav:nth-of-type(2) > button.nav-item:nth-of-type(2)",
+    "tag": "button", "classes": ["nav-item"],
+    "text": "Create project Pro",
+    "route": "/dashboard"
+  },
+  "verdict": "bad",
+  "note": "Create project carries a PRO badge but stays fully enabled, so a free user only learns it is gated after clicking",
+  "status": "proposed", "author": "mudita",
+  "as_of": "2026-07-30", "still_valid": true
+}
+```
+
+**That's the whole capture contract: where, which way, and what you saw.** The
+`rule`, `why` and `instead` below are *enrichment* — an LLM reading the packet
+proposes them and you rule on it. Making a person type a rule slug while
+looking at one screen is asking them to cluster a corpus they can't see.
+
+### Enriched form
+
 ```json
 {
   "anchor": "sidebar.upgrade-badge",
@@ -84,7 +110,7 @@ concept, no contradiction.
 
 | Field | Does what |
 |---|---|
-| `anchor` | the element, by stable id (see *Anchors*) |
+| `at` | the located element, captured automatically (see *Anchors*) |
 | `verdict` | `good` or `bad`. Good is first-class — it is half the job |
 | `note` | the observation. Must pass the bar below |
 | `instead` | required on `bad`. Without it the note reaches the judge but never the builder |
@@ -94,7 +120,7 @@ concept, no contradiction.
 | `status` | `proposed` → `accepted` → `rejected`. Candidates stay pending until a human rules |
 | `as_of` · `still_valid` | corrections supersede rather than delete, per vault convention |
 
-**There is deliberately no `route` field.** See below.
+**No `route` field, and nothing about which home it belongs in.** See below.
 
 ---
 
@@ -181,16 +207,28 @@ gives "one thing to grep" without the merge conflicts.
 
 ## Anchors
 
-Elements declare their own id. Annotations reference it.
+**Any element is annotatable, at any level of grouping.** Hover to select,
+`[` and `]` to narrow and widen through the DOM, so you can judge a nav item,
+the nav it sits in, or the whole sidebar.
 
-```jsx
-<span data-annotate="sidebar.upgrade-badge">
+An earlier version only allowed elements someone had pre-tagged with
+`data-annotate`. That made capture serve storage: you could only judge what had
+already been anticipated, which is exactly backwards.
+
+A selector alone is fragile — that was the real objection to agentation's
+captured selectors, and it still holds. So capture records a **descriptor**, not
+just a selector:
+
+```json
+{ "region": "sidebar.workspace", "selector": "…", "tag": "button",
+  "classes": ["nav-item"], "text": "Create project Pro", "route": "/dashboard" }
 ```
 
-Not a CSS selector. A selector captured from the DOM breaks silently the first
-time someone restyles, and agentation's captured selectors have exactly this
-problem. An id is greppable, survives restyling, and **an orphaned anchor is a
-lint failure** rather than a mystery.
+If the selector rots, the region, classes and text still say what the note was
+about, and re-anchoring becomes a job the analysis pass can do rather than a
+mystery. `data-annotate` survives as an optional **region marker** — a name for
+a part, so notes cluster by area even when the clicked element is three levels
+deep and anonymous.
 
 ---
 

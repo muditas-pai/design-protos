@@ -60,10 +60,14 @@ export default function annotationsPlugin({ root }) {
             return send(200, { ok: true, file: body.file, count: next.length })
           }
 
+          /* Capture's whole contract: where, which way, and what you saw.
+             No rule slug, no "instead", no principle — those are inferences the
+             analysis pass makes over the corpus, and demanding them here just
+             moves that work onto someone holding a mouse. */
           const a = body.annotation ?? {}
-          if (!a.anchor || !a.verdict || !a.note) return send(400, { error: 'anchor, verdict and note are required' })
-          if (a.verdict === 'bad' && !a.instead) return send(400, { error: 'a "bad" needs an "instead"' })
-          if (!a.rule) return send(400, { error: 'a rule slug is required — it is the join key' })
+          if (!a.at && !a.anchor) return send(400, { error: 'no locator' })
+          if (!['good', 'bad'].includes(a.verdict)) return send(400, { error: 'verdict must be good or bad' })
+          if (!a.note?.trim()) return send(400, { error: 'a note is required' })
 
           list.push(a)
           write(abs, list)
