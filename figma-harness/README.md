@@ -49,9 +49,10 @@ users, and already has copy, states and components. So the run reads the live
 route in `pitchdeckdoclist` before anything is drawn:
 
 ```
-which components compose this route   →  and via Code Connect, which
-what copy is actually in them            Figma components to compose with
-what states it already handles
+which components compose this route   →  the agent matches each to a
+what copy is actually in them            Figma component by name
+what states it already handles           (Code Connect would bind them,
+                                          but needs an Org plan)
 ```
 
 The repo is 342k LOC and needs three services to run, so it is **read, never
@@ -120,3 +121,7 @@ Figma. Nothing has to sit inside Figma, and nothing is a black box.
   API, so critique capture is the node diff for now, not threads.
 - **A frame is not a flow.** States are sibling frames. Anything about motion or
   what-happens-next is out of scope here.
+- **Code Connect is unavailable.** It needs an Organization or Enterprise plan
+  and we are on pro, so nothing binds a library component to its React
+  counterpart. Grounding matches by name, and promoting a component changes
+  what gets designed rather than what gets shipped. An upgrade closes this.

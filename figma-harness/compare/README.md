@@ -26,7 +26,7 @@ The React prototype's substrate boxes are things you must BUILD AND MAINTAIN
    an annotation layer written from scratch · dist/ and a deploy action
 
 Figma's substrate boxes are things you GET
-   the Figma file · one design system, Code Connect bound ·
+   the Figma file · no new design-system copy ·
    capture as a byproduct · every designer can edit it
 ```
 
