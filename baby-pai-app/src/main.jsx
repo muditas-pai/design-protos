@@ -11,6 +11,7 @@ import './styles/chrome.css'
 import './styles/dashboard.css'
 import './styles/editor.css'
 import './styles/flow.css'
+import './styles/annotations.css'
 import './styles/index-page.css'
 import './index.css'
 

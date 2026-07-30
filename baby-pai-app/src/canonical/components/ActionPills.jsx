@@ -4,7 +4,7 @@ import { Badge } from '../../ds'
    it is a design-system badge, so that part stays in sync. */
 export default function ActionPills() {
   return (
-    <div className="pills">
+    <div className="pills" data-annotate="pills.group">
       <button className="pill text-body-base-medium">
         <span className="pill-ic"><i className="ph-fill ph-microsoft-powerpoint-logo" /></span>
         Import PowerPoint

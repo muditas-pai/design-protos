@@ -9,7 +9,7 @@ export default function EditorTopbar({ title = figmaDeck.title, onHome }) {
         <InlineMenu.Group>
           <InlineMenu.Item iconOnly aria-label="Home" onClick={onHome} icon={<i className="ph ph-house" />} />
         </InlineMenu.Group>
-        <InlineMenu.Group className="editor-docname">
+        <InlineMenu.Group className="editor-docname" data-annotate="editor.docname">
           <InlineMenu.Item grow title={title}>{title}</InlineMenu.Item>
         </InlineMenu.Group>
       </InlineMenu>
@@ -43,7 +43,7 @@ export default function EditorTopbar({ title = figmaDeck.title, onHome }) {
           </InlineMenu.Item>
         </InlineMenu.Group>
 
-        <InlineMenu.Group className="editor-export">
+        <InlineMenu.Group className="editor-export" data-annotate="editor.export">
           <Button
             variant="primary"
             size="small"

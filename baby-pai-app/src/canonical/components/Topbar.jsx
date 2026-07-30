@@ -4,10 +4,11 @@ import { Button } from '../../ds'
 export default function Topbar() {
   return (
     <header className="topbar">
-      <div className="trial">
+      <div className="trial" data-annotate="topbar.trial">
         <span className="trial-text text-body-base-medium">🔥 Trial: 4 days left</span>
         <Button
           variant="primary-brand"
+          data-annotate="topbar.upgrade"
           size="small"
           leading={<i className="ph ph-rocket-launch" />}
         >

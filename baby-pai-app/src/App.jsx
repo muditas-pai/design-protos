@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Navigate, Link, useParams } from 'react-router-dom'
 import { Overrides, useComponent, CANONICAL, SCREEN_NAMES } from './lib/overrides'
 import { FlowRunner, FLOWS } from './lib/flow'
+import { AnnotationLayer } from './lib/annotations'
 
 /* Explorations are auto-registered from the file tree. Nobody edits a router
    file, so two designers adding variations the same afternoon never conflict.
@@ -142,6 +143,7 @@ function Index() {
 export default function App() {
   return (
     <HashRouter>
+      <AnnotationLayer />
       <Routes>
         <Route path="/" element={<Index />} />
         {[...SCREEN_NAMES].map((s) => (

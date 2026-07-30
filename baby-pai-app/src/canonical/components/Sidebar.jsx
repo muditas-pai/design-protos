@@ -4,12 +4,12 @@ import { Badge } from '../../ds'
 export default function Sidebar() {
   return (
     <aside className="sidebar">
-      <div className="ws">
+      <div className="ws" data-annotate="sidebar.workspace">
         <span className="ws-avatar">
           <img src={workspaceImg} alt="" />
         </span>
         <span className="ws-name text-body-base-medium">Foursquare</span>
-        <Badge variant="pro">Upgrade</Badge>
+        <Badge variant="pro" data-annotate="sidebar.upgrade-badge">Upgrade</Badge>
         <i className="ph ph-caret-down caret" />
       </div>
 
@@ -35,7 +35,7 @@ export default function Sidebar() {
         <button className="nav-item"><i className="ph ph-pencil-ruler" /><span>Hire an Expert</span></button>
       </nav>
 
-      <div className="sidebar-foot">
+      <div className="sidebar-foot" data-annotate="sidebar.foot">
         <nav className="nav nav-flush">
           <button className="nav-item"><i className="ph ph-gear" /><span>Workspace settings</span></button>
           <button className="nav-item">

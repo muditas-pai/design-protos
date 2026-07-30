@@ -8,7 +8,20 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # → dist/  (committed, so Pages serves it)
 npm run lint     # the seam rule
+npm run annotations   # review packet from every annotation
 ```
+
+---
+
+## Annotations
+
+`Shift-C` on any route toggles the annotation layer: located judgements pinned
+to elements, coloured by verdict, with the elements nobody has judged outlined
+as coverage. `npm run annotations` clusters them by rule slug across surfaces
+and prints a review packet.
+
+Capture records evidence only — it never proposes a home. That's the analysis
+pass, deliberately separated. Full design in `ANNOTATIONS.md`.
 
 ---
 

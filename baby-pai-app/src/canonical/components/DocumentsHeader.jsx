@@ -3,7 +3,7 @@ const TABS = ['Recent', 'Starred', 'Download', 'Recently deleted']
 export default function DocumentsHeader({ active = 'Recent', onSelect, view = 'grid', onView }) {
   return (
     <div className="files-head">
-      <div className="tabs">
+      <div className="tabs" data-annotate="files.tabs">
         {TABS.map((t) => (
           <button
             key={t}
@@ -14,7 +14,7 @@ export default function DocumentsHeader({ active = 'Recent', onSelect, view = 'g
           </button>
         ))}
       </div>
-      <div className="toggle">
+      <div className="toggle" data-annotate="files.viewtoggle">
         <button
           className={view === 'list' ? 'is-active' : undefined}
           aria-label="List view"

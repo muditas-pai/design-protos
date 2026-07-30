@@ -16,13 +16,13 @@ export default function PromptComposer() {
 
   return (
     <div className="composer" style={{ '--composer-tint': brand.tint }}>
-      <div className="composer-head">
+      <div className="composer-head" data-annotate="composer.brand-chip">
         <button className="brand-chip text-body-base-regular">
           <img src={brandImg} alt="" className="brand-chip-avatar" />
           <span>For {brand.name}</span>
           <i className="ph ph-caret-down" />
         </button>
-        <div className="swatches">
+        <div className="swatches" data-annotate="composer.swatches">
           {brand.palette.map((c) => (
             <span key={c} className="swatch" style={{ '--swatch': c }} />
           ))}
@@ -45,7 +45,7 @@ export default function PromptComposer() {
         )}
 
         <div className="composer-actions">
-          <div className="composer-tools">
+          <div className="composer-tools" data-annotate="composer.tools">
             <Button variant="tertiary" size="small" leading={<i className="ph ph-upload-simple" />}>
               Upload files, or links
             </Button>
@@ -71,6 +71,7 @@ export default function PromptComposer() {
           <Button
             variant="primary" size="small"
             className="composer-submit"
+            data-annotate="composer.submit"
             disabled={!flow || !ready}
             onClick={() => flow?.next()}
           >

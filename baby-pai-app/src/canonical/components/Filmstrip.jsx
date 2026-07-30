@@ -25,7 +25,7 @@ export default function Filmstrip({ deck = figmaDeck, current = 1, onSelect, vie
         </InlineMenu.Group>
       </InlineMenu>
 
-      <button className="filmstrip-new">
+      <button className="filmstrip-new" data-annotate="filmstrip.new">
         <i className="ph ph-plus" />
         New Slide
       </button>
