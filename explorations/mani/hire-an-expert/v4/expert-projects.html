@@ -111,8 +111,8 @@
 
     /* membership summary */
     .member-card { margin-top: 20px; background: var(--surface);
-      border-radius: 8px; box-shadow: var(--sh-card); padding: 16px 20px;
-      display: flex; align-items: center; gap: 24px; }
+      border-radius: 8px; box-shadow: var(--sh-card); }
+    .mc-top { padding: 16px 20px; display: flex; align-items: center; gap: 24px; }
     .mc-plan { display: flex; align-items: center; gap: 10px; flex: none; }
     .mc-plan .pl-ic { width: 40px; height: 40px; border-radius: 8px; background: var(--brand-tint);
       display: grid; place-items: center; color: var(--brand); font-size: 22px; }
@@ -124,7 +124,44 @@
     .q-bar { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
     .q-fill { height: 100%; width: 50%; border-radius: 99px; background: var(--brand); transition: width .3s var(--ease); }
     body.q-zero .q-fill { width: 100%; }
-    .mc-actions { display: flex; gap: 8px; flex: none; }
+    .mc-actions { position: relative; display: flex; gap: 8px; flex: none; }
+
+    /* manage popover (dashboard menu style) */
+    .mmenu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+      width: 224px; padding: 6px; background: var(--surface); border-radius: 6px;
+      box-shadow: 0 24px 40px -16px rgba(26,26,26,.12), 0 4px 6px rgba(26,26,26,.06),
+                  0 0 0 1px rgba(26,26,26,.06), inset 0 0 0 1px var(--inner);
+      opacity: 0; visibility: hidden; transform: translateY(-6px);
+      transition: opacity 140ms var(--ease), transform 180ms var(--ease); }
+    .mc-actions.open .mmenu { opacity: 1; visibility: visible; transform: translateY(0); }
+    .mc-actions.open .btn-ghost { background: var(--surface-2); }
+    .mmenu button { display: flex; align-items: center; gap: 10px; width: 100%; height: 36px;
+      padding: 8px 10px; border: 0; border-radius: 4px; background: transparent;
+      font: 400 13.5px "Inter", sans-serif; color: var(--fg); text-align: left; cursor: pointer;
+      transition: background 120ms var(--ease); }
+    .mmenu button:hover { background: var(--sel); }
+    .mmenu button i { font-size: 18px; color: var(--fg); flex: none; }
+    .mmenu .m-sep { height: 1px; background: var(--line); margin: 6px 8px; }
+    .mmenu .danger, .mmenu .danger i { color: #b91c1c; }
+    .mmenu .danger:hover { background: rgba(185,28,28,.07); }
+
+    /* Unlimited upsell strip at the bottom of the member card */
+    .mc-up { display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+      border-top: 1px solid var(--line); background: var(--brand-tint);
+      border-radius: 0 0 8px 8px; font-size: 13px; color: var(--fg); }
+    .mc-up i { font-size: 18px; color: var(--brand); flex: none; }
+    .mc-up b { font-weight: 600; }
+    .mc-up .up-cta { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 6px;
+      height: 30px; padding: 0 14px; background: var(--brand); color: #fff; border: 0; border-radius: 5px;
+      font: 500 12.5px "Inter", sans-serif; cursor: pointer; transition: filter 120ms var(--ease); }
+    .mc-up .up-cta:hover { filter: brightness(1.07); }
+
+    /* toast */
+    .toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%) translateY(8px);
+      z-index: 70; background: #171717; color: #fff; padding: 10px 16px; border-radius: 8px;
+      font: 500 13px "Inter", sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      opacity: 0; visibility: hidden; transition: opacity 180ms var(--ease), transform 200ms var(--ease); }
+    .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
     .btn-ghost { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
       background: var(--surface); color: var(--fg); border: 0; border-radius: 6px;
       box-shadow: var(--sh-btn); font: 500 13px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
@@ -253,6 +290,7 @@
 
         <!-- Membership summary -->
         <div class="member-card">
+          <div class="mc-top">
           <div class="mc-plan">
             <span class="pl-ic"><i class="ph-fill ph-pencil-ruler"></i></span>
             <b>Studio membership
@@ -263,9 +301,21 @@
             <div class="q-row"><span><b id="q-used">2 of 4</b> decks used this month</span><span id="q-left">2 left</span></div>
             <div class="q-bar"><div class="q-fill"></div></div>
           </div>
-          <div class="mc-actions">
-            <button class="btn-ghost"><i class="ph ph-chats-circle"></i>Message your Designer</button>
-            <button class="btn-ghost"><i class="ph ph-gear"></i>Manage</button>
+          <div class="mc-actions" id="mc-actions">
+            <button class="btn-ghost" onclick="toggleManage(event)"><i class="ph ph-gear"></i>Manage<i class="ph ph-caret-down" style="font-size:13px;"></i></button>
+            <div class="mmenu" role="menu">
+              <button role="menuitem" onclick="manageAction(event, 'Change plan')"><i class="ph ph-arrows-left-right"></i>Change plan</button>
+              <button role="menuitem" onclick="manageAction(event, 'pause')"><i class="ph ph-pause-circle"></i>Pause membership</button>
+              <button role="menuitem" onclick="manageAction(event, 'billing')"><i class="ph ph-receipt"></i>Billing &amp; invoices</button>
+              <div class="m-sep"></div>
+              <button class="danger" role="menuitem" onclick="manageAction(event, 'cancel')"><i class="ph ph-x-circle"></i>Cancel membership</button>
+            </div>
+          </div>
+          </div><!-- /mc-top -->
+          <div class="mc-up">
+            <i class="ph-bold ph-infinity"></i>
+            <span>Shipping more than 4 decks a month? <b>Go Unlimited for $5,000/month.</b></span>
+            <button class="up-cta" onclick="openOverlay('retainer-checkout.html?plan=unlimited')">Upgrade</button>
           </div>
         </div>
 
@@ -331,6 +381,8 @@
     </main>
   </div>
 
+  <div class="toast" id="toast" role="status"></div>
+
   <!-- Overlay: upload screen (quota left) or Hire an Expert page (none left) -->
   <div class="ov" id="ov" aria-hidden="true">
     <button class="ov-close" aria-label="Close" onclick="closeOverlay()"><i class="ph-bold ph-x"></i></button>
@@ -358,6 +410,32 @@
       document.getElementById('q-left').textContent = decksLeft === 0 ? 'Resets Aug 30' : decksLeft + ' left';
       document.getElementById('btn-left').textContent = decksLeft === 0 ? '' : '· ' + decksLeft + ' left';
     }
+
+    // Manage popover
+    function toggleManage(e) {
+      e.stopPropagation();
+      document.getElementById('mc-actions').classList.toggle('open');
+    }
+    function manageAction(e, action) {
+      e.stopPropagation();
+      document.getElementById('mc-actions').classList.remove('open');
+      if (action === 'Change plan') { openOverlay('retainer-checkout.html?plan=studio'); return; }
+      var msg = action === 'pause' ? 'Membership paused. Your decks and channel stay until Aug 30.'
+              : action === 'billing' ? 'Opening billing and invoices...'
+              : 'We are sorry to see you go. Check your email to confirm cancellation.';
+      showToast(msg);
+    }
+    var toastTimer;
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2800);
+    }
+    document.addEventListener('click', function () {
+      document.getElementById('mc-actions').classList.remove('open');
+    });
 
     // Quota left -> straight to the upload screen.
     // None left -> the Hire an Expert page with both tabs (buy one-time or upgrade).
