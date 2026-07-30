@@ -15,7 +15,8 @@ Roughly 80% carries over unchanged. Only the middle three steps move.
 | Step | Design harness | Here |
 |---|---|---|
 | 0 · Frame the brief + gate | brief → numbered checklist, you ratify | **unchanged** |
-| 1 · Retrieve anchors | `exemplars.json` rows → files | rows → `figma://` node ids |
+| **1a · Ground** | — | **new.** Read the live route in `pitchdeckdoclist` first |
+| 1b · Retrieve anchors | `exemplars.json` rows → files | rows → `figma://` node ids |
 | 2 · Generate | write HTML from `template.html` | `use_figma`, composing library components |
 | 3 · Lint | regex over HTML source | **query the node tree** |
 | 4 · Render states | Playwright at `?state=` | `get_screenshot` per state frame |
@@ -40,6 +41,31 @@ node:
 
 Four of six go from textual guesswork to structural fact. **Determinism is the
 reason to prefer this substrate**, not fidelity.
+
+### Ground before you design
+
+You are almost never inventing a screen. You are changing one that exists, has
+users, and already has copy, states and components. So the run reads the live
+route in `pitchdeckdoclist` before anything is drawn:
+
+```
+which components compose this route   →  and via Code Connect, which
+what copy is actually in them            Figma components to compose with
+what states it already handles
+```
+
+The repo is 342k LOC and needs three services to run, so it is **read, never
+run**. Reading is cheap; running is not.
+
+Two things fall out. Generation starts from what exists instead of redesigning
+the dashboard from scratch every run. And the product judge can be asked a
+sharper question than "does this solve the brief" — it can be asked what
+actually changed, and whether that delta is the one the brief wanted.
+
+Ground says *what is there*. Anchors say *how it should look*. Both, then
+generate.
+
+---
 
 ### The loop is a diff, not an annotation
 
