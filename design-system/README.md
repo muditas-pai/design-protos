@@ -53,6 +53,13 @@ Two interchangeable ways to style — mix freely:
   panel one step darker so it reads as its own surface.
 - **Shadow primitives** — `drop-{1|2|3}`, `inner-{1|2}`. Every elevation composes from these,
   so reach for them rather than inventing a new rgba.
+- **Stock palettes** — `gray`, `amber`, `violet`, `purple`, `red`, `indigo`, `blue`, `orange` are
+  pinned to the exact ramps the app aliases. Two are not what their name suggests: **`gray` is
+  Tailwind's neutral** and **`amber` is Tailwind's yellow**. Pinning them means a proto cannot
+  silently pick up a different ramp from the CDN default.
+- **Not in the app** — `slate`, `zinc`, `stone`, `emerald`, `teal`, `cyan`, `sky`, `rose`, `pink`,
+  `fuchsia`, `lime`, `neutral` reach protos from the Tailwind CDN but have no counterpart in the
+  product. Treat anything you build with them as off-system.
 
 ## Notes / scope
 
