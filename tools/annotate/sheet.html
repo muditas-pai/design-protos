@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Annotations</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ==========================================================================
+     Every note in the repo, each with a picture of what it is about.
+
+     The picture is the real proto in an iframe, scaled and offset so the
+     annotated element sits in frame, with a highlight over it. Not a raster:
+     a note anchors by CSS selector, so the thing worth showing is the DOM the
+     selector resolves against. A PNG could not be re-anchored, re-measured or
+     linted, and would go stale without saying so.
+
+     It shows a REGION around the element, not a tight crop. Most judgements
+     are about an element in its context — "the subtitle repeats the title"
+     cannot be seen from the subtitle alone.
+     ========================================================================= */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0d1117; color: #e6edf3;
+    font-family: Inter, system-ui, sans-serif;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; padding: 18px 24px 14px;
+    background: rgba(13,17,23,.94); border-bottom: 1px solid #21262d;
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  h1 { font-size: 17px; font-weight: 600; margin: 0; }
+  .meta { font-size: 12px; color: #6e7681; font-variant-numeric: tabular-nums; }
+  .sp { flex: 1; }
+  a.plain { color: #58a6ff; font-size: 12px; text-decoration: none; }
+  a.plain:hover { text-decoration: underline; }
+
+  .group { padding: 26px 24px 0; }
+  .group h2 {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: #6e7681; margin: 0 0 12px;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+  .card {
+    background: #161b22; border: 1px solid #21262d; border-radius: 10px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .card:hover { border-color: #30363d; }
+
+  /* the picture */
+  .shot {
+    position: relative; height: 190px; background: #fff; overflow: hidden;
+    border-bottom: 1px solid #21262d;
+  }
+  .shot iframe {
+    position: absolute; top: 0; left: 0; border: 0;
+    transform-origin: 0 0; pointer-events: none;
+  }
+  .shot .box {
+    position: absolute; border: 2px solid #d29922;
+    background: rgba(210,153,34,.13); border-radius: 2px; pointer-events: none;
+  }
+  .shot .ph {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; color: #6e7681; font-size: 12px; background: #0d1117;
+  }
+  .shot .ph.bad { color: #f85149; }
+
+  /* the words, which are the point */
+  .body { padding: 12px 14px 13px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
+  .note { font-size: 13.5px; line-height: 1.5; color: #e6edf3; }
+  .foot {
+    display: flex; align-items: center; gap: 7px; margin-top: auto;
+    font-size: 10.5px; color: #6e7681;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .foot a { color: #6e7681; text-decoration: none; }
+  .foot a:hover { color: #58a6ff; }
+  .tag {
+    padding: 2px 6px; border-radius: 4px; background: #21262d; color: #8b949e;
+  }
+  .tag.state { color: #58a6ff; }
+  .tag.warn { background: #3d2b06; color: #e3b341; }
+  .tag.bad { background: #40161a; color: #f85149; }
+  .empty { padding: 60px 24px; color: #6e7681; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Annotations</h1>
+  <span class="meta" id="count">reading&hellip;</span>
+  <span class="sp"></span>
+  <a class="plain" href="system.html">How this works &rsaquo;</a>
+</header>
+<div id="out" class="empty">Loading&hellip;</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var CARD_W = 320, CARD_H = 190;
+  var PAD = 64;          // context around the element, in proto pixels
+  var MAX_SCALE = 1.4;   // a tiny element may grow, but not into abstraction
+  var MIN_MARK = 14;     // a 1px divider still has to be findable by eye
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  /* Which slice of the proto to show, and how to fit it in the card.
+     Centred on the element, padded for context, clamped to the page. */
+  function frame(n) {
+    var r = n.rect || [0, 0, 0, 0];
+    var vw = (n.viewport && n.viewport[0]) || 1440;
+    var vh = (n.viewport && n.viewport[1]) || 900;
+    var ex = r[0], ey = r[1], ew = Math.max(r[2], 1), eh = Math.max(r[3], 1);
+
+    var rw = ew + PAD * 2, rh = eh + PAD * 2;
+    var scale = Math.min(CARD_W / rw, CARD_H / rh, MAX_SCALE);
+    // widen the region to whatever the card can actually hold at that scale,
+    // so a short element still shows the row it sits in
+    var showW = CARD_W / scale, showH = CARD_H / scale;
+    var rx = ex + ew / 2 - showW / 2;
+    var ry = ey + eh / 2 - showH / 2;
+    rx = Math.max(0, Math.min(rx, Math.max(0, vw - showW)));
+    ry = Math.max(0, ry);            // page height is unknown, so only clamp the top
+
+    // The highlight marks the element; it does not measure it. A divider is
+    // one pixel tall, and a one-pixel outline is a thing nobody can find, so
+    // grow the mark symmetrically to a size the eye can catch.
+    var bx = (ex - rx) * scale, by = (ey - ry) * scale;
+    var bw = ew * scale, bh = eh * scale;
+    if (bw < MIN_MARK) { bx -= (MIN_MARK - bw) / 2; bw = MIN_MARK; }
+    if (bh < MIN_MARK) { by -= (MIN_MARK - bh) / 2; bh = MIN_MARK; }
+
+    return { scale: scale, rx: rx, ry: ry, vw: vw, vh: vh,
+             box: { x: bx, y: by, w: bw, h: bh } };
+  }
+
+  function card(n) {
+    var f = frame(n);
+    var src = "/" + n.proto + (n.state || "");
+    var el = document.createElement("div");
+    el.className = "card";
+
+    var problem = !n.proto_exists ? "the proto no longer exists"
+                : n.stale ? null : null;
+
+    el.innerHTML =
+      '<div class="shot">' +
+        (n.proto_exists
+          ? '<iframe data-src="' + esc(src) + '" scrolling="no" ' +
+                   'style="width:' + f.vw + 'px;height:' + f.vh + 'px;' +
+                   'transform:scale(' + f.scale.toFixed(4) + ') ' +
+                   'translate(' + (-f.rx).toFixed(1) + 'px,' + (-f.ry).toFixed(1) + 'px)"></iframe>' +
+            '<div class="box" style="left:' + f.box.x.toFixed(1) + 'px;top:' + f.box.y.toFixed(1) + 'px;' +
+                 'width:' + f.box.w.toFixed(1) + 'px;height:' + f.box.h.toFixed(1) + 'px"></div>'
+          : '<div class="ph bad">' + esc(problem) + '</div>') +
+      '</div>' +
+      '<div class="body">' +
+        '<div class="note">' + esc(n.note) + '</div>' +
+        '<div class="foot">' +
+          '<a href="/' + esc(n.proto) + (esc(n.state) || "") + '" title="open and press Shift+C">' +
+            esc(n.proto.split("/").pop()) + "</a>" +
+          (n.state ? '<span class="tag state">' + esc(n.state) + "</span>" : "") +
+          '<span class="tag">' + esc(n.tag || "?") + "</span>" +
+          (n.stale ? '<span class="tag warn">proto edited since</span>' : "") +
+          '<span class="sp"></span><span>' + esc((n.id || "").slice(0, 8)) + "</span>" +
+        "</div>" +
+      "</div>";
+    return el;
+  }
+
+  /* Load a proto only when its card is near the viewport. Twenty protos
+     booting at once is twenty protos running their own JS. */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var f = e.target.querySelector("iframe[data-src]");
+      if (f) { f.src = f.getAttribute("data-src"); f.removeAttribute("data-src"); }
+      io.unobserve(e.target);
+    });
+  }, { rootMargin: "300px" });
+
+  fetch("/_notes", { cache: "no-store" })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var notes = d.notes || [];
+      var out = document.getElementById("out");
+      if (!notes.length) {
+        out.className = "empty";
+        out.textContent = "No annotations yet. Open a proto and press Shift+C.";
+        document.getElementById("count").textContent = "";
+        return;
+      }
+      var stale = notes.filter(function (n) { return n.stale; }).length;
+      document.getElementById("count").textContent =
+        notes.length + (notes.length === 1 ? " note" : " notes") +
+        (stale ? "  ·  " + stale + " on an edited proto" : "");
+
+      var by = {};
+      notes.forEach(function (n) {
+        var k = (n.proto || "").replace(/\/[^/]*$/, "");
+        (by[k] = by[k] || []).push(n);
+      });
+
+      out.className = "";
+      out.innerHTML = "";
+      Object.keys(by).sort().forEach(function (k) {
+        var g = document.createElement("div");
+        g.className = "group";
+        g.innerHTML = "<h2>" + esc(k) + "</h2>";
+        var grid = document.createElement("div");
+        grid.className = "grid";
+        by[k].forEach(function (n) {
+          var c = card(n);
+          grid.appendChild(c);
+          io.observe(c);
+        });
+        g.appendChild(grid);
+        out.appendChild(g);
+      });
+      var spacer = document.createElement("div");
+      spacer.style.height = "40px";
+      out.appendChild(spacer);
+    })
+    .catch(function () {
+      var out = document.getElementById("out");
+      out.className = "empty";
+      out.innerHTML = "Start the server: <code>python3 tools/annotate/serve.py</code>";
+    });
+})();
+</script>
+</body>
+</html>
