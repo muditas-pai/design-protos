@@ -107,6 +107,29 @@ components into their own file, not by editing someone else's frame.
 - **Shared infrastructure is meant to be updated**, so edit these normally: `design-system/`,
   `index.html`, `CLAUDE.md`, `README.md`.
 
+## Annotating a proto
+
+Designers mark up a screen in place, and the notes become the corpus the design harness
+learns from. The tool is `tools/annotate/`; the full reference is its `README.md`.
+
+```bash
+python3 tools/annotate/serve.py          # http://localhost:8901
+```
+
+Open any proto through that server and press <kbd>Shift</kbd>+<kbd>C</kbd>. Hover outlines an
+element, alt+scroll changes level, click writes one note, clicking a marker edits or deletes it.
+
+- Notes land in **one `annotations.jsonl` per problem folder**, beside the protos, covering
+  every screen in that folder. Saving commits and pushes just that file.
+- **The proto is never written to.** `serve.py` injects the annotator as the page is served, so
+  annotation only works through the server — from Finder or GitHub Pages a proto is just a proto.
+- The store is the interface to the harness. Keep it self-describing; don't reshape the record
+  casually, and don't build the digest side here (that's harness work).
+
+When a designer asks how to annotate, point them at this and at
+`tools/annotate/system.html`, which explains the mechanism and the rules. If they ask you to
+change a proto that has notes against it, see the rule below first.
+
 ## Never edit an annotated proto — fork a v2
 
 **A proto with annotations against it is frozen. Nobody edits it, including the designer who

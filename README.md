@@ -7,6 +7,31 @@ on GitHub Pages: **https://muditas-pai.github.io/design-protos/**
 > **Building protos here?** Read [`CLAUDE.md`](CLAUDE.md) — it's the guide Claude follows
 > for scaffolding protos with the design system.
 
+## Annotating a proto
+
+Say what's wrong with a screen, on the screen, and have it stick.
+
+```bash
+python3 tools/annotate/serve.py          # http://localhost:8901
+```
+
+Open any proto through that server and press <kbd>Shift</kbd>+<kbd>C</kbd>. Hover to outline
+an element, **alt + scroll** to change level (the button, the button row, the whole modal),
+click to write a note. Click a marker to edit or delete it. Save writes the note beside the
+proto and commits and pushes it, so a note you make is a note everyone has.
+
+Annotation mode is a mode on purpose: with it off the proto behaves normally, so drive the
+flow to the state you care about first, then turn it on. Notes are recorded against that state.
+
+- **Everything noted so far:** [`tools/annotate/sheet.html`](https://muditas-pai.github.io/design-protos/tools/annotate/sheet.html)
+- **How the whole thing works:** [`tools/annotate/system.html`](https://muditas-pai.github.io/design-protos/tools/annotate/system.html)
+- **Full reference:** [`tools/annotate/README.md`](tools/annotate/README.md)
+
+Two things to know. **Annotation needs the local server** — it works by injecting the annotator
+as the page is served, which is what lets it never write to your proto. On GitHub Pages the
+protos are view-only. And **an annotated proto is frozen**: to change the design, duplicate it
+to a v2 and change that. See [`CLAUDE.md`](CLAUDE.md#never-edit-an-annotated-proto--fork-a-v2).
+
 ## design-system/
 A browser-ready port of the production presentations.ai design system (Tailwind tokens +
 UI components) — no React, no build step. Reference: [`design-system/README.md`](design-system/README.md).
