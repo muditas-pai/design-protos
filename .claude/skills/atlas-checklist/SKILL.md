@@ -1,9 +1,9 @@
 ---
-name: design-checklist
-description: Turn a written brief into checklist.json — a numbered checklist of what must be true of the finished artifact, one claim per id, each tagged with the state it lives in and how that state is reached, then ratified by the person who owns it. Mechanical, not interpretive: it extracts, splits and classifies what the brief already says, and never interviews, never invents a specific. Invoke once a brief exists and before anything is drawn or generated, when a build needs the list it will be scored against, or when someone asks what this run will be judged on. Works on any brief — one written by design-brief, a PRD, a spec, a Notion page — and reports what was missing rather than filling it in.
+name: atlas-checklist
+description: Turn a written brief into checklist.json — a numbered checklist of what must be true of the finished artifact, one claim per id, each tagged with the state it lives in and how that state is reached, then ratified by the person who owns it. Mechanical, not interpretive: it extracts, splits and classifies what the brief already says, and never interviews, never invents a specific. Invoke once a brief exists and before anything is drawn or generated, when a build needs the list it will be scored against, or when someone asks what this run will be judged on. Works on any brief — one written by atlas-brief, a PRD, a spec, a Notion page — and reports what was missing rather than filling it in.
 ---
 
-# design-checklist
+# atlas-checklist
 
 ## What this produces
 

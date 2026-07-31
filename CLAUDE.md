@@ -171,12 +171,12 @@ design-protos with Claude Code** — no `~/.claude/skills` install or symlink ne
   waits for a pick, then branches 8 more off it. Reach for it when exploring alternatives ("give
   me 8 variations", "different versions of this") — it's the natural way to fill an
   `explorations/<designer>/<problem>/` folder.
-- **`/design-brief`** — interviews whoever brings a vague ask and writes the brief the design
+- **`/atlas-brief`** — interviews whoever brings a vague ask and writes the brief the design
   harness consumes (`explorations/<designer>/<problem>/brief.md`). Reach for it before
   a harness run, or any time a request is too loose to build from.
-- **`/design-checklist`** — turns any brief into `checklist.json`: one claim per id, each tagged
+- **`/atlas-checklist`** — turns any brief into `checklist.json`: one claim per id, each tagged
   with the state it lives in and how to reach it, and each marked checkable from the finished
-  thing or not. Ends at a gate you ratify. Works on a brief from anywhere, not just `/design-brief`.
+  thing or not. Ends at a gate you ratify. Works on a brief from anywhere, not just `/atlas-brief`.
 - **`pai-visual-language`** — presentations.ai brand voice & visual conventions (navy = action,
   orange = brand/upsell, setup → payoff, density, copy tone). Runs *alongside* the design system;
   auto-triggers on UI/brand work. The brand-voice section below is the short version of it.

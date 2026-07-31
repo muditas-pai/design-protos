@@ -1,9 +1,9 @@
 ---
-name: design-brief
+name: atlas-brief
 description: Interview whoever arrives with a half-formed design ask and turn it into a written brief — what is being made, when it appears, who it is for, what the person gets, every state and case, and what was left open and why. Works for any design artifact: a screen, a modal, a flow, a component, an empty state, a page. Invoke when someone brings a vague design request (a paragraph, a Slack message, "I want to design X"), when a design job needs a brief before anyone draws, or when an existing brief is too thin to build from. Produces one markdown document and stops there.
 ---
 
-# design-brief
+# atlas-brief
 
 ## What this produces
 
