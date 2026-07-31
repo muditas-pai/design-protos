@@ -221,6 +221,6 @@ new frames are linked.
 ## The design system is a snapshot
 
 `design-system/` is ported from the production app (`~/Documents/GitHub/PAI/pitchdeckdoclist`) —
-if app tokens or components change, re-sync it so protos don't drift. **Owner: Tyo (`@tyo-pai`)**;
+if app tokens or components change, re-sync it so protos don't drift. **Owner: Mudita (`@muditas-pai`)**;
 design-system changes go via branch + PR. (Key screens are different: they're hand-maintained by
 their owners, not auto-synced — see above.)

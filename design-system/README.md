@@ -42,7 +42,17 @@ Two interchangeable ways to style — mix freely:
 - **Checkbox / radio** — `<input type="checkbox" class="pai-checkbox">`, `<input type="radio" class="pai-radio">`.
 - **Toggle** — `<label class="pai-toggle"><input type="checkbox"><span class="track"></span><span class="knob"></span></label>`.
 - **Type** — `text-heading-{4xl…sm}`, `text-body-{xl|lg|base|sm|xs}-{regular|medium|semibold}`, `text-overline-small`.
-- **Elevation** — `shadow-elevation-{01|02|03|button|input}`.
+- **Elevation** — `shadow-elevation-{01|02|03|04|new-04|button|input|input-focused|input-error}`.
+  `new-04` (Figma effect style 471:2410) is the heavier one the newer dashboard modals use.
+- **Colour ramps** — `app-{50…900}` (brand), `green-{50…950}` (aliased `success-*`),
+  `gray-{25…900}`. The brand and green ramps are OKLCH-corrected: perceived lightness is
+  evenly spaced, and for green pinned to the red/blue/purple mean so it stops reading
+  fluorescent. The brand anchors 50/500/600/700/900 are held exactly and must not change.
+- **Surfaces** — `bg-{primary|subtle|muted|secondary|tertiary|quaternary}`. `subtle` (#FCFCFC)
+  and `muted` (#F9F9F9) are the two near-white steps: main column and top nav, then side
+  panel one step darker so it reads as its own surface.
+- **Shadow primitives** — `drop-{1|2|3}`, `inner-{1|2}`. Every elevation composes from these,
+  so reach for them rather than inventing a new rgba.
 
 ## Notes / scope
 
