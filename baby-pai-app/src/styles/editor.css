@@ -1,0 +1,168 @@
+/* ============================================================================
+   Editor — Figma "JAS '26 — Handoff" 334:3043.
+   Frame is 1280×640: top-section 48px, 180px filmstrip rail at x=12,
+   canvas 16:9 starting x=281, floating toolbar bottom-centre.
+   ========================================================================== */
+.editor {
+  height: 100vh; display: flex; flex-direction: column;
+  background: var(--surface-2); overflow: hidden;
+}
+
+/* ── inlinemenu: the repeated chrome primitive ───────────────────────────── */
+.inlinemenu {
+  display: flex; align-items: stretch;
+  background: var(--surface); border-radius: 6px;
+  box-shadow: var(--sh-card); overflow: hidden;
+}
+.inlinemenu-group { display: flex; align-items: center; gap: 4px; padding: 4px; }
+/* dividers come from adjacency, so nothing is interleaved by hand */
+.inlinemenu-group + .inlinemenu-group { border-left: 1px solid var(--line); }
+
+.inlinemenu-item {
+  display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px;
+  border: 0; background: transparent; border-radius: 4px; cursor: pointer;
+  font: 400 14px "Inter", sans-serif; color: var(--fg); white-space: nowrap;
+  transition: background 140ms var(--ease);
+}
+.inlinemenu-item:hover:not(:disabled) { background: var(--sel); }
+.inlinemenu-item:disabled { opacity: .35; cursor: not-allowed; }
+.inlinemenu-item.is-active { background: var(--sel); }
+.inlinemenu-item.is-icon-only { width: 28px; padding: 0; justify-content: center; }
+.inlinemenu-item.is-grow { width: 100%; min-width: 0; justify-content: flex-start; }
+.inlinemenu-item i { font-size: 16px; flex: none; }
+.inlinemenu-label {
+  min-width: 0; display: inline-flex; align-items: center; gap: 8px;
+}
+/* a grow item's label is the thing that truncates, so it needs to be a plain
+   block for text-overflow to apply */
+.is-grow .inlinemenu-label {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── top section ─────────────────────────────────────────────────────────── */
+.editor-top {
+  height: 48px; flex: none; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; padding: 12px 12px 0;
+}
+.editor-docname { width: 144px; }
+.editor-docname .inlinemenu-item { padding: 0 8px; }
+/* the export button is a design-system Button sitting inside a menu group */
+.editor-export { padding: 4px; }
+
+.collab-item { padding: 0 6px; }
+.collab { display: inline-flex; align-items: center; }
+.collab-avatar {
+  position: relative; width: 20px; height: 20px; border-radius: 999px;
+  overflow: hidden; margin-right: -8px; box-shadow: 0 0 0 1.5px var(--surface);
+}
+.collab-avatar:last-child { margin-right: 0; }
+.collab-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.collab-overflow {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: var(--surface-2); color: var(--fg);
+  font-size: 8px; font-weight: 600; letter-spacing: -0.02em;
+}
+
+/* ── body ────────────────────────────────────────────────────────────────── */
+.editor-body { flex: 1; min-height: 0; display: flex; gap: 0; padding: 12px; }
+
+/* ── filmstrip rail ──────────────────────────────────────────────────────── */
+.filmstrip {
+  width: 180px; min-width: 180px; display: flex; flex-direction: column; gap: 8px;
+  min-height: 0;
+}
+.filmstrip-head { align-self: stretch; }
+.filmstrip-head .filmstrip-collapse { margin-left: auto; border-left: 0; }
+
+.filmstrip-new {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 28px; margin: 0 8px; border: 0; border-radius: 4px;
+  background: var(--surface); box-shadow: var(--sh-btn); cursor: pointer;
+  font: 500 14px "Inter", sans-serif; color: var(--fg);
+  transition: background 140ms var(--ease);
+}
+.filmstrip-new:hover { background: var(--sel); }
+.filmstrip-new i { font-size: 16px; }
+
+.filmstrip-list {
+  list-style: none; margin: 0; padding: 4px 12px 12px; display: flex;
+  flex-direction: column; gap: 12px; overflow-y: auto; min-height: 0; flex: 1;
+}
+.filmstrip-list::-webkit-scrollbar { width: 8px; }
+.filmstrip-list::-webkit-scrollbar-thumb {
+  background: rgba(11, 15, 20, .14); border-radius: 99px; border: 2px solid var(--surface-2);
+}
+
+.slide-thumb {
+  position: relative; display: block; width: 100%; aspect-ratio: 160 / 90;
+  padding: 0; border: 0; border-radius: 4px; overflow: hidden; cursor: pointer;
+  background: var(--surface); box-shadow: var(--sh-card);
+  transition: box-shadow 180ms var(--ease);
+}
+.slide-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.slide-thumb:hover { box-shadow: var(--sh-card), 0 0 0 2px var(--line-strong); }
+/* selected state is the design system's focused treatment */
+.slide-thumb.is-current {
+  box-shadow: 0 0 0 2px rgba(26, 26, 26, .48), 0 1px 2px 0 rgba(26, 26, 26, .09),
+              inset 0 0 0 1px var(--border-neutral);
+}
+.slide-num {
+  position: absolute; top: 4px; left: 4px; width: 20px; height: 20px;
+  display: grid; place-items: center; border-radius: 4px;
+  background: rgba(0, 0, 0, .4); backdrop-filter: blur(2px);
+  color: #fff; font-size: 12px; font-weight: 500;
+}
+
+/* ── stage + canvas ──────────────────────────────────────────────────────── */
+.editor-stage {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+  padding: 0 12px 0 76px;
+}
+.canvas {
+  width: 100%; max-width: 910px; aspect-ratio: 16 / 9;
+  background: var(--surface); border-radius: 8px; box-shadow: var(--sh-card);
+  container-type: inline-size;      /* everything below sizes in cqw */
+  display: flex; flex-direction: column;
+  padding: 3.3cqw 2.8cqw 2.2cqw; overflow: hidden;
+}
+/* a page image is the whole slide, so it fills the canvas edge to edge —
+   the padding above is for the one slide that is real DOM */
+.canvas.is-image { padding: 0; }
+.canvas-standin { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; display: block; }
+
+.sl-title { margin: 0 0 3.4cqw; font-size: 2.2cqw; font-weight: 400; color: #111; }
+.sl-body { flex: 1; min-height: 0; display: flex; gap: 2cqw; }
+
+.sl-grid {
+  flex: 1; min-width: 0; display: grid;
+  grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 0.9cqw;
+}
+.sl-stat {
+  background: #f4f4f4; border-radius: 0.5cqw; padding: 1.1cqw 1.2cqw;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.sl-stat-label { font-size: 0.95cqw; line-height: 1.35; color: #2b2b2b; }
+.sl-stat-value { font-size: 2.6cqw; line-height: 1; color: #111; letter-spacing: -0.01em; }
+
+.sl-side { width: 17cqw; flex: none; display: flex; flex-direction: column; gap: 1.4cqw; }
+.sl-footnotes { display: flex; flex-direction: column; gap: 0.2cqw; padding-top: 8.4cqw; }
+.sl-footnotes p { margin: 0; font-size: 0.62cqw; line-height: 1.45; color: #3a3a3a; }
+.sl-note { margin: 0; font-size: 0.62cqw; line-height: 1.5; color: #3a3a3a; }
+
+.sl-footer {
+  flex: none; display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: 1.6cqw; font-size: 0.72cqw; color: #111;
+}
+.sl-footer-left { display: inline-flex; gap: 0.5cqw; }
+.sl-footer-div { color: #9a9a9a; }
+.sl-footer-right { display: inline-flex; gap: 2.6cqw; align-items: baseline; }
+.sl-footer-right strong { letter-spacing: 0.02em; }
+
+/* ── floating toolbar ────────────────────────────────────────────────────── */
+.editor-toolbar {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 30; display: flex; align-items: center; gap: 8px;
+}
+.editor-history { flex: none; }
+.editor-history .inlinemenu-group { padding: 2px; }
+.editor-history .inlinemenu-item.is-icon-only { width: 32px; height: 32px; }
