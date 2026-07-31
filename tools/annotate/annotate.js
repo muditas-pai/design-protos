@@ -142,7 +142,8 @@
 
   function toast(msg, bad) {
     toastEl.textContent = msg;
-    toastEl.style.background = bad ? "#da3633" : "#238636";
+    // navy for the ordinary case, red only when something actually failed
+    toastEl.style.background = bad ? "#b42318" : "#0A1925";
     toastEl.classList.add("show");
     setTimeout(function () { toastEl.classList.remove("show"); }, 1800);
   }
