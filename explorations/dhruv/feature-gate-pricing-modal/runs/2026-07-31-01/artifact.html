@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Feature gate — run 2026-07-31-01</title>
+
+  <!-- atlas artifact.
+       States:  ?state=default | no-offer | offer-part-spent | offer-expired | pending |
+                       already-on-pro | video-unavailable
+       Motion:  frozen by default. Add &freeze=0 to watch it move.
+       Clock:   ?t=<ms> overrides ATLAS_T0. -->
+  <meta name="atlas-states" content="default no-offer offer-part-spent offer-expired pending already-on-pro video-unavailable" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../../../design-system/pai.css" />
+
+  <style>
+    /* --- state branches: exactly one per state ------------------------------ */
+    body [data-state] { display: none; }
+    body[data-state="default"]           [data-state~="default"],
+    body[data-state="no-offer"]          [data-state~="no-offer"],
+    body[data-state="offer-part-spent"]  [data-state~="offer-part-spent"],
+    body[data-state="offer-expired"]     [data-state~="offer-expired"],
+    body[data-state="pending"]           [data-state~="pending"],
+    body[data-state="already-on-pro"]    [data-state~="already-on-pro"],
+    body[data-state="video-unavailable"] [data-state~="video-unavailable"] { display: contents; }
+
+    /* --- freeze: default on, so two renders of a state are identical -------- */
+    body[data-freeze="1"], body[data-freeze="1"] *,
+    body[data-freeze="1"] *::before, body[data-freeze="1"] *::after {
+      animation-delay: 0s !important;
+      animation-duration: 0s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0s !important;
+      transition-delay: 0s !important;
+      scroll-behavior: auto !important;
+      caret-color: transparent !important;
+    }
+
+    /* --- dismissal ---------------------------------------------------------- */
+    body[data-dismissed="1"] #scrim, body[data-dismissed="1"] #gate { display: none; }
+
+    /* --- layout the utilities cannot express -------------------------------- */
+    @keyframes atlas-playhead { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .playhead { transform-origin: left center; animation: atlas-playhead 6s linear infinite; }
+
+    .feature-rail { scrollbar-width: none; }
+    .feature-rail::-webkit-scrollbar { display: none; }
+
+    .feature-tile[aria-selected="true"] { box-shadow: var(--shadow-elevation-focused); }
+    .feature-tile[aria-selected="true"] .tile-name { color: var(--text-brand); }
+  </style>
+</head>
+
+<body class="pai m-0 bg-bg-tertiary">
+<script>
+  // ---- atlas runtime: state + freeze. First child of <body>, so nothing has painted.
+  const ATLAS_STATES = ["default", "no-offer", "offer-part-spent", "offer-expired",
+                        "pending", "already-on-pro", "video-unavailable"];
+  const ATLAS_T0 = 1785600000000;   // the artifact's only clock
+  (function () {
+    const q = new URLSearchParams(location.search);
+    const s = q.get("state");
+    document.body.dataset.state = ATLAS_STATES.includes(s) ? s : ATLAS_STATES[0];
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.body.dataset.freeze = (q.get("freeze") === "0" && !reduced) ? "0" : "1";
+  })();
+  window.__atlasReady = document.fonts.ready
+    .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+</script>
+
+<!-- ===== what the person was doing, behind the modal ======================= -->
+<div id="host" class="min-h-screen">
+  <header class="h-14 px-5 flex items-center gap-3 bg-bg-primary border-b border-border-secondary">
+    <i class="ph-fill ph-circle text-text-brand"></i>
+    <span class="text-body-base-semibold text-text-primary">Q3 board review</span>
+    <span class="pai-badge pai-badge-free">FREE</span>
+    <span class="ml-auto text-body-sm-regular text-text-tertiary">Saved just now</span>
+  </header>
+  <div class="p-6 grid gap-4 grid-cols-2 max-w-5xl">
+    <div class="h-40 rounded-lg bg-bg-primary shadow-elevation-02"></div>
+    <div class="h-40 rounded-lg bg-bg-primary shadow-elevation-02"></div>
+    <div class="h-40 rounded-lg bg-bg-primary shadow-elevation-02"></div>
+    <div class="h-40 rounded-lg bg-bg-primary shadow-elevation-02"></div>
+  </div>
+</div>
+
+<!-- ===== the modal ========================================================= -->
+<div id="scrim" class="fixed inset-0 bg-bg-blackout/60"></div>
+
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-headline"
+     class="fixed inset-0 overflow-y-auto p-4 md:p-8 flex items-start md:items-center justify-center">
+  <div class="relative w-full max-w-5xl rounded-2xl bg-bg-elevated shadow-elevation-03 overflow-hidden">
+
+    <button id="gate-close" aria-label="Close"
+            class="button-style button-medium button-ghost icon-only absolute right-3 top-3 z-10">
+      <i class="ph ph-x"></i>
+    </button>
+
+    <div class="grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
+
+      <!-- ---- the story: video, copy, feature rail --------------------------- -->
+      <section class="p-6 md:p-8 order-1">
+        <p class="text-overline-small text-text-tertiary">Included with a paid plan</p>
+        <h1 id="gate-headline" class="text-heading-2xl text-text-primary mt-2">
+          Brand kit is one upgrade away.
+        </h1>
+
+        <!-- video area — a still is present from first paint and never leaves -->
+        <div class="mt-5 relative rounded-xl overflow-hidden bg-bg-quaternary aspect-video">
+          <div id="still" class="absolute inset-0 bg-gradient-brand-03 flex items-end p-4">
+            <span id="still-label" class="text-body-base-semibold text-text-inverted-primary"></span>
+          </div>
+          <div data-state="default no-offer offer-part-spent offer-expired pending already-on-pro">
+            <video id="clip" class="absolute inset-0 w-full h-full object-cover"
+                   muted loop playsinline preload="none"></video>
+            <div class="absolute left-0 right-0 bottom-0 h-1 bg-bg-default-alpha-800/30">
+              <div class="playhead h-full w-full bg-bg-brand"></div>
+            </div>
+          </div>
+          <div data-state="video-unavailable">
+            <div class="absolute right-3 top-3">
+              <span class="pai-badge pai-badge-neutral">STILL</span>
+            </div>
+          </div>
+        </div>
+
+        <p id="feature-line" class="text-body-lg-regular text-text-secondary mt-4 min-h-12"></p>
+
+        <p class="text-overline-small text-text-tertiary mt-6">And the rest of it</p>
+        <div class="feature-rail mt-3 flex gap-3 overflow-x-auto md:grid md:grid-cols-5 md:overflow-visible"
+             role="tablist" aria-label="Features">
+
+          <button class="feature-tile shrink-0 w-32 md:w-auto text-left rounded-lg p-2 bg-bg-secondary shadow-elevation-01"
+                  role="tab" aria-selected="true" data-feature="1" data-locked="0">
+            <span class="block h-12 rounded bg-gradient-brand-03"></span>
+            <span class="tile-name mt-2 flex items-start gap-1 text-body-sm-medium text-text-primary">
+              <span class="grow">Brand kit</span>
+            </span>
+          </button>
+
+          <button class="feature-tile shrink-0 w-32 md:w-auto text-left rounded-lg p-2 bg-bg-secondary shadow-elevation-01"
+                  role="tab" aria-selected="false" data-feature="2" data-locked="0">
+            <span class="block h-12 rounded bg-gradient-brand-03"></span>
+            <span class="tile-name mt-2 flex items-start gap-1 text-body-sm-medium text-text-primary">
+              <span class="grow">Analytics</span>
+            </span>
+          </button>
+
+          <button class="feature-tile shrink-0 w-32 md:w-auto text-left rounded-lg p-2 bg-bg-secondary shadow-elevation-01"
+                  role="tab" aria-selected="false" data-feature="3" data-locked="1">
+            <span class="block h-12 rounded bg-gradient-brand-03"></span>
+            <span class="tile-name mt-2 flex items-start gap-1 text-body-sm-medium text-text-primary">
+              <span class="grow">Custom templates</span>
+              <i class="ph-fill ph-lock-simple text-text-warning-secondary" title="Gold only"></i>
+            </span>
+          </button>
+
+          <button class="feature-tile shrink-0 w-32 md:w-auto text-left rounded-lg p-2 bg-bg-secondary shadow-elevation-01"
+                  role="tab" aria-selected="false" data-feature="4" data-locked="0">
+            <span class="block h-12 rounded bg-gradient-brand-03"></span>
+            <span class="tile-name mt-2 flex items-start gap-1 text-body-sm-medium text-text-primary">
+              <span class="grow">Advanced export</span>
+            </span>
+          </button>
+
+          <button class="feature-tile shrink-0 w-32 md:w-auto text-left rounded-lg p-2 bg-bg-secondary shadow-elevation-01"
+                  role="tab" aria-selected="false" data-feature="5" data-locked="1">
+            <span class="block h-12 rounded bg-gradient-brand-03"></span>
+            <span class="tile-name mt-2 flex items-start gap-1 text-body-sm-medium text-text-primary">
+              <span class="grow">Shared workspace</span>
+              <i class="ph-fill ph-lock-simple text-text-warning-secondary" title="Gold only"></i>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ---- the plans ------------------------------------------------------ -->
+      <aside class="p-6 md:p-8 bg-bg-secondary border-t md:border-t-0 md:border-l border-border-secondary order-2">
+
+        <!-- offer bar -->
+        <div class="flex items-center gap-2 min-h-7">
+          <span data-state="default offer-part-spent pending already-on-pro video-unavailable">
+            <span class="pai-badge pai-badge-pro">40% OFF</span>
+            <span class="text-body-sm-medium text-text-secondary inline-flex items-center gap-1">
+              <i class="ph ph-timer"></i><span id="timer">--:--</span> left
+            </span>
+          </span>
+          <span data-state="offer-expired">
+            <span class="text-body-sm-medium text-text-tertiary">This offer has ended.</span>
+          </span>
+        </div>
+
+        <!-- Pro -->
+        <div class="mt-4 rounded-xl bg-bg-elevated p-5 shadow-elevation-02">
+          <div class="flex items-center gap-2">
+            <span class="text-heading-base text-text-primary">Pro</span>
+            <span class="pai-badge pai-badge-pro">PRO</span>
+          </div>
+          <p class="text-body-sm-regular text-text-secondary mt-1">Everything you need on your own.</p>
+          <div data-state="default offer-part-spent pending already-on-pro video-unavailable">
+            <p class="text-body-base-semibold text-text-brand mt-3">You save $71</p>
+          </div>
+          <div data-state="default no-offer offer-expired offer-part-spent pending video-unavailable">
+            <button class="button-style button-large button-secondary w-full mt-4">Get Pro</button>
+          </div>
+          <div data-state="already-on-pro">
+            <button class="button-style button-large button-secondary w-full mt-4 button-disabled button-disabled-60">
+              <i class="ph ph-check"></i><span class="button-label">Your current plan</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Gold — the emphatic card -->
+        <div class="mt-3 rounded-xl bg-bg-elevated p-5 shadow-elevation-03 border border-border-brand-secondary">
+          <div class="flex items-center gap-2">
+            <span class="text-heading-base text-text-primary">Gold</span>
+            <span class="pai-badge pai-badge-gold">GOLD</span>
+            <span class="pai-badge pai-badge-neutral ml-auto">Most complete</span>
+          </div>
+          <p class="text-body-sm-regular text-text-secondary mt-1">Everything in Pro, plus the locked ones.</p>
+          <div data-state="default offer-part-spent pending already-on-pro video-unavailable">
+            <p class="text-body-base-semibold text-text-brand mt-3">You save $143</p>
+          </div>
+          <div data-state="default no-offer offer-expired offer-part-spent already-on-pro video-unavailable">
+            <button class="button-style button-large button-primary-brand w-full mt-4">Get Gold</button>
+          </div>
+          <div data-state="pending">
+            <button class="button-style button-large button-primary-brand w-full mt-4 button-disabled">
+              <i class="ph ph-circle-notch"></i><span class="button-label">Opening checkout…</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="text-body-sm-regular text-text-tertiary mt-4">You'll see the price at checkout.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const body = document.body;
+    const frozen = body.dataset.freeze === "1";
+
+    // ---- content that switches with the selected feature --------------------
+    const FEATURES = {
+      1: { name: "Brand kit", line: "Your fonts, colours and logo applied to every deck you make." },
+      2: { name: "Analytics", line: "See who opened a deck, which slides they stayed on, where they stopped." },
+      3: { name: "Custom templates", line: "Save any deck as a starting point the whole team can reach for." },
+      4: { name: "Advanced export", line: "Editable PowerPoint and print-ready PDF, with your fonts embedded." },
+      5: { name: "Shared workspace", line: "One place your team's decks live, everyone always on the latest." }
+    };
+    const stillLabel = document.getElementById("still-label");
+    const featureLine = document.getElementById("feature-line");
+    const clip = document.getElementById("clip");
+    const tiles = [...document.querySelectorAll(".feature-tile")];
+
+    function select(n) {
+      tiles.forEach(t => t.setAttribute("aria-selected", String(t.dataset.feature === String(n))));
+      stillLabel.textContent = FEATURES[n].name;   // still and copy change together
+      featureLine.textContent = FEATURES[n].line;
+      if (!frozen && clip && clip.currentSrc) { clip.currentTime = 0; clip.play().catch(() => {}); }
+    }
+    tiles.forEach(t => t.addEventListener("click", () => select(t.dataset.feature)));
+    select(1);   // the gate the person hit is preselected
+
+    // ---- the countdown ------------------------------------------------------
+    const OFFER_MS = 60 * 60 * 1000;                 // the offer runs for one hour
+    const SPENT = { "offer-part-spent": 41 * 60 * 1000 + 22 * 1000 };
+    const spent = SPENT[body.dataset.state] || 0;
+    const timer = document.getElementById("timer");
+
+    function paint(ms) {
+      const left = Math.max(0, OFFER_MS - ms);
+      const m = String(Math.floor(left / 60000)).padStart(2, "0");
+      const s = String(Math.floor((left % 60000) / 1000)).padStart(2, "0");
+      timer.textContent = m + ":" + s;
+    }
+    paint(spent);
+    if (!frozen) setInterval(() => paint(spent + performance.now()), 1000);
+
+    // ---- backing out --------------------------------------------------------
+    const gate = document.getElementById("gate");
+    const dismiss = () => { body.dataset.dismissed = "1"; };
+    document.getElementById("gate-close").addEventListener("click", dismiss);
+    // #gate fills the viewport and sits over the scrim, so "outside" is a click that
+    // lands on #gate itself rather than on the panel inside it.
+    gate.addEventListener("click", e => { if (e.target === gate) dismiss(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") dismiss(); });
+  })();
+</script>
+</body>
+</html>

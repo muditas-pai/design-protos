@@ -177,6 +177,10 @@ design-protos with Claude Code** — no `~/.claude/skills` install or symlink ne
 - **`/atlas-checklist`** — turns any brief into `checklist.json`: one claim per id, each tagged
   with the state it lives in and how to reach it, and each marked checkable from the finished
   thing or not. Ends at a gate you ratify. Works on a brief from anywhere, not just `/atlas-brief`.
+- **`/atlas-build`** — takes a ratified `checklist.json` and builds the artifact: starts from
+  `design-system/template.html`, every state reachable via `?state=`, motion freezable so two
+  renders are identical, and any string or number missing from `atlas/content.md` halts the run
+  rather than getting invented. Few-shot on `atlas/examples.json` — Do's and Don'ts both.
 - **`pai-visual-language`** — presentations.ai brand voice & visual conventions (navy = action,
   orange = brand/upsell, setup → payoff, density, copy tone). Runs *alongside* the design system;
   auto-triggers on UI/brand work. The brand-voice section below is the short version of it.
