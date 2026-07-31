@@ -62,6 +62,7 @@
   .card {
     background: var(--paper); border-radius: 12px; overflow: hidden;
     display: flex; flex-direction: column;
+    color: inherit; text-decoration: none; cursor: pointer;
     box-shadow: 0 0 0 1px rgba(10,25,37,.07), 0 1px 2px rgba(10,25,37,.04);
     transition: box-shadow .18s cubic-bezier(.2,0,0,1),
                 translate .18s cubic-bezier(.2,0,0,1);
@@ -72,6 +73,14 @@
     box-shadow: 0 0 0 1px rgba(10,25,37,.10), 0 6px 18px rgba(10,25,37,.09);
     translate: 0 -2px;
   }
+  .card:active { translate: 0 0; }
+  .card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink), 0 6px 18px rgba(10,25,37,.09);
+  }
+  /* the filename in the foot reads as the destination, but the whole tile is
+     the target, so it must not be a second link inside the first */
+  .card:hover .foot .where { color: var(--ink); }
 
   /* the picture */
   .shot {
@@ -108,8 +117,7 @@
     font-size: 10.5px; color: var(--ink-4);
     font-family: ui-monospace, Menlo, monospace;
   }
-  .foot a { color: var(--ink-3); text-decoration: none; transition: color .15s; }
-  .foot a:hover { color: var(--ink); }
+  .foot .where { color: var(--ink-3); transition: color .15s; }
   .tag {
     padding: 2px 7px; border-radius: 5px; background: var(--paper-2); color: var(--ink-3);
     box-shadow: inset 0 0 0 1px rgba(10,25,37,.06);
@@ -187,8 +195,18 @@
   function card(n, i) {
     var f = frame(n);
     var src = ROOT + n.proto + (n.state || "");
-    var el = document.createElement("div");
+    // the whole tile is the target. A new tab because the sheet is a hub you
+    // come back to: opening in place would cost you your scroll position and
+    // reload every render on the way back.
+    var el = document.createElement(n.proto_exists ? "a" : "div");
     el.className = "card";
+    if (n.proto_exists) {
+      el.href = src;
+      el.target = "_blank";
+      el.rel = "noopener";
+      el.title = "Open " + n.proto.split("/").pop() +
+                 (n.state ? " at " + n.state : "") + ", then press Shift+C to annotate";
+    }
     // stagger, capped so a long sheet does not take a visible age to settle
     el.style.animationDelay = Math.min(i, 11) * 40 + "ms";
 
@@ -208,8 +226,7 @@
       '<div class="body">' +
         '<div class="note">' + esc(n.note) + '</div>' +
         '<div class="foot">' +
-          '<a href="' + ROOT + esc(n.proto) + (esc(n.state) || "") + '" title="open and press Shift+C">' +
-            esc(n.proto.split("/").pop()) + "</a>" +
+          '<span class="where">' + esc(n.proto.split("/").pop()) + "</span>" +
           (n.state ? '<span class="tag state">' + esc(n.state) + "</span>" : "") +
           '<span class="tag">' + esc(n.tag || "?") + "</span>" +
           (n.stale ? '<span class="tag warn">proto edited since</span>' : "") +
