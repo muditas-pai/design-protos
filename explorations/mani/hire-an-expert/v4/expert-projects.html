@@ -125,6 +125,23 @@
     .q-fill { height: 100%; width: 50%; border-radius: 99px; background: var(--brand); transition: width .3s var(--ease); }
     body.q-zero .q-fill { width: 100%; }
     body.sc-unlimited .q-bar, body.sc-unlimited .mc-up { display: none; }
+
+    /* one-off scenario: no membership, single order, upsell on top */
+    body.sc-oneoff .member-card { display: none; }
+    body.sc-oneoff .trow.r-member { display: none; }
+    .trow.r-oneoff { display: none; }
+    body.sc-oneoff .trow.r-oneoff { display: grid; }
+    .up-banner { display: none; align-items: center; gap: 14px; margin-top: 20px;
+      padding: 16px 20px; background: var(--brand-tint); border-radius: 8px; }
+    body.sc-oneoff .up-banner { display: flex; }
+    .up-banner .ub-ic { width: 40px; height: 40px; border-radius: 8px; background: #fff;
+      display: grid; place-items: center; color: var(--brand); font-size: 22px; flex: none; }
+    .up-banner .ub-txt { flex: 1; min-width: 0; font-size: 13px; color: var(--fg); line-height: 1.45; }
+    .up-banner .ub-txt b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 1px; }
+    .up-banner .ub-cta { flex: none; display: inline-flex; align-items: center; gap: 6px;
+      height: 34px; padding: 0 16px; background: var(--brand); color: #fff; border: 0; border-radius: 6px;
+      font: 500 13px "Inter", sans-serif; cursor: pointer; transition: filter 120ms var(--ease); }
+    .up-banner .ub-cta:hover { filter: brightness(1.07); }
     .mc-actions { position: relative; display: flex; gap: 8px; flex: none; }
 
     /* manage popover (dashboard menu style) */
@@ -263,6 +280,7 @@
       <button type="button" class="is-active" data-q="left">2 decks left</button>
       <button type="button" data-q="zero">0 left</button>
       <button type="button" data-q="unlimited">Unlimited plan</button>
+      <button type="button" data-q="oneoff">One-off order</button>
     </div>
   </div>
 
@@ -315,6 +333,16 @@
           <button class="btn-new" id="btn-new" onclick="newProject()"><i class="ph-bold ph-plus"></i><span id="btn-new-label">New project <small id="btn-left">· 2 left</small></span></button>
         </div>
 
+        <!-- One-off scenario: no membership yet, upsell on top -->
+        <div class="up-banner" id="up-banner">
+          <span class="ub-ic"><i class="ph-fill ph-pen-nib"></i></span>
+          <div class="ub-txt">
+            <b>Like how your deck turned out?</b>
+            <span>Get a Designer on call every month with a Design membership. Plans from $1,000/month, pause or cancel anytime.</span>
+          </div>
+          <button class="ub-cta" onclick="openOverlay('hire-an-expert-v6.html?mode=retainer')">See plans</button>
+        </div>
+
         <!-- Membership summary -->
         <div class="member-card">
           <div class="mc-top">
@@ -356,7 +384,7 @@
             <span></span>
           </div>
 
-          <div class="trow">
+          <div class="trow r-member">
             <div class="t-name">
               <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
               <span class="nm"><b>Q3 Board Update</b><span>28 slides · Overnight delivery</span></span>
@@ -367,7 +395,7 @@
             <div class="t-dl"></div>
           </div>
 
-          <div class="trow">
+          <div class="trow r-member">
             <div class="t-name">
               <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
               <span class="nm"><b>Acme Pitch v4</b><span>16 slides · Overnight delivery</span></span>
@@ -378,7 +406,7 @@
             <div class="t-dl"></div>
           </div>
 
-          <div class="trow">
+          <div class="trow r-member">
             <div class="t-name">
               <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
               <span class="nm"><b>Sales Kickoff 2027</b><span>40 slides · Standard delivery</span></span>
@@ -389,7 +417,7 @@
             <div class="t-dl"></div>
           </div>
 
-          <div class="trow">
+          <div class="trow r-member">
             <div class="t-name">
               <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
               <span class="nm"><b>Investor Memo</b><span>12 slides · Overnight delivery</span></span>
@@ -400,6 +428,17 @@
               <span class="st-chip st-done"><i class="ph-fill ph-check-circle"></i>Delivered</span>
             </div>
             <div class="t-dl"><button class="btn-dl" aria-label="Download" title="Download"><i class="ph-bold ph-download-simple"></i></button></div>
+          </div>
+
+          <div class="trow r-oneoff">
+            <div class="t-name">
+              <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
+              <span class="nm"><b>Series B Fundraise</b><span>18 slides · Overnight delivery</span></span>
+            </div>
+            <span class="t-date col-ordered">Jul 30, 2026</span>
+            <span class="t-date"><span class="soon">Tomorrow, 9:00 AM</span></span>
+            <div class="t-status"><span class="st-chip st-process"><i class="ph-fill ph-circle-notch"></i>In process</span></div>
+            <div class="t-dl"></div>
           </div>
 
         </div>
@@ -434,11 +473,13 @@
     var decksLeft = 2;
 
     var isUnlimited = false;
+    var isOneoff = false;
     var seg = document.querySelectorAll('.demo-seg button');
     seg.forEach(function (btn) {
       btn.addEventListener('click', function () {
         seg.forEach(function (b) { b.classList.toggle('is-active', b === btn); });
         isUnlimited = btn.dataset.q === 'unlimited';
+        isOneoff = btn.dataset.q === 'oneoff';
         decksLeft = btn.dataset.q === 'zero' ? 0 : 2;
         renderQuota();
       });
@@ -446,8 +487,14 @@
 
     function renderQuota() {
       document.body.classList.toggle('sc-unlimited', isUnlimited);
-      document.body.classList.toggle('q-zero', !isUnlimited && decksLeft === 0);
+      document.body.classList.toggle('sc-oneoff', isOneoff);
+      document.body.classList.toggle('q-zero', !isUnlimited && !isOneoff && decksLeft === 0);
       var set = function (id, txt) { document.getElementById(id).textContent = txt; };
+      if (isOneoff) {
+        // One-off: no membership, single order, upsell banner on top.
+        set('btn-left', '');
+        return;
+      }
       if (isUnlimited) {
         // Unlimited: no cap, no meter, no upsell. Always straight to upload.
         set('pl-name', 'Unlimited membership');
@@ -531,7 +578,8 @@
     // Quota left -> straight to the upload screen.
     // None left -> the Hire an Expert page with both tabs (buy one-time or upgrade).
     function newProject() {
-      var url = (isUnlimited || decksLeft > 0)
+      // One-off: no plan, so the full Hire an Expert page (buy one-time or join).
+      var url = (!isOneoff && (isUnlimited || decksLeft > 0))
         ? '../onboarding/onboarding.html?embed=1'
         : 'hire-an-expert-v6.html';
       openOverlay(url);
