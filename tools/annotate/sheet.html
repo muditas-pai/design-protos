@@ -180,9 +180,13 @@
              box: { x: bx, y: by, w: bw, h: bh } };
   }
 
+  // repo root, relative to this page. Absolute "/" would break on Pages, where
+  // the site is served under /design-protos/ rather than at the domain root.
+  var ROOT = "../../";
+
   function card(n, i) {
     var f = frame(n);
-    var src = "/" + n.proto + (n.state || "");
+    var src = ROOT + n.proto + (n.state || "");
     var el = document.createElement("div");
     el.className = "card";
     // stagger, capped so a long sheet does not take a visible age to settle
@@ -204,7 +208,7 @@
       '<div class="body">' +
         '<div class="note">' + esc(n.note) + '</div>' +
         '<div class="foot">' +
-          '<a href="/' + esc(n.proto) + (esc(n.state) || "") + '" title="open and press Shift+C">' +
+          '<a href="' + ROOT + esc(n.proto) + (esc(n.state) || "") + '" title="open and press Shift+C">' +
             esc(n.proto.split("/").pop()) + "</a>" +
           (n.state ? '<span class="tag state">' + esc(n.state) + "</span>" : "") +
           '<span class="tag">' + esc(n.tag || "?") + "</span>" +
@@ -226,8 +230,20 @@
     });
   }, { rootMargin: "300px" });
 
-  fetch("/_notes", { cache: "no-store" })
-    .then(function (r) { return r.json(); })
+  /* Live from the server when there is one, otherwise from the committed
+     manifest. The notes are static files either way; the only thing a static
+     host cannot do is list a directory and say which folders have a store,
+     which is exactly what notes.json answers. */
+  function load() {
+    return fetch("/_notes", { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .catch(function () {
+        return fetch(ROOT + "tools/annotate/notes.json", { cache: "no-store" })
+          .then(function (r) { return r.json(); });
+      });
+  }
+
+  load()
     .then(function (d) {
       var notes = d.notes || [];
       var out = document.getElementById("out");
@@ -271,7 +287,8 @@
     .catch(function () {
       var out = document.getElementById("out");
       out.className = "empty";
-      out.innerHTML = "Start the server: <code>python3 tools/annotate/serve.py</code>";
+      out.innerHTML = "No notes found. Annotate a proto, or run " +
+                      "<code>python3 tools/annotate/serve.py</code> to read them live.";
     });
 })();
 </script>

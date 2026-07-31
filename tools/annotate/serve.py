@@ -62,28 +62,82 @@ def git(*args, **kw):
         return False, str(exc)
 
 
-def publish(rel, proto, count):
-    """Commit this one file and push it, so a note reaches everyone else.
+def sha16(path):
+    try:
+        with open(path, "rb") as fh:
+            return hashlib.sha256(fh.read()).hexdigest()[:16]
+    except OSError:
+        return None
 
-    Only ever stages the store that was just written. Staging broadly would
-    sweep up whatever else the designer happens to have open, which in a repo
-    where everyone commits to main is how unrelated work ends up in somebody
-    else's commit.
+
+def collect_notes():
+    """Every annotation in the repo, with enough to draw it without the proto.
+
+    `stale` is decided here rather than in the page, because it is a comparison
+    against the bytes on disk and only something with a filesystem can see that.
+    """
+    notes = []
+    for store in sorted(pathlib.Path(ROOT).rglob("annotations.jsonl")):
+        if "node_modules" in store.parts:
+            continue
+        rel_store = str(store.relative_to(ROOT))
+        for line in store.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                n = json.loads(line)
+            except ValueError:
+                continue
+            proto = os.path.join(ROOT, n.get("proto", ""))
+            exists = os.path.isfile(proto)
+            current = sha16(proto) if exists else None
+            n["store"] = rel_store
+            n["proto_exists"] = exists
+            n["stale"] = bool(n.get("hash") and current and n["hash"] != current)
+            notes.append(n)
+    return notes
+
+
+def write_manifest():
+    """The same payload as /_notes, as a file.
+
+    A static host cannot list a directory, which is the only reason the contact
+    sheet needed a server at all: not to hold the notes, just to answer "which
+    folders have a store?". Committing the answer removes the server from the
+    reading path entirely, so the sheet works on Pages.
+    """
+    path = os.path.join(ROOT, "tools", "annotate", "notes.json")
+    notes = collect_notes()
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump({"notes": notes, "generated_by": "tools/annotate/serve.py"}, fh, indent=1)
+        fh.write("\n")
+    os.replace(tmp, path)
+    return "tools/annotate/notes.json", len(notes)
+
+
+def publish(paths, proto, count):
+    """Commit these files and push them, so a note reaches everyone else.
+
+    Only ever stages the store that was just written and the manifest derived
+    from it. Staging broadly would sweep up whatever else the designer happens
+    to have open, which in a repo where everyone commits to main is how
+    unrelated work ends up in somebody else's commit.
     """
     ok, branch = git("rev-parse", "--abbrev-ref", "HEAD")
     branch = branch if ok else "?"
 
-    ok, out = git("add", "--", rel)
+    ok, out = git("add", "--", *paths)
     if not ok:
         return {"state": "failed", "at": "add", "branch": branch, "detail": out}
 
-    ok, out = git("diff", "--cached", "--quiet", "--", rel)
+    ok, out = git("diff", "--cached", "--quiet", "--", *paths)
     if ok:                                   # exit 0 means nothing staged
         return {"state": "unchanged", "branch": branch}
 
     subject = "annotate: %d note%s on %s" % (count, "" if count == 1 else "s",
                                              os.path.basename(proto))
-    ok, out = git("commit", "-m", subject, "--", rel)
+    ok, out = git("commit", "-m", subject, "--", *paths)
     if not ok:
         return {"state": "failed", "at": "commit", "branch": branch, "detail": out}
 
@@ -131,31 +185,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def _notes(self):
-        """Every annotation in the repo, with enough to draw it without the proto.
-
-        `stale` is decided here rather than in the page: it is a comparison
-        against the file on disk, and only the server can see that.
-        """
-        notes = []
-        for store in sorted(pathlib.Path(ROOT).rglob("annotations.jsonl")):
-            if "node_modules" in store.parts:
-                continue
-            rel_store = str(store.relative_to(ROOT))
-            for line in store.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    n = json.loads(line)
-                except ValueError:
-                    continue
-                proto = os.path.join(ROOT, n.get("proto", ""))
-                exists = os.path.isfile(proto)
-                current = self._sha16(proto) if exists else None
-                n["store"] = rel_store
-                n["proto_exists"] = exists
-                n["stale"] = bool(n.get("hash") and current and n["hash"] != current)
-                notes.append(n)
-        self._json(200, {"notes": notes})
+        self._json(200, {"notes": collect_notes()})
 
     @staticmethod
     def _sha16(path):
@@ -212,8 +242,12 @@ class Handler(SimpleHTTPRequestHandler):
         print("  wrote %-52s %d note%s (+%d kept)"
               % (rel, len(mine), "" if len(mine) == 1 else "s", len(kept)))
 
-        out = {"ok": True, "file": rel, "notes": len(mine), "kept": len(kept)}
-        out["git"] = publish(rel, proto, len(mine)) if PUSH else {"state": "off"}
+        # regenerate the static manifest so the contact sheet stays true on Pages
+        manifest, total = write_manifest()
+
+        out = {"ok": True, "file": rel, "notes": len(mine), "kept": len(kept),
+               "manifest": total}
+        out["git"] = publish([rel, manifest], proto, len(mine)) if PUSH else {"state": "off"}
         self._json(200, out)
 
     @staticmethod
