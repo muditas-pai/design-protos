@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Annotate</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<style>
+  /* ==========================================================================
+     Annotation capture, thinnest slice.
+
+     The proto renders in an iframe and is NEVER touched: no script injected,
+     no attribute written, no class added. Every piece of chrome (highlight,
+     breadcrumb, markers, input) is drawn in THIS document, positioned over the
+     iframe. Hit testing reads the iframe's DOM, which same-origin allows.
+
+     That matters because an annotated proto is frozen. If the tool mutated the
+     page it was annotating, the content hash recorded with each annotation
+     would never match on the next visit.
+     ========================================================================= */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    background: #0d1117; color: #e6edf3; overflow: hidden;
+  }
+
+  /* ---- top bar ----------------------------------------------------------- */
+  .bar {
+    position: fixed; inset: 0 0 auto 0; height: 44px; z-index: 40;
+    display: flex; align-items: center; gap: 12px; padding: 0 12px;
+    background: #161b22; border-bottom: 1px solid #30363d;
+  }
+  .bar .name { font-size: 13px; font-weight: 600; }
+  .bar .meta { font-size: 11px; color: #8b949e; font-variant-numeric: tabular-nums; }
+  .bar .spacer { flex: 1; }
+  .btn {
+    height: 28px; padding: 0 11px; border: 1px solid #30363d; border-radius: 6px;
+    background: #21262d; color: #e6edf3; font: inherit; font-size: 12px;
+    font-weight: 500; cursor: pointer;
+  }
+  .btn:hover { background: #30363d; }
+  .btn.primary { background: #238636; border-color: #2ea043; }
+  .btn.primary:hover { background: #2ea043; }
+  .pill {
+    font-size: 11px; padding: 3px 8px; border-radius: 999px;
+    background: #21262d; color: #8b949e; font-variant-numeric: tabular-nums;
+  }
+  .pill.dirty { background: #3d2b06; color: #e3b341; }
+
+  /* ---- stage ------------------------------------------------------------- */
+  #stage { position: fixed; inset: 44px 0 0 0; }
+  #frame { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+
+  /* overlay sits above the iframe and never eats pointer events */
+  #layer { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
+
+  #hl {
+    position: absolute; border: 1px solid #58a6ff; background: rgba(56,139,253,0.14);
+    display: none; border-radius: 2px;
+  }
+  #tip {
+    position: absolute; display: none; padding: 2px 6px; border-radius: 4px;
+    background: #58a6ff; color: #04121f; font-size: 10px; font-weight: 600;
+    white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* numbered markers for saved annotations */
+  .marker {
+    position: absolute; width: 20px; height: 20px; border-radius: 999px;
+    background: #d29922; color: #1c1200; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.35); pointer-events: auto; cursor: pointer;
+    transform: translate(-50%, -50%);
+  }
+  .marker.unresolved { background: #f85149; color: #fff; }
+
+  /* ---- breadcrumb -------------------------------------------------------- */
+  #crumbs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: none;
+    align-items: center; gap: 4px; padding: 7px 12px; overflow-x: auto;
+    background: rgba(13,17,23,0.94); border-top: 1px solid #30363d;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+  }
+  #crumbs span { color: #6e7681; white-space: nowrap; }
+  #crumbs b { color: #58a6ff; font-weight: 600; }
+  #crumbs .hint { margin-left: auto; color: #6e7681; font-family: Inter, sans-serif; }
+
+  /* ---- note input -------------------------------------------------------- */
+  #note {
+    position: absolute; z-index: 50; display: none; width: 340px;
+    background: #161b22; border: 1px solid #58a6ff; border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5); padding: 8px;
+  }
+  #note textarea {
+    width: 100%; min-height: 58px; resize: vertical; border: 0; outline: none;
+    background: transparent; color: #e6edf3; font: inherit; font-size: 13px;
+    line-height: 1.45;
+  }
+  #note textarea::placeholder { color: #6e7681; }
+  #note .row {
+    display: flex; align-items: center; gap: 8px; margin-top: 6px;
+    font-size: 10px; color: #6e7681;
+  }
+  #note .row .spacer { flex: 1; }
+  #note .sel {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px;
+    color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 100%; margin-bottom: 6px;
+  }
+
+  /* ---- picker (shown when no ?proto is given) ---------------------------- */
+  .picker { max-width: 620px; margin: 88px auto; padding: 0 20px; }
+  .picker h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .picker p { color: #8b949e; font-size: 13px; margin: 0 0 18px; }
+  .picker a {
+    display: block; padding: 10px 12px; margin-bottom: 6px; border-radius: 8px;
+    background: #161b22; border: 1px solid #30363d; color: #e6edf3;
+    text-decoration: none; font-size: 13px;
+  }
+  .picker a:hover { border-color: #58a6ff; }
+  .picker a .n { color: #6e7681; font-size: 11px; margin-left: 8px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 52px; transform: translateX(-50%);
+    z-index: 60; padding: 8px 14px; border-radius: 999px; font-size: 12px;
+    background: #238636; color: #fff; opacity: 0; transition: opacity 180ms ease;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var qs = new URLSearchParams(location.search);
+  var proto = qs.get("proto");
+  var app = document.getElementById("app");
+  var toastEl = document.getElementById("toast");
+
+  function toast(msg, bad) {
+    toastEl.textContent = msg;
+    toastEl.style.background = bad ? "#da3633" : "#238636";
+    toastEl.classList.add("show");
+    setTimeout(function () { toastEl.classList.remove("show"); }, 1800);
+  }
+
+  /* ======================================================================
+     No proto given: list what there is to annotate, read off the index.
+     ====================================================================== */
+  if (!proto) {
+    var INDEX = "../../explorations/mudita/design-harness/index.html";
+    app.innerHTML =
+      '<div class="picker"><h1>Annotate</h1>' +
+      '<p>Pick a screen. The proto is never modified; notes are written to ' +
+      'annotations.jsonl beside it.</p><div id="list">Loading…</div></div>';
+    fetch(INDEX).then(function (r) { return r.text(); }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, "text/html");
+      var seen = {}, out = [];
+      doc.querySelectorAll("a.card-link").forEach(function (a) {
+        var href = a.getAttribute("href");
+        if (!href || !href.endsWith(".html") || href.indexOf("index.html") >= 0) return;
+        // resolve relative to the index's own folder
+        var path = new URL(href, new URL(INDEX, location.href)).pathname
+                     .replace(/^.*?\/design-protos\//, "")
+                     .replace(/^\//, "");
+        if (seen[path]) return;
+        seen[path] = 1;
+        var title = (a.querySelector("div") || {}).textContent || href;
+        out.push('<a href="?proto=' + encodeURIComponent(path) + '">' +
+                 title.trim().replace(/\s+/g, " ") + "</a>");
+      });
+      document.getElementById("list").innerHTML = out.join("") ||
+        "Nothing found. Add ?proto=&lt;path&gt; to the URL.";
+    }).catch(function () {
+      document.getElementById("list").textContent =
+        "Could not read the index. Add ?proto=<path> to the URL.";
+    });
+    return;
+  }
+
+  /* ======================================================================
+     Annotating a proto.
+     ====================================================================== */
+  var dir = proto.replace(/\/[^/]*$/, "");
+  var storeFile = dir + "/annotations.jsonl";
+  var rootUp = "../../";                 // tools/annotate/ -> repo root
+
+  app.innerHTML =
+    '<div class="bar">' +
+      '<span class="name">' + proto.split("/").pop() + "</span>" +
+      '<span class="meta" id="hash">hashing…</span>' +
+      '<span class="pill" id="count">0 notes</span>' +
+      '<span class="pill" id="unsaved" style="display:none">unsaved</span>' +
+      '<span class="spacer"></span>' +
+      '<button class="btn" id="copy">Copy for Claude</button>' +
+      '<button class="btn primary" id="save">Save</button>' +
+    "</div>" +
+    '<div id="stage">' +
+      '<iframe id="frame" src="' + rootUp + proto + '"></iframe>' +
+      '<div id="layer"><div id="hl"></div><div id="tip"></div></div>' +
+      '<div id="note"><div class="sel" id="noteSel"></div>' +
+        '<textarea placeholder="What do you notice? Plain words, no categories."></textarea>' +
+        '<div class="row"><span>Enter saves, Esc cancels</span><span class="spacer"></span>' +
+        '<button class="btn" id="noteCancel">Cancel</button>' +
+        '<button class="btn primary" id="noteSave">Add</button></div>' +
+      "</div>" +
+    "</div>" +
+    '<div id="crumbs"></div>';
+
+  var frame   = document.getElementById("frame");
+  var layer   = document.getElementById("layer");
+  var hl      = document.getElementById("hl");
+  var tip     = document.getElementById("tip");
+  var crumbs  = document.getElementById("crumbs");
+  var noteBox = document.getElementById("note");
+  var noteTa  = noteBox.querySelector("textarea");
+  var noteSel = document.getElementById("noteSel");
+  var countEl = document.getElementById("count");
+  var dirtyEl = document.getElementById("unsaved");
+  var hashEl  = document.getElementById("hash");
+
+  var annotations = [];      // every annotation for this proto
+  var dirty = false;
+  var contentHash = null;
+  var hoverDeep = null;      // deepest element under the cursor
+  var lift = 0;              // how many levels up from it we have walked
+  var target = null;         // what is actually selected
+  var frozen = false;        // true while the note box is open
+
+  // #layer and #note live inside #stage, which is already inset below the bar,
+  // so iframe client coordinates map straight through with no offset.
+  var BAR_H = 44;
+
+  /* ---- helpers --------------------------------------------------------- */
+
+  function idoc() { return frame.contentDocument; }
+  function state() { return (frame.contentWindow.location.hash || ""); }
+
+  function markDirty(v) {
+    dirty = v;
+    dirtyEl.style.display = v ? "" : "none";
+  }
+
+  /* Classes a proto's own JS toggles at runtime. They describe the moment, not
+     the element, so they must never end up in a stored selector: a marker
+     captured while a step was showing has to resolve when it is not. */
+  var VOLATILE = /^(is|has|js)-|^(active|open|selected|current|hidden|show|disabled)$/;
+
+  function stableClasses(el) {
+    return (el.getAttribute("class") || "").trim().split(/\s+/)
+      .filter(Boolean).filter(function (c) { return !VOLATILE.test(c); });
+  }
+
+  /** A deterministic, unique CSS path. The proto is frozen, so this is exact
+      forever; there is no need for fuzzy re-resolution. */
+  function cssPath(el) {
+    var doc = idoc(), parts = [];
+    while (el && el.nodeType === 1 && el !== doc.body) {
+      var part = el.tagName.toLowerCase();
+      if (el.id && doc.querySelectorAll("#" + CSS.escape(el.id)).length === 1) {
+        parts.unshift("#" + CSS.escape(el.id));
+        break;
+      }
+      var cls = stableClasses(el);
+      if (cls.length) part += "." + cls.map(function (c) { return CSS.escape(c); }).join(".");
+      var parent = el.parentElement;
+      if (parent) {
+        var sibs = Array.prototype.filter.call(parent.children, function (s) {
+          return s.tagName === el.tagName;
+        });
+        if (sibs.length > 1) part += ":nth-of-type(" + (sibs.indexOf(el) + 1) + ")";
+      }
+      parts.unshift(part);
+      el = parent;
+    }
+    return parts.join(" > ");
+  }
+
+  function label(el) {
+    var cls = stableClasses(el);
+    return el.tagName.toLowerCase() + (cls.length ? "." + cls[0] : "");
+  }
+
+  function ancestry(el) {
+    var out = [];
+    while (el && el.nodeType === 1 && el !== idoc().body) { out.unshift(el); el = el.parentElement; }
+    return out;
+  }
+
+  /** Element the cursor is on, walked up `lift` levels. */
+  function resolveTarget() {
+    var el = hoverDeep;
+    for (var i = 0; i < lift && el && el.parentElement && el.parentElement !== idoc().body; i++) {
+      el = el.parentElement;
+    }
+    return el;
+  }
+
+  function place(box, rect) {
+    box.style.left   = rect.left + "px";
+    box.style.top    = rect.top + "px";
+    box.style.width  = rect.width + "px";
+    box.style.height = rect.height + "px";
+  }
+
+  function paint() {
+    if (frozen || !target) return;
+    var r = target.getBoundingClientRect();
+    hl.style.display = "block";
+    place(hl, r);
+    tip.style.display = "block";
+    tip.textContent = label(target);
+    tip.style.left = r.left + "px";
+    tip.style.top = Math.max(0, r.top - 16) + "px";
+
+    var chain = ancestry(target);
+    crumbs.style.display = "flex";
+    crumbs.innerHTML = chain.map(function (e, i) {
+      var t = (i === chain.length - 1 ? "<b>" + label(e) + "</b>" : "<span>" + label(e) + "</span>");
+      return t;
+    }).join('<span>&rsaquo;</span>') +
+    '<span class="hint">scroll or arrow keys to change level, click to annotate</span>';
+  }
+
+  function clearPaint() {
+    hl.style.display = "none";
+    tip.style.display = "none";
+    crumbs.style.display = "none";
+  }
+
+  /* ---- markers --------------------------------------------------------- */
+
+  function renderMarkers() {
+    Array.prototype.slice.call(layer.querySelectorAll(".marker")).forEach(function (m) { m.remove(); });
+    var here = state();
+    var shown = 0;
+    annotations.forEach(function (a, i) {
+      if ((a.state || "") !== here) return;          // only this state, so no bleed
+      var el = null;
+      try { el = idoc().querySelector(a.selector); } catch (e) { /* bad selector */ }
+      var m = document.createElement("div");
+      m.className = "marker" + (el ? "" : " unresolved");
+      m.textContent = String(i + 1);
+      m.title = (el ? "" : "anchor not found on this state\n") + a.note;
+      if (el) {
+        var r = el.getBoundingClientRect();
+        m.style.left = (r.left + r.width / 2) + "px";
+        m.style.top  = r.top + "px";
+      } else {
+        m.style.left = (16 + shown * 24) + "px";
+        m.style.top  = "16px";
+      }
+      m.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        if (confirm("Delete note " + (i + 1) + "?\n\n" + a.note)) {
+          annotations.splice(i, 1); markDirty(true); refresh();
+        }
+      });
+      layer.appendChild(m);
+      shown++;
+    });
+    countEl.textContent = annotations.length + (annotations.length === 1 ? " note" : " notes");
+  }
+
+  function refresh() { renderMarkers(); }
+
+  /* ---- note box -------------------------------------------------------- */
+
+  function openNote(el) {
+    frozen = true;
+    target = el;
+    var r = el.getBoundingClientRect();
+    noteSel.textContent = cssPath(el);
+    noteTa.value = "";
+    noteBox.style.display = "block";
+    var stageH = window.innerHeight - BAR_H;
+    var top = r.bottom + 8;
+    if (top + 130 > stageH) top = Math.max(8, r.top - 138);
+    noteBox.style.top = top + "px";
+    noteBox.style.left = Math.min(Math.max(8, r.left), window.innerWidth - 350) + "px";
+    noteTa.focus();
+  }
+
+  function closeNote() {
+    frozen = false;
+    noteBox.style.display = "none";
+    clearPaint();
+  }
+
+  function commitNote() {
+    var text = noteTa.value.trim();
+    if (!text) { closeNote(); return; }
+    var r = target.getBoundingClientRect();
+    annotations.push({
+      proto: proto,
+      hash: contentHash,
+      state: state(),
+      viewport: [Math.round(frame.clientWidth), Math.round(frame.clientHeight)],
+      selector: cssPath(target),
+      tag: target.tagName.toLowerCase(),
+      classes: (target.getAttribute("class") || "").trim().split(/\s+/).filter(Boolean),
+      text: (target.textContent || "").trim().slice(0, 120),
+      rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)],
+      note: text,
+      at: new Date().toISOString()
+    });
+    markDirty(true);
+    closeNote();
+    refresh();
+  }
+
+  document.getElementById("noteSave").addEventListener("click", commitNote);
+  document.getElementById("noteCancel").addEventListener("click", closeNote);
+  noteTa.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitNote(); }
+    else if (e.key === "Escape") { e.preventDefault(); closeNote(); }
+    e.stopPropagation();
+  });
+
+  /* ---- wiring into the iframe ------------------------------------------ */
+
+  function wire() {
+    var d = idoc();
+
+    d.addEventListener("mousemove", function (e) {
+      if (frozen) return;
+      var el = d.elementFromPoint(e.clientX, e.clientY);
+      if (!el || el === d.documentElement || el === d.body) { clearPaint(); target = null; return; }
+      if (el !== hoverDeep) { hoverDeep = el; lift = 0; }   // new element resets the level
+      target = resolveTarget();
+      paint();
+    }, true);
+
+    d.addEventListener("mouseleave", function () { if (!frozen) { clearPaint(); target = null; } });
+
+    // scroll changes the grouping level rather than scrolling the proto
+    d.addEventListener("wheel", function (e) {
+      if (frozen || !hoverDeep) return;
+      e.preventDefault();
+      lift = Math.max(0, lift + (e.deltaY < 0 ? 1 : -1));
+      target = resolveTarget();
+      paint();
+    }, { passive: false, capture: true });
+
+    d.addEventListener("keydown", function (e) {
+      if (frozen) return;
+      if (e.key === "ArrowUp")   { e.preventDefault(); lift++; target = resolveTarget(); paint(); }
+      if (e.key === "ArrowDown") { e.preventDefault(); lift = Math.max(0, lift - 1); target = resolveTarget(); paint(); }
+    }, true);
+
+    // click selects instead of activating the control
+    d.addEventListener("click", function (e) {
+      if (frozen) return;
+      e.preventDefault(); e.stopPropagation();
+      if (target) openNote(target);
+    }, true);
+
+    // the proto may change state (the stitched flow uses #step-N)
+    frame.contentWindow.addEventListener("hashchange", refresh);
+    d.addEventListener("scroll", refresh, true);
+    window.addEventListener("resize", refresh);
+  }
+
+  /* ---- load + persist -------------------------------------------------- */
+
+  function loadExisting() {
+    return fetch(rootUp + storeFile, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.text() : ""; })
+      .then(function (txt) {
+        annotations = txt.split("\n").filter(Boolean).map(function (l) {
+          try { return JSON.parse(l); } catch (e) { return null; }
+        }).filter(Boolean).filter(function (a) { return a.proto === proto; });
+      })
+      .catch(function () { annotations = []; });
+  }
+
+  function hashProto() {
+    return fetch(rootUp + proto, { cache: "no-store" })
+      .then(function (r) { return r.arrayBuffer(); })
+      .then(function (buf) { return crypto.subtle.digest("SHA-256", buf); })
+      .then(function (d) {
+        contentHash = Array.prototype.map.call(new Uint8Array(d), function (b) {
+          return b.toString(16).padStart(2, "0");
+        }).join("").slice(0, 16);
+        hashEl.textContent = contentHash;
+        // a frozen proto that has been edited invalidates its notes
+        var stale = annotations.filter(function (a) { return a.hash && a.hash !== contentHash; });
+        if (stale.length) {
+          hashEl.textContent = contentHash + "  (" + stale.length + " note" +
+            (stale.length === 1 ? "" : "s") + " from an older version of this file)";
+          hashEl.style.color = "#e3b341";
+        }
+      })
+      .catch(function () { hashEl.textContent = "hash unavailable"; });
+  }
+
+  function serialise() {
+    return annotations.map(function (a) { return JSON.stringify(a); }).join("\n") + "\n";
+  }
+
+  document.getElementById("save").addEventListener("click", function () {
+    fetch("/_annotate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file: storeFile, content: serialise() })
+    }).then(function (r) {
+      if (!r.ok) throw new Error(String(r.status));
+      markDirty(false);
+      toast("Saved to " + storeFile.split("/").pop());
+    }).catch(function () {
+      toast("No local writer. Use Copy for Claude.", true);
+    });
+  });
+
+  document.getElementById("copy").addEventListener("click", function () {
+    navigator.clipboard.writeText(
+      "Append to " + storeFile + ":\n\n" + serialise()
+    ).then(function () { toast("Copied. Paste into Claude Code."); },
+           function () { toast("Clipboard blocked.", true); });
+  });
+
+  window.addEventListener("beforeunload", function (e) {
+    if (dirty) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  frame.addEventListener("load", function () {
+    loadExisting().then(hashProto).then(function () { wire(); refresh(); });
+  });
+})();
+</script>
+</body>
+</html>
