@@ -14,6 +14,30 @@
    ========================================================================== */
 tailwind.config = {
   theme: {
+    // borderRadius and spacing sit here rather than in extend, so they REPLACE
+    // Tailwind's default scales instead of merging with them. A scale that
+    // still carries 35 inherited steps is not a scale; the whole point is that
+    // there is a small set of choices and 7px is not one of them.
+    borderRadius: {
+      none: "0",
+      sm: "4px",
+      DEFAULT: "8px",
+      md: "12px",
+      lg: "16px",
+      full: "9999px",
+    },
+    spacing: {
+      0: "0",
+      1: "4px",
+      2: "8px",
+      3: "12px",
+      4: "16px",
+      6: "24px",
+      8: "32px",
+      12: "48px",
+      16: "64px",
+      24: "96px",
+    },
     extend: {
       colors: {
         // brand (app) ramp. Lightness steps evened out in OKLCH: the old
@@ -194,6 +218,14 @@ tailwind.config = {
         sans: ["Inter", "system-ui", "sans-serif"],
         poppins: ["Poppins", "serif"],
         robotoCondensed: ['"Roboto Condensed"', "sans-serif"],
+        mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      fontWeight: {
+        normal: "400",
+        medium: "500",
+        semibold: "600",
+        bold: "700",
+        extrabold: "800",
       },
       fontSize: {
         "2xs": "0.813rem",
