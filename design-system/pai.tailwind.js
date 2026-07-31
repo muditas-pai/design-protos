@@ -16,11 +16,43 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        // brand (app) ramp
-        "app-50": "#E6EFFF", "app-75": "#D6E5FF", "app-100": "#C2D8FF",
-        "app-200": "#8FB8FF", "app-300": "#5291FF", "app-400": "#1A6EFF",
-        "app-500": "#005EFF", "app-600": "#0055ED", "app-650": "#004DD1",
-        "app-700": "#0043B8", "app-800": "#002F80", "app-900": "#00225C",
+        // brand (app) ramp. Lightness steps evened out in OKLCH: the old
+        // 400/500/600 sat within about three L points of each other. Anchors
+        // marked "held" are exact brand values and must never change.
+        "app-50": "#E6EFFF",   // held, brand tint
+        "app-75": "#D6E5FF",
+        "app-100": "#BFD5FC",
+        "app-200": "#94BBFF",
+        "app-300": "#69A0FF",
+        "app-400": "#3C82FF",
+        "app-500": "#005EFF",  // held, Brand Blue
+        "app-600": "#0055ED",  // held, brand companion (= text-brand / bg-brand)
+        "app-650": "#004DD1",
+        "app-700": "#0043B8",  // held, brand companion (hover)
+        "app-800": "#043485",
+        "app-900": "#00225C",  // held
+
+        // green / success ramp. Tailwind's stock green runs lighter and more
+        // saturated than the other hues at the same step (the fluorescent
+        // look), so each step's perceived lightness is pinned to the
+        // red/blue/purple mean. Hue unchanged; 950 is Tailwind's original.
+        "green-50": "#EFF9F2",  "green-100": "#DAF1E2", "green-200": "#BDE7CB",
+        "green-300": "#8DD6A6", "green-400": "#47BE70", "green-500": "#00A449",
+        "green-600": "#018C3C", "green-700": "#017735", "green-800": "#106131",
+        "green-900": "#11512B", "green-950": "#052E16",
+        // success-* is an alias of the same ramp, as in the app
+        "success-50": "#EFF9F2",  "success-100": "#DAF1E2", "success-200": "#BDE7CB",
+        "success-300": "#8DD6A6", "success-400": "#47BE70", "success-500": "#00A449",
+        "success-600": "#018C3C", "success-700": "#017735", "success-800": "#106131",
+        "success-900": "#11512B", "success-950": "#052E16",
+
+        // shadow primitives. Every elevation composes from these, which is why
+        // they live with the colours rather than in boxShadow.
+        "drop-1": "rgba(9, 15, 21, 0.06)",
+        "drop-2": "rgba(9, 15, 21, 0.09)",
+        "drop-3": "rgba(9, 15, 21, 0.20)",
+        "inner-1": "rgba(255, 255, 255, 0.80)",
+        "inner-2": "rgba(255, 255, 255, 0)",
 
         // neutrals (gray = production scale)
         "gray-25": "#F6F6F6", "gray-50": "#F4F4F4", "gray-75": "#ECECEC",
@@ -39,6 +71,12 @@ tailwind.config = {
         "bg-secondary-inverted": "#1C3550",
         "bg-tertiary": "#F5F5F5",
         "bg-default-tertiary": "#F5F5F5",
+        // Two near-white surface steps between primary (#FFF) and tertiary
+        // (#F5F5F5). Exact Figma JAS'26 raw fills: subtle is the dashboard main
+        // column and top nav; muted is the side panel, deliberately one step
+        // darker so the panel reads as its own surface.
+        "bg-subtle": "#FCFCFC",
+        "bg-muted": "#F9F9F9",
         "bg-tertiary-inverted": "#284B71",
         "bg-quaternary": "#E5E5E5",
         "bg-elevated": "#FFFFFF",
@@ -72,6 +110,7 @@ tailwind.config = {
         "text-inverted-primary": "#ffffff",
         "text-inverted-secondary": "rgba(255, 255, 255, 0.6)",
         "text-danger-primary": "#b91c1c",
+        "text-danger-hover": "#991b1b",
         "text-danger-secondary": "#dc2626",
         "text-warning-primary": "#a16207",
         "text-warning-secondary": "#ca8a04",
@@ -86,6 +125,7 @@ tailwind.config = {
         "border-secondary": "rgba(11, 15, 20, 0.09)",
         "border-secondary-inverted": "rgba(10, 25, 37, 0.48)",
         "border-tertiary": "rgba(11, 15, 20, 0.06)",
+        "border-quaternary": "#D4D4D4",
         "border-brand": "#0055ED",
         "border-brand-secondary": "#8FB8FF",
         "border-danger": "#DC2626",
@@ -104,6 +144,7 @@ tailwind.config = {
         "linkedin-500": "#0077B5", "facebook-500": "#1877F2", "twitter-500": "#1DA1F2",
         "email-500": "#FF6C5F", "copylink-500": "#FF6A00",
         "darkblue-500": "#193351", "darkblue-600": "#0F233A",
+        "profile-app-500": "#0284C7",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
@@ -141,6 +182,11 @@ tailwind.config = {
         "elevation-input": "0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(16, 24, 40, 0.05)",
         "elevation-input-focused": "0 0 0 2px rgba(10,25,37,0.48), 0 0 0 1px #0A1925 inset, 0 1px 2px 0 rgba(11,15,20,0.09)",
         "elevation-input-error": "0 0 0 2px rgba(248, 113, 113, 0.40), 0 0 0 1px #FECACA, 0 1px 2px 0 rgba(26, 26, 26, 0.06)",
+        "elevation-04": "0 0 0 1.5px rgba(255,255,255,0.30) inset, 0 0 0 0.5px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(26,26,26,0.06), 0 4px 6px 0 rgba(26,26,26,0.06), 0 40px 40px -24px rgba(26,26,26,0.06), 0 56px 56px -32px rgba(26,26,26,0.09), 0 24px 40px 0 rgba(26,26,26,0.06)",
+        // Figma effect style 471:2410 ("elevation 4"), stronger than elevation-04
+        // and used by the newer dashboard modals. This is the one the cancel-flow
+        // protos were transcribing by hand under the name elevation-04.
+        "elevation-new-04": "0 0 0 1.5px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09), 0 4px 6px 0 rgba(11,15,20,0.09), 0 40px 40px -24px rgba(11,15,20,0.09), 0 56px 56px -32px rgba(11,15,20,0.20), 0 24px 40px 0 rgba(11,15,20,0.09)",
       },
       backgroundImage: {
         "gradient-brand-01": "linear-gradient(90deg, #2ABFFF -58.35%, #3E5DF7 22.24%, #9C4CFF 75.71%, #E14CFF 99.69%)",
