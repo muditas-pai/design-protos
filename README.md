@@ -23,8 +23,8 @@ proto and commits and pushes it, so a note you make is a note everyone has.
 Annotation mode is a mode on purpose: with it off the proto behaves normally, so drive the
 flow to the state you care about first, then turn it on. Notes are recorded against that state.
 
-- **Everything noted so far:** `http://localhost:8901/tools/annotate/sheet.html` — the contact
-  sheet reads the notes off the running server, so it only works locally
+- **Everything noted so far:** [`tools/annotate/sheet.html`](https://muditas-pai.github.io/design-protos/tools/annotate/sheet.html)
+  — works on Pages, no server needed, so it is a link you can just send someone
 - **How the whole thing works:** [`tools/annotate/system.html`](https://muditas-pai.github.io/design-protos/tools/annotate/system.html)
   — static, so this one opens on Pages
 - **Full reference:** [`tools/annotate/README.md`](tools/annotate/README.md)
