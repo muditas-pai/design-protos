@@ -1,6 +1,6 @@
 # Deal Room — grounding
 
-**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 23 Jul 2026
+**Type:** Shared grounding for this folder — reference, **not** source of truth · **Owner:** Mudita · **Updated:** 24 Jul 2026
 
 The **deal room** itself: a per-deal, branded container that wraps a PAI deck + supporting assets + a Mutual Action Plan into one link. Engagement analytics is its own project — the room *consumes* it. See the [Deck Analytics grounding](../deck-analytics/grounding.html).
 
@@ -32,6 +32,15 @@ your advocate   controls budget,   will use PAI;
 ```
 
 The room's job is to travel from the champion outward to the committee (avg ~6–10 people), especially the unseen economic buyer. The Mutual Action Plan is how the champion sells internally.
+
+**Who exactly — first-timers, not mature sales teams (positioning · Dhruv ✓ 23 Jul 2026).** We are **not** building a sales-enablement tool, and **not** positioning against mature deal rooms (Showpad, Trumpet, Aligned). Pitch's own "rooms" positioning gave no compelling reason-to-choose, and there's no point fighting the mature DSRs on their turf. Our user has **never used a deal room** — their current workflow is: finish a presentation, send a PDF attachment. The deal room is the **natural next step after building a deck**: bundle the resources into one neat package and keep track of what happens next.
+
+```
+TODAY:  build deck → send a PDF attachment → lose the thread
+OURS:   build deck → wrap in a room → share one link → see what happens next
+```
+
+So the target is the **first-time deal-room user, reached from the deck** — not the mature AE shopping for a DSR. The champion → committee model above still holds; it just plays out for a team doing this for the first time. (See [Positioning](#positioning-2x2) for the market whitespace this sits in, and [Tiering](#tiering--packaging) for how packaging mirrors this logic.)
 
 ---
 
@@ -145,6 +154,31 @@ Y — single artifact (point tool) ⟷   whole deal / revenue workflow (platform
 
 ---
 
+## Tiering & packaging
+
+Packaging mirrors the **first-timers, reached from the deck** logic ([Who is this for?](#who-is-this-for)): let people *experience* a room before asking them to pay, then scale by volume, then by CRM.
+
+```
+FREE   1 room            they have to experience it to know what it is
+PRO    N rooms           the room becomes a routine part of sharing work
+GOLD   unlimited rooms   + CRM integration (pre-fill the room · share analytics)
+```
+
+| Tier | Rooms | CRM |
+|---|---|---|
+| **Free** | 1 (the taste) | — |
+| **Pro** | N | — |
+| **Gold** | unlimited | pre-fill room from CRM + share analytics |
+
+**Expected outcome:**
+
+- Conversion for Sales & Leadership personas goes up.
+- If the room is Gold-gated → AOV goes up.
+
+**Open question (raised 23 Jul 2026):** it's not obvious why a CRM-using, more mature buyer would want such a *lightweight* deal room — so the pull of the Gold + CRM tier is unproven. Watch whether CRM pre-fill is a genuine draw or just a checkbox.
+
+---
+
 ## Touchpoints across the app
 
 Entry from the **editor** and **dashboard**, not the create flow.
@@ -242,57 +276,52 @@ The deck is native; everything else is an attachment. Analytics we can capture v
 
 ## In-room analytics
 
-Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.html), not a separate engine** — the room *consumes* it and adds two axes: **resources** (a room holds many artifacts, not one deck) and the **buying group + MAP**. The question shifts from *"did the deck land?"* to **"is this deal moving?"**
+Room analytics is a **superset of [Deck Analytics](../deck-analytics/grounding.html), not a separate engine** — the room *consumes* it. But the room has **one user (the AE running the deal) with one question: "is this deal moving, and what do I do next?"** Scope everything to that; import nothing from Deck Analytics that doesn't serve it.
 
-### Three levels — room → resource → slide
+### Phase 1 = three tabs (each metric is a tab)
 
-```
-ROOM (the deal)   →   RESOURCE (deck · file · link · video)   →   SLIDE
-deal momentum,        per-artifact engagement                     per-slide dwell
-MAP progress,         (opened? how long? by whom?)                 └─ IS the Deck
-the buying group                                                      Analytics view
-```
-
-Room analytics is Deck Analytics **one level up**. Click a deck resource inside the room → you land in the exact per-slide / per-viewer deep view we already built. The room level answers *which of the room's N things* the buyer engaged; the deck view is the drill-down. **So the deck engine must compose upward — that's the one thing scoping now protects.**
-
-### The metric shift — momentum, not just engagement
-
-A public deck asks "reach + engagement." A room asks "is the deal progressing." So the **hero signals change**:
+The three top-line stats double as **tabs** (like the deck's metric tabs) — so all three are tappable, none is a false affordance:
 
 ```
-HERO (room-level)     recency (last touch) · breadth (# people / # companies
-                      engaged = multi-threading) · MAP progress (steps done/stalled)
-SUPPORTING            per-resource engagement · per-slide dwell · completion
-                      (the Deck-Analytics metrics, demoted to detail)
+[ 2h ago · Last viewed ]   [ 6 people · Viewed ]   [ 5/6 · Resources opened ]
+   views-over-time graph      the buying-group table   the resource list
+   (busy early vs now?)       (name+email; domain =    (native deck expands to
+                               internal/external)       per-slide time; others
+                                                         = click-and-open)
 ```
 
-This is the DSR scoreboard (Trumpet · Aligned) — and it's our **wedge**, not table-stakes.
+**Per-person = inline expand, not a navigation.** Tapping a viewer row in the **Viewed** tab **expands it in place** (accordion) — a tidy, sectioned detail (engagement line → the native deck's per-slide time as a compact heat strip + drop-off → other resources as chips). No push to a separate screen: navigating *inside* a tab reads as a dead-end, and the old drill-in was an untidy grab-bag. The header shows the **co-brand** (seller × buyer logos). Prototype: `room-analytics.html`.
 
-### The audience is the buying group
+**Visual language** follows the updated deck-analytics design (product Figma, JAS working file): a **layered shell** (grey tray holding the header + a white content card), **24px regular** stat numbers (not bold), **light→blue gradient** magnitude bars (`#A3D3FF → #005EFF → #01358E`, windowed so longer bars reveal the darker end), **rounded-square avatars** (initials for known people, a **pastel smiley** for anonymous visitors), and 10px overline column headers.
 
-A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*). So the viewer list becomes the **committee**, rolled up **by person and by company**.
+**Affordance discipline:** earlier the three stats were a read-only KPI strip, which read as tappable but wasn't — a false affordance ("if one's tappable they all should be"). The fix was to make them **all tabs** (underline-active, like the deck), so every one *is* interactive. Everything else that's tappable — a viewer row (expands), the native-deck resource (expands) — gets a hover state + chevron. Rule: don't give non-interactive things tappable chrome; give interactive things an affordance; and if a set looks uniform, make the whole set behave uniformly.
 
-- **"New viewer" flips meaning.** On a public deck a new viewer is noise (we dropped that badge). In a **room**, a new person = the **champion looped in a colleague = multi-threading** — a *positive* deal signal, worth surfacing. Same event, opposite value, because a room has an intended audience and a public deck doesn't.
-- **Identity-forward defaults.** Rooms lean toward known identity (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in the Deck Analytics grounding). The access friction-dial sits higher here than on a public deck.
+### Scope discipline — what we deliberately cut
 
-### MAP as a first-class metric
+Room analytics is where it's tempting to bolt all of Deck Analytics on, one level up. We didn't. Each of these failed the *"does the AE need it to decide?"* test:
 
-The Mutual Action Plan isn't content — its **progress is deal-health**: steps done vs stalled, who's the blocker, time-in-stage. Trackable natively in the room, no deck involved. (Phase 1 MAP is the simple checklist; richer per-step owners/dates are Phase 2 — see below.)
+- **✂ Room-level activity chart** (opens over time) → recency is answered by *"last active: 2h ago"*; the only thing a chart adds is trend, which didn't justify even a sparkline (it wasn't interactive, and "last active" already answers *is it warm*).
+- **✂ Room-level per-resource engagement panel** (median time / watch % / bars per artifact) → *which* resources someone opened is a per-**person** signal ("IT opened the security doc"), so it lives in the **drill-in**, not a room aggregate.
+- **Per-slide time is the exception — surface it, don't bury it.** It's our differentiator (we own the deck; competitors have a linked PDF), so the **native presentation** shows **slide-by-slide time + the drop-off point** inside the **per-person drill-in** — not the room top level, but not buried in a separate view either. **Only** the native deck: every other resource (PDF / link / video) is **click-and-open** (Opened / not), because we can't see inside them. So the room *list* stops at the resource; the per-slide depth lives one tap in, on the person.
+- **✂ Key-takeaways card** → it only restated the MAP (the blocked step) and the buying group (multi-threading). Let those two carry the signal.
+- **✂ Next-steps / MAP panel.** The MAP is the room's **own content** — the seller sees and manages it *in the room*, so re-rendering the checklist in analytics is pure duplication. The only MAP-derived thing that's genuinely analytics (not visible in the room) is **time-in-stage** — "this step has been stalled 5 days" — which can surface as a small alert if it ever earns its place; the checklist never does.
 
-### Reuse vs new
+### The buying group
 
-```
-REUSE (already built)   metric engine · per-slide charts · per-viewer drill-in ·
-                        identity/anonymous model · the SIDE-PANEL master-detail
-                        (its left rail maps cleanly onto a small known buying group)
-NEW for rooms           a RESOURCES panel (per-artifact engagement, per the content
-                        table above) · a MAP-progress panel · buying-group roll-up
-                        (by company) · the momentum framing
-```
+A room is shared with a **small, known set** (~6–10 people, one account — see *Who is this for?*), so the viewer list is the **committee** — a flat list, one row per person.
 
-### Phasing
+**What identity we actually have:** the room's email gate gives us **name + email**. The **domain** tells us **internal vs external** — acme.com = the buyer (known from the co-brand header), meridianlegal.com = someone outside it — which *is* the multi-threading signal. It does **not** give a company **name** (a domain needs enrichment to resolve, and free domains map to no company), so **never display a company name** or a named-company count ("2 companies"). We also don't have **roles / titles** (Phase 1 shows email, not a job title), and we don't know who was invited-but-hasn't-opened, so the top-line stat is a plain **viewer headcount** ("6 people viewed"), not an "engaged" judgment we don't measure and **never a fraction of an assumed total** ("6 / 10"). Per-person engagement *depth* lives in the table's time column. Rule: don't invent identity we can't capture; flag multi-threading **per person** (external domain, or newly appeared), not as named companies.
 
-Deck Analytics is the locked **"ships first, standalone"** call; room analytics is the **wedge but comes after** (the room beyond the checklist MAP is Phase 2 anyway). **Scoping it now is planning, not a build commitment** — the point is to keep the deck engine composing upward, so the room is a wrapper, never a rebuild.
+- **"New viewer" flips to positive.** On a public deck a new viewer is noise (we dropped that badge). In a **room** a new person = the **champion looped in a colleague = multi-threading** — a deal signal worth a small badge. Same event, opposite value.
+- **Identity-forward defaults** (Pitch defaults *Require visitor email* ON for rooms — see the Pitch room-link reference in Deck Analytics). The friction-dial sits higher than a public deck.
+
+### The MAP lives in the room, not in analytics
+
+The Mutual Action Plan's *progress* is deal-health — but the checklist itself is **room content the seller already sees and manages in the room**, so analytics doesn't duplicate it. The one MAP-derived signal that's genuinely analytics (the room doesn't compute it) is **time-in-stage** — "this step has been stalled 5 days." That can surface as a small alert if it earns its place; the full checklist never does.
+
+### Reuse + phasing
+
+Reuse from Deck Analytics: the **per-viewer drill-in** (now per-*person* resource coverage), the **identity/anonymous model**, and the **modal shell**. Deck Analytics is the locked **"ships first, standalone"** call; room analytics is the **wedge, but after**. Scoping now just keeps the deck engine composing upward, so the room stays a wrapper, never a rebuild.
 
 ---
 
@@ -588,6 +617,8 @@ Benchmarked Pitch, HubSpot, Trumpet, Aligned on buyer access + who-can-tick + se
 | Question | Decision |
 |---|---|
 | **Roles** | Sales only (AE). SE / CS adjacent, Phase 2. |
+| **Target user** | **First-time deal-room users, reached from the deck** (current workflow = send a PDF). NOT mature sales teams, NOT a sales-enablement tool, NOT positioned against Showpad / Trumpet. (Dhruv ✓ 23 Jul 2026.) |
+| **Tiering** | Free = 1 room · Pro = N rooms · Gold = unlimited + CRM pre-fill / shared analytics. Goal: conversion up; AOV up if Gold-gated. Open: does CRM pull a mature buyer to a lightweight room? |
 | **Analytics** | Its own project; the room consumes a room-scoped slice. |
 | **Salesforce sync** | V2, all tiers. V1 stands alone. |
 | **Post-sale model** | School A (freeze + clone). Not the School B year-round hub. |

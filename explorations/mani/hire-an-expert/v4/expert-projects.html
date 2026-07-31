@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<!-- exploration: Hire an Expert projects view · owner: Mani (@manivasakan-arch)
+     dashboard shell duplicated from explorations/mani/dashboard-hover (own frame)
+     List follows the dashboard table style (Name / dates / Status), download only when ready.
+     One combined screen: quota left -> New project opens the upload screen;
+     none left -> New project opens the Hire an Expert page (both tabs). -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hire an Expert · Projects · design-protos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <style>
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface-2: #f5f5f5;
+      --fg: #171717;
+      --fg-2: #525252;
+      --fg-3: #a3a3a3;
+      --brand: #005eff;
+      --brand-tint: #e6efff;
+      --ink: #0b0f14;
+      --green: #16a34a;
+      --green-tint: #ecfdf3;
+      --green-text: #067647;
+      --amber-tint: #fef3c7;
+      --amber-text: #92400e;
+      --line: rgba(11,15,20,0.09);
+      --line-strong: rgba(11,15,20,0.20);
+      --sel: rgba(22,30,39,0.08);
+      --d1: rgba(11,15,20,0.06);
+      --d2: rgba(11,15,20,0.09);
+      --inner: rgba(255,255,255,0.8);
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+      --sh-card: 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-btn: 0 1px 2px 1px var(--d1), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: "Inter", system-ui, sans-serif; font-size: 14px;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* demo seg: quota state switch (proto-only chrome) */
+    .demo-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 60; }
+    .demo-seg { display: inline-flex; padding: 3px; background: #171717; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+    .demo-seg button { border: 0; cursor: pointer; border-radius: 6px; padding: 7px 14px;
+      font: 600 12px/1 "Inter", sans-serif; background: transparent; color: rgba(255,255,255,.7); }
+    .demo-seg button.is-active { background: #fff; color: #171717; }
+
+    /* sidebar (duplicated from dashboard-hover) */
+    .sidebar { width: 260px; min-width: 260px; height: 100%; background: var(--bg);
+      border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+    .ws { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+    .ws-avatar { width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+      background: linear-gradient(135deg, #ff5a3c, #e0422a);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+      display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; }
+    .ws-name { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .badge { display: inline-flex; align-items: center; justify-content: center;
+      background: var(--brand-tint); color: var(--brand);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 34px; line-height: 1.33; }
+    .ws .caret { color: var(--fg-2); font-size: 18px; }
+    .nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-label { padding: 8px 8px 2px; color: var(--fg-2); font-size: 14px; }
+    .nav-item { display: flex; align-items: center; gap: 8px; height: 36px; padding: 8px;
+      border-radius: 6px; color: var(--fg-2); cursor: pointer; text-decoration: none;
+      transition: background 140ms var(--ease); }
+    .nav-item i { font-size: 20px; flex-shrink: 0; }
+    .nav-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-item:hover { background: var(--sel); }
+    .nav-item.is-active { background: var(--sel); color: var(--fg); font-weight: 600; }
+    .divider { height: 1px; background: var(--line); margin: 6px 0; box-shadow: 0 1px 0 0 var(--inner); }
+    .sidebar-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 8px; }
+
+    /* main */
+    .main { flex: 1; min-width: 0; height: 100%; background: var(--surface); overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 10px; }
+    .main::-webkit-scrollbar-thumb { background: rgba(11,15,20,0.12); border-radius: 99px; border: 3px solid var(--surface); }
+    .topbar { height: 56px; display: flex; align-items: center; justify-content: flex-end;
+      gap: 10px; padding: 0 24px; position: sticky; top: 0; z-index: 30; background: var(--surface); }
+    .icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 0;
+      background: transparent; color: var(--fg-2); border-radius: 4px; cursor: pointer;
+      font-size: 20px; transition: background 140ms var(--ease); }
+    .icon-btn:hover { background: var(--sel); }
+    .avatar { width: 28px; height: 28px; border-radius: 999px; margin-left: 4px; flex-shrink: 0;
+      background: url("https://i.pravatar.cc/56?img=12") center/cover, var(--surface-2);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line); }
+
+    /* page head */
+    .page { max-width: 1160px; margin: 0 auto; padding: 24px 24px 120px; }
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 16px 0 8px; }
+    .page-head h1 { font-weight: 400; font-size: 2rem; letter-spacing: -0.0075em; margin: 0; }
+    .page-head .sub { margin-top: 6px; color: var(--fg-2); font-size: 14px; }
+    .btn-new { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px;
+      background: var(--brand); color: #fff; border: 0; border-radius: 6px;
+      font: 500 14px "Inter", sans-serif; cursor: pointer; white-space: nowrap; flex: none;
+      transition: transform 120ms var(--ease), filter 120ms var(--ease); }
+    .btn-new i { font-size: 18px; }
+    .btn-new:hover { filter: brightness(1.07); }
+    .btn-new:active { transform: scale(0.97); }
+    .btn-new small { font-weight: 500; opacity: .75; }
+
+    /* membership summary */
+    .member-card { margin-top: 20px; background: var(--surface);
+      border-radius: 8px; box-shadow: var(--sh-card); }
+    .mc-top { padding: 16px 20px; display: flex; align-items: center; gap: 24px; }
+    .mc-plan { display: flex; align-items: center; gap: 10px; flex: none; }
+    .mc-plan .pl-ic { width: 40px; height: 40px; border-radius: 8px; background: var(--brand-tint);
+      display: grid; place-items: center; color: var(--brand); font-size: 22px; }
+    .mc-plan b { font-size: 14px; }
+    .mc-plan .pl-sub { display: block; font-size: 12px; color: var(--fg-2); font-weight: 400; margin-top: 1px; }
+    .mc-quota { flex: 1; min-width: 200px; }
+    .mc-quota .q-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-2); margin-bottom: 6px; }
+    .mc-quota .q-row b { color: var(--fg); font-weight: 600; }
+    .q-bar { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+    .q-fill { height: 100%; width: 50%; border-radius: 99px; background: var(--brand); transition: width .3s var(--ease); }
+    body.q-zero .q-fill { width: 100%; }
+    body.sc-unlimited .q-bar, body.sc-unlimited .mc-up { display: none; }
+    .mc-actions { position: relative; display: flex; gap: 8px; flex: none; }
+
+    /* manage popover (dashboard menu style) */
+    .mmenu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+      width: 224px; padding: 6px; background: var(--surface); border-radius: 6px;
+      box-shadow: 0 24px 40px -16px rgba(26,26,26,.12), 0 4px 6px rgba(26,26,26,.06),
+                  0 0 0 1px rgba(26,26,26,.06), inset 0 0 0 1px var(--inner);
+      opacity: 0; visibility: hidden; transform: translateY(-6px);
+      transition: opacity 140ms var(--ease), transform 180ms var(--ease); }
+    .mc-actions.open .mmenu { opacity: 1; visibility: visible; transform: translateY(0); }
+    .mc-actions.open .btn-ghost { background: var(--surface-2); }
+    .mmenu button { display: flex; align-items: center; gap: 10px; width: 100%; height: 36px;
+      padding: 8px 10px; border: 0; border-radius: 4px; background: transparent;
+      font: 400 13.5px "Inter", sans-serif; color: var(--fg); text-align: left; cursor: pointer;
+      transition: background 120ms var(--ease); }
+    .mmenu button:hover { background: var(--sel); }
+    .mmenu button i { font-size: 18px; color: var(--fg); flex: none; }
+    .mmenu .m-sep { height: 1px; background: var(--line); margin: 6px 8px; }
+    .mmenu .danger, .mmenu .danger i { color: #b91c1c; }
+    .mmenu .danger:hover { background: rgba(185,28,28,.07); }
+
+    /* Unlimited upsell strip at the bottom of the member card */
+    .mc-up { display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+      border-top: 1px solid var(--line); background: var(--brand-tint);
+      border-radius: 0 0 8px 8px; font-size: 13px; color: var(--fg); }
+    .mc-up i { font-size: 18px; color: var(--brand); flex: none; }
+    .mc-up b { font-weight: 600; }
+    .mc-up .up-cta { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 6px;
+      height: 30px; padding: 0 14px; background: var(--brand); color: #fff; border: 0; border-radius: 5px;
+      font: 500 12.5px "Inter", sans-serif; cursor: pointer; transition: filter 120ms var(--ease); }
+    .mc-up .up-cta:hover { filter: brightness(1.07); }
+
+    /* change-plan modal: upgrades now, downgrades next cycle */
+    .cp-ov { position: fixed; inset: 0; z-index: 90; background: rgba(10,25,37,.5);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; }
+    .cp-ov.show { display: flex; }
+    .cp-card { width: 440px; max-width: 92vw; background: #fff; border-radius: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.3); padding: 24px; }
+    .cp-card h3 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+    .cp-note { font-size: 12.5px; color: var(--fg-2); margin: 0 0 16px; line-height: 1.5; }
+    .cp-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px;
+      border: 1px solid var(--line-strong); border-radius: 8px; background: #fff;
+      cursor: pointer; font-family: inherit; text-align: left;
+      transition: border-color 120ms var(--ease), background 120ms var(--ease); }
+    .cp-row + .cp-row { margin-top: 10px; }
+    .cp-row:hover { background: var(--bg); }
+    .cp-row.current { border-color: var(--ink); cursor: default; }
+    .cp-row b { font-size: 14px; font-weight: 600; }
+    .cp-row .cp-sub { display: block; font-size: 12px; color: var(--fg-2); margin-top: 1px; }
+    .cp-row .cp-price { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--fg-2); white-space: nowrap; }
+    .cp-tag { flex: none; font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase;
+      background: var(--surface-2); color: var(--fg-2); border-radius: 34px; padding: 2px 8px; }
+    .cp-close { margin-top: 16px; width: 100%; height: 38px; border: 0; border-radius: 6px;
+      background: var(--surface-2); color: var(--fg); font: 500 13px "Inter", sans-serif; cursor: pointer; }
+    .cp-close:hover { background: var(--sel); }
+
+    /* toast */
+    .toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%) translateY(8px);
+      z-index: 70; background: #171717; color: #fff; padding: 10px 16px; border-radius: 8px;
+      font: 500 13px "Inter", sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      opacity: 0; visibility: hidden; transition: opacity 180ms var(--ease), transform 200ms var(--ease); }
+    .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+    .btn-ghost { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
+      background: var(--surface); color: var(--fg); border: 0; border-radius: 6px;
+      box-shadow: var(--sh-btn); font: 500 13px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
+      transition: background 140ms var(--ease); }
+    .btn-ghost:hover { background: var(--surface-2); }
+    .btn-ghost i { font-size: 16px; }
+
+    /* projects table: dashboard list style */
+    .table { margin-top: 28px; }
+    .trow, .thead {
+      display: grid; grid-template-columns: minmax(280px,1fr) 150px 170px 220px 48px;
+      align-items: center; gap: 16px; padding: 0 8px;
+    }
+    .thead { height: 40px; border-bottom: 1px solid var(--line);
+      font-size: 13px; color: var(--fg-2); }
+    .trow { min-height: 64px; border-bottom: 1px solid var(--line); cursor: pointer;
+      transition: background 120ms var(--ease); border-radius: 6px; }
+    .trow:hover { background: var(--bg); }
+
+    .t-name { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .t-file { width: 20px; height: 20px; flex: none; display: grid; place-items: center;
+      color: #ff5a3c; font-size: 20px; }
+    .t-name .nm { min-width: 0; }
+    .t-name .nm b { display: block; font-weight: 500; font-size: 14px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .t-name .nm span { display: block; font-size: 12px; color: var(--fg-2); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .t-date { font-size: 13px; color: var(--fg-2); }
+    .t-date .soon { color: #b45309; font-weight: 600; }
+
+    .t-status { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .st-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; }
+    .st-chip i { font-size: 12px; }
+    .st-process { background: var(--brand-tint); color: var(--brand); }
+    .st-done   { background: var(--green-tint); color: var(--green-text); }
+    .t-bar { flex: 1; max-width: 72px; height: 4px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+    .t-fill { height: 100%; border-radius: 99px; background: var(--brand); }
+    .t-fill.done { background: var(--green); }
+    .t-pct { font-size: 11.5px; color: var(--fg-3); font-weight: 500; flex: none; }
+
+    /* download appears only when the file is ready */
+    .t-dl { display: flex; justify-content: flex-end; }
+    .btn-dl { width: 32px; height: 32px; display: grid; place-items: center; border: 0;
+      background: transparent; color: var(--fg-2); border-radius: 4px; cursor: pointer;
+      font-size: 18px; transition: background 120ms var(--ease), color 120ms var(--ease); }
+    .btn-dl:hover { background: var(--sel); color: var(--fg); }
+
+    /* overlay: upload screen or hire-an-expert page */
+    .ov { position: fixed; inset: 0; z-index: 100; background: rgba(10,25,37,.5);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      opacity: 0; visibility: hidden; transition: opacity .4s var(--ease), visibility 0s linear .4s; }
+    .ov.show { opacity: 1; visibility: visible; transition: opacity .4s var(--ease); }
+    .ov iframe { width: 100%; height: 100%; border: 0; display: block; background: transparent; }
+    .ov-close { position: absolute; top: 16px; right: 16px; z-index: 5;
+      width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 0;
+      display: grid; place-items: center; cursor: pointer; color: #171717;
+      box-shadow: 0 4px 16px rgba(0,0,0,.25); font-size: 18px; }
+    .ov.show ~ [data-feedback-toolbar] { display: none !important; }
+
+    @media (max-width: 1100px) {
+      .trow, .thead { grid-template-columns: minmax(200px,1fr) 150px 220px 48px; }
+      .col-ordered { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+  <div class="demo-bar">
+    <div class="demo-seg" role="tablist" aria-label="Quota demo">
+      <button type="button" class="is-active" data-q="left">2 decks left</button>
+      <button type="button" data-q="zero">0 left</button>
+      <button type="button" data-q="unlimited">Unlimited plan</button>
+    </div>
+  </div>
+
+  <div class="app">
+
+    <aside class="sidebar">
+      <div class="ws">
+        <div class="ws-avatar">F</div>
+        <span class="ws-name">Foursquare</span>
+        <span class="badge">Upgrade</span>
+        <i class="ph ph-caret-down caret"></i>
+      </div>
+      <nav class="nav">
+        <a class="nav-item"><i class="ph ph-house-simple"></i><span>Home</span></a>
+        <a class="nav-item"><i class="ph ph-file"></i><span>Created by Me</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <div class="nav-label">Projects</div>
+        <a class="nav-item"><i class="ph ph-plus"></i><span>Create project</span><span class="badge" style="flex:none;">Pro</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <a class="nav-item"><i class="ph ph-layout"></i><span>Templates</span></a>
+        <a class="nav-item is-active"><i class="ph ph-pencil-ruler"></i><span>Hire an Expert</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <nav class="nav" style="padding:0;">
+          <a class="nav-item"><i class="ph ph-gear"></i><span>Workspace settings</span></a>
+          <a class="nav-item"><i class="ph ph-user-plus"></i><span>Invite new member</span><span class="badge" style="flex:none;">Pro</span></a>
+        </nav>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
+        <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
+        <button class="icon-btn" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+        <div class="avatar" role="img" aria-label="Your profile"></div>
+      </header>
+
+      <div class="page">
+
+        <div class="page-head">
+          <div>
+            <h1>Hire an Expert</h1>
+            <p class="sub">Expert-designed decks, delivered fast. Track every project here.</p>
+          </div>
+          <button class="btn-new" id="btn-new" onclick="newProject()"><i class="ph-bold ph-plus"></i><span id="btn-new-label">New project <small id="btn-left">· 2 left</small></span></button>
+        </div>
+
+        <!-- Membership summary -->
+        <div class="member-card">
+          <div class="mc-top">
+          <div class="mc-plan">
+            <span class="pl-ic"><i class="ph-fill ph-pen-nib"></i></span>
+            <b><span id="pl-name">Studio membership</span>
+              <span class="pl-sub" id="pl-sub">$2,000/month</span>
+            </b>
+          </div>
+          <div class="mc-quota">
+            <div class="q-row"><span><b id="q-used">2 of 4</b> decks used this month</span><span id="q-left">2 left</span></div>
+            <div class="q-bar"><div class="q-fill"></div></div>
+          </div>
+          <div class="mc-actions" id="mc-actions">
+            <button class="btn-ghost" onclick="toggleManage(event)"><i class="ph ph-gear"></i>Manage<i class="ph ph-caret-down" style="font-size:13px;"></i></button>
+            <div class="mmenu" role="menu">
+              <button role="menuitem" onclick="manageAction(event, 'Change plan')"><i class="ph ph-arrows-left-right"></i>Change plan</button>
+              <button role="menuitem" onclick="manageAction(event, 'pause')"><i class="ph ph-pause-circle"></i>Pause membership</button>
+              <button role="menuitem" onclick="manageAction(event, 'billing')"><i class="ph ph-receipt"></i>Billing &amp; invoices</button>
+              <div class="m-sep"></div>
+              <button class="danger" role="menuitem" onclick="manageAction(event, 'cancel')"><i class="ph ph-x-circle"></i>Cancel membership</button>
+            </div>
+          </div>
+          </div><!-- /mc-top -->
+          <div class="mc-up">
+            <i class="ph-bold ph-infinity"></i>
+            <span>Shipping more than 4 decks a month? <b>Go Unlimited for $5,000/month.</b></span>
+            <button class="up-cta" onclick="openOverlay('retainer-checkout.html?plan=unlimited')">Upgrade</button>
+          </div>
+        </div>
+
+        <!-- Projects table: dashboard list style -->
+        <div class="table">
+          <div class="thead">
+            <span>Name</span>
+            <span class="col-ordered">Ordered</span>
+            <span>Deadline</span>
+            <span>Status</span>
+            <span></span>
+          </div>
+
+          <div class="trow">
+            <div class="t-name">
+              <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
+              <span class="nm"><b>Q3 Board Update</b><span>28 slides · Overnight delivery</span></span>
+            </div>
+            <span class="t-date col-ordered">Jul 29, 2026</span>
+            <span class="t-date"><span class="soon">Tomorrow, 9:00 AM</span></span>
+            <div class="t-status"><span class="st-chip st-process"><i class="ph-fill ph-circle-notch"></i>In process</span></div>
+            <div class="t-dl"></div>
+          </div>
+
+          <div class="trow">
+            <div class="t-name">
+              <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
+              <span class="nm"><b>Acme Pitch v4</b><span>16 slides · Overnight delivery</span></span>
+            </div>
+            <span class="t-date col-ordered">Jul 28, 2026</span>
+            <span class="t-date"><span class="soon">Today, 6:00 PM</span></span>
+            <div class="t-status"><span class="st-chip st-process"><i class="ph-fill ph-circle-notch"></i>In process</span></div>
+            <div class="t-dl"></div>
+          </div>
+
+          <div class="trow">
+            <div class="t-name">
+              <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
+              <span class="nm"><b>Sales Kickoff 2027</b><span>40 slides · Standard delivery</span></span>
+            </div>
+            <span class="t-date col-ordered">Jul 30, 2026</span>
+            <span class="t-date">Aug 2, 2026</span>
+            <div class="t-status"><span class="st-chip st-process"><i class="ph-fill ph-circle-notch"></i>In process</span></div>
+            <div class="t-dl"></div>
+          </div>
+
+          <div class="trow">
+            <div class="t-name">
+              <span class="t-file"><i class="ph-fill ph-file-ppt"></i></span>
+              <span class="nm"><b>Investor Memo</b><span>12 slides · Overnight delivery</span></span>
+            </div>
+            <span class="t-date col-ordered">Jul 20, 2026</span>
+            <span class="t-date">Delivered Jul 21, 2026</span>
+            <div class="t-status">
+              <span class="st-chip st-done"><i class="ph-fill ph-check-circle"></i>Delivered</span>
+            </div>
+            <div class="t-dl"><button class="btn-dl" aria-label="Download" title="Download"><i class="ph-bold ph-download-simple"></i></button></div>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Change plan: upgrade now, downgrade at cycle end -->
+  <div class="cp-ov" id="cp-ov">
+    <div class="cp-card">
+      <h3>Change plan</h3>
+      <p class="cp-note">Upgrades apply immediately. Downgrades take effect at the end of your current cycle (Aug 30). You cannot move down mid cycle.</p>
+      <button class="cp-row" data-tier="1" onclick="pickPlan(1)"><span><b>Essential</b><span class="cp-sub">1 deck a month</span></span><span class="cp-price">$1,000/mo</span></button>
+      <button class="cp-row" data-tier="2" onclick="pickPlan(2)"><span><b>Studio</b><span class="cp-sub">Up to 4 decks a month</span></span><span class="cp-price">$2,000/mo</span></button>
+      <button class="cp-row" data-tier="3" onclick="pickPlan(3)"><span><b>Unlimited</b><span class="cp-sub">Unlimited decks, in parallel</span></span><span class="cp-price">$5,000/mo</span></button>
+      <button class="cp-close" onclick="closeChangePlan()">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <!-- Overlay: upload screen (quota left) or Hire an Expert page (none left) -->
+  <div class="ov" id="ov" aria-hidden="true">
+    <button class="ov-close" aria-label="Close" onclick="closeOverlay()"><i class="ph-bold ph-x"></i></button>
+    <iframe id="ov-frame" title="New project" src="about:blank"></iframe>
+  </div>
+
+  <script>
+    // Quota demo: 2 left vs 0 left. One screen serves both cases.
+    var DECKS_TOTAL = 4;
+    var decksLeft = 2;
+
+    var isUnlimited = false;
+    var seg = document.querySelectorAll('.demo-seg button');
+    seg.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        seg.forEach(function (b) { b.classList.toggle('is-active', b === btn); });
+        isUnlimited = btn.dataset.q === 'unlimited';
+        decksLeft = btn.dataset.q === 'zero' ? 0 : 2;
+        renderQuota();
+      });
+    });
+
+    function renderQuota() {
+      document.body.classList.toggle('sc-unlimited', isUnlimited);
+      document.body.classList.toggle('q-zero', !isUnlimited && decksLeft === 0);
+      var set = function (id, txt) { document.getElementById(id).textContent = txt; };
+      if (isUnlimited) {
+        // Unlimited: no cap, no meter, no upsell. Always straight to upload.
+        set('pl-name', 'Unlimited membership');
+        set('pl-sub', '$5,000/month');
+        set('q-used', 'Unlimited');
+        document.getElementById('q-used').parentNode.childNodes[1].textContent = ' decks a month';
+        set('q-left', '2 in progress · decks run in parallel');
+        set('btn-left', '');
+        return;
+      }
+      set('pl-name', 'Studio membership');
+      set('pl-sub', '$2,000/month');
+      var used = DECKS_TOTAL - decksLeft;
+      set('q-used', used + ' of ' + DECKS_TOTAL);
+      document.getElementById('q-used').parentNode.childNodes[1].textContent = ' decks used this month';
+      set('q-left', decksLeft === 0 ? 'Resets Aug 30' : decksLeft + ' left');
+      set('btn-left', decksLeft === 0 ? '' : '· ' + decksLeft + ' left');
+    }
+
+    // Manage popover
+    function toggleManage(e) {
+      e.stopPropagation();
+      document.getElementById('mc-actions').classList.toggle('open');
+    }
+    function manageAction(e, action) {
+      e.stopPropagation();
+      document.getElementById('mc-actions').classList.remove('open');
+      if (action === 'Change plan') { openChangePlan(); return; }
+      var msg = action === 'pause' ? 'Membership paused. Your decks and channel stay until Aug 30.'
+              : action === 'billing' ? 'Opening billing and invoices...'
+              : 'We are sorry to see you go. Check your email to confirm cancellation.';
+      showToast(msg);
+    }
+    // Change plan rules: up any time, down only at cycle end
+    var TIERS = { 1: 'Essential', 2: 'Studio', 3: 'Unlimited' };
+    function currentTier() { return isUnlimited ? 3 : 2; }
+    function openChangePlan() {
+      var cur = currentTier();
+      document.querySelectorAll('.cp-row').forEach(function (r) {
+        var t = +r.dataset.tier;
+        r.classList.toggle('current', t === cur);
+        var old = r.querySelector('.cp-tag'); if (old) old.remove();
+        if (t === cur) {
+          var tag = document.createElement('span'); tag.className = 'cp-tag'; tag.textContent = 'Current plan';
+          r.appendChild(tag);
+        } else if (t < cur) {
+          var tag2 = document.createElement('span'); tag2.className = 'cp-tag'; tag2.textContent = 'From Aug 30';
+          r.appendChild(tag2);
+        }
+      });
+      document.getElementById('cp-ov').classList.add('show');
+    }
+    function closeChangePlan() { document.getElementById('cp-ov').classList.remove('show'); }
+    function pickPlan(tier) {
+      var cur = currentTier();
+      if (tier === cur) return;
+      closeChangePlan();
+      if (tier > cur) {
+        // upgrade: immediate
+        if (tier === 3) { isUnlimited = true; renderQuota(); }
+        showToast('Upgraded to ' + TIERS[tier] + '. Active immediately.');
+      } else {
+        // downgrade: only at cycle end
+        showToast('You move to ' + TIERS[tier] + ' on Aug 30, when your current cycle ends.');
+        document.getElementById('pl-sub').textContent += ' · switches to ' + TIERS[tier] + ' on Aug 30';
+      }
+    }
+
+    var toastTimer;
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2800);
+    }
+    document.addEventListener('click', function () {
+      document.getElementById('mc-actions').classList.remove('open');
+    });
+
+    // Quota left -> straight to the upload screen.
+    // None left -> the Hire an Expert page with both tabs (buy one-time or upgrade).
+    function newProject() {
+      var url = (isUnlimited || decksLeft > 0)
+        ? '../onboarding/onboarding.html?embed=1'
+        : 'hire-an-expert-v6.html';
+      openOverlay(url);
+    }
+
+    function openOverlay(url) {
+      var ov = document.getElementById('ov');
+      var fr = document.getElementById('ov-frame');
+      fr.src = url + (url.indexOf('?') > -1 ? '&' : '?') + '_=' + Date.now();
+      ov.classList.add('show');
+      ov.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeOverlay() {
+      var ov = document.getElementById('ov');
+      var fr = document.getElementById('ov-frame');
+      ov.classList.remove('show');
+      ov.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      setTimeout(function () { if (!ov.classList.contains('show')) fr.src = 'about:blank'; }, 300);
+    }
+    window.addEventListener('message', function (e) { if (e.data === 'ob-close') closeOverlay(); });
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.getElementById('ov').classList.contains('show')) closeOverlay();
+    });
+
+    renderQuota();
+  </script>
+
+  <!-- Agentation -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+    }
+  }
+  </script>
+  <div id="agentation-root"></div>
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { Agentation } from 'agentation';
+    createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+  </script>
+</body>
+</html>

@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Early renewal · Get more credits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #3d3d3d;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px 16px;
+    color: #171717;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Demo-only switches, top-left of the page */
+  .demo-bar { position: fixed; top: 20px; left: 20px; z-index: 60; display: flex; gap: 10px; }
+  .demo-seg {
+    display: inline-flex; gap: 2px; padding: 3px;
+    background: rgba(255,255,255,.12); border-radius: 8px;
+  }
+  .demo-seg button {
+    border: 0; cursor: pointer; border-radius: 6px;
+    padding: 6px 12px; font: 600 12px/1 'Inter', sans-serif;
+    background: transparent; color: rgba(255,255,255,.75);
+  }
+  .demo-seg button.is-active { background: #fff; color: #171717; }
+
+  .modal-wrap { position: relative; width: 100%; max-width: 1068px; }
+
+  .modal-close {
+    position: absolute; top: 0; right: -54px; z-index: 5;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #fff; border: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #171717;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  }
+  .modal-close i { font-size: 18px; }
+  .modal-close:hover { background: #f2f6ff; }
+
+  .modal-card {
+    display: grid; grid-template-columns: 540px 1fr;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.4);
+  }
+
+  /* ---------- Left: credits state + renewal options ---------- */
+  .left {
+    background: #f5f5f5;
+    border-right: 1px solid rgba(11,15,20,0.06);
+    border-radius: 12px 0 0 12px;
+    padding: 32px 28px 40px;
+    display: flex; flex-direction: column;
+  }
+
+  /* Credit meter (shown in low state only) */
+  .meter-wrap { margin-bottom: 24px; }
+  .meter-row { display: flex; align-items: center; gap: 8px; }
+  .meter-row .spark-svg { color: #171717; width: 22px; height: 22px; flex: none; }
+  .meter-num { font-size: 24px; font-weight: 500; letter-spacing: -0.24px; color: #171717; }
+  .meter-label { font-size: 14px; color: #525252; }
+  .meter-of { margin-left: auto; font-size: 12px; color: #a3a3a3; }
+  .meter-bar { height: 6px; border-radius: 999px; background: rgba(11,15,20,0.06); overflow: hidden; margin-top: 10px; }
+  .meter-fill { height: 100%; border-radius: 999px; width: 0%; background: #005eff; transition: width .3s ease; }
+  .state-low .meter-fill { width: 8.6%; }
+  body.sc-gold.state-low .meter-fill { width: 1%; }
+  body.sc-teams.state-low .meter-fill { width: 3%; }
+
+  /* Scenario zones: one visible plan set per demo tab */
+  .plan-zone { display: none; }
+  body.sc-silver #zone-silver,
+  body.sc-gold #zone-gold,
+  body.sc-teams #zone-teams { display: block; }
+  #zone-gold .big-cred { margin-top: 4px; }
+
+  /* Teams: unlimited seats + credit-pool dropdown (ported from v7.3) */
+  .team-seats { margin-top: 4px; font-size: 12px; font-weight: 600; width: fit-content; }
+  .unlimited-grad {
+    background: linear-gradient(90deg, #002464, #0059ff, #0095ff, #b6daff, #0095ff, #0059ff, #002464);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    background-position: 200% center;
+    animation: unlimited-grad-move 3.5s linear infinite;
+  }
+  @keyframes unlimited-grad-move {
+    from { background-position: 200% center; }
+    to   { background-position: 0% center; }
+  }
+  .dd-label { margin: 18px 0 6px; font-size: 12px; font-weight: 500; color: #525252; }
+  #zone-teams .stack-math { margin-top: 12px; }
+  .credit-dd { position: relative; max-width: 300px; }
+  .credit-dd-trigger {
+    width: 100%; height: 40px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 0 12px; border: 0; border-radius: 4px;
+    background: #fff; color: #171717;
+    font: 600 14px 'Inter', sans-serif; cursor: pointer; text-align: left;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+  }
+  .credit-dd.is-open .credit-dd-trigger { box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px #0b0f14; }
+  .credit-dd-caret { color: #667085; font-size: 14px; transition: transform .15s ease; }
+  .credit-dd.is-open .credit-dd-caret { transform: rotate(180deg); }
+  .credit-dd-menu {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+    margin: 0; padding: 6px; list-style: none;
+    background: #fff; border: 1px solid #E4E7EC; border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(16,24,40,.14), 0 2px 6px rgba(16,24,40,.06);
+    display: none;
+  }
+  .credit-dd.is-open .credit-dd-menu { display: block; }
+  .credit-dd-opt {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 10px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: #171717; cursor: pointer;
+  }
+  .credit-dd-opt:hover, .credit-dd-opt[aria-selected="true"] { background: #F2F4F7; }
+  .credit-dd-pill {
+    flex: none; padding: 3px 10px; border-radius: 999px;
+    background: #ECFDF3; color: #067647;
+    font-size: 11px; font-weight: 600; line-height: 1;
+  }
+  .credit-dd-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .credit-dd-left svg { color: #171717; flex: none; }
+
+  .left-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .head-col { position: relative; }
+  .head-row { display: flex; align-items: center; gap: 6px; }
+  .info-tip { display: inline-flex; position: relative; color: #a3a3a3; cursor: pointer; }
+  .info-tip i { font-size: 17px; }
+  .info-tip:hover, .info-tip:focus { color: #525252; }
+  .tip-bubble {
+    position: absolute; left: 50%; top: calc(100% + 8px); z-index: 20;
+    width: 320px; padding: 10px 12px; border-radius: 6px;
+    background: #171717; color: #fff;
+    font-size: 12px; line-height: 1.5; font-weight: 400; white-space: normal;
+    opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(-2px);
+    transition: opacity .15s ease, transform .15s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .info-tip:hover .tip-bubble, .info-tip:focus .tip-bubble { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+  .left-head h1 {
+    font-size: 24px; font-weight: 400; line-height: 1.3;
+    letter-spacing: -0.24px; color: #171717;
+  }
+  .left-head .sub { margin-top: 4px; font-size: 14px; line-height: 1.43; color: #171717; white-space: nowrap; }
+  body.ver-2 .left-head .sub { display: none; }
+  body.ver-2 .left-head h1 { max-width: 470px; }
+  /* Plan cards */
+  .plan-card {
+    background: #fff; border-radius: 4px; padding: 20px 16px; margin-top: 24px;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+  .plan-card + .plan-card { margin-top: 16px; }
+  .plan-card--gold {
+    background-image: linear-gradient(180deg, #faf0d6 0%, #fdf9ec 40%, #ffffff 80%);
+    box-shadow: 0 0 0 1px #e6d19e, 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+  .plan-row { display: flex; gap: 20px; align-items: flex-start; cursor: pointer; }
+  .plan-row input { position: absolute; opacity: 0; pointer-events: none; }
+  .radio {
+    width: 16px; height: 16px; border-radius: 50%; flex: none; margin-top: 1px;
+    border: 1px solid #c2c7ce; background: #fff;
+    transition: border .12s ease;
+  }
+  .plan-row.is-selected .radio { border: 5px solid #0b0f14; }
+  .plan-body { flex: 1; min-width: 0; }
+  .plan-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .plan-name { font-size: 14px; font-weight: 500; color: #525252; white-space: nowrap; }
+  .plan-name .cred { font-size: 12px; font-weight: 400; color: #005eff; }
+  .plan-price { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .strike { font-size: 14px; font-weight: 500; color: #a3a3a3; text-decoration: line-through; }
+  .price { font-size: 14px; font-weight: 500; color: #525252; }
+  .per { font-size: 12px; color: #525252; }
+  .save { font-size: 12px; color: #005eff; white-space: nowrap; }
+
+  .off-badge {
+    padding: 2px 4px; border-radius: 2px; margin-left: 6px;
+    background: rgba(0,85,237,0.12); color: #005eff;
+    font-size: 10px; font-weight: 500; vertical-align: 1px;
+  }
+  .current-badge {
+    padding: 2px 4px; border-radius: 2px; margin-left: 6px;
+    background: rgba(11,15,20,0.06); color: #525252;
+    font-size: 10px; font-weight: 500; vertical-align: 1px;
+  }
+
+  .big-cred { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .big-cred .spark-svg { width: 22px; height: 22px; flex: none; color: #171717; }
+  .plan-split { height: 1px; background: rgba(11,15,20,0.09); margin: 12px 0 0; }
+  .plan-card--gold .big-cred .spark-svg { color: #c9932a; }
+  .plan-card--gold .big-cred { margin-top: 0; }
+  .big-cred .num { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: #171717; }
+  .big-cred .lbl { font-size: 14px; color: #525252; }
+  .save-line { display: flex; justify-content: flex-end; margin-top: 2px; }
+  .plan-card--gold .big-cred i { color: #c9932a; }
+  .plan-card--gold .big-cred .num {
+    background: linear-gradient(92deg, #8a5a10, #c9932a 40%, #f2d688 50%, #c9932a 60%, #8a5a10);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: gold-shimmer 2.6s linear infinite;
+  }
+  @keyframes gold-shimmer {
+    0% { background-position: 120% 0; }
+    100% { background-position: -80% 0; }
+  }
+  .xbadge { background: #fdeeba; color: #8a5a10; border-radius: 999px; font-size: 10.5px; font-weight: 600; padding: 3px 8px; }
+
+  .stack-math {
+    margin-top: 8px; display: none;
+    align-items: center; gap: 5px;
+    font-size: 12px; color: #525252; font-weight: 500;
+  }
+  .state-low .stack-math { display: inline-flex; }
+  .info-tip--sm i { font-size: 14px; }
+  .info-tip--title { display: inline; margin-left: 6px; }
+  .info-tip--title > i { vertical-align: -1px; }
+
+  .gold-points {
+    list-style: none; margin: 12px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .gold-points li { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.4; color: #525252; }
+  .gold-points li i { font-size: 16px; flex: none; color: #525252; margin-top: 0px; }
+
+
+  /* ---------- Right: payment ---------- */
+  .right { padding: 32px 24px 28px; display: flex; flex-direction: column; }
+  .right-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+  .right h2 {
+    font-size: 24px; font-weight: 400; line-height: 1.3;
+    letter-spacing: -0.24px; color: #171717; margin-bottom: 24px;
+  }
+
+  .pay-tabs { display: flex; border-bottom: 1px solid rgba(11,15,20,0.09); margin-bottom: 24px; }
+  .pay-tab {
+    display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 2px 8px;
+    border: 0; background: none; cursor: pointer;
+    font: 500 14px/1.43 'Inter', sans-serif; color: #171717;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .pay-tab.is-active { border-bottom-color: #0b0f14; }
+  .pay-tab i { font-size: 20px; }
+  .pay-tab .tab-logo { width: 20px; height: 20px; }
+  .upi-logos { display: flex; gap: 6px; align-items: center; }
+  .upi-logos img { width: 20px; height: 20px; display: block; }
+  .upi-logos .logo-circle {
+    width: 20px; height: 20px; border-radius: 50%; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .logo-circle--gray { background: #e5e5e5; }
+  .logo-circle--black { background: #000; }
+  .logo-circle--gray img { width: 13px; height: 11px; }
+  .logo-circle--black img { width: 9px; height: 10px; }
+
+  .field { margin-bottom: 20px; }
+  .field label { display: block; font-size: 14px; font-weight: 500; line-height: 1.43; color: #525252; margin-bottom: 5px; }
+  .input {
+    width: 100%; padding: 12px; border: 0; border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+    font: 400 14px/1.43 'Inter', sans-serif; color: #171717;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .input.placeholder { color: #a3a3a3; }
+  .input .grow { flex: 1; min-width: 0; }
+  .brand-icons { display: flex; gap: 4px; align-items: center; }
+  .brand-icons img { width: 24px; height: 16px; display: block; }
+  .cvc-icon { width: 24px; height: 16px; display: block; margin-left: auto; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .select {
+    width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 4px;
+    background: #fff; cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 1px rgba(11,15,20,0.06),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    font: 400 14px/1.43 'Inter', sans-serif; color: #525252;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .select i { font-size: 16px; color: #525252; }
+
+  .disclaimer { font-size: 12px; line-height: 1.33; color: #525252; margin-bottom: 20px; }
+
+  .pay-btn {
+    width: 100%; height: 44px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #0b0f14; color: #fff;
+    font: 500 14px/1.43 'Inter', sans-serif;
+    box-shadow: 0 0 0 1px rgba(26,26,26,0.06), 0 1px 2px 0 rgba(26,26,26,0.09);
+    transition: background .15s ease, transform .16s ease;
+  }
+  .pay-btn:hover { background: #23272c; transform: translateY(-1px); }
+  .pay-btn:active { transform: translateY(0); }
+
+  .pay-foot {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    margin-top: 20px; font-size: 12px; color: #525252;
+  }
+  .pay-foot .powered { display: flex; align-items: center; gap: 8px; }
+  .pay-foot .powered img { height: 16px; display: block; }
+  .pay-foot .vsep { width: 1px; height: 18px; background: rgba(26,26,26,0.09); }
+  .pay-foot .links { display: flex; gap: 12px; }
+  .pay-foot a { color: #525252; text-decoration: none; }
+  .pay-foot a:hover { text-decoration: underline; }
+
+  .stripe-panel { display: flex; flex-direction: column; flex: 1; }
+  .stripe-panel .pay-foot { margin-top: auto; padding-top: 20px; }
+
+  /* ---------- Paddle: saved card, one-click ---------- */
+  .paddle-panel { display: none; }
+  body.pay-paddle .stripe-panel { display: none; }
+  body.pay-paddle .paddle-panel { display: flex; flex-direction: column; flex: 1; }
+  .pp-box {
+    border-radius: 4px; padding: 16px; background: #fff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+  }
+  .pp-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .pp-plan { font-size: 14px; font-weight: 500; }
+  .pp-off b { color: #16A34A; font-weight: 500; }
+  .pp-sub { margin-top: 6px; font-size: 13px; color: #525252; }
+  .pp-divider { border-bottom: 1px solid rgba(11,15,20,0.09); margin: 14px 0; }
+  .pp-due { font-size: 14px; font-weight: 500; }
+  .pp-card-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; font-size: 13px; color: #171717; font-weight: 500;
+  }
+  .pp-card-row i { font-size: 17px; color: #525252; }
+  .pp-change {
+    margin-left: auto; border: 0; background: none; cursor: pointer;
+    font: 500 12.5px 'Inter', sans-serif; color: #1a6eff;
+  }
+  .pp-change:hover { text-decoration: underline; }
+  .pp-agree {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin-top: 16px; font-size: 13px; color: #171717; line-height: 1.45; cursor: pointer;
+  }
+  .pp-agree input { accent-color: #0b0f14; width: 15px; height: 15px; margin-top: 2px; flex: none; }
+  .pp-actions { display: flex; margin-top: 22px; }
+  .pp-confirm {
+    width: 100%; height: 44px; padding: 0 20px; border-radius: 4px; border: 0; cursor: pointer;
+    background: #0b0f14; color: #fff;
+    font: 500 13.5px 'Inter', sans-serif;
+    transition: background .15s ease, transform .16s ease;
+  }
+  .pp-confirm:hover { background: #23272c; transform: translateY(-1px); }
+  .paddle-panel .pay-foot { margin-top: auto; padding-top: 20px; }
+
+  @media (max-width: 980px) {
+    .modal-card { grid-template-columns: 1fr; }
+    .left { border-right: 0; border-bottom: 1px solid rgba(11,15,20,0.06); border-radius: 12px 12px 0 0; }
+  }
+</style>
+</head>
+<body class="state-zero ver-2 sc-silver">
+
+  <div class="demo-bar">
+    <div class="demo-seg" id="scenario-seg" role="tablist" aria-label="Plan scenario">
+      <button type="button" class="is-active" data-sc="silver">Silver</button>
+      <button type="button" data-sc="gold">Gold</button>
+      <button type="button" data-sc="teams">Teams</button>
+    </div>
+    <div class="demo-seg" id="state-seg" role="tablist" aria-label="Demo state">
+      <button type="button" class="is-active" data-state="zero">0 credits</button>
+      <button type="button" data-state="low">432 credits left</button>
+    </div>
+    <div class="demo-seg" id="provider-seg" role="tablist" aria-label="Payment provider">
+      <button type="button" class="is-active" data-provider="stripe">Stripe</button>
+      <button type="button" data-provider="paddle">Paddle</button>
+    </div>
+  </div>
+
+  <div class="modal-wrap">
+    <button class="modal-close" aria-label="Close"><i class="ph-bold ph-x"></i></button>
+
+    <div class="modal-card">
+      <!-- Left: credits state + renewal options -->
+      <div class="left">
+        <div class="meter-wrap">
+          <div class="meter-row">
+            <svg class="spark-svg" width="22" height="22" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10 1.5C10.3939 1.5 10.871 1.70087 11.0547 2.19629L11.4316 3.21387H11.4326C12.4124 5.85615 14.7271 8.00421 17.7676 9.0293C18.1842 9.16981 18.4593 9.5102 18.4961 9.91016C18.5324 10.3064 18.3269 10.6925 17.9463 10.8945L17.9277 10.9043L17.9082 10.9121L17.8047 10.957L17.7861 10.9648L17.7676 10.9707C14.7273 11.9951 12.4122 14.1423 11.4326 16.7842L11.0547 17.8037C10.8836 18.265 10.4548 18.4721 10.083 18.4971C9.71655 18.5215 9.27311 18.3795 9.03125 17.9824L9.01953 17.9619L9.00879 17.9395L8.96387 17.8477L8.9541 17.8262L8.94531 17.8037L8.56641 16.7832C7.58645 14.1419 5.27208 11.9951 2.23242 10.9707C1.81581 10.8302 1.54073 10.4898 1.50391 10.0898C1.4676 9.69363 1.67314 9.30749 2.05371 9.10547L2.07227 9.0957L2.0918 9.08789L2.19531 9.04297L2.21387 9.03516L2.23242 9.0293C5.27234 8.00417 7.58717 5.85653 8.56738 3.21484L8.94531 2.19629C9.12904 1.70087 9.60608 1.5 10 1.5Z"/></svg><span class="meter-num" id="meter-num">0</span>
+            <span class="meter-label">credits left</span>
+            <span class="meter-of">of <span id="meter-cap">5,000</span></span>
+          </div>
+          <div class="meter-bar"><div class="meter-fill"></div></div>
+        </div>
+
+        <div class="left-head">
+          <div class="head-col">
+            <div class="head-row">
+              <h1><span id="headline">You're out of credits. Renew your plan</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i>
+                <span class="tip-bubble">Renewing early starts a fresh plan year today. Your new plan runs Jul 28, 2026 to Jul 28, 2027. Unused credits carry over.</span>
+              </span></h1>
+            </div>
+            <p class="sub" id="subline">You've used all your credits. Renew early and fresh credits land today.</p>
+          </div>
+        </div>
+
+        <div class="plan-zone" id="zone-silver">
+        <div class="plan-card">
+          <label class="plan-row is-selected" data-plan="pro">
+            <input type="radio" name="plan" value="pro" checked />
+            <span class="radio"></span>
+            <div class="plan-body">
+              <div class="plan-line">
+                <span class="plan-name">Renew Silver<span class="current-badge">Current plan</span></span>
+                <span class="plan-price"><span class="price">$240</span><span class="per">/year</span></span>
+              </div>
+              <div class="big-cred"><span class="num">5,000</span><span class="lbl">Credits</span></div>
+              <div class="stack-math">+432 credits carry forward</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="plan-card plan-card--gold">
+          <label class="plan-row" data-plan="gold">
+            <input type="radio" name="plan" value="gold" />
+            <span class="radio"></span>
+            <div class="plan-body">
+              <div class="plan-line">
+                <span class="plan-name">Upgrade to Gold<span class="off-badge">50% off</span></span>
+                <span class="plan-price"><span class="strike">$1,200</span><span class="price">$600</span><span class="per">/year</span></span>
+              </div>
+              <div class="save-line"><span class="save">Save $600</span></div>
+              <div class="big-cred">
+                <span class="num">50,000</span><span class="lbl">Credits</span><span class="xbadge">10x Silver</span>
+              </div>
+              <div class="stack-math">+432 credits carry forward</div>
+              <div class="plan-split"></div>
+              <ul class="gold-points">
+                <li><i class="ph ph-sparkle"></i>Ultra AI model, our most powerful</li>
+                <li><i class="ph ph-swatches"></i>Custom brand kit and moods, built for you</li>
+                <li><i class="ph ph-book-open"></i>Projects with a shared knowledge base</li>
+                <li><i class="ph ph-headset"></i>Priority support, with direct access to our Head of Product</li>
+              </ul>
+            </div>
+          </label>
+        </div>
+        </div>
+
+        <!-- Scenario: already on Gold, early repurchase -->
+        <div class="plan-zone" id="zone-gold">
+        <div class="plan-card plan-card--gold">
+          <label class="plan-row is-selected" data-plan="goldRenew">
+            <input type="radio" name="plan-g" value="goldRenew" checked />
+            <span class="radio"></span>
+            <div class="plan-body">
+              <div class="plan-line">
+                <span class="plan-name">Renew Gold<span class="current-badge">Current plan</span></span>
+                <span class="plan-price"><span class="price">$1,200</span><span class="per">/year</span></span>
+              </div>
+              <div class="big-cred"><span class="num">50,000</span><span class="lbl">Credits</span></div>
+              <div class="stack-math">+432 credits carry forward</div>
+            </div>
+          </label>
+        </div>
+        </div>
+
+        <!-- Scenario: Teams admin, pooled credits -->
+        <div class="plan-zone" id="zone-teams">
+        <div class="plan-card">
+          <label class="plan-row is-selected" data-plan="teamPro">
+            <input type="radio" name="plan-t" value="teamPro" checked />
+            <span class="radio"></span>
+            <div class="plan-body">
+              <div class="plan-line">
+                <span class="plan-name">Renew Silver Team<span class="current-badge" id="tp-current">Current plan</span></span>
+                <span class="plan-price"><span class="price" id="tp-price">$720</span><span class="per">/year</span></span>
+              </div>
+              <div class="dd-label">How many credits?</div>
+              <div class="credit-dd" data-dd="teamPro">
+                <button type="button" class="credit-dd-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Credit pool size">
+                  <span class="credit-dd-left">
+                    <span class="credit-dd-value">15,000 credits</span>
+                  </span>
+                  <i class="ph ph-caret-down credit-dd-caret" aria-hidden="true"></i>
+                </button>
+                <ul class="credit-dd-menu" role="listbox" aria-label="Credit pool size"></ul>
+              </div>
+              <div class="stack-math">+432 credits carry forward</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="plan-card plan-card--gold">
+          <label class="plan-row" data-plan="teamGold">
+            <input type="radio" name="plan-t" value="teamGold" />
+            <span class="radio"></span>
+            <div class="plan-body">
+              <div class="plan-line">
+                <span class="plan-name">Upgrade to Gold Team<span class="off-badge">50% off</span></span>
+                <span class="plan-price"><span class="strike" id="tg-strike">$3,240</span><span class="price" id="tg-price">$1,620</span><span class="per">/year</span></span>
+              </div>
+              <div class="save-line"><span class="save" id="tg-save">Save $1,620</span></div>
+              <div class="dd-label">How many credits?</div>
+              <div class="credit-dd" data-dd="teamGold">
+                <button type="button" class="credit-dd-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Credit pool size">
+                  <span class="credit-dd-left">
+                    <span class="credit-dd-value">150,000 credits</span>
+                  </span>
+                  <i class="ph ph-caret-down credit-dd-caret" aria-hidden="true"></i>
+                </button>
+                <ul class="credit-dd-menu" role="listbox" aria-label="Credit pool size"></ul>
+              </div>
+              <div class="stack-math">+432 credits carry forward</div>
+              <div class="plan-split"></div>
+              <ul class="gold-points">
+                <li><i class="ph ph-sparkle"></i>Ultra AI model, our most powerful</li>
+                <li><i class="ph ph-swatches"></i>Custom brand kit and moods, built for you</li>
+                <li><i class="ph ph-book-open"></i>Projects with a shared knowledge base</li>
+                <li><i class="ph ph-headset"></i>Priority support, with direct access to our Head of Product</li>
+              </ul>
+            </div>
+          </label>
+        </div>
+        </div>
+      </div>
+
+      <!-- Right: payment -->
+      <div class="right">
+        <div class="right-inner">
+
+        <div class="stripe-panel">
+          <h2>Payment Method</h2>
+
+          <div class="pay-tabs">
+            <button class="pay-tab is-active" type="button"><i class="ph ph-credit-card"></i>Credit/Debit card</button>
+            <button class="pay-tab" type="button">
+              <img class="tab-logo" src="assets/er/upi.svg" alt="UPI" />UPI/QR Code
+              <span class="upi-logos">
+                <span class="logo-circle logo-circle--gray"><img src="assets/er/gpay.svg" alt="Google Pay" /></span>
+                <img src="assets/er/phonepe.svg" alt="PhonePe" />
+                <span class="logo-circle logo-circle--black"><img src="assets/er/cred.svg" alt="CRED" /></span>
+                <img src="assets/er/amazonpay.svg" alt="Amazon Pay" />
+              </span>
+            </button>
+          </div>
+
+          <div class="field">
+            <label>Card details</label>
+            <div class="input placeholder">
+              <span class="grow">1234 1234 1234 1234</span>
+              <span class="brand-icons">
+                <img src="assets/er/visa.svg" alt="Visa" />
+                <img src="assets/er/mastercard.svg" alt="Mastercard" />
+                <img src="assets/er/amex.svg" alt="Amex" />
+                <img src="assets/er/jcb.svg" alt="JCB" />
+              </span>
+            </div>
+          </div>
+
+          <div class="row-2">
+            <div class="field">
+              <label>Expiration date</label>
+              <div class="input placeholder">MM / YY</div>
+            </div>
+            <div class="field">
+              <label>CVC</label>
+              <div class="input placeholder"><span class="grow">CVC</span><img class="cvc-icon" src="assets/er/cvc1.svg" alt="" /></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Country</label>
+            <button type="button" class="select">India<i class="ph ph-caret-down"></i></button>
+          </div>
+
+          <p class="disclaimer">By providing your card information, you allow PRESENTATIONS AI PTE. LTD to charge your card for future payments in accordance with their terms.</p>
+
+          <button class="pay-btn" id="pay-btn">Pay $240</button>
+
+          <div class="pay-foot">
+            <span class="powered">Powered by <img src="assets/er/stripe.svg" alt="Stripe" /></span>
+            <span class="vsep"></span>
+            <span class="links"><a href="#">Terms</a><a href="#">Privacy</a></span>
+          </div>
+        </div>
+
+        <!-- Paddle: saved card, one-click confirm -->
+        <div class="paddle-panel">
+          <h2 id="pp-title">Renew Silver</h2>
+
+          <div class="pp-box">
+            <div class="pp-line">
+              <span class="pp-plan"><span id="pp-plan">Silver Plan</span><span class="pp-off" id="pp-off" hidden> - <b>50% off</b></span></span>
+              <span class="pp-price"><span class="strike" id="pp-strike" hidden>US$1,200</span> <span class="price" id="pp-amount">US$240</span></span>
+            </div>
+            <div class="pp-sub" id="pp-credits">Full plan credits unlock (5,000)</div>
+            <div class="pp-divider"></div>
+            <div class="pp-line">
+              <span class="pp-due">Due today:</span>
+              <span class="price" id="pp-due">US$240</span>
+            </div>
+          </div>
+
+          <div class="pp-card-row">
+            <i class="ph ph-credit-card"></i>
+            <span>Visa &bull;&bull;&bull;&bull; 4242</span>
+            <button type="button" class="pp-change">Change</button>
+          </div>
+
+          <label class="pp-agree">
+            <input type="checkbox" checked />
+            <span>I agree to the Terms. Renews at <b id="pp-renew">US$240/year</b> on Jul 28, 2027</span>
+          </label>
+
+          <div class="pp-actions">
+            <button type="button" class="pp-confirm" id="pp-confirm">Confirm Payment</button>
+          </div>
+
+          <div class="pay-foot">
+            <span class="powered">Powered by <b style="color:#7a8699;font-size:14px;letter-spacing:-0.02em;">paddle</b></span>
+            <span class="vsep"></span>
+            <span class="links"><a href="#">Terms</a><a href="#">Privacy</a></span>
+          </div>
+        </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  (function () {
+    const PLANS = {
+      pro:  { label: 'Silver renewal', credits: '5,000 credits',  total: '$240',
+              ppTitle: 'Renew Silver',   ppPlan: 'Silver Plan', off: false,
+              strike: '', amount: 'US$240', ppCredits: 'Full plan credits unlock (5,000)',
+              due: 'US$240', renew: 'US$240/year' },
+      gold: { label: 'Gold upgrade',   credits: '50,000 credits', total: '$600',
+              ppTitle: 'Upgrade to Gold', ppPlan: 'Gold Plan', off: true,
+              strike: 'US$1,200', amount: 'US$600', ppCredits: 'Full plan credits unlock (50,000)',
+              due: 'US$600', renew: 'US$1,200/year' },
+      goldRenew: { label: 'Gold renewal', credits: '50,000 credits', total: '$1,200',
+              ppTitle: 'Renew Gold', ppPlan: 'Gold Plan', off: false,
+              strike: '', amount: 'US$1,200', ppCredits: 'Full plan credits unlock (50,000)',
+              due: 'US$1,200', renew: 'US$1,200/year' },
+      teamPro: { label: 'Silver Team renewal', credits: '15,000 credits', total: '$720',
+              ppTitle: 'Renew Silver Team', ppPlan: 'Silver Team Plan', off: false,
+              strike: '', amount: 'US$720', ppCredits: 'Full pool credits unlock (15,000)',
+              due: 'US$720', renew: 'US$720/year' },
+      teamGold: { label: 'Gold Team upgrade', credits: '150,000 credits', total: '$1,620',
+              ppTitle: 'Upgrade to Gold Team', ppPlan: 'Gold Team Plan', off: true,
+              strike: 'US$3,240', amount: 'US$1,620', ppCredits: 'Full pool credits unlock (150,000)',
+              due: 'US$1,620', renew: 'US$3,240/year' }
+    };
+    const payBtn = document.getElementById('pay-btn');
+
+    function applyPlan(key) {
+      const p = PLANS[key];
+      payBtn.textContent = 'Pay ' + p.total;
+      document.getElementById('pp-title').textContent = p.ppTitle;
+      document.getElementById('pp-plan').textContent = p.ppPlan;
+      document.getElementById('pp-off').hidden = !p.off;
+      const strikeEl = document.getElementById('pp-strike');
+      strikeEl.hidden = !p.strike;
+      strikeEl.textContent = p.strike;
+      document.getElementById('pp-amount').textContent = p.amount;
+      document.getElementById('pp-credits').textContent = p.ppCredits;
+      document.getElementById('pp-due').textContent = p.due;
+      document.getElementById('pp-renew').textContent = p.renew;
+    }
+
+    document.querySelectorAll('.plan-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const zone = row.closest('.plan-zone');
+        zone.querySelectorAll('.plan-row').forEach(r => r.classList.toggle('is-selected', r === row));
+        row.querySelector('input').checked = true;
+        applyPlan(row.dataset.plan);
+      });
+    });
+
+    // Teams: credit-pool dropdowns (v7.3 model — unit price minus volume offer,
+    // ladder 10/20/30/40/50%; Gold Team upsell keeps the extra 50% off)
+    const TEAM_DD = {
+      teamPro:  { unit: 5000,  list: 20,  options: [15000, 25000, 50000, 75000, 100000],  upsell: 1 },
+      teamGold: { unit: 50000, list: 100, options: [150000, 250000, 500000, 750000, 1000000], upsell: 0.5 }
+    };
+    const LADDER = [0.10, 0.20, 0.30, 0.40, 0.50];
+    const ddState = { teamPro: 15000, teamGold: 150000 };
+    const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+
+    function refreshTeam(key) {
+      const t = TEAM_DD[key];
+      const c = ddState[key];
+      const off = (key === 'teamPro' && c === 15000) ? 0 : (LADDER[t.options.indexOf(c)] || 0);
+      const annualList = (c / t.unit) * t.list * (1 - off) * 12;
+      const pay = annualList * t.upsell;
+      if (key === 'teamPro') {
+        document.getElementById('tp-price').textContent = fmt(pay);
+        document.getElementById('tp-current').hidden = c !== 15000;
+      } else {
+        document.getElementById('tg-strike').textContent = fmt(annualList);
+        document.getElementById('tg-price').textContent = fmt(pay);
+        document.getElementById('tg-save').textContent = 'Save ' + fmt(annualList - pay);
+      }
+      const p = PLANS[key];
+      p.total = fmt(pay);
+      p.amount = 'US' + fmt(pay);
+      p.due = 'US' + fmt(pay);
+      p.strike = key === 'teamGold' ? 'US' + fmt(annualList) : '';
+      p.renew = 'US' + fmt(key === 'teamGold' ? annualList : pay) + '/year';
+      p.ppCredits = 'Full pool credits unlock (' + c.toLocaleString('en-US') + ')';
+      const row = document.querySelector('.plan-row[data-plan="' + key + '"]');
+      if (row.classList.contains('is-selected') && document.body.classList.contains('sc-teams')) applyPlan(key);
+    }
+
+    document.querySelectorAll('.credit-dd').forEach(dd => {
+      const key = dd.dataset.dd;
+      const t = TEAM_DD[key];
+      const menu = dd.querySelector('.credit-dd-menu');
+      const valEl = dd.querySelector('.credit-dd-value');
+      function build() {
+        menu.innerHTML = t.options.map((c, i) => {
+          const pct = (key === 'teamPro' && c === 15000) ? 0 : Math.round(LADDER[i] * 100);
+          return '<li class="credit-dd-opt" role="option" data-value="' + c + '" aria-selected="' + (c === ddState[key]) + '">' +
+            '<span>' + c.toLocaleString('en-US') + ' credits</span>' +
+            (pct ? '<span class="credit-dd-pill">' + pct + '% off</span>' : '') +
+          '</li>';
+        }).join('');
+      }
+      build();
+      dd.querySelector('.credit-dd-trigger').addEventListener('click', e => {
+        e.stopPropagation();
+        document.querySelectorAll('.credit-dd.is-open').forEach(o => { if (o !== dd) o.classList.remove('is-open'); });
+        dd.classList.toggle('is-open');
+      });
+      menu.addEventListener('click', e => {
+        const li = e.target.closest('.credit-dd-opt');
+        if (!li) return;
+        e.preventDefault();
+        e.stopPropagation();
+        ddState[key] = +li.dataset.value;
+        valEl.textContent = ddState[key].toLocaleString('en-US') + ' credits';
+        dd.classList.remove('is-open');
+        build();
+        refreshTeam(key);
+      });
+    });
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.credit-dd.is-open').forEach(o => o.classList.remove('is-open'));
+    });
+
+    // Scenario tabs: Silver (default) / Gold repurchase / Teams
+    const SCEN = {
+      silver: { cap: '5,000',  def: 'pro' },
+      gold:   { cap: '50,000', def: 'goldRenew' },
+      teams:  { cap: '15,000', def: 'teamPro' }
+    };
+    const scSeg = document.getElementById('scenario-seg');
+    scSeg.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        scSeg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+        const sc = btn.dataset.sc;
+        document.body.classList.toggle('sc-silver', sc === 'silver');
+        document.body.classList.toggle('sc-gold', sc === 'gold');
+        document.body.classList.toggle('sc-teams', sc === 'teams');
+        document.getElementById('meter-cap').textContent = SCEN[sc].cap;
+        const zone = document.getElementById('zone-' + sc);
+        zone.querySelectorAll('.plan-row').forEach(r => {
+          const sel = r.dataset.plan === SCEN[sc].def;
+          r.classList.toggle('is-selected', sel);
+          r.querySelector('input').checked = sel;
+        });
+        applyPlan(SCEN[sc].def);
+      });
+    });
+
+    // Payment method tabs (visual toggle)
+    const tabs = document.querySelectorAll('.pay-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.toggle('is-active', t === tab));
+      });
+    });
+
+    // Payment provider toggle: Stripe (full form) vs Paddle (saved card, one-click)
+    const provSeg = document.getElementById('provider-seg');
+    provSeg.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        provSeg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+        document.body.classList.toggle('pay-paddle', btn.dataset.provider === 'paddle');
+      });
+    });
+
+    // Demo toggles: credit state (zero/low) and copy version (v1/v2)
+    const COPY = {
+      zero: { head: "You're out of credits",
+              sub: "You've used all your credits. Renew early and fresh credits land today.",
+              combined: "You're out of credits. Renew your plan" },
+      low:  { head: 'Running low on credits',
+              sub: 'Renew early, new credits land today and stack on what you have left.',
+              combined: 'Running low on credits. Renew early, credits stack' }
+    };
+    const seg = document.getElementById('state-seg');
+    const meterNum = document.getElementById('meter-num');
+    const headline = document.getElementById('headline');
+    const subline = document.getElementById('subline');
+    let curState = 'zero', curVer = '2';
+
+    function render() {
+      const low = curState === 'low';
+      document.body.classList.toggle('state-low', low);
+      document.body.classList.toggle('state-zero', !low);
+      document.body.classList.toggle('ver-2', curVer === '2');
+      meterNum.textContent = low ? '432' : '0';
+      const c = COPY[curState];
+      headline.textContent = curVer === '2' ? c.combined : c.head;
+      subline.textContent = c.sub;
+    }
+
+    seg.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        seg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+        curState = btn.dataset.state;
+        render();
+      });
+    });
+  })();
+</script>
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>

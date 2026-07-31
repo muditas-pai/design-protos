@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Feature modal · Access premium features</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #f5f5f5; color: #171717; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+  .reopen-btn {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    padding: 10px 20px; border-radius: 6px; border: 1px solid #d4d4d4;
+    background: #ffffff; font: 500 14px 'Inter', sans-serif; color: #171717; cursor: pointer;
+  }
+  .reopen-btn:hover { background: #fafafa; }
+  .demo-bar {
+    position: fixed; top: 12px; left: 12px; z-index: 500;
+    display: flex; gap: 4px; padding: 4px;
+    background: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.08);
+  }
+  .demo-btn {
+    padding: 6px 12px; border: none; border-radius: 6px;
+    background: transparent; font: 500 12px 'Inter', sans-serif;
+    color: #525252; cursor: pointer;
+  }
+  .demo-btn.is-active { background: #171717; color: #ffffff; }
+  body.mode-plain .dp-offer-chip { display: none; }
+  body.mode-plain .dp-cta .save { display: none; }
+  body.mode-plain .dp-box-title { top: 30px; }
+  body.mode-plain .dp-feat-list { top: 160px; }
+  .dp-box-title em {
+    font-style: normal;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    text-decoration-color: currentColor;
+  }
+
+  /* =================================================================
+     v5 discount popup (Figma 217:7704) — feature list + export preview
+     ================================================================= */
+  .dp-backdrop {
+    position: fixed; inset: 0;
+    display: flex;
+    align-items: center; justify-content: center;
+    background: rgba(10, 25, 37, 0.72);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+  }
+  .dp-backdrop[data-open="true"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.2s ease, visibility 0s linear 0s;
+  }
+  .dp-stack {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1), opacity 0.2s ease;
+  }
+  .dp-backdrop[data-open="true"] .dp-stack {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  /* Main box (940 x 540, white) — Figma 2132:1984 */
+  .dp-box {
+    position: relative;
+    z-index: 1;
+    width: 940px;
+    height: 540px;
+    background: #ffffff;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(10,25,37,0.09),
+      0 1px 2px 0 rgba(10,25,37,0.09),
+      0 4px 6px 0 rgba(10,25,37,0.09),
+      0 24px 40px -16px rgba(10,25,37,0.09);
+  }
+
+  /* Left column: offer chip + title + feature list */
+  /* Same chip treatment as the Pro/Gold Buy Now discount chip (bob + glow). */
+  .dp-offer-chip {
+    position: absolute;
+    top: 20px; left: 30px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px 6px 8px;
+    background: #005eff; color: #ffffff;
+    font-size: 12px; font-weight: 500; letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    border-radius: 999px;
+    z-index: 1;
+    animation: pro-chip-bob 2.6s ease-in-out infinite,
+               pro-chip-glow 2.2s ease-in-out infinite;
+  }
+  @keyframes pro-chip-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  @keyframes pro-chip-glow {
+    0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                           0 0 0 0   rgba(0, 85, 237, 0.55); }
+    70%      { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                           0 0 0 9px rgba(0, 85, 237, 0); }
+    100%     { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                           0 0 0 0   rgba(0, 85, 237, 0); }
+  }
+  @keyframes gold-shimmer {
+    0%   { left: -75%; }
+    60%  { left: 125%; }
+    100% { left: 125%; }
+  }
+  .dp-offer-chip i { font-size: 12px; color: #ffffff; }
+  .dp-offer-chip::after {
+    content: '';
+    position: absolute;
+    left: 50%; margin-left: -4px; bottom: -4px;
+    width: 8px; height: 8px;
+    background: #005eff;
+    border-radius: 1px;
+    transform: rotate(45deg);
+    z-index: -1;
+  }
+  .dp-box-title {
+    position: absolute;
+    top: 60px; left: 30px;
+    width: 280px;
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 32px;
+    letter-spacing: -0.02em;
+    color: #171717;
+    margin: 0;
+  }
+  .dp-box-title .accent { color: #005eff; font-weight: 600; }
+
+  .dp-feat-list {
+    position: absolute;
+    top: 208px; left: 30px; bottom: 16px;
+    width: 288px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d4 transparent;
+  }
+  .dp-feat-list::-webkit-scrollbar { width: 4px; }
+  .dp-feat-list::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 999px; }
+  .dp-feat-list::-webkit-scrollbar-track { background: transparent; }
+  .dp-feat-fade {
+    position: absolute;
+    left: 30px; bottom: 16px;
+    width: 288px; height: 64px;
+    pointer-events: none;
+    z-index: 2;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 78%, #ffffff 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 70%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 70%);
+  }
+  .dp-feat-fade--top {
+    top: 208px; bottom: auto;
+    background: linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 78%, #ffffff 100%);
+    mask-image: linear-gradient(0deg, transparent 0%, #000 70%);
+    -webkit-mask-image: linear-gradient(0deg, transparent 0%, #000 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  body.mode-plain .dp-feat-fade--top { top: 160px; }
+  .dp-feat-fade--top.is-visible { opacity: 1; }
+  .dp-feat-item {
+    display: flex; align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    color: #171717;
+    line-height: 1.43;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s ease;
+  }
+  .dp-feat-item:hover { background: #fafafa; }
+  .dp-feat-item.is-active { background: #f5f5f5; cursor: default; }
+  .dp-feat-item i { font-size: 20px; color: #171717; flex-shrink: 0; line-height: 1; }
+  .dp-feat-item .lbl { font-weight: 400; color: #171717; }
+  .dp-badge {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.3px; text-transform: uppercase;
+    line-height: 1.33;
+    padding: 2px 6px;
+    border-radius: 34px;
+    flex-shrink: 0;
+  }
+  .dp-badge--pro  { background: #e6efff; color: #005eff; }
+  .dp-badge--gold { background: #fefce8; color: #ca8a04; }
+
+  /* Right column: preview + description + offer box */
+  .dp-right {
+    position: absolute;
+    top: 0; left: 340px;
+    width: 600px; height: 540px;
+    border-left: 1px solid rgba(11,15,20,0.09);
+  }
+  .dp-preview {
+    position: absolute;
+    top: 0; left: 0;
+    width: 600px; height: 338px;
+    background: #e9eff5;
+    overflow: hidden;
+  }
+  /* Two stacked media slots dissolve: incoming fades in on top while the
+     outgoing stays put underneath, so there is never an empty frame. */
+  .dp-slide { position: absolute; inset: 0; }
+  .dp-slide[hidden] { display: none; }
+  .dp-slide img, .dp-slide video {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .dp-slide.is-entering {
+    opacity: 0;
+    transition: none;
+    z-index: 2;
+  }
+  .dp-slide.is-in {
+    opacity: 1;
+    transition: opacity 0.55s ease;
+    z-index: 2;
+  }
+  .dp-slide.is-out { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .dp-slide.is-entering, .dp-slide.is-in { transition: none; }
+  }
+
+  /* Body under the preview: feature title + description + CTA row */
+  .dp-body {
+    position: absolute;
+    top: 338px; left: 0; right: 0; bottom: 0;
+    padding: 20px 30px 30px;
+    display: flex; flex-direction: column;
+  }
+  .dp-feat-title {
+    font-size: 20px; font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: #171717;
+    margin: 0 0 6px;
+  }
+  .dp-desc {
+    font-size: 14px; line-height: 1.5;
+    color: #525252;
+    margin: 0;
+  }
+  .dp-ctas {
+    margin-top: auto;
+    display: flex; gap: 10px;
+  }
+  .dp-cta .save { font-weight: 500; color: rgba(255,255,255,0.6); margin-left: 6px; }
+  .dp-cta .save::before { content: '\2022'; margin-right: 6px; }
+  .dp-cta {
+    flex: 1; height: 44px;
+    background: #0b0f14;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px; font-weight: 500;
+    border: 0; border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.06), 0 1px 2px rgba(11,15,20,0.09);
+    transition: background 0.2s ease, filter 0.16s ease;
+  }
+  .dp-cta:hover:not(:disabled) { background: #23303B; }
+  .dp-cta:disabled {
+    background: #c5cad1;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .dp-cta--gold {
+    position: relative; overflow: hidden;
+    background: linear-gradient(90deg, #dcb05e 0%, #ca9e4c 30%, #c39643 65%, #b8893a 100%);
+    box-shadow:
+      0 1px 2px 0 rgba(11,15,20,.09),
+      0 3px 12px rgba(202,158,76,.45);
+  }
+  .dp-cta--gold:hover:not(:disabled) {
+    background: linear-gradient(90deg, #dcb05e 0%, #ca9e4c 30%, #c39643 65%, #b8893a 100%);
+    filter: brightness(1.08);
+    box-shadow:
+      0 1px 2px 0 rgba(11,15,20,.09),
+      0 4px 18px rgba(202,158,76,.65);
+  }
+  .dp-cta--gold::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,.06) 45%, transparent 55%);
+    pointer-events: none;
+  }
+  .dp-cta--gold::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -75%;
+    width: 50%;
+    background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,.65) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    animation: gold-shimmer 2.8s ease-in-out infinite;
+  }
+
+  /* Close button (floats right of box) */
+  .dp-close {
+    position: absolute;
+    top: 10px; right: -40px;
+    width: 28px; height: 28px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fafafa;
+    border: 0; border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px rgba(11,15,20,0.09);
+    color: #171717;
+    z-index: 4;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .dp-close:hover { background: #f4f6fa; transform: scale(1.06); }
+  .dp-close i { font-size: 14px; }
+
+  @media (max-width: 980px) {
+    .dp-box { width: calc(100vw - 32px); height: auto; }
+    .dp-close { right: 8px; top: 8px; }
+  }
+  </style>
+</head>
+<body class="mode-offer">
+  <div class="demo-bar" role="tablist" aria-label="Modal variant">
+    <button type="button" class="demo-btn is-active" data-mode="offer" role="tab">Close nudge offer</button>
+    <button type="button" class="demo-btn" data-mode="plain" role="tab">No offer</button>
+    <button type="button" class="demo-btn" data-mode="trial" role="tab">7-day trial expired free users</button>
+  </div>
+  <button class="reopen-btn" id="reopen" type="button">Open feature modal</button>
+
+  <div class="dp-backdrop" id="dp-backdrop" role="dialog" aria-modal="true" aria-labelledby="dp-box-title" data-open="false">
+    <div class="dp-stack">
+      <div class="dp-box">
+        <span class="dp-offer-chip"><i class="ph-fill ph-clock"></i>Offer ends in <span id="dp-timer">59:56</span></span>
+        <h2 class="dp-box-title" id="dp-box-title">Access premium features of Pro or Gold at <span class="accent">20% off</span></h2>
+
+        <div class="dp-feat-list" id="dp-feat-list">
+          <button type="button" class="dp-feat-item is-active" data-feat="export" data-plan="pro" data-video="trigger_export" data-icon-active="ph-fill ph-export" data-icon-inactive="ph ph-export">
+            <i class="ph-fill ph-export"></i><span class="lbl">Export presentations</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="ultra" data-plan="gold" data-preview="assets/feature-modal/triggeraimodels.jpg" data-icon-active="ph-fill ph-sparkle" data-icon-inactive="ph ph-sparkle">
+            <i class="ph ph-sparkle"></i><span class="lbl">Ultra AI model</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="brandkit" data-plan="pro" data-preview="assets/feature-modal/triggerbrandkit.jpg" data-icon-active="ph-fill ph-swatches" data-icon-inactive="ph ph-swatches">
+            <i class="ph ph-swatches"></i><span class="lbl">Brand kit</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="knowledge" data-plan="gold" data-preview="assets/feature-modal/triggerprojectknowledge.jpg" data-icon-active="ph-fill ph-book-open" data-icon-inactive="ph ph-book-open">
+            <i class="ph ph-book-open"></i><span class="lbl">Shared knowledge base</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="team" data-plan="pro" data-video="trigger_invite_members" data-icon-active="ph-fill ph-users-three" data-icon-inactive="ph ph-users-three">
+            <i class="ph ph-users-three"></i><span class="lbl">Invite team members</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="refresh" data-plan="gold" data-preview="assets/feature-modal/triggerrefresh.jpg" data-icon-active="ph-fill ph-arrows-clockwise" data-icon-inactive="ph ph-arrows-clockwise">
+            <i class="ph ph-arrows-clockwise"></i><span class="lbl">Refresh data</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="templates" data-plan="pro" data-preview="assets/feature-modal/triggertemplates.jpg" data-icon-active="ph-fill ph-layout" data-icon-inactive="ph ph-layout">
+            <i class="ph ph-layout"></i><span class="lbl">Templates</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="analytics" data-plan="pro" data-video="trigger_analytics" data-icon-active="ph-fill ph-chart-bar" data-icon-inactive="ph ph-chart-bar">
+            <i class="ph ph-chart-bar"></i><span class="lbl">Analytics</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="projects" data-plan="pro" data-preview="assets/feature-modal/triggerproject.jpg" data-icon-active="ph-fill ph-folder" data-icon-inactive="ph ph-folder">
+            <i class="ph ph-folder"></i><span class="lbl">Projects</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="fonts" data-plan="pro" data-preview="assets/feature-modal/triggerfonts.jpg" data-icon-active="ph-fill ph-text-aa" data-icon-inactive="ph ph-text-aa">
+            <i class="ph ph-text-aa"></i><span class="lbl">Font pair</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="colors" data-plan="pro" data-preview="assets/feature-modal/triggercolors.jpg" data-icon-active="ph-fill ph-palette" data-icon-inactive="ph ph-palette">
+            <i class="ph ph-palette"></i><span class="lbl">Color palette</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="assign" data-plan="pro" data-preview="assets/feature-modal/triggerassignslide.jpg" data-icon-active="ph-fill ph-cursor" data-icon-inactive="ph ph-cursor">
+            <i class="ph ph-cursor"></i><span class="lbl">Assign slide</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="promodel" data-plan="pro" data-preview="assets/feature-modal/triggerpromodelupgrade.jpg" data-icon-active="ph-fill ph-star-four" data-icon-inactive="ph ph-star-four">
+            <i class="ph ph-star-four"></i><span class="lbl">Pro AI model</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="slidecount" data-plan="pro" data-preview="assets/feature-modal/triggerverylongslides.jpg" data-icon-active="ph-fill ph-cards" data-icon-inactive="ph ph-cards">
+            <i class="ph ph-cards"></i><span class="lbl">Slide count</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="comments" data-plan="pro" data-preview="assets/feature-modal/triggercomments.jpg" data-icon-active="ph-fill ph-chat-centered-dots" data-icon-inactive="ph ph-chat-centered-dots">
+            <i class="ph ph-chat-centered-dots"></i><span class="lbl">Comments</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="present" data-plan="pro" data-preview="assets/feature-modal/triggercolorsmeetandpresent.jpg" data-icon-active="ph-fill ph-projector-screen" data-icon-inactive="ph ph-projector-screen">
+            <i class="ph ph-projector-screen"></i><span class="lbl">Meet and present</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="meetedit" data-plan="pro" data-preview="assets/feature-modal/triggermeetandedit.jpg" data-icon-active="ph-fill ph-pencil-simple" data-icon-inactive="ph ph-pencil-simple">
+            <i class="ph ph-pencil-simple"></i><span class="lbl">Meet and edit</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+        </div>
+        <div class="dp-feat-fade" aria-hidden="true"></div>
+        <div class="dp-feat-fade dp-feat-fade--top" id="dp-fade-top" aria-hidden="true"></div>
+
+        <div class="dp-right">
+          <div class="dp-preview" aria-hidden="true">
+            <div class="dp-slide" id="dp-slide-a" data-key="trigger_export">
+              <video autoplay muted loop playsinline>
+                <source src="assets/feature-modal/trigger_export.webm" type="video/webm" />
+                <source src="assets/feature-modal/trigger_export.mp4" type="video/mp4" />
+              </video>
+            </div>
+            <div class="dp-slide" id="dp-slide-b" hidden></div>
+          </div>
+          <div class="dp-body">
+            <h3 class="dp-feat-title" id="dp-feat-title">Export presentations</h3>
+            <p class="dp-desc" id="dp-desc">Download your presentations as PowerPoint, PDF, or image files for offline use and sharing.</p>
+            <div class="dp-ctas">
+              <button class="dp-cta" id="dp-cta" type="button">Buy Pro<span class="save">Save $48</span></button>
+              <button class="dp-cta dp-cta--gold" id="dp-cta-gold" type="button">Buy Gold<span class="save">Save $300</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Close (sibling of .dp-box so it's not clipped by overflow:hidden) -->
+      <button class="dp-close" id="dp-close" type="button" aria-label="Close">
+        <i class="ph ph-x"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const backdrop = document.getElementById('dp-backdrop');
+      const closeBtn = document.getElementById('dp-close');
+      const proBtn   = document.getElementById('dp-cta');
+      const goldBtn  = document.getElementById('dp-cta-gold');
+      const timerEl  = document.getElementById('dp-timer');
+      const descEl   = document.getElementById('dp-desc');
+      const featList = document.getElementById('dp-feat-list');
+      const titleEl  = document.getElementById('dp-feat-title');
+      const slideA   = document.getElementById('dp-slide-a');
+      const slideB   = document.getElementById('dp-slide-b');
+      const reopen   = document.getElementById('reopen');
+      const boxTitle = document.getElementById('dp-box-title');
+
+      function updateTitle() {
+        const active = featList.querySelector('.dp-feat-item.is-active');
+        const name = active ? active.querySelector('.lbl').textContent : 'premium features';
+        if (document.body.classList.contains('mode-trial')) {
+          boxTitle.textContent = 'Your 7-day free trial has ended. Continue with Pro or Gold at ';
+          const trialAccent = document.createElement('span');
+          trialAccent.className = 'accent';
+          trialAccent.textContent = '20% off';
+          boxTitle.appendChild(trialAccent);
+        } else {
+          const plain = document.body.classList.contains('mode-plain');
+          boxTitle.textContent = 'Access ';
+          const em = document.createElement('em');
+          em.textContent = name;
+          boxTitle.appendChild(em);
+          if (plain) {
+            boxTitle.appendChild(document.createTextNode(' and lots more with Pro or Gold'));
+          } else {
+            boxTitle.appendChild(document.createTextNode(' and lots more with Pro or Gold at '));
+            const accent = document.createElement('span');
+            accent.className = 'accent';
+            accent.textContent = '20% off';
+            boxTitle.appendChild(accent);
+          }
+        }
+      }
+
+      const DURATION_MS = 60 * 60 * 1000;
+      let startMs = null;
+      let interval = null;
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function tick() {
+        if (!startMs) { timerEl.textContent = '60:00'; return; }
+        const left = Math.max(0, DURATION_MS - (Date.now() - startMs));
+        const m = Math.floor(left / 60000);
+        const s = Math.floor((left % 60000) / 1000);
+        timerEl.textContent = pad(m) + ':' + pad(s);
+        if (left <= 0 && interval) { clearInterval(interval); interval = null; }
+      }
+
+      // Per-feature description shown under the preview
+      const DESCS = {
+        export:     'Download your presentations as PowerPoint, PDF, or image files for offline use and sharing.',
+        ultra:      'Our most powerful model, for the highest quality content and design output.',
+        brandkit:   'Add your logo, fonts, and colors once, and every deck comes out on-brand.',
+        knowledge:  'Upload your files once. The AI references them on every slide, so your decks stay accurate and on-message.',
+        team:       'Bring your team into one workspace to co-edit decks in real time, with comments.',
+        refresh:    'Update every chart and number across the deck in one click, so nothing goes stale.',
+        templates:  'Start from professionally designed, on-brand templates.',
+        analytics:  'Track views, engagement, and viewer location. See exactly how your deck performs after you share it.',
+        projects:   'Group related decks into shared spaces, so everyone knows where the latest version lives.',
+        fonts:      'Set your brand fonts once, and they apply across every deck you create.',
+        colors:     'Lock in your brand colors, and every slide stays on palette automatically.',
+        assign:     'Hand specific slides to the right teammate, so everyone knows exactly what they own.',
+        promodel:   'Enhanced quality on every generation: smarter content, sharper design.',
+        slidecount: 'Generate longer decks, up to 21+ slides in one go, without splitting your story.',
+        comments:   'Leave feedback right on the slide, and resolve it without leaving the deck.',
+        present:    'Present live to remote audiences in real time, straight from the editor.',
+        meetedit:   'Work on the same deck together during a live call, with edits visible instantly.',
+      };
+
+      function syncForItem(item) {
+        if (!item) return;
+        const lbl = item.querySelector('.lbl');
+        if (titleEl && lbl) titleEl.textContent = lbl.textContent;
+        if (descEl && DESCS[item.dataset.feat]) descEl.textContent = DESCS[item.dataset.feat];
+        if (proBtn) proBtn.disabled = item.dataset.plan === 'gold';
+        updateTitle();
+      }
+
+      let activeSlot = slideA;
+      let settleTimer = null;
+      function fillSlot(slot, item) {
+        const key = item.dataset.video;
+        if (key) {
+          slot.innerHTML =
+            '<video autoplay muted loop playsinline>' +
+            '<source src="assets/feature-modal/' + key + '.webm" type="video/webm" />' +
+            '<source src="assets/feature-modal/' + key + '.mp4" type="video/mp4" />' +
+            '</video>';
+          const v = slot.querySelector('video');
+          if (v) v.play().catch(function () {});
+        } else {
+          slot.innerHTML = '<img src="' + item.dataset.preview + '" alt="" />';
+        }
+      }
+      function settleSlots(incoming, outgoing) {
+        outgoing.hidden = true;
+        outgoing.classList.remove('is-out');
+        const v = outgoing.querySelector('video');
+        if (v) v.pause();
+        outgoing.innerHTML = '';
+        incoming.classList.remove('is-in');
+      }
+      function swapMedia(item) {
+        if (!slideA || !slideB) return;
+        const key = item.dataset.video || item.dataset.preview;
+        if (activeSlot.dataset.key === key) return;
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+          settleTimer = null;
+          settleSlots(activeSlot, activeSlot === slideA ? slideB : slideA);
+        }
+        const outgoing = activeSlot;
+        const incoming = outgoing === slideA ? slideB : slideA;
+        incoming.dataset.key = key;
+        fillSlot(incoming, item);
+        incoming.hidden = false;
+        incoming.classList.add('is-entering');
+        void incoming.offsetWidth;
+        incoming.classList.remove('is-entering');
+        incoming.classList.add('is-in');
+        outgoing.classList.add('is-out');
+        activeSlot = incoming;
+        settleTimer = setTimeout(() => {
+          settleTimer = null;
+          settleSlots(incoming, outgoing);
+        }, 680);
+      }
+
+      function activateFeat(item) {
+        if (!item || !featList) return;
+        if (item.classList.contains('is-active')) return;
+        featList.querySelectorAll('.dp-feat-item').forEach((el) => {
+          el.classList.remove('is-active');
+          const icon = el.querySelector('i');
+          const inactiveCls = el.dataset.iconInactive;
+          if (icon && inactiveCls) icon.className = inactiveCls;
+        });
+        item.classList.add('is-active');
+        const activeIcon = item.querySelector('i');
+        const activeCls = item.dataset.iconActive;
+        if (activeIcon && activeCls) activeIcon.className = activeCls;
+        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        syncForItem(item);
+        swapMedia(item);
+      }
+
+      const fadeTop = document.getElementById('dp-fade-top');
+      featList.addEventListener('scroll', () => {
+        fadeTop.classList.toggle('is-visible', featList.scrollTop > 4);
+      });
+
+      featList.addEventListener('click', (e) => {
+        const item = e.target.closest('.dp-feat-item');
+        if (item) activateFeat(item);
+      });
+
+      function open() {
+        startMs = Date.now();
+        backdrop.dataset.open = 'true';
+        document.body.style.overflow = 'hidden';
+        tick();
+        if (interval) clearInterval(interval);
+        interval = setInterval(tick, 1000);
+        syncForItem(featList.querySelector('.dp-feat-item.is-active'));
+      }
+      function close() {
+        backdrop.dataset.open = 'false';
+        document.body.style.overflow = '';
+        if (interval) { clearInterval(interval); interval = null; }
+      }
+
+      document.querySelectorAll('.demo-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.demo-btn').forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          document.body.classList.remove('mode-offer', 'mode-plain', 'mode-trial');
+          document.body.classList.add('mode-' + btn.dataset.mode);
+          updateTitle();
+        });
+      });
+
+      closeBtn.addEventListener('click', close);
+      reopen.addEventListener('click', open);
+      proBtn.addEventListener('click', () => {});
+      goldBtn.addEventListener('click', () => {});
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && backdrop.dataset.open === 'true') close();
+      });
+
+      open();
+    })();
+  </script>
+</body>
+</html>
