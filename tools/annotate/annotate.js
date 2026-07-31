@@ -371,13 +371,26 @@
     return annotations.map(function (a) { return JSON.stringify(a); }).join("\n") + "\n";
   }
 
+  function key(a) { return a.id || (a.at + "|" + a.selector); }
+
+  /* Re-read the store WITHOUT throwing away what is only in memory.
+     This runs every time annotation mode is switched on, and turning the mode
+     off and on is the normal way to drive a proto to the next state. Replacing
+     the array wholesale silently destroyed every note made since the last save,
+     which read as "Save only pushed the last one". */
   function loadExisting() {
     return fetch("/" + STORE, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.text() : ""; })
       .then(function (txt) {
-        annotations = txt.split("\n").filter(Boolean).map(function (l) {
+        var onDisk = txt.split("\n").filter(Boolean).map(function (l) {
           try { return JSON.parse(l); } catch (e) { return null; }
         }).filter(Boolean).filter(function (a) { return a.proto === PROTO; });
+
+        var held = {};
+        annotations.forEach(function (a) { held[key(a)] = true; });
+        // what is in memory wins, because it may carry an unsaved edit; anything
+        // new on disk is somebody else's note and joins the end
+        annotations = annotations.concat(onDisk.filter(function (a) { return !held[key(a)]; }));
         // a frozen proto that was edited anyway invalidates the notes made before
         var stale = annotations.filter(function (a) { return a.hash && a.hash !== HASH; });
         if (stale.length) {
