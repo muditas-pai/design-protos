@@ -33,58 +33,83 @@
   host.id = "pai-annotate-root";
   host.style.cssText = "position:fixed;inset:0;z-index:2147483647;pointer-events:none;";
   var sr = host.attachShadow({ mode: "open" });
+  /* Light chrome, over work that is itself light. Separation comes from
+     layered shadow rather than from being dark, so the tool reads as sitting
+     above the design instead of competing with it. */
   sr.innerHTML =
     '<style>' +
     ':host{all:initial}' +
-    '*{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,sans-serif}' +
-    '#hl{position:fixed;border:1px solid #58a6ff;background:rgba(56,139,253,.14);' +
-      'border-radius:2px;display:none}' +
-    '#tip{position:fixed;display:none;padding:2px 6px;border-radius:4px;background:#58a6ff;' +
-      'color:#04121f;font-size:10px;font-weight:600;white-space:nowrap;' +
-      'font-family:ui-monospace,SFMono-Regular,Menlo,monospace}' +
-    '.marker{position:fixed;width:20px;height:20px;border-radius:999px;background:#d29922;' +
-      'color:#1c1200;font-size:11px;font-weight:700;display:flex;align-items:center;' +
-      'justify-content:center;box-shadow:0 0 0 2px rgba(0,0,0,.35);pointer-events:auto;' +
-      'cursor:pointer;transform:translate(-50%,-50%)}' +
-    '.marker.unresolved{background:#f85149;color:#fff}' +
+    '*{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,sans-serif;' +
+      '-webkit-font-smoothing:antialiased}' +
+    /* navy marks what you are pointing at now, amber marks where a note already is */
+    '#hl{position:fixed;border:1.5px solid rgba(10,25,37,.62);background:rgba(10,25,37,.06);' +
+      'border-radius:3px;display:none}' +
+    '.marker{position:fixed;width:22px;height:22px;border-radius:999px;background:#b8860b;' +
+      'color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;' +
+      'justify-content:center;font-variant-numeric:tabular-nums;pointer-events:auto;' +
+      'cursor:pointer;transform:translate(-50%,-50%);' +
+      /* white ring so it separates from whatever it lands on */
+      'box-shadow:0 0 0 2px #fff,0 1px 3px rgba(10,25,37,.3);' +
+      'transition:scale .12s cubic-bezier(.2,0,0,1)}' +
+    /* 22px is below a comfortable target, so extend the hit area. 32 rather than
+       40: two notes on nested elements sit close, and overlapping targets are
+       worse than small ones. */
+    '.marker::after{content:"";position:absolute;inset:-5px;border-radius:999px}' +
+    '.marker:hover{scale:1.12}' +
+    '.marker:active{scale:.96}' +
+    '.marker.unresolved{background:#b42318}' +
     /* idle affordance */
-    '#nub{position:fixed;right:12px;bottom:12px;padding:5px 9px;border-radius:999px;' +
-      'background:rgba(13,17,23,.72);color:#8b949e;font-size:11px;font-weight:500;' +
-      'pointer-events:auto;cursor:pointer;user-select:none;transition:color .15s,background .15s}' +
-    '#nub:hover{background:rgba(13,17,23,.92);color:#e6edf3}' +
+    '#nub{position:fixed;right:14px;bottom:14px;padding:7px 11px;border-radius:999px;' +
+      'background:rgba(255,255,255,.92);color:#6b7780;font-size:11px;font-weight:550;' +
+      'pointer-events:auto;cursor:pointer;user-select:none;backdrop-filter:blur(8px);' +
+      'box-shadow:0 0 0 1px rgba(10,25,37,.08),0 2px 8px rgba(10,25,37,.10);' +
+      'transition:color .15s,box-shadow .15s,scale .12s cubic-bezier(.2,0,0,1)}' +
+    '#nub:hover{color:#0A1925;box-shadow:0 0 0 1px rgba(10,25,37,.14),0 4px 14px rgba(10,25,37,.14)}' +
+    '#nub:active{scale:.96}' +
     /* active bottom bar */
     '#bar{position:fixed;left:0;right:0;bottom:0;display:none;align-items:center;gap:8px;' +
-      'padding:7px 12px;background:rgba(13,17,23,.96);border-top:1px solid #30363d;' +
-      'pointer-events:auto;color:#e6edf3;font-size:11px}' +
+      'padding:9px 14px;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);' +
+      'pointer-events:auto;color:#0A1925;font-size:11px;' +
+      'box-shadow:0 -1px 0 rgba(10,25,37,.09),0 -10px 28px rgba(10,25,37,.07)}' +
     '#crumbs{display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;' +
-      'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#6e7681}' +
-    '#crumbs b{color:#58a6ff;font-weight:600}' +
+      'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#9aa4ac}' +
+    '#crumbs b{color:#0A1925;font-weight:600}' +
     '.sp{flex:1}' +
-    '.pill{padding:3px 8px;border-radius:999px;background:#21262d;color:#8b949e;' +
+    '.pill{padding:3px 9px;border-radius:999px;background:#f0f2f3;color:#6b7780;' +
       'font-variant-numeric:tabular-nums}' +
-    '.pill.warn{background:#3d2b06;color:#e3b341}' +
-    'button{height:26px;padding:0 10px;border:1px solid #30363d;border-radius:6px;' +
-      'background:#21262d;color:#e6edf3;font:inherit;font-size:11px;font-weight:500;cursor:pointer}' +
-    'button:hover{background:#30363d}' +
-    'button.primary{background:#238636;border-color:#2ea043}' +
-    'button.primary:hover{background:#2ea043}' +
-    'button.danger{background:transparent;border-color:#30363d;color:#f85149}' +
-    'button.danger:hover{background:#da3633;border-color:#da3633;color:#fff}' +
-    /* note box */
-    '#note{position:fixed;display:none;width:340px;background:#161b22;border:1px solid #58a6ff;' +
-      'border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:8px;pointer-events:auto}' +
+    '.pill.warn{background:#fdf7e8;color:#8a6508;box-shadow:inset 0 0 0 1px #ecd9a3}' +
+    /* 28px visual, 40px target via the pseudo-element */
+    'button{position:relative;height:28px;padding:0 11px;border:0;border-radius:7px;' +
+      'background:#f0f2f3;color:#0A1925;font:inherit;font-size:11px;font-weight:550;' +
+      'cursor:pointer;box-shadow:inset 0 0 0 1px rgba(10,25,37,.08);' +
+      'transition:background .15s,box-shadow .15s,scale .12s cubic-bezier(.2,0,0,1)}' +
+    'button::after{content:"";position:absolute;left:0;right:0;top:50%;height:40px;' +
+      'transform:translateY(-50%)}' +
+    'button:hover{background:#e4e7e9}' +
+    'button:active{scale:.96}' +
+    'button.primary{background:#0A1925;color:#fff;box-shadow:inset 0 0 0 1px #0A1925}' +
+    'button.primary:hover{background:#1b2c3a}' +
+    'button.danger{background:transparent;color:#b42318;box-shadow:inset 0 0 0 1px rgba(180,35,24,.28)}' +
+    'button.danger:hover{background:#b42318;color:#fff;box-shadow:inset 0 0 0 1px #b42318}' +
+    /* note box: 14 outer = 7 inner + 7 padding, so the radii stay concentric */
+    '#note{position:fixed;display:none;width:344px;background:#fff;border-radius:14px;' +
+      'box-shadow:0 0 0 1px rgba(10,25,37,.10),0 8px 16px rgba(10,25,37,.08),' +
+      '0 24px 48px rgba(10,25,37,.14);padding:7px;pointer-events:auto}' +
     '#note .sel{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;' +
-      'color:#8b949e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}' +
-    '#note textarea{width:100%;min-height:58px;resize:vertical;border:0;outline:none;' +
-      'background:transparent;color:#e6edf3;font:inherit;font-size:13px;line-height:1.45}' +
-    '#note textarea::placeholder{color:#6e7681}' +
-    '#note .row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px;color:#6e7681}' +
-    '#toast{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);padding:8px 14px;' +
-      'border-radius:999px;font-size:12px;background:#238636;color:#fff;opacity:0;' +
-      'transition:opacity .18s}' +
+      'color:#9aa4ac;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+      'margin:3px 4px 7px}' +
+    '#note textarea{width:100%;min-height:62px;resize:vertical;border:0;outline:none;' +
+      'background:transparent;color:#0A1925;font:inherit;font-size:13.5px;line-height:1.5;' +
+      'padding:0 4px;text-wrap:pretty}' +
+    '#note textarea::placeholder{color:#9aa4ac}' +
+    '#note .row{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:10px;' +
+      'color:#9aa4ac;padding-left:4px}' +
+    '#toast{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);padding:8px 15px;' +
+      'border-radius:999px;font-size:12px;font-weight:500;background:#0A1925;color:#fff;' +
+      'opacity:0;box-shadow:0 6px 20px rgba(10,25,37,.22);transition:opacity .18s}' +
     '#toast.show{opacity:1}' +
     '</style>' +
-    '<div id="hl"></div><div id="tip"></div>' +
+    '<div id="hl"></div>' +
     '<div id="nub">&#8679;C annotate</div>' +
     '<div id="bar">' +
       '<span id="crumbs"></span><span class="sp"></span>' +
@@ -103,7 +128,7 @@
     '<div id="toast"></div>';
 
   var $ = function (s) { return sr.querySelector(s); };
-  var hl = $("#hl"), tip = $("#tip"), bar = $("#bar"), nub = $("#nub");
+  var hl = $("#hl"), bar = $("#bar"), nub = $("#nub");
   var crumbs = $("#crumbs"), countEl = $("#count"), staleEl = $("#stale");
   var noteBox = $("#note"), noteTa = noteBox.querySelector("textarea");
   var noteSel = noteBox.querySelector(".sel"), toastEl = $("#toast");
@@ -197,10 +222,6 @@
     hl.style.display = "block";
     hl.style.left = r.left + "px"; hl.style.top = r.top + "px";
     hl.style.width = r.width + "px"; hl.style.height = r.height + "px";
-    tip.style.display = "block";
-    tip.textContent = label(target);
-    tip.style.left = r.left + "px";
-    tip.style.top = Math.max(0, r.top - 16) + "px";
 
     var chain = ancestry(target);
     crumbs.innerHTML = chain.map(function (e, i) {
@@ -208,7 +229,7 @@
     }).join(" &rsaquo; ");
   }
 
-  function clearPaint() { hl.style.display = "none"; tip.style.display = "none"; }
+  function clearPaint() { hl.style.display = "none"; }
 
   function renderMarkers() {
     Array.prototype.slice.call(sr.querySelectorAll(".marker")).forEach(function (m) { m.remove(); });
@@ -270,10 +291,6 @@
       hl.style.display = "block";
       hl.style.left = er.left + "px"; hl.style.top = er.top + "px";
       hl.style.width = er.width + "px"; hl.style.height = er.height + "px";
-      tip.style.display = "block";
-      tip.textContent = label(el);
-      tip.style.left = er.left + "px";
-      tip.style.top = Math.max(0, er.top - 16) + "px";
     }
 
     noteBox.style.display = "block";

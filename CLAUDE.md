@@ -107,6 +107,35 @@ components into their own file, not by editing someone else's frame.
 - **Shared infrastructure is meant to be updated**, so edit these normally: `design-system/`,
   `index.html`, `CLAUDE.md`, `README.md`.
 
+## Never edit an annotated proto — fork a v2
+
+**A proto with annotations against it is frozen. Nobody edits it, including the designer who
+made it.** If a folder has an `annotations.jsonl` naming that file, it is closed for changes.
+
+To improve the design, **duplicate first**: copy it to a new version in the same folder
+(`<name>-v2.html`), and change *that*. The v2 starts with no annotations of its own.
+
+**Why this is firm.** Every annotation stores a CSS selector into the proto's DOM, plus the
+file's content hash. Freezing the file is what makes those selectors exact forever, so the
+whole class of "the note has drifted off the thing it was about" problem never arises. Edit an
+annotated proto and you silently invalidate real design judgement, which is the most expensive
+thing you can lose here: the notes still render, they just quietly point at the wrong elements.
+
+- **Check before editing any proto.** Is there an `annotations.jsonl` in its folder with a line
+  whose `proto` is this file? If yes, fork instead. `tools/annotate/sheet.html` lists every
+  annotated file, and the annotator's top bar warns in amber when a file has been edited under
+  its notes.
+- **The one way to unfreeze** is to delete that proto's annotations, when the notes were wrong,
+  exploratory, or about a direction that has been dropped. Clearing is a real choice, not a
+  workaround: you are discarding the judgement, so make it deliberately.
+- **When you fork, say what it came from.** A v2 that records its parent lets the harness later
+  ask whether it actually fixed what was flagged on v1. Without that link, the iteration teaches
+  the system nothing.
+- Claude: never edit a proto that has annotations against it, even when asked directly. Say it is
+  annotated, offer the fork, and let the designer choose the fork or the clear.
+
+Full mechanism and rules: `tools/annotate/system.html`.
+
 ## Building a proto
 
 - One self-contained `.html`, usually under `explorations/<designer>/<problem>/`. Short,
