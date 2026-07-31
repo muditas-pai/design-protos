@@ -1,0 +1,3274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design harness — the design up for approval</title>
+<style>
+/* ===========================================================================
+   mindmap engine — engine.css
+   Ported from docs/specs/design-harness-diagram.html (the reference diagram).
+   CSS owns: colour, radius, per-kind width, typography, border, shadow,
+             editor affordances.
+   JS owns:  every gap BETWEEN things (laneGap, rowGap, padX/padY, framePad,
+             bulge, label offsets) — see MMLayout.DEFAULTS / MMWires.DEFAULTS.
+   =========================================================================== */
+
+/* ---------------------------------------------------------------- tokens -- */
+:root {
+  color-scheme: light;
+
+  /* ink + surface */
+  --mm-ink:        #0A1925;
+  --mm-ink2:       #4A5B6A;
+  --mm-ink3:       #8494B4;
+  --mm-line:       #E1E7EC;
+  --mm-paper:      #ffffff;
+
+  /* solid accents (also the wire palette in MMWires.COLOR) */
+  --mm-navy:       #1C3550;
+  --mm-blue:       #0043B8;
+  --mm-orange:     #E64A00;
+  --mm-green:      #0E8A4D;
+  --mm-red:        #C93A2B;
+  --mm-violet:     #6B3FA0;
+  --mm-gray:       #A6B3BE;
+
+  /* tints — border (-bd) + fill (-bg) per accent */
+  --mm-blue-bd:    #B9CFF3;   --mm-blue-bg:    #F7FAFF;
+  --mm-violet-bd:  #C6B0E8;   --mm-violet-bg:  #FBF8FF;
+  --mm-violet-bd2: #D6C4EE;
+  --mm-red-bd:     #EFBDB5;   --mm-red-bg:     #FDF7F6;
+  --mm-red-bd2:    #E4C9C4;
+  --mm-green-bd:   #A9D8BC;   --mm-green-bg:   #F4FBF7;
+  --mm-orange-bd:  #F3B79B;   --mm-orange-bg:  #FFF6F0;
+  /* extras (frames may be tinted navy/gray; not used by any node kind) */
+  --mm-navy-bd:    #B8C6D4;
+  --mm-gray-bd:    #D6DDE3;
+
+  /* geometry owned by CSS */
+  --mm-radius:      10px;
+  --mm-radius-frame:14px;
+  --mm-node-pad:    9px 13px;
+  --mm-w-narrow:    218px;   /* brief, file, note   */
+  --mm-w-mid:       230px;   /* side, correct       */
+  --mm-w-wide:      380px;   /* step/verify/judge/you/harvest */
+
+  /* presentational gutters (page chrome only — NOT diagram spacing) */
+  --mm-page-pad-x:  20px;
+  --mm-page-pad-t:  32px;
+  --mm-page-pad-b:  60px;
+  --mm-legend-gap:  20px;
+  --mm-bar-gap:     6px;
+
+  /* type scale */
+  --mm-font:  system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mm-mono:  ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --mm-fs-h1:      22px;
+  --mm-fs-sub:     13px;
+  --mm-fs-hint:    11.5px;
+  --mm-fs-title:   12.5px;
+  --mm-fs-body:    11px;
+  --mm-fs-rw:      10px;
+  --mm-fs-badge:   10px;
+  --mm-fs-frame:   12px;
+  --mm-fs-legend:  11.5px;
+  --mm-fs-ui:      11.5px;
+
+  /* shadows + affordance accents */
+  --mm-shadow:      0 1px 3px rgba(10, 25, 37, .06);
+  --mm-shadow-lift: 0 3px 10px rgba(10, 25, 37, .10);
+  --mm-shadow-drag: 0 4px 14px rgba(10, 25, 37, .13);
+  --mm-shadow-bar:  0 6px 22px rgba(10, 25, 37, .14);
+  --mm-badge-ink:   #ffffff;
+  --mm-focus:       #0043B8;
+  --mm-ui-bg:       rgba(255, 255, 255, .90);
+  --mm-ui-bd:       #E1E7EC;
+  --mm-grip:        rgba(132, 148, 180, .55);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--mm-paper);
+  color: var(--mm-ink);
+  font-family: var(--mm-font);
+}
+
+[hidden] { display: none !important; }
+
+/* ------------------------------------------------------------ page shell -- */
+.mm-page {
+  position: relative;
+  max-width: 1340px;
+  /* A canvas wider than max-width used to overflow the centred box, so `margin:0 auto`
+     wasted a left gutter exactly as wide as the horizontal scroll it created.
+     min-width beats max-width in CSS, so the page grows to hold the canvas instead. */
+  min-width: fit-content;
+  margin: 0 auto;
+  padding: var(--mm-page-pad-t) var(--mm-page-pad-x) var(--mm-page-pad-b);
+}
+
+.mm-head { margin: 0 0 18px; }
+
+#mm-title,
+.mm-head h1 {
+  font-size: var(--mm-fs-h1);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+.mm-sub {
+  color: var(--mm-ink2);
+  font-size: var(--mm-fs-sub);
+  line-height: 1.5;
+  margin: 0 0 6px;
+  max-width: 100ch;
+}
+
+.mm-hint {
+  color: var(--mm-ink3);
+  font-size: var(--mm-fs-hint);
+  margin: 0;
+}
+
+.mm-head:has(.mm-hint:empty) { margin-bottom: 14px; }
+
+/* ---------------------------------------------------------------- canvas -- */
+.mm-canvas {
+  position: relative;
+  min-height: 560px;
+  margin: 0 0 12px;
+}
+
+.mm-wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Wire LABELS sit in their own layer above the boxes. Under them, any label wider
+   than the lane gap was cut in half by whatever box it crossed — unreadable, and
+   only discoverable by eye. The halo keeps them legible over anything. */
+.mm-wire-labels {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* ----------------------------------------------------------------- nodes -- */
+.mm-node {
+  position: absolute;
+  z-index: 2;
+  border-radius: var(--mm-radius);
+  background: var(--mm-paper);
+  border: 1.5px solid var(--mm-line);
+  padding: var(--mm-node-pad);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: var(--mm-shadow);
+}
+
+.mm-node:active {
+  cursor: grabbing;
+  z-index: 5;
+  box-shadow: var(--mm-shadow-drag);
+}
+
+/* text rows */
+.mm-t {
+  font-weight: 700;
+  font-size: var(--mm-fs-title);
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.mm-d {
+  font-size: var(--mm-fs-body);
+  color: var(--mm-ink2);
+  line-height: 1.45;
+  margin-top: 2px;
+  pointer-events: none;
+}
+
+.mm-rw {
+  font-size: var(--mm-fs-rw);
+  color: var(--mm-ink3);
+  line-height: 1.4;
+  margin-top: 4px;
+  pointer-events: none;
+}
+
+.mm-t code, .mm-d code, .mm-rw code {
+  font-family: var(--mm-mono);
+  font-size: 0.94em;
+}
+
+/* step-number badge — spec-owned, never typed into (it sits inside the editable title) */
+.mm-n {
+  display: inline-block;
+  background: var(--mm-navy);
+  color: var(--mm-badge-ink);
+  font-size: var(--mm-fs-badge);
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 1px 7px;
+  margin-right: 7px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------ node kinds -- */
+/* step — the plain numbered stage */
+.mm-node.kind-step { width: var(--mm-w-wide); }
+
+/* verify — mechanical / style check */
+.mm-node.kind-verify {
+  width: var(--mm-w-wide);
+  border-color: var(--mm-red-bd);
+  background: var(--mm-red-bg);
+}
+.mm-node.kind-verify .mm-n { background: var(--mm-red); }
+
+/* judge — checks intent, not style */
+.mm-node.kind-judge {
+  width: var(--mm-w-wide);
+  border-color: var(--mm-violet-bd2);
+  background: var(--mm-violet-bg);
+}
+.mm-node.kind-judge .mm-n { background: var(--mm-violet); }
+
+/* you / harvest — the human, and the write-back */
+.mm-node.kind-you,
+.mm-node.kind-harvest {
+  width: var(--mm-w-wide);
+  border: 2px solid var(--mm-orange);
+  background: var(--mm-orange-bg);
+}
+.mm-node.kind-you .mm-t,
+.mm-node.kind-harvest .mm-t { color: var(--mm-orange); }
+
+/* brief — the input document */
+.mm-node.kind-brief {
+  width: var(--mm-w-narrow);
+  border: 2px solid var(--mm-violet-bd);
+  background: var(--mm-violet-bg);
+}
+.mm-node.kind-brief .mm-t {
+  color: var(--mm-violet);
+  font-size: var(--mm-fs-title);
+}
+
+/* file — something on disk */
+.mm-node.kind-file {
+  width: var(--mm-w-narrow);
+  border-color: var(--mm-blue-bd);
+  background: var(--mm-blue-bg);
+}
+.mm-node.kind-file .mm-t {
+  color: var(--mm-blue);
+  font-family: var(--mm-mono);
+  font-size: 11.5px;
+}
+
+/* note — an aside; usually body-only */
+.mm-node.kind-note {
+  width: var(--mm-w-narrow);
+  border-style: dashed;
+  background: var(--mm-paper);
+}
+
+/* side — owned elsewhere / optional branch */
+.mm-node.kind-side {
+  width: var(--mm-w-mid);
+  border-color: var(--mm-green-bd);
+  background: var(--mm-green-bg);
+}
+.mm-node.kind-side .mm-t { color: var(--mm-green); }
+
+/* correct — the retry loop */
+.mm-node.kind-correct {
+  width: var(--mm-w-mid);
+  border: 2px solid var(--mm-red-bd2);
+  background: var(--mm-red-bg);
+}
+.mm-node.kind-correct .mm-t { color: var(--mm-red); }
+
+/* ---------------------------------------------------------------- frames -- */
+.mm-frame {
+  position: absolute;
+  z-index: 1;
+  border: 2px solid var(--mm-orange-bd);
+  border-radius: var(--mm-radius-frame);
+  pointer-events: none;
+}
+
+.mm-frame-label {
+  position: absolute;
+  z-index: 1;
+  font-size: var(--mm-fs-frame);
+  font-weight: 700;
+  color: var(--mm-orange);
+  background: var(--mm-paper);
+  padding: 0 8px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.mm-frame[data-color="navy"]   { border-color: var(--mm-navy-bd); }
+.mm-frame[data-color="blue"]   { border-color: var(--mm-blue-bd); }
+.mm-frame[data-color="orange"] { border-color: var(--mm-orange-bd); }
+.mm-frame[data-color="green"]  { border-color: var(--mm-green-bd); }
+.mm-frame[data-color="red"]    { border-color: var(--mm-red-bd); }
+.mm-frame[data-color="violet"] { border-color: var(--mm-violet-bd); }
+.mm-frame[data-color="gray"]   { border-color: var(--mm-gray-bd); }
+
+.mm-frame-label[data-color="navy"]   { color: var(--mm-navy); }
+.mm-frame-label[data-color="blue"]   { color: var(--mm-blue); }
+.mm-frame-label[data-color="orange"] { color: var(--mm-orange); }
+.mm-frame-label[data-color="green"]  { color: var(--mm-green); }
+.mm-frame-label[data-color="red"]    { color: var(--mm-red); }
+.mm-frame-label[data-color="violet"] { color: var(--mm-violet); }
+.mm-frame-label[data-color="gray"]   { color: var(--mm-ink2); }
+
+/* ----------------------------------------------------------------- wires -- */
+/* stroke / fill come from inline attributes written by wires.js; CSS only
+   adds behaviour + state, and re-points the label halo at the page surface. */
+.mm-wire {
+  fill: none;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.mm-wire-label {
+  stroke: var(--mm-paper);          /* the halo — follows the surface in dark mode */
+  paint-order: stroke;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mm-wire-hit {
+  fill: none;
+  stroke: transparent;
+  cursor: pointer;
+}
+
+.mm-wire-layer,
+.mm-label-layer { pointer-events: none; }
+
+.mm-hit-layer { pointer-events: none; }
+body.mm-editing .mm-hit-layer { pointer-events: auto; }
+
+/* ==========================================================================
+   EDITING AFFORDANCES
+   Everything below is chrome. It exists only while body.mm-editing is set,
+   and is switched off wholesale by body.editing-off (screenshot mode).
+   Rule of thumb: nothing appears until you hover or select.
+   ========================================================================== */
+
+/* --- draggable signal: a quiet lift + a grip dot-grid on hover ------------ */
+body.mm-editing .mm-node {
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+
+body.mm-editing .mm-node:hover {
+  box-shadow: var(--mm-shadow-lift);
+}
+
+body.mm-editing .mm-node::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 11px;
+  opacity: 0;
+  transition: opacity .12s ease;
+  pointer-events: none;
+  background-image: radial-gradient(var(--mm-grip) 42%, transparent 44%);
+  background-size: 4px 4px;
+  background-position: 0 0;
+}
+
+body.mm-editing .mm-node:hover::after { opacity: 1; }
+
+/* --- pinned: a small dot in the top-left corner --------------------------- */
+body.mm-editing .mm-node.is-pinned::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mm-orange);
+  box-shadow: 0 0 0 2px var(--mm-paper);
+  pointer-events: none;
+}
+
+/* --- text editing: hover hint, then a soft focus ring -------------------- */
+body.mm-editing .mm-t,
+body.mm-editing .mm-d,
+body.mm-editing .mm-rw {
+  pointer-events: auto;
+  border-radius: 4px;
+  outline: none;
+}
+
+body.mm-editing [contenteditable="true"]:hover {
+  box-shadow: inset 0 0 0 1px var(--mm-line);
+}
+
+/* An emptied row collapses to zero height and becomes unclickable — give it a target
+   back. Pseudo-element content is not in the DOM, so it never reaches the spec. */
+body.mm-editing [contenteditable="true"]:empty::before {
+  content: "…";
+  color: var(--mm-ink3);
+  opacity: .5;
+}
+
+/* The row being edited is the ONLY contenteditable one (double-click turns it on), so it
+   has to opt back out of the node's user-select:none or the caret cannot select anything. */
+body.mm-editing [contenteditable="true"] {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+body.mm-editing [contenteditable="true"]:focus {
+  box-shadow: inset 0 0 0 1.5px var(--mm-focus);
+  background: color-mix(in srgb, var(--mm-focus) 5%, transparent);
+}
+
+/* --- connect mode: crosshair, source ring, target ring -------------------- */
+body.mm-connect .mm-node { cursor: crosshair; }
+
+/* clicks must reach the node, not the caret, while wiring */
+body.mm-connect .mm-t,
+body.mm-connect .mm-d,
+body.mm-connect .mm-rw { pointer-events: none; }
+
+body.mm-connect .mm-node:hover,
+.mm-node.is-hover-target {
+  box-shadow: 0 0 0 2px var(--mm-green), var(--mm-shadow-lift);
+}
+
+.mm-node.is-src,
+body.mm-connect .mm-node.is-src:hover {
+  box-shadow: 0 0 0 2px var(--mm-blue), var(--mm-shadow-lift);
+}
+
+/* --- wire selection ------------------------------------------------------- */
+.mm-wire.is-selected {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 4px rgba(0, 67, 184, .35));
+}
+
+.mm-wire-hit.is-selected { stroke: rgba(0, 67, 184, .08); }
+
+body.mm-editing .mm-wire-hit:hover { stroke: rgba(10, 25, 37, .05); }
+
+/* --- toolbar (in flow, above the canvas) ---------------------------------- */
+/* It used to be position:fixed in the top-right corner. On a 1650px-tall canvas
+   that parked a 670px bar permanently over the diagram: scroll down and it washed
+   out whatever was behind it, and hovering it hid that content completely. */
+.mm-toolbar {
+  position: relative;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-bar-gap);
+  margin: 0 0 14px;
+  padding: 5px;
+  border: 1px solid var(--mm-ui-bd);
+  border-radius: 9px;
+  background: var(--mm-ui-bg);
+  box-shadow: var(--mm-shadow);
+  width: fit-content;
+  opacity: .75;
+  transition: opacity .15s ease, box-shadow .15s ease;
+}
+
+.mm-toolbar:hover,
+.mm-toolbar:focus-within {
+  opacity: 1;
+  box-shadow: var(--mm-shadow-bar);
+}
+
+.mm-btn {
+  font-family: inherit;
+  font-size: var(--mm-fs-ui);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--mm-ink2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s ease, color .12s ease, border-color .12s ease;
+}
+
+.mm-btn:hover {
+  color: var(--mm-ink);
+  background: color-mix(in srgb, var(--mm-ink) 6%, transparent);
+}
+
+.mm-btn:focus-visible {
+  outline: 2px solid var(--mm-focus);
+  outline-offset: 1px;
+}
+
+.mm-btn[aria-pressed="true"],
+.mm-btn.is-on {
+  color: var(--mm-blue);
+  border-color: var(--mm-blue-bd);
+  background: var(--mm-blue-bg);
+}
+
+.mm-btn-primary {
+  color: var(--mm-paper);
+  background: var(--mm-navy);
+}
+
+.mm-btn-primary:hover {
+  color: var(--mm-paper);
+  background: color-mix(in srgb, var(--mm-navy) 85%, #000);
+}
+
+/* --- edge-style bar (floated next to the selected wire by editor.js) ------ */
+#mm-edge-bar {
+  position: absolute;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: var(--mm-bar-gap);
+  padding: 5px 6px;
+  border: 1px solid var(--mm-ui-bd);
+  border-radius: 8px;
+  background: var(--mm-ui-bg);
+  backdrop-filter: saturate(150%) blur(6px);
+  -webkit-backdrop-filter: saturate(150%) blur(6px);
+  box-shadow: var(--mm-shadow-bar);
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-ink2);
+}
+
+#mm-edge-bar .mm-btn { padding: 4px 8px; }
+
+#mm-edge-bar input[type="text"] {
+  font-family: inherit;
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-ink);
+  background: var(--mm-paper);
+  border: 1px solid var(--mm-line);
+  border-radius: 6px;
+  padding: 4px 7px;
+  min-width: 150px;
+}
+
+#mm-edge-bar input[type="text"]:focus-visible {
+  outline: 2px solid var(--mm-focus);
+  outline-offset: 0;
+}
+
+/* the current wire colour, between the ◀ ▶ cycler buttons (#mm-eb-swatch) */
+#mm-edge-bar .mm-chip {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(10, 25, 37, .12);
+}
+
+/* --- validation banner ---------------------------------------------------- */
+#mm-errors {
+  margin: 0 0 14px;
+  padding: 10px 13px;
+  border: 1.5px solid var(--mm-red-bd);
+  border-radius: 8px;
+  background: var(--mm-red-bg);
+  color: var(--mm-red);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#mm-errors ul { margin: 4px 0 0; padding-left: 18px; }
+#mm-errors li { font-family: var(--mm-mono); font-size: 11px; }
+
+/* ---------------------------------------------------------------- legend -- */
+.mm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-legend-gap);
+  margin-top: 10px;
+  font-size: var(--mm-fs-legend);
+  color: var(--mm-ink2);
+}
+
+.mm-legend-item,
+.mm-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mm-sw {
+  display: block;
+  width: 20px;
+  border-top: 3px solid;
+  flex: 0 0 auto;
+}
+
+.mm-sw.dash {
+  border-top-style: dashed;
+  border-top-width: 2px;
+}
+
+/* box swatch — a legend entry for a node KIND rather than a wire colour, so the
+   loud boxes on the canvas (the human call, the thing owned elsewhere) get a key
+   too. Mirrors the kind borders/fills above; the reference carried four of these. */
+.mm-bx {
+  display: block;
+  width: 19px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 1.5px solid var(--mm-line);
+  border-radius: 3px;
+  background: var(--mm-paper);
+}
+
+.mm-bx.kind-verify  { border-color: var(--mm-red-bd);     background: var(--mm-red-bg); }
+.mm-bx.kind-judge   { border-color: var(--mm-violet-bd2); background: var(--mm-violet-bg); }
+.mm-bx.kind-you,
+.mm-bx.kind-harvest { border-color: var(--mm-orange);     background: var(--mm-orange-bg); }
+.mm-bx.kind-brief   { border-color: var(--mm-violet-bd);  background: var(--mm-violet-bg); }
+.mm-bx.kind-file    { border-color: var(--mm-blue-bd);    background: var(--mm-blue-bg); }
+.mm-bx.kind-note    { border-style: dashed; }
+.mm-bx.kind-side    { border-color: var(--mm-green-bd);   background: var(--mm-green-bg); }
+.mm-bx.kind-correct { border-color: var(--mm-red-bd2);    background: var(--mm-red-bg); }
+
+/* ==========================================================================
+   SCREENSHOT / PRINT MODE — body.editing-off strips every affordance so the
+   page looks exactly like the hand-authored reference.
+   ========================================================================== */
+body.editing-off .mm-toolbar,
+body.editing-off #mm-edge-bar,
+body.editing-off .mm-hint,
+body.editing-off #mm-errors { display: none !important; }
+
+body.editing-off .mm-node { cursor: default; box-shadow: var(--mm-shadow); }
+body.editing-off .mm-node:hover { box-shadow: var(--mm-shadow); }
+body.editing-off .mm-node::after,
+body.editing-off .mm-node::before { display: none !important; }
+
+body.editing-off .mm-node.is-src,
+body.editing-off .mm-node.is-hover-target { box-shadow: var(--mm-shadow); }
+
+body.editing-off .mm-t,
+body.editing-off .mm-d,
+body.editing-off .mm-rw {
+  pointer-events: none;
+  box-shadow: none !important;
+  background: none !important;
+}
+
+body.editing-off .mm-wire.is-selected { stroke-width: 2.5; filter: none; }
+body.editing-off .mm-wire-hit,
+body.editing-off .mm-wire-hit.is-selected { stroke: transparent !important; }
+
+@media print {
+  :root { color-scheme: light; }
+  body { background: #fff; }
+  .mm-toolbar, #mm-edge-bar, #mm-errors { display: none !important; }
+  .mm-node { box-shadow: none; }
+  .mm-page { padding-top: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ==========================================================================
+   DARK MODE
+   Only surfaces, tints and the wire palette are remapped — the light
+   appearance above is untouched. Wire strokes and marker fills are written
+   as inline attributes by wires.js, so they are re-pointed here by matching
+   on the literal hex.
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --mm-ink:        #E8EEF4;
+    --mm-ink2:       #A6B4C1;
+    --mm-ink3:       #7B8A9C;
+    --mm-line:       #27343F;
+    --mm-paper:      #0E161D;
+
+    --mm-navy:       #A9BED4;
+    --mm-blue:       #7FA9F0;
+    --mm-orange:     #FF8A4D;
+    --mm-green:      #4FC98A;
+    --mm-red:        #F0857A;
+    --mm-violet:     #B694E0;
+    --mm-gray:       #8A98A5;
+
+    --mm-blue-bd:    #2A4870;   --mm-blue-bg:    #101C2B;
+    --mm-violet-bd:  #4A3670;   --mm-violet-bg:  #191428;
+    --mm-violet-bd2: #56417F;
+    --mm-red-bd:     #6A342C;   --mm-red-bg:     #241413;
+    --mm-red-bd2:    #5C3730;
+    --mm-green-bd:   #2A6547;   --mm-green-bg:   #0E2018;
+    --mm-orange-bd:  #7A3A18;   --mm-orange-bg:  #26140A;
+    --mm-navy-bd:    #35485D;
+    --mm-gray-bd:    #313E49;
+
+    --mm-shadow:      0 1px 3px rgba(0, 0, 0, .55);
+    --mm-shadow-lift: 0 3px 10px rgba(0, 0, 0, .60);
+    --mm-shadow-drag: 0 4px 14px rgba(0, 0, 0, .65);
+    --mm-shadow-bar:  0 6px 22px rgba(0, 0, 0, .70);
+    --mm-badge-ink:   #0E161D;
+    --mm-focus:       #7FA9F0;
+    --mm-ui-bg:       rgba(20, 30, 39, .90);
+    --mm-ui-bd:       #27343F;
+    --mm-grip:        rgba(166, 180, 193, .50);
+  }
+
+  .mm-node.kind-you .mm-t,
+  .mm-node.kind-harvest .mm-t { color: var(--mm-orange); }
+
+  /* the orange "you / harvest" border reads too hot at full strength on dark */
+  .mm-node.kind-you,
+  .mm-node.kind-harvest { border-color: #B8542A; }
+
+  .mm-btn-primary {
+    color: #0E161D;
+    background: var(--mm-navy);
+  }
+  .mm-btn-primary:hover {
+    color: #0E161D;
+    background: color-mix(in srgb, var(--mm-navy) 85%, #fff);
+  }
+
+  .mm-wire.is-selected { filter: drop-shadow(0 0 4px rgba(127, 169, 240, .45)); }
+  .mm-wire-hit.is-selected { stroke: rgba(127, 169, 240, .10); }
+  body.mm-editing .mm-wire-hit:hover { stroke: rgba(232, 238, 244, .06); }
+
+  /* wire strokes — remap the seven literal hexes wires.js writes inline */
+  .mm-wire[stroke="#1C3550"] { stroke: #9DB4CE; }
+  .mm-wire[stroke="#0043B8"] { stroke: #7FA9F0; }
+  .mm-wire[stroke="#E64A00"] { stroke: #FF8A4D; }
+  .mm-wire[stroke="#0E8A4D"] { stroke: #4FC98A; }
+  .mm-wire[stroke="#C93A2B"] { stroke: #F0857A; }
+  .mm-wire[stroke="#6B3FA0"] { stroke: #B694E0; }
+  .mm-wire[stroke="#A6B3BE"] { stroke: #7E8C97; }
+
+  /* wire labels — fill follows the same remap; halo is var(--mm-paper) */
+  .mm-wire-label[fill="#1C3550"] { fill: #9DB4CE; stroke: var(--mm-paper); }
+  .mm-wire-label[fill="#0043B8"] { fill: #7FA9F0; }
+  .mm-wire-label[fill="#E64A00"] { fill: #FF8A4D; }
+  .mm-wire-label[fill="#0E8A4D"] { fill: #4FC98A; }
+  .mm-wire-label[fill="#C93A2B"] { fill: #F0857A; }
+  .mm-wire-label[fill="#6B3FA0"] { fill: #B694E0; }
+  .mm-wire-label[fill="#A6B3BE"] { fill: #7E8C97; }
+
+  /* arrowheads live in <defs> as <marker><path fill="…"> */
+  #mm-wires marker path[fill="#1C3550"] { fill: #9DB4CE; }
+  #mm-wires marker path[fill="#0043B8"] { fill: #7FA9F0; }
+  #mm-wires marker path[fill="#E64A00"] { fill: #FF8A4D; }
+  #mm-wires marker path[fill="#0E8A4D"] { fill: #4FC98A; }
+  #mm-wires marker path[fill="#C93A2B"] { fill: #F0857A; }
+  #mm-wires marker path[fill="#6B3FA0"] { fill: #B694E0; }
+  #mm-wires marker path[fill="#A6B3BE"] { fill: #7E8C97; }
+}
+
+/* ------------------------------------------------------------ small screen */
+@media (max-width: 820px) {
+  .mm-toolbar { opacity: 1; }
+}
+
+</style>
+</head>
+<body>
+<div class="mm-page">
+  <header class="mm-head">
+    <h1 id="mm-title"></h1>
+    <p class="mm-sub"  id="mm-sub"></p>
+    <p class="mm-hint" id="mm-hint"></p>
+  </header>
+
+  <div class="mm-toolbar" id="mm-toolbar">
+    <button type="button" id="mm-btn-connect"   class="mm-btn">Connect (C)</button>
+    <button type="button" id="mm-btn-relayout"  class="mm-btn">Re-layout</button>
+    <button type="button" id="mm-btn-clearpins" class="mm-btn">Clear pins</button>
+    <button type="button" id="mm-btn-export"    class="mm-btn mm-btn-primary">Export spec</button>
+  </div>
+
+  <div id="mm-errors" hidden></div>
+
+  <div id="mm-canvas" class="mm-canvas">
+    <svg id="mm-wires" class="mm-wires"></svg>
+    <!-- frames, then nodes, injected here by MMLayout.build -->
+    <svg id="mm-wire-labels" class="mm-wire-labels"></svg>
+  </div>
+
+  <div class="mm-legend" id="mm-legend"></div>
+  <div id="mm-edge-bar" hidden></div>
+</div>
+
+<script>
+window.MM_SPEC = {
+  META: {
+    title: 'Design harness — the design up for approval',
+    subtitle: 'A brief goes in, a screen in the house style comes out, and the judgement spent on it is written back so the next run starts smarter. The corpus is ten small annotated prototypes, not one big canonical app — that was the simplification.',
+    legend: [
+      { c: 'navy',   label: 'build flow' },
+      { c: 'violet', label: 'the brief, and the check that it was answered' },
+      { c: 'red',    label: 'correction loop — the whole surface re-verifies' },
+      { c: 'orange', label: 'harvest — your decisions written back' },
+      { c: 'green',  label: 'owned elsewhere — leaves as a PR' },
+      { c: 'gray',   label: 'reads', dash: 1 },
+      { k: 'you',    label: 'you, and the calls only you can make' },
+      { k: 'file',   label: 'an asset on disk' },
+      { k: 'judge',  label: 'a fresh agent, deliberately kept ignorant' }
+    ]
+  },
+
+  LANES: [
+    { id: 'assets' },
+    { id: 'run' },
+    { id: 'join', gap: 40 },
+    { id: 'close' }
+  ],
+
+  FRAMES: [
+    { id: 'corpus', label: 'THE CORPUS — what "good" looks like', color: 'orange',
+      nodes: ['protos', 'annotations', 'donts'] },
+    { id: 'verify', label: 'ONE PASS — everything below runs, then adjudicate decides', color: 'red',
+      nodes: ['lint', 'render', 'designjudge', 'productjudge'] }
+  ],
+
+  NODES: [
+    // ---- assets ----
+    { id: 'brief', lane: 'assets', kind: 'brief', title: 'THE BRIEF',
+      body: 'a feature spec or PRD — the problem, who it is for, and what counts as solved. Written by a person; the harness never invents one from an investigation' },
+
+    { id: 'quickref', lane: 'assets', kind: 'note',
+      body: '<b>Quick reference</b> — the surface × register list, eleven rows. It fixes what kind of thing you are building, which decides every anchor and every scoped rule after it' },
+
+    { id: 'reqtemplate', lane: 'assets', kind: 'file', title: 'requirements-template.md',
+      body: 'the edge cases we always forget, inherited by every brief — free-plan behaviour, the empty case, what happens after the primary action' },
+
+    { id: 'content', lane: 'assets', kind: 'file', title: 'content.md',
+      body: 'the real strings and numbers — plan names, prices, limits, error copy. Carries an owner and a date. Nothing user-visible may be invented' },
+
+    { id: 'tokens', lane: 'assets', kind: 'file', title: 'design-system/',
+      body: 'pai.css, components.html, template.html — the only vocabulary. Linked by relative path, never copied. Owned by someone else and PR-gated' },
+
+    { id: 'protos', lane: 'assets', kind: 'file', title: 'ten canonical prototypes',
+      body: 'small, isolated, one surface each — the anchors a build is few-shot on. <b>This is the change.</b> Retrieval used to come back with fewer than two hits and every run went unanchored; ten deliberately-chosen files fix that without maintaining a whole replica app' },
+
+    { id: 'annotations', lane: 'assets', kind: 'file', title: 'annotations/',
+      body: 'element-level comments left in the browser — what is wrong here, and what to do instead. Committed as files beside the design they describe, so the comment and the thing move together and harvest just reads them' },
+
+    { id: 'donts', lane: 'assets', kind: 'file', title: 'the anti-pattern table',
+      body: 'every rejection, as ❌ don\'t / ✅ do / why, pointing at the file where the bad thing already sits. It <b>is</b> the design judge\'s rubric, and it reaches the builder too — a rejection only the judge sees is one we pay to rediscover every run' },
+
+    { id: 'lintscript', lane: 'assets', kind: 'file', title: 'lint/pai-lint.py',
+      body: 'everything checkable without judgement. It reports which checks it has not got yet, so a thin lint never reads as a clean bill of health' },
+
+    // ---- the run ----
+    { id: 'frame', lane: 'run', kind: 'step', n: '0', title: 'FRAME THE BRIEF',
+      body: 'check the assets are all there — a missing one stops the run rather than quietly degrading it. Then turn the doc into a numbered checklist and fix the surface and register. Anything you could not settle by looking at a picture is marked <b>not checkable</b> instead of being reworded into something scoreable' },
+
+    { id: 'gate', lane: 'run', kind: 'you', title: 'YOU RATIFY — surface, register, the list',
+      body: 'a minute or two, honestly, before a line is generated. The builder and the product judge both score against this list, so if it is wrong they are wrong together and the second opinion buys nothing',
+      foot: 'the only stop that waits for you — every other human moment ends the run and hands it back' },
+
+    { id: 'retrieve', lane: 'run', kind: 'step', n: '1', title: 'RETRIEVE THE ANCHORS',
+      body: 'up to three prototypes on the same surface and register, widening if too few hit. At least one must be human-made whenever one exists — the only thing stopping the corpus from feeding on its own output' },
+
+    { id: 'generate', lane: 'run', kind: 'step', n: '2', title: 'GENERATE',
+      body: 'build against the ratified list, <b>few-shot on the anchors just retrieved</b> — this is the one moment prevention is cheaper than correction. A number content.md cannot resolve stops the run rather than being invented' },
+
+    { id: 'lint', lane: 'run', kind: 'verify', n: '3', title: 'LINT — two phases',
+      body: 'on the file first, in milliseconds: no inline styles, no colour or spacing literals, no placeholder text. Then on each rendered state: every price and number checked against content.md, plus contrast, accessible names and focus rings',
+      foot: 'a source failure short-circuits — no screenshots, no judges, no pass spent' },
+
+    { id: 'render', lane: 'run', kind: 'verify', n: '4', title: 'RENDER EVERY STATE',
+      body: 'a real browser, at phone and desktop width. A state you reach by clicking is <b>driven through the interface</b> — so the renderer is the one that found out whether it is reachable, and neither judge is asked to guess' },
+
+    { id: 'designjudge', lane: 'run', kind: 'judge', n: '5', title: 'DESIGN JUDGE — does it look right?',
+      body: 'a fresh agent given the pictures, the rubric, and the same anchors the builder saw. Never the brief, the checklist, the code, or how the thing was built — a judge holding the style rules starts excusing a missing error state as restraint',
+      foot: 'its verdict on the anchor is advisory, always — direction is yours' },
+
+    { id: 'productjudge', lane: 'run', kind: 'judge', n: '6', title: 'PRODUCT JUDGE — does it solve the brief?',
+      body: 'a second fresh agent given the brief, the ratified list, the content, every state and the code. Walks the list one requirement at a time. Anything the brief obliged that the list never mentioned <b>stops the run</b> — the list was wrong, so correcting against it would be aiming at the wrong target' },
+
+    { id: 'deliver', lane: 'run', kind: 'step', n: '7', title: 'DELIVER',
+      body: 'the only way out, including every stop. It always names what went unjudged and which checks were never written, so a thin pass can never be mistaken for a clean one' },
+
+    // ---- the join ----
+    { id: 'adjudicate', lane: 'join', kind: 'correct', title: 'ADJUDICATE',
+      body: 'waits for both judges, adds the lint\'s and the renderer\'s findings, and routes to exactly one of deliver, correct, or stop. Clean means <b>nothing blocking from anywhere</b>',
+      alignWith: 'designjudge' },
+
+    { id: 'conflict', lane: 'join', kind: 'note',
+      body: 'two blocking findings that cannot both be satisfied end the run and are quoted back to you verbatim. A finding that merely survives a fix is not a conflict — it means the edit helped without finishing the job' },
+
+    { id: 'correct', lane: 'join', kind: 'correct', title: 'CORRECT',
+      body: 'targeted edits, never a regenerate, so nothing already right gets gambled away. Then the whole surface re-verifies, because fixing one thing breaks another constantly',
+      foot: 'two passes total, then it delivers the best one' },
+
+    // ---- close ----
+    { id: 'you', lane: 'close', kind: 'you', title: 'YOU — the taste, and the call on the brief',
+      body: 'accept it · reject it and say why (the why is the whole payload) · override a rule · settle something the brief implied but the list missed',
+      alignWith: 'deliver' },
+
+    { id: 'harvest', lane: 'close', kind: 'harvest', title: 'HARVEST — where the judgement is kept',
+      body: 'opens with one question, always: <b>is this the reference for this surface?</b> A yes makes it the newest anchor. Then every other learning goes to exactly one home, you confirm each write, and every write prunes — nothing here only grows',
+      foot: 'nothing worth keeping? it says so in one line and stops' },
+
+    { id: 'ladder', lane: 'close', kind: 'note',
+      body: 'the point of the whole thing: a rule argued about twice becomes a written rule, and a written rule that turns out mechanically checkable becomes a lint check — where it is enforced for free instead of re-litigated every run' },
+
+    { id: 'comppr', lane: 'close', kind: 'side', title: 'component PR',
+      body: 'a snippet you keep rebuilding is proposed to whoever owns the design system, never quietly ported in' }
+  ],
+
+  EDGES: [
+    // in
+    { f: 'brief',    t: 'frame',  c: 'violet', l: 'the ask' },
+    { f: 'quickref', t: 'frame',  c: 'gray', dash: 1 },
+    { f: 'reqtemplate', t: 'frame', c: 'gray', dash: 1 },
+    { f: 'frame',    t: 'gate',   c: 'navy', l: 'the checklist' },
+    { f: 'gate',     t: 'retrieve', c: 'navy', l: 'ratified' },
+
+    // build
+    { f: 'protos',   t: 'retrieve', c: 'gray', dash: 1, l: 'the anchors' },
+    { f: 'retrieve', t: 'generate', c: 'navy' },
+    { f: 'tokens',   t: 'generate', c: 'gray', dash: 1 },
+    { f: 'content',  t: 'generate', c: 'gray', dash: 1 },
+    { f: 'donts',    t: 'generate', c: 'gray', dash: 1, l: 'known failures' },
+    { f: 'generate', t: 'lint',   c: 'navy', l: 'a draft you have not seen' },
+    { f: 'lintscript', t: 'lint', c: 'gray', dash: 1 },
+    { f: 'lint',     t: 'render', c: 'navy' },
+    { f: 'render',   t: 'designjudge', c: 'navy', l: 'the pictures' },
+    { f: 'render',   t: 'productjudge', c: 'violet', side: 'left', bulge: 60 },
+    { f: 'brief',    t: 'productjudge', c: 'violet', dash: 1, side: 'left', bulge: 300 },
+    { f: 'donts',    t: 'designjudge', c: 'gray', dash: 1, l: 'the rubric' },
+
+    // join
+    { f: 'designjudge',  t: 'adjudicate', c: 'red' },
+    { f: 'productjudge', t: 'adjudicate', c: 'violet' },
+    { f: 'lint',   t: 'adjudicate', c: 'red', side: 'right', bulge: 40 },
+    { f: 'render', t: 'adjudicate', c: 'red', side: 'right', bulge: 70, l: 'a state it could not reach' },
+    { f: 'adjudicate', t: 'correct', c: 'red', l: 'something blocking' },
+    { f: 'correct', t: 'lint', c: 'red', side: 'right', bulge: 90, l: 'then the whole surface re-verifies' },
+    { f: 'adjudicate', t: 'deliver', c: 'navy', side: 'right', bulge: 130, l: 'nothing blocking anywhere' },
+    { f: 'productjudge', t: 'deliver', c: 'violet', side: 'left', bulge: 110, l: 'the brief obliged something the list missed' },
+
+    // close
+    { f: 'deliver', t: 'you', c: 'navy' },
+    { f: 'you', t: 'harvest', c: 'navy', l: 'the session ends here' },
+    { f: 'annotations', t: 'harvest', c: 'orange', side: 'left', bulge: 340, l: 'what designers marked up' },
+
+    // write-back
+    { f: 'harvest', t: 'protos',      c: 'orange', side: 'left', bulge: 40,  l: 'a new anchor' },
+    { f: 'harvest', t: 'donts',       c: 'orange', side: 'left', bulge: 90,  l: 'a rejection, and why' },
+    { f: 'harvest', t: 'lintscript',  c: 'orange', side: 'left', bulge: 140, l: 'a rule that turned out checkable' },
+    { f: 'harvest', t: 'reqtemplate', c: 'orange', side: 'left', bulge: 190, l: 'a miss we keep making' },
+    { f: 'harvest', t: 'content',     c: 'orange', side: 'left', bulge: 240, l: 'a number that was wrong' },
+    { f: 'harvest', t: 'brief',       c: 'violet', side: 'left', bulge: 290, l: 'the doc itself was wrong' },
+    { f: 'harvest', t: 'comppr',      c: 'green' }
+  ]
+};
+
+</script>
+<script>
+/* mindmap engine — layout.js
+   window.MMLayout : DOM build, measurement, lane placement, frames, validation.
+   Knows nothing about wires or editing. Assigns exactly one global, touches no DOM at load time. */
+
+(function () {
+  'use strict';
+
+  var DEFAULTS = {
+    laneGap: 120,
+    rowGap: 28,
+    padX: 24,
+    padY: 24,
+    minW: 900,
+    minH: 560,
+    hint: 'Drag any box to move it — connections follow. Double-click its text to edit.',
+    framePad: { x: 16, top: 30, bottom: 16 },
+    frameLabelDy: 40,
+    frameLabelDx: 2
+  };
+
+  // Informational only — engine.css is authoritative for widths.
+  var KINDS = {
+    step: { w: 380 }, verify: { w: 380 }, judge: { w: 380 }, you: { w: 380 }, harvest: { w: 380 },
+    brief: { w: 218 }, file: { w: 218 }, note: { w: 218 },
+    side: { w: 230 }, correct: { w: 230 }
+  };
+
+  // Local copy so layout.js never depends on wires.js loading first; MMWires wins if present.
+  var COLOR_KEYS = ['navy', 'orange', 'green', 'blue', 'red', 'violet', 'gray'];
+  var MIN_LANE_W = 40;
+  var ID_RE = /^[A-Za-z0-9_-]+$/;
+
+  var _measured = {};   // nodeId -> { w, h }
+  var _warnedAlign = {};   // nodeId -> 1, so a bad alignWith warns once, not once per frame
+  var _needs = {};      // nodeId -> { left, top } room the drawing needs outside the box
+  var ZERO_NEED = { left: 0, top: 0 };
+
+  /* ---------------------------------------------------------------- helpers */
+
+  function num(v, d) { return (typeof v === 'number' && isFinite(v)) ? v : d; }
+
+  function colorKeys() {
+    return (window.MMWires && window.MMWires.COLOR) ? Object.keys(window.MMWires.COLOR) : COLOR_KEYS;
+  }
+
+  function escText(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var ALLOWED_TAGS = { B: 1, STRONG: 1, I: 1, EM: 1, CODE: 1, BR: 1 };
+
+  // Inline-HTML allowlist: b/strong/i/em/code/br, no attributes; anything else collapses to its text.
+  function walk(node) {
+    var out = '';
+    for (var c = node.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 3) {
+        out += escText(c.nodeValue);
+      } else if (c.nodeType === 1) {
+        var tag = c.tagName;
+        if (ALLOWED_TAGS[tag]) {
+          var lower = tag.toLowerCase();
+          out += (lower === 'br') ? '<br>' : '<' + lower + '>' + walk(c) + '</' + lower + '>';
+        } else {
+          out += walk(c);
+        }
+      }
+    }
+    return out;
+  }
+
+  function san(html) {
+    if (html === undefined || html === null || html === '') return '';
+    var box = document.createElement('div');
+    box.innerHTML = String(html);
+    return walk(box);
+  }
+
+  function setHTML(el, html) { if (el) el.innerHTML = san(html); }
+
+  /* --------------------------------------------------------------- validate */
+
+  function validate(spec) {
+    var errs = [];
+    if (!spec || typeof spec !== 'object') return ['spec is missing — window.MM_SPEC is not an object'];
+
+    var meta = spec.META || {};
+    if (!meta.title) errs.push('META.title is required');
+
+    var lanes = spec.LANES || [];
+    if (!lanes.length) errs.push('LANES is empty — at least one lane is required');
+    var laneSeen = {};
+    lanes.forEach(function (ln, i) {
+      if (!ln || !ln.id) { errs.push('LANES[' + i + '] has no id'); return; }
+      if (laneSeen[ln.id]) errs.push('duplicate lane id "' + ln.id + '"');
+      laneSeen[ln.id] = 1;
+      if (ln.align && ln.align !== 'left' && ln.align !== 'center') {
+        errs.push('lane "' + ln.id + '" has align "' + ln.align + '" (expected left|center)');
+      }
+    });
+
+    var nodes = spec.NODES || [];
+    var nodeSeen = {}, alignRefs = [];
+    nodes.forEach(function (n, i) {
+      if (!n || !n.id) { errs.push('NODES[' + i + '] has no id'); return; }
+      if (!ID_RE.test(n.id)) errs.push('node id "' + n.id + '" is not [A-Za-z0-9_-]+');
+      if (nodeSeen[n.id]) errs.push('duplicate node id "' + n.id + '"');
+      nodeSeen[n.id] = 1;
+      if (!n.lane) errs.push('node "' + n.id + '" has no lane');
+      else if (!laneSeen[n.lane]) errs.push('node "' + n.id + '" refers to unknown lane "' + n.lane + '"');
+      if (!n.kind) errs.push('node "' + n.id + '" has no kind');
+      else if (!KINDS[n.kind]) errs.push('node "' + n.id + '" has unknown kind "' + n.kind + '"');
+      if (n.pin && (typeof n.pin.x !== 'number' || typeof n.pin.y !== 'number')) {
+        errs.push('node "' + n.id + '" has a malformed pin (expected {x,y} numbers)');
+      }
+      if (n.alignWith !== undefined) alignRefs.push([n.id, n.alignWith]);
+    });
+    alignRefs.forEach(function (p) {
+      if (!nodeSeen[p[1]]) errs.push('node "' + p[0] + '" aligns with unknown node "' + p[1] + '"');
+      else if (p[1] === p[0]) errs.push('node "' + p[0] + '" aligns with itself');
+    });
+
+    var keys = colorKeys();
+    (spec.EDGES || []).forEach(function (e, i) {
+      if (!e || !e.f || !e.t) { errs.push('EDGES[' + i + '] is missing f or t'); return; }
+      if (!nodeSeen[e.f]) errs.push('edge ' + i + ' (' + e.f + ' → ' + e.t + ') has unknown source "' + e.f + '"');
+      if (!nodeSeen[e.t]) errs.push('edge ' + i + ' (' + e.f + ' → ' + e.t + ') has unknown target "' + e.t + '"');
+      if (!e.c) errs.push('edge ' + i + ' (' + e.f + ' → ' + e.t + ') has no colour');
+      else if (keys.indexOf(e.c) === -1) {
+        errs.push('edge ' + i + ' (' + e.f + ' → ' + e.t + ') has unknown colour "' + e.c + '"');
+      }
+    });
+
+    var frameSeen = {};
+    (spec.FRAMES || []).forEach(function (f, i) {
+      if (!f || !f.id) { errs.push('FRAMES[' + i + '] has no id'); return; }
+      if (frameSeen[f.id]) errs.push('duplicate frame id "' + f.id + '"');
+      frameSeen[f.id] = 1;
+      if (!f.nodes || !f.nodes.length) { errs.push('frame "' + f.id + '" has no nodes'); return; }
+      f.nodes.forEach(function (id) {
+        if (!nodeSeen[id]) errs.push('frame "' + f.id + '" refers to unknown node "' + id + '"');
+      });
+    });
+
+    return errs;
+  }
+
+  function showErrors(errs) {
+    var box = document.getElementById('mm-errors');
+    if (!box || !errs || !errs.length) return;
+    var html = '<strong>' + errs.length + ' spec problem' + (errs.length === 1 ? '' : 's') + '</strong><ul>';
+    for (var i = 0; i < errs.length; i++) html += '<li>' + escText(errs[i]) + '</li>';
+    box.innerHTML = html + '</ul>';
+    box.hidden = false;
+    box.removeAttribute('hidden');
+  }
+
+  /* ------------------------------------------------------------------ build */
+
+  function buildNodeEl(n) {
+    var el = document.createElement('div');
+    el.className = 'mm-node kind-' + n.kind + (n.pin ? ' is-pinned' : '');
+    el.id = 'n-' + n.id;
+    el.setAttribute('data-id', n.id);
+    el.setAttribute('data-kind', n.kind);
+    el.setAttribute('data-lane', n.lane);
+    if (n.pin) el.setAttribute('data-pinned', '1');
+    if (typeof n.w === 'number') el.style.width = n.w + 'px';
+
+    var html = '';
+    // A row exists when its KEY exists — including an empty string. Omitting on '' made an
+    // emptied row unrecoverable in the browser (no element left to type back into).
+    var hasN = (n.n !== undefined && n.n !== '' && n.n !== null);
+    if (n.title !== undefined || hasN) {
+      html += '<div class="mm-t" data-field="title">';
+      // contenteditable=false so the caret cannot enter the badge and Home+type cannot corrupt it
+      if (hasN) html += '<span class="mm-n" data-field="n" contenteditable="false">' + escText(n.n) + '</span>';
+      html += san(n.title) + '</div>';
+    }
+    if (n.body !== undefined) html += '<div class="mm-d" data-field="body">' + san(n.body) + '</div>';
+    if (n.rw !== undefined) html += '<div class="mm-rw" data-field="rw">' + san(n.rw) + '</div>';
+    el.innerHTML = html;
+    return el;
+  }
+
+  function buildLegend(meta) {
+    var host = document.getElementById('mm-legend');
+    if (!host) return;
+    var items = meta.legend || [];
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i] || {};
+      // `k` is a node KIND — a box swatch. `c` is a wire colour — a line swatch.
+      // Without the box form the loudest things on the canvas had no key at all.
+      var sw = (it.k && KINDS[it.k])
+        ? '<span class="mm-bx kind-' + escText(it.k) + '"></span>'
+        : '<span class="mm-sw' + (it.dash ? ' dash' : '') +
+          '" style="border-color:var(--mm-' + escText(it.c || 'navy') + ')"></span>';
+      html += '<span class="mm-legend-item">' + sw + escText(it.label || '') + '</span>';
+    }
+    host.innerHTML = html;
+  }
+
+  function build(spec, canvasEl) {
+    var canvas = canvasEl || document.getElementById('mm-canvas');
+    if (!canvas) throw new Error('MMLayout.build: #mm-canvas not found');
+    var svg = document.getElementById('mm-wires');
+    var svgLabels = document.getElementById('mm-wire-labels');   // may be absent (old template)
+
+    // Idempotent: wipe everything we previously injected, keep the two wire svgs.
+    var kids = Array.prototype.slice.call(canvas.children);
+    for (var k = 0; k < kids.length; k++) {
+      if (kids[k] !== svg && kids[k] !== svgLabels) canvas.removeChild(kids[k]);
+    }
+
+    var meta = spec.META || {};
+    var titleEl = document.getElementById('mm-title');
+    if (titleEl) titleEl.textContent = meta.title || '';
+    var subEl = document.getElementById('mm-sub');
+    if (subEl) { setHTML(subEl, meta.subtitle || ''); subEl.hidden = !(meta.subtitle); }
+    var hintEl = document.getElementById('mm-hint');
+    if (hintEl) {
+      var hint = (meta.hint === undefined) ? DEFAULTS.hint : meta.hint;
+      setHTML(hintEl, hint);
+      hintEl.hidden = !hint;
+    }
+    buildLegend(meta);
+    if (typeof meta.maxWidth === 'number') {
+      var page = document.querySelector('.mm-page');
+      if (page) page.style.maxWidth = meta.maxWidth + 'px';
+    }
+
+    // Frames first, then nodes — paint order is wires < frames < nodes.
+    var frameEls = {};
+    (spec.FRAMES || []).forEach(function (f) {
+      if (!f || !f.id) return;
+      var col = f.color || 'orange';
+      var band = document.createElement('div');
+      band.className = 'mm-frame';
+      band.id = 'f-' + f.id;
+      band.setAttribute('data-frame', f.id);
+      band.setAttribute('data-color', col);
+      canvas.appendChild(band);
+      var label = null;
+      if (f.label) {
+        label = document.createElement('div');
+        label.className = 'mm-frame-label';
+        label.id = 'fl-' + f.id;
+        label.setAttribute('data-frame', f.id);
+        label.setAttribute('data-color', col);
+        label.textContent = f.label;
+        canvas.appendChild(label);
+      }
+      frameEls[f.id] = { band: band, label: label, spec: f };
+    });
+
+    var nodeEl = {}, nodeById = {};
+    (spec.NODES || []).forEach(function (n) {
+      if (!n || !n.id || !KINDS[n.kind]) {
+        if (n && n.id) console.warn('MMLayout: skipping node "' + n.id + '" — unknown kind "' + n.kind + '"');
+        return;
+      }
+      var el = buildNodeEl(n);
+      canvas.appendChild(el);
+      nodeEl[n.id] = el;
+      nodeById[n.id] = n;
+    });
+
+    _measured = {};
+
+    window.MM = {
+      spec: spec,
+      canvas: canvas,
+      svg: svg,
+      svgLabels: svgLabels,
+      nodeEl: nodeEl,
+      nodeById: nodeById,
+      frameEl: frameEls,
+      lanes: [],
+      size: { w: DEFAULTS.minW, h: DEFAULTS.minH },
+      redraw: function () {
+        layout();
+        if (window.MMWires) window.MMWires.render();
+      }
+    };
+  }
+
+  /* ---------------------------------------------------------------- measure */
+
+  // Heights are always read from the live DOM — never assumed — so text length can never
+  // force the author to retune a position. offsetWidth/offsetHeight (not getBoundingClientRect)
+  // so measurement and rectOf() agree exactly and wires land on the painted border.
+  function measure() {
+    var MM = window.MM;
+    if (!MM) return;
+    _measured = {};
+    for (var id in MM.nodeEl) {
+      if (!Object.prototype.hasOwnProperty.call(MM.nodeEl, id)) continue;
+      var el = MM.nodeEl[id];
+      _measured[id] = { w: el.offsetWidth, h: el.offsetHeight };
+    }
+  }
+
+  function mw(id) { return (_measured[id] && _measured[id].w) || 0; }
+  function mh(id) { return (_measured[id] && _measured[id].h) || 0; }
+
+  /* --------------------------------------------------- gutters and overhang */
+
+  // Wire geometry lives in wires.js, but the CANVAS is layout's to size, and a U-turn
+  // wire is drawn outside the node bounding box. Without reserving room for it a
+  // `side:'left'` loop lands at negative x — off the left edge of the document, where
+  // the browser cannot scroll — and a `side:'right'` loop is cut off at the canvas edge.
+  // Reading MMWires.DEFAULTS is a constant lookup, not a call; layout still works alone.
+  function bulgeDefaults() {
+    var W = (window.MMWires && window.MMWires.DEFAULTS) || null;
+    return { bulge: W ? W.bulge : 40, bulgeSide: W ? W.bulgeSide : 52 };
+  }
+
+  function bulgeOf(e, D) {
+    var b = (e.bulge !== undefined) ? e.bulge : (e.side ? D.bulgeSide : D.bulge);
+    return isFinite(b) ? b : D.bulge;
+  }
+
+  // half the rendered width of an SVG wire label (text-anchor:middle, ~10.5px semibold)
+  function halfLabel(s) { return s ? 6 + String(s).length * 3 : 0; }
+
+  // where a labelAbove caption is centred across its source box — mirrors MMWires.labelPos
+  function aboveFrac(e) { return (e.side === 'left') ? 0.18 : (e.side === 'right') ? 0.82 : 0.72; }
+
+  // Room each node needs OUTSIDE its own box, to the left of it and above it: a
+  // `side:'left'` U-turn plus its label, a `labelAbove` caption, and the band + caption
+  // of any frame the node belongs to. Depends only on the spec and the label text —
+  // never on where anything currently sits, and never on what is pinned. That is what
+  // makes the gutter below immune to dragging.
+  function needs(spec) {
+    var D = bulgeDefaults();
+    var out = {};
+    function want(id, left, top) {
+      var e = out[id];
+      if (!e) return;
+      if (left > e.left) e.left = left;
+      if (top > e.top) e.top = top;
+    }
+    (spec.NODES || []).forEach(function (n) { if (n && n.id) out[n.id] = { left: 0, top: 0 }; });
+
+    (spec.EDGES || []).forEach(function (e) {
+      if (!e || !out[e.f] || !out[e.t]) return;
+      if (e.side === 'left') {
+        // the U-turn's control points reach `bulge` left of the leftmost anchor, and the
+        // label is centred a little further out again
+        var room = bulgeOf(e, D) + (e.labelAbove ? 0 : 4 + halfLabel(e.l));
+        want(e.f, room, 0);
+        want(e.t, room, 0);
+      }
+      if (e.labelAbove) {
+        // The caption is centred at a.x + a.w*frac with text-anchor:middle, so half of it
+        // hangs to the LEFT of that point — on a narrow box at the left edge of the
+        // diagram that half was drawn at negative document x, where nothing scrolls.
+        // (Rule 7 named labelAbove but only ever reserved the 22px above it.)
+        want(e.f, Math.max(0, halfLabel(e.l) - mw(e.f) * aboveFrac(e)), 22);
+      }
+    });
+
+    (spec.FRAMES || []).forEach(function (f) {
+      var pad = f.pad || DEFAULTS.framePad;
+      var px = num(pad.x, DEFAULTS.framePad.x);
+      var pt = num(pad.top, DEFAULTS.framePad.top);
+      // the caption sits frameLabelDy above the topmost member and needs its own line height
+      var top = f.label ? Math.max(pt, DEFAULTS.frameLabelDy + 8) : pt;
+      (f.nodes || []).forEach(function (id) { want(id, px, top); });
+    });
+
+    return out;
+  }
+
+  // How far right of every box the wires actually reach. Growing the canvas is safe
+  // (no re-placement), so this is measured from the FINAL positions of every node.
+  function rightOverhang(spec, pos) {
+    var D = bulgeDefaults();
+    var W = window.MMWires;
+    var r = 0;
+    (spec.EDGES || []).forEach(function (e) {
+      if (!e) return;
+      var a = pos[e.f], b = pos[e.t];
+      if (!a || !b) return;
+      if (e.labelAbove) {                    // a caption can hang off the right edge too
+        r = Math.max(r, a.x + a.w * aboveFrac(e) + halfLabel(e.l));
+      }
+      // `side:'right'`, or a wire wires.js auto-routed around a blocked column — the
+      // canvas must grow for both, or the loop is simply cut off at the edge.
+      var side = e.side;
+      if (side !== 'right' && side !== 'left' && W && W.effSide) side = W.effSide(e, pos);
+      if (side !== 'right') return;
+      var bulge = (e.bulge !== undefined && isFinite(e.bulge)) ? e.bulge : D.bulgeSide;
+      var edge = Math.max(a.x + a.w, b.x + b.w) + bulge;
+      r = Math.max(r, edge + (e.labelAbove ? 0 : halfLabel(e.l)) + 16);
+    });
+    return r;
+  }
+
+  /* ------------------------------------------------------------------ apply */
+
+  function apply() {
+    var MM = window.MM;
+    if (!MM) return;
+    var spec = MM.spec, meta = spec.META || {};
+    var padX = num(meta.padX, DEFAULTS.padX);
+    var padY = num(meta.padY, DEFAULTS.padY);
+    var laneGap = num(meta.laneGap, DEFAULTS.laneGap);
+    var rowGap = num(meta.rowGap, DEFAULTS.rowGap);
+    var lanes = spec.LANES || [];
+
+    // Bucket nodes into lanes, preserving declaration order = vertical stacking order.
+    var bucket = {};
+    lanes.forEach(function (ln) { bucket[ln.id] = []; });
+    (spec.NODES || []).forEach(function (n) {
+      if (MM.nodeEl[n.id] && bucket[n.lane]) bucket[n.lane].push(n);
+    });
+
+    // --- lane widths: measured max over EVERY member. A pin moves a box, it does not
+    //     remove it from its column — excluding pinned nodes made an all-pinned lane
+    //     measure MIN_LANE_W and let the next lane draw straight over it.
+    var laneW = lanes.map(function (ln) {
+      if (typeof ln.w === 'number') return ln.w;
+      var w = 0;
+      bucket[ln.id].forEach(function (n) { w = Math.max(w, mw(n.id)); });
+      return Math.max(w, MIN_LANE_W);
+    });
+
+    // --- lane x: each lane starts after the previous lane's width plus that lane's own gap.
+    var laneX = [];
+    for (var i = 0; i < lanes.length; i++) {
+      laneX[i] = (i === 0) ? padX : laneX[i - 1] + laneW[i - 1] + num(lanes[i - 1].gap, laneGap);
+    }
+
+    // --- lane heights, so a lane can be centred against the others without the author
+    //     working out a pixel number from measured text. `y: 'center'` is the only
+    //     text-length-independent way to sit a one-box hub beside a tall column.
+    var laneH = {};
+    lanes.forEach(function (ln) {
+      var h = 0, first = true;
+      bucket[ln.id].forEach(function (n) {
+        if (!first) h += num(n.gapBefore, rowGap);
+        h += mh(n.id);
+        first = false;
+      });
+      laneH[ln.id] = h;
+    });
+    var spanTop = Infinity, spanBot = -Infinity;
+    lanes.forEach(function (ln) {
+      if (ln.y === 'center') return;
+      var t = num(ln.y, padY);
+      spanTop = Math.min(spanTop, t);
+      spanBot = Math.max(spanBot, t + laneH[ln.id]);
+    });
+    if (!isFinite(spanTop)) { spanTop = padY; spanBot = padY; }
+    function laneTop(ln) {
+      if (ln.y !== 'center') return num(ln.y, padY);
+      return Math.max(padY, spanTop + ((spanBot - spanTop) - laneH[ln.id]) / 2);
+    }
+
+    // --- tops. A pinned node KEEPS ITS SLOT in the cursor: it is drawn at its pin, but the
+    //     rest of the lane does not collapse upward into the space it still visually occupies.
+    //     `autoTop` is where the box would sit with no pin at all — see the gutter note below.
+    var autoTop = {}, tops = {};
+    lanes.forEach(function (ln) {
+      var cursor = laneTop(ln);
+      var first = true;
+      bucket[ln.id].forEach(function (n) {
+        if (!first) cursor += num(n.gapBefore, rowGap);   // gapBefore is ignored on a lane's first node
+        // alignWith: sit level with a box in an EARLIER lane, derived from that box's
+        // measured position instead of a hand-counted gapBefore that goes stale the
+        // moment any text above it changes. Clamped downward — it never overlaps the
+        // box above it in its own lane.
+        if (n.alignWith) {
+          if (autoTop[n.alignWith] !== undefined) {
+            cursor = Math.max(cursor, autoTop[n.alignWith]);
+          } else if (!_warnedAlign[n.id]) {
+            _warnedAlign[n.id] = 1;          // a drag re-lays out at 60fps — say it once
+            console.warn('MMLayout: node "' + n.id + '" alignWith "' + n.alignWith +
+              '" — unknown, or not in an earlier lane; ignored');
+          }
+        }
+        autoTop[n.id] = cursor;
+        tops[n.id] = n.pin ? n.pin.y : cursor;
+        cursor += mh(n.id);
+        first = false;
+      });
+    });
+
+    // --- provisional rects, plus the pin-free position of every box.
+    var pos = {}, auto = {};
+    lanes.forEach(function (ln, li) {
+      var align = (ln.align === 'center') ? 'center' : 'left';
+      bucket[ln.id].forEach(function (n) {
+        var w = mw(n.id), h = mh(n.id);
+        var ax = (align === 'center') ? laneX[li] + (laneW[li] - w) / 2 : laneX[li];
+        auto[n.id] = { x: ax, y: autoTop[n.id] };
+        pos[n.id] = { x: n.pin ? n.pin.x : ax, y: tops[n.id], w: w, h: h };
+      });
+    });
+
+    // --- the gutter: room reserved left of / above the auto-placed boxes so a U-turn wire,
+    //     a labelAbove caption or a frame band never lands at a negative canvas coordinate
+    //     (which cannot be scrolled to). It is measured against the PIN-FREE positions on
+    //     purpose. Measuring it against live positions meant that pinning a node — which is
+    //     all a drag does — dropped that node's demand and collapsed the gutter, so every
+    //     other box in the diagram jumped sideways the instant one box was touched.
+    var need = needs(spec);
+    _needs = need;
+    var gut = { left: 0, top: 0 };
+    for (var id in auto) {
+      if (!Object.prototype.hasOwnProperty.call(auto, id)) continue;
+      var nd = need[id];
+      if (!nd) continue;
+      gut.left = Math.max(gut.left, nd.left - auto[id].x);
+      gut.top = Math.max(gut.top, nd.top - auto[id].y);
+    }
+    gut.left = Math.ceil(Math.max(0, gut.left));
+    gut.top = Math.ceil(Math.max(0, gut.top));
+
+    // --- write positions, collect extents
+    var maxR = 0, maxB = 0;
+    var laneInfo = [];
+    lanes.forEach(function (ln, li) {
+      var align = (ln.align === 'center') ? 'center' : 'left';
+      laneInfo.push({
+        id: ln.id, label: ln.label || '',
+        x: laneX[li] + gut.left, w: laneW[li],
+        y: laneTop(ln) + gut.top, align: align
+      });
+      bucket[ln.id].forEach(function (n) {
+        var el = MM.nodeEl[n.id], p = pos[n.id];
+        var nd = need[n.id] || ZERO_NEED;
+        // A pin is an absolute canvas coordinate, so it is never shifted by the gutter —
+        // that shift would be re-recorded on the next drag and drift forever. It is CLAMPED
+        // instead, to the room this box's own U-turn wire / caption / frame band needs, so a
+        // box can never be parked where its own drawing falls off the canvas and disappears.
+        var x = n.pin ? Math.max(p.x, nd.left) : p.x + gut.left;
+        var y = n.pin ? Math.max(p.y, nd.top) : p.y + gut.top;
+        p.x = x; p.y = y;
+        el.style.left = Math.round(x) + 'px';
+        el.style.top = Math.round(y) + 'px';
+        maxR = Math.max(maxR, x + p.w);
+        maxB = Math.max(maxB, y + p.h);
+      });
+    });
+
+    MM.lanes = laneInfo;
+    MM.gutter = gut;
+    setSize(Math.ceil(Math.max(maxR, rightOverhang(spec, pos)) + padX), Math.ceil(maxB + padY));
+  }
+
+  function setSize(w, h) {
+    var MM = window.MM;
+    MM.size = { w: Math.max(DEFAULTS.minW, w), h: Math.max(DEFAULTS.minH, h) };
+    MM.canvas.style.width = MM.size.w + 'px';
+    MM.canvas.style.height = MM.size.h + 'px';
+  }
+
+  /* ----------------------------------------------------------------- frames */
+
+  function frames() {
+    var MM = window.MM;
+    if (!MM) return;
+    var meta = MM.spec.META || {};
+    var padX = num(meta.padX, DEFAULTS.padX);
+    var padY = num(meta.padY, DEFAULTS.padY);
+    var maxR = MM.size.w - padX, maxB = MM.size.h - padY;
+
+    (MM.spec.FRAMES || []).forEach(function (f) {
+      var ent = MM.frameEl && MM.frameEl[f.id];
+      if (!ent) return;
+      var pad = f.pad || DEFAULTS.framePad;
+      var px = num(pad.x, DEFAULTS.framePad.x);
+      var pt = num(pad.top, DEFAULTS.framePad.top);
+      var pb = num(pad.bottom, DEFAULTS.framePad.bottom);
+
+      // bounding box over the members that actually exist
+      var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity, seen = 0;
+      (f.nodes || []).forEach(function (id) {
+        var r = rectOf(id);
+        if (!r) return;
+        seen++;
+        x1 = Math.min(x1, r.x); y1 = Math.min(y1, r.y);
+        x2 = Math.max(x2, r.x + r.w); y2 = Math.max(y2, r.y + r.h);
+      });
+      if (!seen) { ent.band.hidden = true; if (ent.label) ent.label.hidden = true; return; }
+      ent.band.hidden = false;
+      if (ent.label) ent.label.hidden = false;
+
+      ent.band.style.left = (x1 - px) + 'px';
+      ent.band.style.top = (y1 - pt) + 'px';
+      ent.band.style.width = (x2 - x1 + px * 2) + 'px';
+      ent.band.style.height = (y2 - y1 + pt + pb) + 'px';
+      if (ent.label) {
+        ent.label.style.left = (x1 - DEFAULTS.frameLabelDx) + 'px';
+        ent.label.style.top = (y1 - DEFAULTS.frameLabelDy) + 'px';
+      }
+      maxR = Math.max(maxR, x2 + px);
+      maxB = Math.max(maxB, y2 + pb);
+    });
+
+    // A band may stick out past every node (its padding, or a label above the top row).
+    setSize(Math.ceil(maxR + padX), Math.ceil(maxB + padY));
+  }
+
+  /* ------------------------------------------------------------------- misc */
+
+  // The smallest left/top a node may be pinned at without its own U-turn wire, labelAbove
+  // caption or frame band falling off the canvas. The editor clamps a drag to it, so the
+  // box does not jump on release when apply() clamps the pin to the same numbers.
+  function minRoomOf(id) {
+    return _needs[id] || ZERO_NEED;
+  }
+
+  function rectOf(id) {
+    var MM = window.MM;
+    if (!MM) return null;
+    var el = MM.nodeEl[id];
+    if (!el) return null;
+    return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+  }
+
+  function layout() {
+    measure();
+    apply();
+    frames();
+  }
+
+  function setPin(id, x, y) {
+    var MM = window.MM;
+    if (!MM) return;
+    var n = MM.nodeById[id], el = MM.nodeEl[id];
+    if (!n || !el) return;
+    n.pin = { x: Math.round(x), y: Math.round(y) };
+    el.setAttribute('data-pinned', '1');
+    el.classList.add('is-pinned');
+    el.style.left = n.pin.x + 'px';
+    el.style.top = n.pin.y + 'px';
+  }
+
+  function clearPin(id) {
+    var MM = window.MM;
+    if (!MM) return;
+    var n = MM.nodeById[id], el = MM.nodeEl[id];
+    if (!n || !el) return;
+    delete n.pin;
+    el.removeAttribute('data-pinned');
+    el.classList.remove('is-pinned');
+  }
+
+  function clearAllPins() {
+    var MM = window.MM;
+    if (!MM) return;
+    for (var id in MM.nodeById) {
+      if (Object.prototype.hasOwnProperty.call(MM.nodeById, id)) clearPin(id);
+    }
+  }
+
+  window.MMLayout = {
+    DEFAULTS: DEFAULTS,
+    KINDS: KINDS,
+    validate: validate,
+    showErrors: showErrors,
+    build: build,
+    measure: measure,
+    apply: apply,
+    layout: layout,
+    rectOf: rectOf,
+    minRoomOf: minRoomOf,
+    frames: frames,
+    setPin: setPin,
+    clearPin: clearPin,
+    clearAllPins: clearAllPins
+  };
+})();
+
+/* mindmap engine — wires.js
+ * window.MMWires — anchors, routing, arrowheads, labels, SVG render.
+ * Reads window.MM and MMLayout.rectOf. NEVER writes to the spec.
+ * Routing maths ported verbatim from the hand-authored reference diagram.
+ * No dependencies. Touches no DOM at load time.
+ */
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   * constants
+   * ------------------------------------------------------------------ */
+
+  // exact map from the reference. Insertion order == the editor's colour cycle order.
+  var COLOR = {
+    navy: '#1C3550',
+    orange: '#E64A00',
+    green: '#0E8A4D',
+    blue: '#0043B8',
+    red: '#C93A2B',
+    violet: '#6B3FA0',
+    gray: '#A6B3BE'
+  };
+
+  var DEFAULTS = {
+    bulge: 40,
+    bulgeSide: 52,
+    width: 2.5,
+    widthDash: 2,
+    dashArray: '5 5',
+    labelSize: 10.5,
+    labelHalo: 3.5,
+    hitWidth: 14,
+    arrowPrefix: 'mm-arrow-'
+  };
+
+  var FALLBACK_COLOR = 'gray';
+
+  /* ------------------------------------------------------------------ *
+   * small helpers
+   * ------------------------------------------------------------------ */
+
+  // trim float noise so `d` strings stay short and stable across redraws
+  function num(v) {
+    return Math.round(v * 100) / 100;
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // console.warn, but at most once per distinct message (a drag redraws at 60fps)
+  var warned = Object.create(null);
+  function warnOnce(msg) {
+    if (warned[msg]) return;
+    warned[msg] = 1;
+    if (window.console && console.warn) console.warn('[MMWires] ' + msg);
+  }
+
+  // The load order is fixed (layout.js, then wires.js, then editor.js) and the dependency
+  // direction is editor -> wires -> layout, so MMLayout is always there.
+  function rectOf(id) {
+    return MMLayout.rectOf(id);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * geometry — ported verbatim from the reference
+   * ------------------------------------------------------------------ */
+
+  function anchor(r, side) {
+    if (side === 'l') return [r.x, r.y + r.h / 2];
+    if (side === 'r') return [r.x + r.w, r.y + r.h / 2];
+    if (side === 't') return [r.x + r.w / 2, r.y];
+    return [r.x + r.w / 2, r.y + r.h];
+  }
+
+  // Two boxes are "in the same column" when their x ranges overlap over more than half
+  // the narrower box. That, not |dy| > |dx|, is what decides top-to-bottom vs side-to-side.
+  // The reference's |dy|>|dx| test dropped a long diagonal read onto the BOTTOM of its
+  // target — the exact anchor the main flow leaves from, so the two arrowheads stacked in
+  // one 34px gap — which is why the reference itself hand-wrote sides:['r','l'] on five of
+  // them. Deriving it from the columns reproduces those five without a new spec field.
+  function sameColumn(a, b) {
+    var over = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+    return over > 0.5 * Math.min(a.w, b.w);
+  }
+
+  function pickSides(a, b, pref) {
+    if (pref === 'right') return ['r', 'r'];
+    if (pref === 'left') return ['l', 'l'];
+    var dx = (b.x + b.w / 2) - (a.x + a.w / 2);
+    var dy = (b.y + b.h / 2) - (a.y + a.h / 2);
+    if (sameColumn(a, b)) return dy > 0 ? ['b', 't'] : ['t', 'b'];
+    return dx > 0 ? ['r', 'l'] : ['l', 'r'];
+  }
+
+  /* ---------------------------------------------------- obstacle-aware routing */
+
+  // Live rect for every node — only needed by the obstruction test below.
+  function allRects() {
+    var MM = window.MM, out = {}, id;
+    if (!MM || !MM.nodeEl) return out;
+    for (id in MM.nodeEl) {
+      if (Object.prototype.hasOwnProperty.call(MM.nodeEl, id)) out[id] = rectOf(id);
+    }
+    return out;
+  }
+
+  function hits(rects, skipA, skipB, x1, y1, x2, y2) {
+    for (var id in rects) {
+      if (!Object.prototype.hasOwnProperty.call(rects, id)) continue;
+      if (id === skipA || id === skipB) continue;
+      var r = rects[id];
+      if (!r) continue;
+      if (r.x < x2 && r.x + r.w > x1 && r.y < y2 && r.y + r.h > y1) return true;
+    }
+    return false;
+  }
+
+  // A top-to-bottom wire between two boxes that are NOT neighbours runs straight through
+  // every box in between — and since the SVG paints under the nodes, all the reader sees
+  // is a stub in each row gap. Several such wires in one column are exactly co-linear, so
+  // N edges read as ONE chain that the spec never contained. When the corridor is blocked,
+  // route the wire around the outside of the column instead. Left is only taken when the
+  // loop already fits inside the canvas (a negative x cannot be scrolled to); otherwise
+  // right, which the canvas grows for.
+  function detour(a, b, rects, ida, idb, bulge) {
+    var up = (a.y + a.h / 2) <= (b.y + b.h / 2) ? a : b;
+    var down = (up === a) ? b : a;
+    var gapTop = up.y + up.h, gapBottom = down.y;
+    if (gapBottom - gapTop < 4) return null;                 // adjacent (or overlapping)
+    var cx1 = Math.min(a.x + a.w / 2, b.x + b.w / 2) - 2;
+    var cx2 = Math.max(a.x + a.w / 2, b.x + b.w / 2) + 2;
+    if (!hits(rects, ida, idb, cx1, gapTop, cx2, gapBottom)) return null;
+
+    var pad = (isFinite(bulge) ? bulge : DEFAULTS.bulgeSide) + 10;
+    var top = Math.min(a.y, b.y), bot = Math.max(a.y + a.h, b.y + b.h);
+    var right = Math.max(a.x + a.w, b.x + b.w);
+    var left = Math.min(a.x, b.x);
+    if (!hits(rects, ida, idb, right, top, right + pad, bot)) return 'right';
+    if (left - pad >= 0 && !hits(rects, ida, idb, left - pad, top, left, bot)) return 'left';
+    return 'right';
+  }
+
+  // The side this edge is actually drawn on: its own `side`, or the detour above.
+  // layout.js calls this so the canvas grows for an auto-routed right-hand loop too.
+  function effSide(edge, rects) {
+    if (!edge) return null;
+    if (edge.side === 'right' || edge.side === 'left') return edge.side;
+    rects = rects || allRects();
+    var a = rects[edge.f] || rectOf(edge.f), b = rects[edge.t] || rectOf(edge.t);
+    if (!a || !b || edge.f === edge.t) return null;
+    var sides = pickSides(a, b);
+    if (sides[0] !== 'b' && sides[0] !== 't') return null;
+    var bulge = edge.bulge !== undefined ? edge.bulge : DEFAULTS.bulgeSide;
+    return detour(a, b, rects, edge.f, edge.t, bulge);
+  }
+
+  function path(p1, p2, sides, bulge) {
+    var x1 = num(p1[0]), y1 = num(p1[1]), x2 = num(p2[0]), y2 = num(p2[1]);
+    var bx, my, mx;
+    if (sides[0] === 'r' && sides[1] === 'r') {
+      bx = num(Math.max(x1, x2) + bulge);
+      return 'M ' + x1 + ' ' + y1 + ' C ' + bx + ' ' + y1 + ', ' + bx + ' ' + y2 + ', ' + x2 + ' ' + y2;
+    }
+    if (sides[0] === 'l' && sides[1] === 'l') {
+      bx = num(Math.min(x1, x2) - bulge);
+      return 'M ' + x1 + ' ' + y1 + ' C ' + bx + ' ' + y1 + ', ' + bx + ' ' + y2 + ', ' + x2 + ' ' + y2;
+    }
+    if (sides[0] === 'b' || sides[0] === 't') {
+      my = num((y1 + y2) / 2);
+      return 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + my + ', ' + x2 + ' ' + my + ', ' + x2 + ' ' + y2;
+    }
+    mx = num((x1 + x2) / 2);
+    return 'M ' + x1 + ' ' + y1 + ' C ' + mx + ' ' + y1 + ', ' + mx + ' ' + y2 + ', ' + x2 + ' ' + y2;
+  }
+
+  // degenerate fallback: a right-side loop off one rect. Used for self-edges (f === t)
+  // and for two nodes sitting exactly on top of each other, where the reference's
+  // straight-line routing would collapse to a zero-length path.
+  function loopPoints(r) {
+    return [
+      [r.x + r.w, r.y + r.h * 0.3],
+      [r.x + r.w, r.y + r.h * 0.7]
+    ];
+  }
+
+  function geom(edge, rects) {
+    if (!edge) return null;
+    var a = (rects && rects[edge.f]) || rectOf(edge.f);
+    var b = (rects && rects[edge.t]) || rectOf(edge.t);
+    if (!a || !b) {
+      warnOnce('edge ' + edge.f + ' → ' + edge.t + ' references a missing node — skipped');
+      return null;
+    }
+
+    var bulge = edge.bulge !== undefined ? edge.bulge : (edge.side ? DEFAULTS.bulgeSide : DEFAULTS.bulge);
+    if (!isFinite(bulge)) bulge = DEFAULTS.bulge;
+
+    var key = edge.c;
+    var col = COLOR[key];
+    if (!col) {
+      warnOnce('edge ' + edge.f + ' → ' + edge.t + ' has unknown colour "' + edge.c + '" — using ' + FALLBACK_COLOR);
+      key = FALLBACK_COLOR;
+      col = COLOR[key];
+    }
+
+    var sides, p1, p2, pts;
+
+    if (edge.f === edge.t) {
+      // self-edge: a visible loop off the right side rather than a zero-length path
+      sides = ['r', 'r'];
+      pts = loopPoints(a);
+      p1 = pts[0];
+      p2 = pts[1];
+      if (edge.bulge === undefined) bulge = DEFAULTS.bulgeSide;
+    } else {
+      sides = pickSides(a, b, edge.side);
+      if (!edge.side && (sides[0] === 'b' || sides[0] === 't')) {
+        var around = detour(a, b, rects || allRects(), edge.f, edge.t,
+                            edge.bulge !== undefined ? edge.bulge : DEFAULTS.bulgeSide);
+        if (around) {
+          sides = (around === 'right') ? ['r', 'r'] : ['l', 'l'];
+          if (edge.bulge === undefined) bulge = DEFAULTS.bulgeSide;
+        }
+      }
+      p1 = anchor(a, sides[0]);
+      p2 = anchor(b, sides[1]);
+      if (Math.abs(p1[0] - p2[0]) < 0.5 && Math.abs(p1[1] - p2[1]) < 0.5) {
+        // fully overlapping nodes — same treatment as a self-edge
+        sides = ['r', 'r'];
+        pts = loopPoints(a);
+        p1 = pts[0];
+        p2 = pts[1];
+        if (edge.bulge === undefined) bulge = DEFAULTS.bulgeSide;
+      }
+    }
+
+    return {
+      a: a,
+      b: b,
+      sides: sides,
+      p1: p1,
+      p2: p2,
+      bulge: bulge,
+      key: key,
+      col: col,
+      d: path(p1, p2, sides, bulge)
+    };
+  }
+
+  function labelPos(edge, g) {
+    var p1 = g.p1, p2 = g.p2, sides = g.sides, a = g.a, bulge = g.bulge;
+    // labelAbove parks the caption over the SOURCE box. Dead-centre is exactly where a
+    // 't'-anchored incoming wire lands its arrowhead AND its own mid-wire label, so sit
+    // it over the flank the wire actually leaves from instead — still plainly "above
+    // this box", but clear of whatever arrives at the box's top centre.
+    if (edge.labelAbove) {
+      var frac = (edge.side === 'left') ? 0.18 : (edge.side === 'right') ? 0.82 : 0.72;
+      return [a.x + a.w * frac, a.y - 13];
+    }
+    if (sides[0] === 'r' && sides[1] === 'r') return [Math.max(p1[0], p2[0]) + bulge - 12, (p1[1] + p2[1]) / 2];
+    if (sides[0] === 'l' && sides[1] === 'l') return [Math.min(p1[0], p2[0]) - bulge - 4, p1[1] - (p1[1] - p2[1]) * 0.72];
+    return [(p1[0] + p2[0]) / 2 + 8, (p1[1] + p2[1]) / 2 - 6];
+  }
+
+  function colorKeys() {
+    return Object.keys(COLOR);
+  }
+
+  function defs() {
+    var out = '<defs>';
+    var keys = colorKeys();
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      out += '<marker id="' + DEFAULTS.arrowPrefix + k + '" viewBox="0 0 10 10" refX="9" refY="5"' +
+        ' markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+        '<path d="M0,0 L10,5 L0,10 z" fill="' + COLOR[k] + '"/></marker>';
+    }
+    return out + '</defs>';
+  }
+
+  /* ------------------------------------------------------------------ *
+   * fanning
+   *
+   * anchor() puts every wire that uses the same side of the same box on
+   * exactly the same point, so the last arrowhead drawn hides all the ones
+   * under it: three wires arriving at one box read as one wire. Spread the
+   * shared anchors along that side, ordered by where the other end sits so
+   * the fan never crosses itself.
+   * ------------------------------------------------------------------ */
+
+  var FAN_STEP = 16;      // px between fanned anchors
+  var FAN_SPAN = 0.62;    // never use more than this fraction of the box side
+
+  function fanAnchors(edges, geoms) {
+    var use = {}, i, g, e, k, key;
+    for (i = 0; i < edges.length; i++) {
+      g = geoms[i]; e = edges[i];
+      if (!g || e.f === e.t) continue;
+      (use[e.f + '|' + g.sides[0]] || (use[e.f + '|' + g.sides[0]] = [])).push({ i: i, end: 0 });
+      (use[e.t + '|' + g.sides[1]] || (use[e.t + '|' + g.sides[1]] = [])).push({ i: i, end: 1 });
+    }
+    var touched = {};
+    for (key in use) {
+      if (!Object.prototype.hasOwnProperty.call(use, key)) continue;
+      var list = use[key], n = list.length;
+      if (n < 2) continue;
+      var side = key.slice(key.lastIndexOf('|') + 1);
+      var along = (side === 'l' || side === 'r') ? 1 : 0;      // 1 = spread in y, 0 = in x
+      var r = list[0].end ? geoms[list[0].i].b : geoms[list[0].i].a;
+      list.sort(function (p, q) {
+        var pp = p.end ? geoms[p.i].p1 : geoms[p.i].p2;        // the OTHER end
+        var qq = q.end ? geoms[q.i].p1 : geoms[q.i].p2;
+        return pp[along] - qq[along];
+      });
+      var extent = along ? r.h : r.w;
+      var span = Math.min((n - 1) * FAN_STEP, extent * FAN_SPAN);
+      for (k = 0; k < n; k++) {
+        var off = -span / 2 + span * k / (n - 1);
+        var pt = list[k].end ? geoms[list[k].i].p2 : geoms[list[k].i].p1;
+        pt[along] += off;
+        touched[list[k].i] = 1;
+      }
+    }
+    for (i in touched) {
+      if (!Object.prototype.hasOwnProperty.call(touched, i)) continue;
+      g = geoms[i];
+      g.d = path(g.p1, g.p2, g.sides, g.bulge);
+    }
+  }
+
+  function buildHTML(edges, geoms, split) {
+    var wires = '', labels = '', hits = '';
+    for (var i = 0; i < edges.length; i++) {
+      var g = geoms[i];
+      if (!g) continue;
+      var e = edges[i];
+      var sw = e.dash ? DEFAULTS.widthDash : DEFAULTS.width;
+
+      wires += '<path class="mm-wire" data-edge="' + i + '" d="' + g.d + '" fill="none" stroke="' + g.col +
+        '" stroke-width="' + sw + '"' +
+        (e.dash ? ' stroke-dasharray="' + DEFAULTS.dashArray + '"' : '') +
+        ' marker-end="url(#' + DEFAULTS.arrowPrefix + g.key + ')"/>';
+
+      if (e.l) {
+        var lp = labelPos(e, g);
+        labels += '<text class="mm-wire-label" data-edge="' + i + '" x="' + num(lp[0]) + '" y="' + num(lp[1]) +
+          '" fill="' + g.col + '" font-size="' + DEFAULTS.labelSize + '" font-weight="600" text-anchor="middle"' +
+          ' paint-order="stroke" stroke="#fff" stroke-width="' + DEFAULTS.labelHalo + '">' + esc(e.l) + '</text>';
+      }
+
+      hits += '<path class="mm-wire-hit" data-edge="' + i + '" d="' + g.d +
+        '" fill="none" stroke="transparent" stroke-width="' + DEFAULTS.hitWidth + '" pointer-events="stroke"/>';
+    }
+    var labelG = '<g class="mm-label-layer">' + labels + '</g>';
+    return {
+      main: defs() + '<g class="mm-wire-layer">' + wires + '</g>' +
+        (split ? '' : labelG) + '<g class="mm-hit-layer">' + hits + '</g>',
+      labels: split ? labelG : ''
+    };
+  }
+
+  function setBox(el, size) {
+    el.setAttribute('width', size.w);
+    el.setAttribute('height', size.h);
+    el.setAttribute('viewBox', '0 0 ' + size.w + ' ' + size.h);
+  }
+
+  // One path: rebuild both svgs from the live spec. There used to be a second,
+  // incremental path (element cache + per-attribute diffing) for drag frames; measured
+  // on the biggest example that shipped it saved 0.4ms of a 16.7ms frame — 130 lines and
+  // a second, redundant selection-restore mechanism for 2% of one frame.
+  function render() {
+    var MM = window.MM;
+    if (!MM || !MM.svg) return;
+    var svg = MM.svg;
+    // Labels live in their OWN svg, painted above the nodes. In one layer with the wires
+    // they sat under every box — any label wider than the lane gap, or on a wire whose
+    // midpoint fell over a box, was silently cut in half with no lever to fix it.
+    var labelRoot = MM.svgLabels || svg;
+    var split = (labelRoot !== svg);
+    var edges = (MM.spec && MM.spec.EDGES) || [];
+
+    var rects = allRects();
+    var geoms = new Array(edges.length);
+    for (var i = 0; i < edges.length; i++) geoms[i] = geom(edges[i], rects);
+    fanAnchors(edges, geoms);
+
+    // canvas size -> svg box, so wires are never clipped when the canvas grows
+    var size = MM.size || { w: svg.clientWidth || 0, h: svg.clientHeight || 0 };
+    setBox(svg, size);
+    if (split) setBox(labelRoot, size);
+
+    var html = buildHTML(edges, geoms, split);
+    svg.innerHTML = html.main;
+    if (split) labelRoot.innerHTML = html.labels;
+
+    // last act, always — frames track their members while they are dragged
+    MMLayout.frames();
+  }
+
+  /* ------------------------------------------------------------------ */
+
+  window.MMWires = {
+    COLOR: COLOR,
+    DEFAULTS: DEFAULTS,
+    anchor: anchor,
+    pickSides: pickSides,
+    path: path,
+    geom: geom,
+    effSide: effSide,
+    labelPos: labelPos,
+    defs: defs,
+    colorKeys: colorKeys,
+    render: render
+  };
+})();
+
+/* mindmap engine — editor.js
+ * window.MMEditor — the ONLY file that mutates MM.spec.
+ * Depends on: window.MM, window.MMLayout, window.MMWires. Touches no DOM at load time.
+ * Vanilla ES5. No build step, no dependencies.
+ */
+(function () {
+  'use strict';
+
+  var MMEditor = {};
+  window.MMEditor = MMEditor;
+
+  /* ------------------------------------------------------------------ config */
+
+  var cfg = { editable: true, filename: 'spec.js' };
+  var inited = false;
+
+  var DRAG_THRESHOLD = 4;       // px — below this a pointerup is a click, not a drag
+  var INPUT_DEBOUNCE = 120;     // ms — text edit -> relayout
+  var UNDO_LIMIT = 60;
+  var BULGE_MIN = 0, BULGE_MAX = 400, BULGE_STEP = 8;
+
+  var ALLOWED_TAGS = { B: 1, STRONG: 1, I: 1, EM: 1, CODE: 1, BR: 1 };
+  var BLOCKISH = { DIV: 1, P: 1, LI: 1, TR: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1 };
+  var DROPPED = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEMPLATE: 1, IFRAME: 1, OBJECT: 1 };
+
+  // The engine's own defaults are the single source of truth: MMLayout.DEFAULTS for
+  // spacing and the hint line, MMWires.DEFAULTS for bulge. Restating them here made the
+  // exporter's "same as default, so omit it" test drift the moment either file changed.
+  // maxWidth is the one META key layout.js has no default for (CSS owns .mm-page).
+  var META_DEFAULTS = { maxWidth: 1340 };
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /* ------------------------------------------------------------------- state */
+
+  MMEditor.state = { connect: false, srcId: null, selEdge: null, dragging: false, selNode: null };
+  var state = MMEditor.state;
+
+  var drag = null;              // { el, id, sx, sy, ox, oy, moved, pid }
+  var undoStack = [], redoStack = [];
+  var inputTimer = null;
+  var bar = null;               // #mm-edge-bar
+  var barLabel = null;          // the label <input> inside it
+  var lastAnchorId = null;      // node the "+ Node" button inserts after
+  var skipFocusUndo = false;    // set when the editor moves focus itself (see addNode)
+
+  /* ----------------------------------------------------------------- helpers */
+
+  function ready() { return !!(window.MM && window.MM.canvas && window.MMLayout && window.MMWires); }
+  function $(id) { return document.getElementById(id); }
+  function nodeElOf(id) { return (window.MM && MM.nodeEl) ? MM.nodeEl[id] : null; }
+  function specNode(id) { return (window.MM && MM.nodeById) ? MM.nodeById[id] : null; }
+  function edges() { return MM.spec.EDGES || (MM.spec.EDGES = []); }
+  function nodes() { return MM.spec.NODES || (MM.spec.NODES = []); }
+  function lanes() { return MM.spec.LANES || (MM.spec.LANES = []); }
+  function metaDefault(key) {
+    var D = (window.MMLayout && MMLayout.DEFAULTS) || {};
+    return (D[key] !== undefined) ? D[key] : META_DEFAULTS[key];
+  }
+  function metaNum(key) {
+    var m = MM.spec.META || {};
+    return m[key] !== undefined ? m[key] : metaDefault(key);
+  }
+  function defBulge(e) {
+    var D = MMWires.DEFAULTS;
+    return e.side ? D.bulgeSide : D.bulge;
+  }
+  function isTyping(el) {
+    if (!el) return false;
+    var t = el.tagName;
+    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return true;
+    return !!(el.closest && el.closest('[contenteditable="true"]'));
+  }
+  function editableRows(root) {
+    return (root || MM.canvas).querySelectorAll('.mm-t, .mm-d, .mm-rw');
+  }
+  // Document coordinates. Not ev.pageX: a synthesised PointerEvent carries whatever pageX
+  // the constructor was given (0, or a copy of clientX), so deriving it keeps real and
+  // scripted events on the same maths.
+  function pageX(ev) { return ev.clientX + window.scrollX; }
+  function pageY(ev) { return ev.clientY + window.scrollY; }
+
+  /* --------------------------------------------------------------- undo/redo */
+
+  function snapshot() {
+    var s = MM.spec;
+    return JSON.stringify({
+      META: s.META || {}, LANES: s.LANES || [], FRAMES: s.FRAMES || null,
+      NODES: s.NODES || [], EDGES: s.EDGES || []
+    });
+  }
+
+  function restore(json) {
+    var o = JSON.parse(json), s = MM.spec;
+    s.META = o.META; s.LANES = o.LANES; s.NODES = o.NODES; s.EDGES = o.EDGES;
+    if (o.FRAMES) s.FRAMES = o.FRAMES; else delete s.FRAMES;
+    rebuild();
+  }
+
+  // Full DOM rebuild — needed after anything that adds/removes a node.
+  function rebuild() {
+    var selN = state.selNode;
+    // Every node element is about to be replaced. A drag still holding the OLD element
+    // would read offsetLeft/offsetTop off a detached node on release — both 0 — and pin
+    // the box into the top-left corner, with the undo stack already spent. Undo and
+    // "+ Node" are both reachable mid-drag, so drop the drag before the DOM goes.
+    cancelDrag();
+    MMLayout.build(MM.spec, MM.canvas);
+    decorate();
+    MM.redraw();
+    if (selN && specNode(selN)) selectNode(selN); else state.selNode = null;
+    // the pending connect source may have been undone away — a stale one silently
+    // pushed an edge whose `f` names a node that no longer exists
+    if (state.srcId && !specNode(state.srcId)) setSrc(null);
+    if (state.selEdge !== null && !edges()[state.selEdge]) selectEdge(null);
+    applySelection();
+  }
+
+  function pushUndo() {
+    try { MMEditor.syncFromDOM(); } catch (e) { /* never block an edit on a sync hiccup */ }
+    undoStack.push(snapshot());
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    redoStack.length = 0;
+  }
+
+  MMEditor.undo = function () {
+    if (!ready() || !undoStack.length) return;
+    redoStack.push(snapshot());
+    restore(undoStack.pop());
+  };
+
+  MMEditor.redo = function () {
+    if (!ready() || !redoStack.length) return;
+    undoStack.push(snapshot());
+    restore(redoStack.pop());
+  };
+
+  /* -------------------------------------------------------------- sanitizing */
+
+  function walkSanitize(src, out) {
+    var kids = src.childNodes, i, n, tag, el;
+    for (i = 0; i < kids.length; i++) {
+      n = kids[i];
+      if (n.nodeType === 3) {
+        out.appendChild(document.createTextNode(n.nodeValue.replace(/ /g, ' ')));
+      } else if (n.nodeType === 1) {
+        tag = n.tagName;
+        if (DROPPED[tag]) continue;                                                             // never keep its text
+        if (tag === 'SPAN' && n.getAttribute && n.getAttribute('data-field') === 'n') continue; // badge
+        if (ALLOWED_TAGS[tag]) {
+          el = document.createElement(tag.toLowerCase());
+          if (tag !== 'BR') walkSanitize(n, el);
+          out.appendChild(el);
+        } else {
+          if (BLOCKISH[tag] && out.childNodes.length) out.appendChild(document.createElement('br'));
+          walkSanitize(n, out);
+        }
+      }
+    }
+  }
+
+  MMEditor.sanitize = function (html) {
+    var src = document.createElement('div');
+    src.innerHTML = String(html == null ? '' : html);
+    var out = document.createElement('div');
+    walkSanitize(src, out);
+    return out.innerHTML.replace(/(<br>)+$/, '').replace(/\s+$/, '');
+  };
+
+  function plainText(html) {
+    var d = document.createElement('div');
+    d.innerHTML = String(html == null ? '' : html);
+    return (d.textContent || '').replace(/ /g, ' ').trim();
+  }
+
+  // Wire labels are SVG <text>: wires.js escapes them on the innerHTML path and uses
+  // textContent on the in-place path, so < and > are safe to keep — stripping them
+  // silently ate characters mid-word in the only free-text field the wire editor has.
+  function safeLabel(s) { return String(s == null ? '' : s).replace(/\s+/g, ' '); }
+
+  /* ---------------------------------------------------- DOM -> spec (persist) */
+
+  MMEditor.syncFromDOM = function () {
+    if (!ready()) return;
+    var els = MM.canvas.querySelectorAll('.mm-node'), i, el, node, t, badge, clone, d, rw;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      node = specNode(el.getAttribute('data-id'));
+      if (!node) continue;
+
+      t = el.querySelector('.mm-t');
+      if (t) {
+        // node.n is SPEC-OWNED and never read back from the DOM. The badge lives inside
+        // the contenteditable title, so select-all + retype used to delete it and take the
+        // step number with it, irrecoverably — there is no UI to type a number back in.
+        clone = t.cloneNode(true);
+        var cb = clone.querySelector('.mm-n');
+        if (cb && cb.parentNode) cb.parentNode.removeChild(cb);
+        node.title = MMEditor.sanitize(clone.innerHTML);
+      }
+
+      d = el.querySelector('.mm-d');
+      if (d) node.body = MMEditor.sanitize(d.innerHTML);
+
+      rw = el.querySelector('.mm-rw');
+      if (rw) node.rw = MMEditor.sanitize(rw.innerHTML);
+
+      if (node.pin) node.pin = { x: Math.round(el.offsetLeft), y: Math.round(el.offsetTop) };
+    }
+  };
+
+  /* -------------------------------------------------------------- text edits */
+
+  // Rows are NOT contenteditable at rest. A live caret everywhere meant a plain
+  // pointerdown on a box landed in the text and started a native text selection instead
+  // of a drag, so boxes felt unmovable wherever they had words on them — which is most of
+  // them. Now: drag from anywhere, double-click to type. Only the row being edited
+  // carries contenteditable, and it is dropped again on blur.
+  function decorate() {
+    if (!ready()) return;
+    var rows = editableRows(), i;
+    for (i = 0; i < rows.length; i++) {
+      rows[i].removeAttribute('contenteditable');
+      if (cfg.editable) rows[i].setAttribute('spellcheck', 'false');
+    }
+  }
+
+  // Turn one row on and put the caret where the user clicked.
+  function beginEdit(row, ev) {
+    if (!cfg.editable || !row) return;
+    row.setAttribute('contenteditable', 'true');
+    row.setAttribute('spellcheck', 'false');
+    row.focus();
+    if (ev && document.caretRangeFromPoint) {
+      var rng = document.caretRangeFromPoint(ev.clientX, ev.clientY);
+      if (rng) {
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(rng);
+      }
+    }
+  }
+
+  function endEdit(row) {
+    if (!row) return;
+    row.removeAttribute('contenteditable');
+  }
+
+  function onDblClick(ev) {
+    var row = ev.target.closest && ev.target.closest('.mm-t, .mm-d, .mm-rw');
+    if (!row || !cfg.editable || state.connect) return;
+    ev.preventDefault();
+    beginEdit(row, ev);
+  }
+
+  function onFocusIn(ev) {
+    var row = ev.target.closest && ev.target.closest('.mm-t, .mm-d, .mm-rw');
+    if (!row || !cfg.editable) return;
+    // addNode focuses the new title itself; without this the focus would push a SECOND,
+    // identical snapshot and the first Undo after "+ Node" would be a silent no-op.
+    if (skipFocusUndo) { skipFocusUndo = false; }
+    else pushUndo();                                // one undo entry per editing session
+    var host = row.closest('.mm-node');
+    if (host) lastAnchorId = host.getAttribute('data-id');
+  }
+
+  // The badge is inside the editable title, so a select-all + retype can wipe the element.
+  // node.n survives (syncFromDOM never reads it back), so put the badge straight back.
+  function restoreBadge(row) {
+    var host = row.closest && row.closest('.mm-node');
+    if (!host || !row.classList.contains('mm-t')) return;
+    var node = specNode(host.getAttribute('data-id'));
+    if (!node || node.n === undefined || node.n === '' || node.n === null) return;
+    if (row.querySelector('.mm-n')) return;
+    var span = document.createElement('span');
+    span.className = 'mm-n';
+    span.setAttribute('data-field', 'n');
+    span.setAttribute('contenteditable', 'false');
+    span.textContent = String(node.n);
+    row.insertBefore(span, row.firstChild);
+  }
+
+  function onFocusOut(ev) {
+    var row = ev.target.closest && ev.target.closest('.mm-t, .mm-d, .mm-rw');
+    if (!row) return;
+    MMEditor.syncFromDOM();
+    restoreBadge(row);
+    endEdit(row);                                   // back to draggable
+  }
+
+  function onInput(ev) {
+    if (!ev.target.closest || !ev.target.closest('.mm-t, .mm-d, .mm-rw')) return;
+    if (inputTimer) clearTimeout(inputTimer);
+    inputTimer = setTimeout(function () {
+      inputTimer = null;
+      MM.redraw();                                  // heights changed — the lane must re-flow
+      applySelection();
+    }, INPUT_DEBOUNCE);
+  }
+
+  function onPaste(ev) {
+    var row = ev.target.closest && ev.target.closest('.mm-t, .mm-d, .mm-rw');
+    if (!row) return;
+    ev.preventDefault();
+    var txt = '';
+    if (ev.clipboardData) txt = ev.clipboardData.getData('text/plain');
+    else if (window.clipboardData) txt = window.clipboardData.getData('Text');
+    txt = String(txt || '').replace(/\r/g, '');
+    if (document.execCommand) { document.execCommand('insertText', false, txt); return; }
+    var sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+      var rg = sel.getRangeAt(0);
+      rg.deleteContents();
+      rg.insertNode(document.createTextNode(txt));
+      sel.collapseToEnd();
+    }
+  }
+
+  /* -------------------------------------------------------------------- drag */
+
+  function onPointerDown(ev) {
+    if (!ready() || ev.button > 0) return;
+    var el = ev.target.closest ? ev.target.closest('.mm-node') : null;
+
+    if (!el) {                                      // empty canvas — clear everything
+      if (ev.target.closest && ev.target.closest('.mm-wire-hit')) return;
+      selectEdge(null);
+      selectNode(null);
+      if (state.connect) setSrc(null);
+      return;
+    }
+
+    var id = el.getAttribute('data-id');
+
+    if (state.connect) {                            // connect mode owns the click
+      ev.preventDefault();
+      connectClick(id);
+      return;
+    }
+
+    // A live caret inside this node means the user is editing text, not dragging.
+    var active = document.activeElement;
+    if (active && active !== document.body && el.contains(active) &&
+        active.getAttribute && active.getAttribute('contenteditable') === 'true') {
+      lastAnchorId = id;
+      return;
+    }
+
+    // Document coordinates, not viewport ones: ox/oy are canvas coordinates, which do not
+    // move when the page scrolls. Mixing in a viewport coordinate left the box offset from
+    // the cursor by the whole scroll distance for the rest of the drag if the user scrolled
+    // (two-finger scroll is still delivered while a pointer is down).
+    drag = {
+      el: el, id: id, pid: ev.pointerId, moved: false,
+      sx: pageX(ev), sy: pageY(ev), ox: el.offsetLeft, oy: el.offsetTop
+    };
+    document.addEventListener('pointermove', onPointerMove, true);
+    document.addEventListener('pointerup', onPointerUp, true);
+    document.addEventListener('pointercancel', onPointerUp, true);
+  }
+
+  // Drop an in-flight drag without committing a pin. Used when the DOM under it is
+  // about to be replaced (undo / add node / delete node).
+  function cancelDrag() {
+    if (!drag) return;
+    try { drag.el.releasePointerCapture(drag.pid); } catch (e) { /* fine */ }
+    drag = null;
+    state.dragging = false;
+    document.removeEventListener('pointermove', onPointerMove, true);
+    document.removeEventListener('pointerup', onPointerUp, true);
+    document.removeEventListener('pointercancel', onPointerUp, true);
+  }
+
+  function onPointerMove(ev) {
+    if (!drag) return;
+    var dx = pageX(ev) - drag.sx, dy = pageY(ev) - drag.sy;
+    if (!drag.moved) {
+      if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+      drag.moved = true;
+      state.dragging = true;
+      pushUndo();
+      var a = document.activeElement;
+      if (a && a.blur && drag.el.contains(a)) a.blur();
+      var sel = window.getSelection();
+      if (sel && sel.removeAllRanges) sel.removeAllRanges();
+      try { drag.el.setPointerCapture(drag.pid); } catch (e) { /* not fatal */ }
+    }
+    ev.preventDefault();
+    // Floor at the room this box's own U-turn wire / caption / frame band needs, not at 0:
+    // apply() clamps the pin to the same numbers, so the box does not jump on release, and
+    // dragging a box to the left edge can no longer push its own wire off the canvas.
+    var min = (MMLayout.minRoomOf ? MMLayout.minRoomOf(drag.id) : null) || { left: 0, top: 0 };
+    drag.el.style.left = Math.max(min.left, drag.ox + dx) + 'px';
+    drag.el.style.top = Math.max(min.top, drag.oy + dy) + 'px';
+    MMWires.render();                               // wires follow, every move
+  }
+
+  function onPointerUp() {
+    document.removeEventListener('pointermove', onPointerMove, true);
+    document.removeEventListener('pointerup', onPointerUp, true);
+    document.removeEventListener('pointercancel', onPointerUp, true);
+    if (!drag) return;
+    var d = drag; drag = null; state.dragging = false;
+    try { d.el.releasePointerCapture(d.pid); } catch (e) { /* fine */ }
+    // belt and braces alongside cancelDrag(): a detached element reports 0/0, and pinning
+    // a box to 0,0 is not something any undo could take back (setPin does not snapshot).
+    if (!d.el.isConnected || MM.nodeEl[d.id] !== d.el) return;
+
+    if (!d.moved) {                                 // a click, not a drag
+      lastAnchorId = d.id;
+      selectNode(d.id);
+      return;
+    }
+    MMLayout.setPin(d.id, Math.round(d.el.offsetLeft), Math.round(d.el.offsetTop));
+    lastAnchorId = d.id;
+    selectNode(d.id);
+    // A full redraw, not just a wire pass: the screen must equal what Export writes, and
+    // what re-rendering the exported spec produces. Half-relayouts drifted apart silently.
+    MM.redraw();
+    applySelection();
+  }
+
+  /* ------------------------------------------------------------ node select */
+
+  function selectNode(id) {
+    var prev = state.selNode ? nodeElOf(state.selNode) : null;
+    if (prev) { prev.classList.remove('is-selected'); prev.style.outline = ''; prev.style.outlineOffset = ''; }
+    state.selNode = null;
+    if (!id) { syncExtraButtons(); return; }
+    var el = nodeElOf(id);
+    if (!el) { syncExtraButtons(); return; }
+    state.selNode = id;
+    el.classList.add('is-selected');
+    // inline fallback so selection is visible even if engine.css has no rule for it
+    el.style.outline = '2px solid var(--mm-orange, #E64A00)';
+    el.style.outlineOffset = '2px';
+    syncExtraButtons();
+  }
+  MMEditor.selectNode = selectNode;
+
+  /* ----------------------------------------------------------- connect mode */
+
+  function setSrc(id) {
+    var prev = state.srcId ? nodeElOf(state.srcId) : null;
+    if (prev) prev.classList.remove('is-src');
+    state.srcId = id || null;
+    if (id) { var el = nodeElOf(id); if (el) el.classList.add('is-src'); }
+  }
+
+  function connectClick(id) {
+    if (state.srcId && !specNode(state.srcId)) setSrc(null);   // undone away since it was armed
+    if (!state.srcId) { setSrc(id); return; }
+    if (state.srcId === id) { setSrc(null); return; }          // second click on A cancels
+    var f = state.srcId, t = id, list = edges(), i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i].f === f && list[i].t === t && list[i].c === 'navy') {
+        if (window.console) console.warn('[mindmap] duplicate edge ignored: ' + f + ' -> ' + t);
+        setSrc(null);
+        return;
+      }
+    }
+    pushUndo();
+    list.push({ f: f, t: t, c: 'navy' });
+    setSrc(null);
+    MMWires.render();
+    selectEdge(list.length - 1);
+  }
+
+  MMEditor.toggleConnect = function (on) {
+    if (!ready()) return;
+    state.connect = (on === undefined) ? !state.connect : !!on;
+    document.body.classList.toggle('mm-connect', state.connect);
+    if (!state.connect) { setSrc(null); clearHoverTarget(); }
+    else { selectEdge(null); selectNode(null); }
+    var b = $('mm-btn-connect');
+    if (b) { b.classList.toggle('is-on', state.connect); b.setAttribute('aria-pressed', state.connect ? 'true' : 'false'); }
+  };
+
+  var hoverEl = null;
+  function clearHoverTarget() { if (hoverEl) hoverEl.classList.remove('is-hover-target'); hoverEl = null; }
+  function onPointerOver(ev) {
+    if (!state.connect) return;
+    var el = ev.target.closest ? ev.target.closest('.mm-node') : null;
+    if (el === hoverEl) return;
+    clearHoverTarget();
+    if (el && el.getAttribute('data-id') !== state.srcId) { el.classList.add('is-hover-target'); hoverEl = el; }
+  }
+
+  /* ------------------------------------------------------------ edge editing */
+
+  function edgeAt(i) { var e = edges()[i]; return e || null; }
+
+  function applySelection() {
+    if (!ready() || !MM.svg) return;
+    var was = MM.svg.querySelectorAll('.is-selected'), i;
+    for (i = 0; i < was.length; i++) was[i].classList.remove('is-selected');
+    if (state.selEdge === null || !edgeAt(state.selEdge)) { hideBar(); return; }
+    var sel = MM.svg.querySelectorAll('[data-edge="' + state.selEdge + '"]');
+    if (!sel.length) { hideBar(); return; }
+    for (i = 0; i < sel.length; i++) sel[i].classList.add('is-selected');
+    positionBar();
+    syncBar();
+  }
+  MMEditor.applySelection = applySelection;
+
+  MMEditor.selectEdge = function (i) {
+    if (!ready()) return;
+    state.selEdge = (i === null || i === undefined || !edgeAt(i)) ? null : i;
+    if (state.selEdge !== null) selectNode(null);
+    applySelection();
+  };
+
+  MMEditor.deleteEdge = function (i) {
+    if (!ready() || !edgeAt(i)) return;
+    pushUndo();
+    edges().splice(i, 1);
+    state.selEdge = null;
+    MMWires.render();
+    applySelection();
+  };
+
+  MMEditor.cycleColor = function (i, dir) {
+    var e = edgeAt(i); if (!e) return;
+    var keys = MMWires.colorKeys(), at = keys.indexOf(e.c);
+    if (at < 0) at = 0;
+    pushUndo();
+    e.c = keys[(at + (dir === -1 ? -1 : 1) + keys.length) % keys.length];
+    MMWires.render(); applySelection();
+  };
+
+  MMEditor.toggleDash = function (i) {
+    var e = edgeAt(i); if (!e) return;
+    pushUndo();
+    if (e.dash) delete e.dash; else e.dash = 1;
+    MMWires.render(); applySelection();
+  };
+
+  // side / bulge / labelAbove / label text all feed MMLayout.minRoomOf — the gutter that
+  // reserves canvas room for a U-turn wire and its caption. A wire-only render left the
+  // gutter at its old value, so switching an edge on the leftmost lane to side:'left' drew
+  // the loop at negative canvas x, clipped flat against the edge with nowhere to scroll.
+  // MM.redraw() is layout + wires: the same pass a drag commits.
+  MMEditor.cycleSide = function (i) {
+    var e = edgeAt(i); if (!e) return;
+    pushUndo();
+    if (e.side === undefined) e.side = 'right';
+    else if (e.side === 'right') e.side = 'left';
+    else delete e.side;
+    MM.redraw(); applySelection();
+  };
+
+  MMEditor.nudgeBulge = function (i, delta) {
+    var e = edgeAt(i); if (!e) return;
+    var base = (e.bulge !== undefined) ? e.bulge : defBulge(e);
+    pushUndo();
+    e.bulge = Math.max(BULGE_MIN, Math.min(BULGE_MAX, base + delta));
+    MM.redraw(); applySelection();
+  };
+
+  MMEditor.toggleLabelAbove = function (i) {
+    var e = edgeAt(i); if (!e) return;
+    pushUndo();
+    if (e.labelAbove) delete e.labelAbove; else e.labelAbove = 1;
+    MM.redraw(); applySelection();
+  };
+
+  MMEditor.setLabel = function (i, text) {
+    var e = edgeAt(i); if (!e) return;
+    var v = safeLabel(text);
+    if (!v.trim()) delete e.l; else e.l = v;
+    MM.redraw(); applySelection();
+  };
+
+  /* ------------------------------------------------------------- the edge bar */
+
+  function buildBar() {
+    bar = $('mm-edge-bar');
+    if (!bar) return;
+    bar.innerHTML =
+      '<span class="mm-eb-tag">wire</span>' +
+      '<button type="button" class="mm-btn" data-act="cprev" title="previous colour ([)">◀</button>' +
+      '<span class="mm-chip" id="mm-eb-swatch"></span>' +
+      '<button type="button" class="mm-btn" data-act="cnext" title="next colour (])">▶</button>' +
+      '<button type="button" class="mm-btn" data-act="dash" title="dashed (d)">dash</button>' +
+      '<button type="button" class="mm-btn" data-act="side" title="force side (s)">side</button>' +
+      '<button type="button" class="mm-btn" data-act="bminus" title="less bulge (-)">−</button>' +
+      '<button type="button" class="mm-btn" data-act="bplus" title="more bulge (=)">+</button>' +
+      '<button type="button" class="mm-btn" data-act="above" title="label above source (a)">label ↑</button>' +
+      '<input type="text" class="mm-eb-label" id="mm-eb-label" placeholder="label">' +
+      '<button type="button" class="mm-btn" data-act="del" title="delete (Del)">delete</button>' +
+      '<button type="button" class="mm-btn" data-act="close" title="deselect (Esc)">✕</button>';
+    barLabel = $('mm-eb-label');
+
+    bar.addEventListener('mousedown', function (ev) {
+      if (ev.target.tagName !== 'INPUT') ev.preventDefault();   // keep focus off the buttons
+    });
+    bar.addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('[data-act]') : null;
+      if (!b || state.selEdge === null) return;
+      var i = state.selEdge;
+      switch (b.getAttribute('data-act')) {
+        case 'cprev': MMEditor.cycleColor(i, -1); break;
+        case 'cnext': MMEditor.cycleColor(i, 1); break;
+        case 'dash': MMEditor.toggleDash(i); break;
+        case 'side': MMEditor.cycleSide(i); break;
+        case 'bminus': MMEditor.nudgeBulge(i, -BULGE_STEP); break;
+        case 'bplus': MMEditor.nudgeBulge(i, BULGE_STEP); break;
+        case 'above': MMEditor.toggleLabelAbove(i); break;
+        case 'del': MMEditor.deleteEdge(i); break;
+        case 'close': MMEditor.selectEdge(null); break;
+      }
+    });
+    barLabel.addEventListener('input', function () {
+      if (state.selEdge === null) return;
+      MMEditor.setLabel(state.selEdge, barLabel.value);
+    });
+    barLabel.addEventListener('focus', function () { pushUndo(); });
+    barLabel.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === 'Escape') { ev.stopPropagation(); barLabel.blur(); }
+    });
+  }
+
+  function hideBar() { if (bar) bar.hidden = true; }
+
+  function positionBar() {
+    if (!bar) return;
+    var p = MM.svg.querySelector('.mm-wire[data-edge="' + state.selEdge + '"]');
+    if (!p) { hideBar(); return; }
+    var pt = { x: 0, y: 0 };
+    try { pt = p.getPointAtLength(p.getTotalLength() / 2); } catch (e) { /* fall back to 0,0 */ }
+    bar.hidden = false;
+    var host = bar.offsetParent || document.body;
+    var hr = host.getBoundingClientRect(), cr = MM.canvas.getBoundingClientRect();
+    bar.style.position = 'absolute';
+    bar.style.left = Math.round(cr.left - hr.left + pt.x + 8) + 'px';
+    bar.style.top = Math.round(cr.top - hr.top + pt.y + 10) + 'px';
+  }
+
+  function syncBar() {
+    if (!bar) return;
+    var e = edgeAt(state.selEdge); if (!e) return;
+    var sw = $('mm-eb-swatch');
+    if (sw) {
+      sw.style.background = MMWires.COLOR[e.c] || '#888';
+      sw.title = e.c;
+    }
+    setOn(bar.querySelector('[data-act="dash"]'), !!e.dash);
+    setOn(bar.querySelector('[data-act="above"]'), !!e.labelAbove);
+    var sb = bar.querySelector('[data-act="side"]');
+    if (sb) { sb.textContent = e.side ? ('side: ' + e.side) : 'side'; setOn(sb, !!e.side); }
+    if (barLabel && document.activeElement !== barLabel) barLabel.value = e.l || '';
+  }
+
+  function setOn(el, on) { if (el) el.classList.toggle('is-on', !!on); }
+
+  /* --------------------------------------------------------- node add/delete */
+
+  function uniqueId(base) {
+    var i = 1, id;
+    do { id = base + i; i++; } while (specNode(id));
+    return id;
+  }
+
+  MMEditor.addNode = function (opts) {
+    if (!ready()) return null;
+    opts = opts || {};
+    var anchor = specNode(state.selNode || lastAnchorId || '');
+    var laneId = opts.lane || (anchor ? anchor.lane : (lanes()[0] ? lanes()[0].id : null));
+    if (!laneId) { if (window.console) console.warn('[mindmap] no lane to add a node to'); return null; }
+    var kind = opts.kind || (anchor && anchor.lane === laneId ? anchor.kind : 'note');
+    if (!MMLayout.KINDS || !MMLayout.KINDS[kind]) kind = 'note';
+
+    var node = {
+      id: opts.id || uniqueId('node'),
+      lane: laneId,
+      kind: kind,
+      title: opts.title !== undefined ? opts.title : 'NEW NODE',
+      body: opts.body !== undefined ? opts.body : 'describe it'
+    };
+    pushUndo();
+    var list = nodes(), at = list.length, i;
+    if (anchor && anchor.lane === laneId) {          // insert after the anchor's lane run
+      for (i = 0; i < list.length; i++) if (list[i] === anchor) { at = i + 1; break; }
+    }
+    list.splice(at, 0, node);
+    state.selNode = node.id;
+    lastAnchorId = node.id;
+    rebuild();
+    var el = nodeElOf(node.id);
+    if (el) {
+      var t = el.querySelector('.mm-t');
+      if (t && cfg.editable) { skipFocusUndo = true; t.focus(); selectAll(t); }
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    return node.id;
+  };
+
+  function selectAll(el) {
+    try {
+      var r = document.createRange(); r.selectNodeContents(el);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    } catch (e) { /* fine */ }
+  }
+
+  MMEditor.deleteNode = function (id) {
+    if (!ready()) return;
+    id = id || state.selNode;
+    if (!id || !specNode(id)) return;
+    pushUndo();
+    var list = nodes(), i;
+    for (i = list.length - 1; i >= 0; i--) if (list[i].id === id) list.splice(i, 1);
+    // a dangling alignWith is the same class of breakage as an empty frame: validate()
+    // rejects it, so a normal in-browser delete produced a save file render.py --check
+    // refuses and the page boots with a red error banner
+    for (i = 0; i < list.length; i++) if (list[i].alignWith === id) delete list[i].alignWith;
+    var es = edges();
+    for (i = es.length - 1; i >= 0; i--) if (es[i].f === id || es[i].t === id) es.splice(i, 1);
+    var fr = MM.spec.FRAMES || [], j, k;
+    for (j = fr.length - 1; j >= 0; j--) {
+      if (!fr[j].nodes) continue;
+      for (k = fr[j].nodes.length - 1; k >= 0; k--) if (fr[j].nodes[k] === id) fr[j].nodes.splice(k, 1);
+      // a frame with no members is invalid — MMLayout.validate rejects it, so exporting
+      // one turned a normal delete into a spec that boots with a red error banner
+      if (!fr[j].nodes.length) fr.splice(j, 1);
+    }
+    if (MM.spec.FRAMES && !MM.spec.FRAMES.length) delete MM.spec.FRAMES;
+    state.selNode = null; state.selEdge = null;
+    if (lastAnchorId === id) lastAnchorId = null;
+    rebuild();
+  };
+
+  /* ------------------------------------------------------------------- serialize */
+
+  function q(s) {
+    return "'" + String(s == null ? '' : s)
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '')
+      .replace(/\n/g, '\\n')
+      // `<\/` is the same character as `</` to JS, but it does not close the inlined
+      // script element the spec lives in — and render.py refuses to inline a literal
+      // closing script tag at all. Without this, typing one into a wire label produced a
+      // save file its own renderer would not take back. Deliberately narrow: `</b>` and
+      // friends are untouched, so an export still reads like a hand-authored spec.
+      .replace(/<\/(\s*script)/gi, '<\\/$1') + "'";
+  }
+
+  function num(v) {
+    var n = Number(v);
+    if (!isFinite(n)) return '0';
+    return (Math.round(n) === n) ? String(Math.round(n)) : String(Math.round(n * 100) / 100);
+  }
+
+  function pairs(list) { return '{ ' + list.join(', ') + ' }'; }
+  function has(v) { return v !== undefined && v !== null && v !== '' && v !== false; }
+
+  function laneLine(l) {
+    var p = ['id: ' + q(l.id)];
+    if (has(l.label)) p.push('label: ' + q(l.label));
+    if (l.y === 'center') p.push("y: 'center'");                 // not a pixel — pass it through
+    else if (has(l.y) && Number(l.y) !== metaNum('padY')) p.push('y: ' + num(l.y));
+    if (has(l.gap) && Number(l.gap) !== metaNum('laneGap')) p.push('gap: ' + num(l.gap));
+    if (has(l.w)) p.push('w: ' + num(l.w));
+    if (has(l.align) && l.align !== 'left') p.push('align: ' + q(l.align));
+    return pairs(p);
+  }
+
+  function frameLine(f) {
+    var p = ['id: ' + q(f.id)];
+    if (has(f.label)) p.push('label: ' + q(f.label));
+    var ids = (f.nodes || []).map(function (n) { return q(n); });
+    p.push('nodes: [' + ids.join(', ') + ']');
+    if (has(f.color) && f.color !== 'orange') p.push('color: ' + q(f.color));
+    // A PARTIAL pad is legal — layout.js defaults each missing key on its own — so only
+    // the keys that are actually there and actually differ are written. Writing all three
+    // through num() turned an absent key into a literal 0, and re-rendering the export
+    // then lost that side's clearance (30px of caption room, silently, on every export).
+    if (f.pad) {
+      var dflt = MMLayout.DEFAULTS.framePad;
+      var pd = [], pk = ['x', 'top', 'bottom'], i;
+      for (i = 0; i < pk.length; i++) {
+        var v = f.pad[pk[i]];
+        if (v === undefined || v === null || v === '') continue;
+        if (Number(v) === dflt[pk[i]]) continue;
+        pd.push(pk[i] + ': ' + num(v));
+      }
+      if (pd.length) p.push('pad: { ' + pd.join(', ') + ' }');
+    }
+    return pairs(p);
+  }
+
+  // A text row whose key EXISTS is written even when it is empty: the key is what makes
+  // build() render the row, so dropping an emptied '' would delete the row for good and
+  // leave nothing in the browser to type back into.
+  function kept(v) { return typeof v === 'string'; }
+
+  function nodeLine(n) {
+    var p = ['id: ' + q(n.id), 'lane: ' + q(n.lane), 'kind: ' + q(n.kind)];
+    if (has(n.n)) p.push('n: ' + q(n.n));
+    if (kept(n.title)) p.push('title: ' + q(n.title));
+    if (kept(n.body)) p.push('body: ' + q(n.body));
+    if (kept(n.rw)) p.push('rw: ' + q(n.rw));
+    if (has(n.w)) p.push('w: ' + num(n.w));
+    if (has(n.gapBefore) && Number(n.gapBefore) !== metaNum('rowGap')) p.push('gapBefore: ' + num(n.gapBefore));
+    if (has(n.alignWith)) p.push('alignWith: ' + q(n.alignWith));
+    if (n.pin) p.push('pin: { x: ' + Math.round(n.pin.x) + ', y: ' + Math.round(n.pin.y) + ' }');
+    return pairs(p);
+  }
+
+  function edgeLine(e) {
+    var p = ['f: ' + q(e.f), 't: ' + q(e.t), 'c: ' + q(e.c)];
+    if (has(e.l)) p.push('l: ' + q(e.l));
+    if (e.dash) p.push('dash: 1');
+    if (has(e.side)) p.push('side: ' + q(e.side));
+    if (has(e.bulge) && Number(e.bulge) !== defBulge(e)) p.push('bulge: ' + num(e.bulge));
+    if (e.labelAbove) p.push('labelAbove: 1');
+    return pairs(p);
+  }
+
+  function block(name, items, fn, last) {
+    var out = [], i;
+    if (!items.length) { out.push('  ' + name + ': []' + (last ? '' : ',')); return out; }
+    out.push('  ' + name + ': [');
+    for (i = 0; i < items.length; i++) out.push('    ' + fn(items[i]) + (i === items.length - 1 ? '' : ','));
+    out.push('  ]' + (last ? '' : ','));
+    return out;
+  }
+
+  // NODES grouped by lane in LANES order, DECLARATION order within a lane.
+  // (It used to sort by visual top. Dragging pins a node without changing its slot, so
+  // the visual order of a pinned box says nothing about the flow — sorting on it only
+  // reshuffled which node is "first in its lane", silently moving the gapBefore chain.)
+  // Nodes whose lane no longer exists keep declaration order at the end.
+  function orderedNodes() {
+    var ls = lanes(), all = nodes(), out = [], seen = {}, i, j;
+    for (i = 0; i < ls.length; i++) {
+      for (j = 0; j < all.length; j++) {
+        if (all[j].lane !== ls[i].id) continue;
+        out.push(all[j]);
+        seen[all[j].id] = 1;
+      }
+    }
+    for (i = 0; i < all.length; i++) if (!seen[all[i].id]) out.push(all[i]);
+    return out;
+  }
+
+  function today() {
+    var d = new Date();
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  function metaBlock() {
+    var m = MM.spec.META || {}, out = [], keys, i, item, parts;
+    out.push('  META: {');
+    var line = [];
+    line.push('    title: ' + q(m.title || ''));
+    if (has(m.subtitle)) line.push('    subtitle: ' + q(m.subtitle));
+    // hint is written whenever the KEY exists and differs from the default — '' included.
+    // An author who deliberately suppressed the hint line had it dropped on export, and the
+    // default text came back on the next render with no UI to remove it again.
+    if (m.hint !== undefined && m.hint !== null && m.hint !== metaDefault('hint')) {
+      line.push('    hint: ' + q(m.hint));
+    }
+    keys = ['laneGap', 'rowGap', 'padX', 'padY', 'maxWidth'];
+    var legendLines = null;
+    if (m.legend && m.legend.length) {
+      legendLines = ['    legend: ['];
+      for (i = 0; i < m.legend.length; i++) {
+        item = m.legend[i];
+        // a legend row is either a wire colour (`c`) or a node kind (`k`) — writing `c`
+        // unconditionally turned every box swatch into `c: ''` on the first export
+        parts = has(item.k) ? ['k: ' + q(item.k)] : ['c: ' + q(item.c)];
+        if (has(item.label)) parts.push('label: ' + q(item.label));
+        if (item.dash) parts.push('dash: true');
+        legendLines.push('      ' + pairs(parts) + (i === m.legend.length - 1 ? '' : ','));
+      }
+      legendLines.push('    ]');
+    }
+    var tail = [];
+    for (i = 0; i < keys.length; i++) {
+      if (has(m[keys[i]]) && Number(m[keys[i]]) !== metaDefault(keys[i])) {
+        tail.push('    ' + keys[i] + ': ' + num(m[keys[i]]));
+      }
+    }
+    var all = line.slice();
+    if (legendLines) all.push(legendLines.join('\n'));
+    all = all.concat(tail);
+    for (i = 0; i < all.length; i++) out.push(all[i] + (i === all.length - 1 ? '' : ','));
+    out.push('  },');
+    return out;
+  }
+
+  MMEditor.exportSpec = function () {
+    if (!ready()) return '';
+    MMEditor.syncFromDOM();
+    var m = MM.spec.META || {}, frames = MM.spec.FRAMES || [];
+    var out = [];
+    // The title goes into a // comment, so any newline in it would push the rest of the
+    // comment onto its own line as bare code — a syntax error that blanked the whole page,
+    // silently, since render.py treats the spec as opaque text.
+    var titleComment = String(m.title || 'untitled').replace(/[\r\n]+/g, ' ');
+    out.push('// mindmap spec — ' + titleComment + ' — exported ' + today());
+    out.push('window.MM_SPEC = {');
+    out = out.concat(metaBlock());
+    out = out.concat(block('LANES', lanes(), laneLine, false));
+    if (frames.length) out = out.concat(block('FRAMES', frames, frameLine, false));
+    out = out.concat(block('NODES', orderedNodes(), nodeLine, false));
+    out = out.concat(block('EDGES', edges(), edgeLine, true));
+    out.push('};');
+    return out.join('\n') + '\n';
+  };
+
+  MMEditor.copyToClipboard = function (text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function () { legacyCopy(text); });
+    }
+    legacyCopy(text);
+  };
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (e) { /* clipboard is a convenience, never a blocker */ }
+  }
+
+  MMEditor.download = function (filename) {
+    if (!ready()) return;
+    var text = MMEditor.exportSpec();
+    var name = filename || cfg.filename || 'spec.js';
+    try {
+      var blob = new Blob([text], { type: 'text/javascript' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    } catch (e) {
+      if (window.console) console.error('[mindmap] download failed', e);
+    }
+    MMEditor.copyToClipboard(text);
+    flash('Exported ' + name + ' · also copied to clipboard');
+  };
+
+  /* ------------------------------------------------------- editing on/off */
+
+  MMEditor.setEditable = function (on) {
+    cfg.editable = !!on;
+    document.body.classList.toggle('mm-editing', cfg.editable);
+    // "E for a clean screenshot" means the toolbar and the drag hint go too, not just the
+    // affordances on the boxes. engine.css already had the whole screenshot-mode block
+    // hanging off body.editing-off; nothing was ever setting the class.
+    document.body.classList.toggle('editing-off', !cfg.editable);
+    if (!cfg.editable) {
+      MMEditor.toggleConnect(false);
+      selectEdge(null);
+      selectNode(null);
+      hideBar();
+    }
+    decorate();
+    syncExtraButtons();
+  };
+
+  function selectEdge(i) { MMEditor.selectEdge(i); }
+
+  /* ------------------------------------------------------------- toolbar */
+
+  function mkBtn(id, label, title, handler) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.id = id;
+    b.className = 'mm-btn';
+    b.setAttribute('data-mm-extra', '1');
+    b.textContent = label;
+    if (title) b.title = title;
+    b.addEventListener('click', handler);
+    return b;
+  }
+
+  function wireToolbar() {
+    var tb = $('mm-toolbar');
+    var connect = $('mm-btn-connect'), relayout = $('mm-btn-relayout'),
+        clearpins = $('mm-btn-clearpins'), exportBtn = $('mm-btn-export');
+
+    if (connect) connect.addEventListener('click', function () { MMEditor.toggleConnect(); });
+    if (relayout) relayout.addEventListener('click', function () { MMEditor.syncFromDOM(); MM.redraw(); applySelection(); });
+    if (clearpins) clearpins.addEventListener('click', function () {
+      pushUndo(); MMLayout.clearAllPins(); MM.redraw(); applySelection();
+    });
+    if (exportBtn) exportBtn.addEventListener('click', function () { MMEditor.download(); });
+
+    if (!tb || tb.querySelector('[data-mm-extra]')) return;
+    tb.appendChild(mkBtn('mm-btn-addnode', '+ Node', 'add a node below the selected one (N)', function () { MMEditor.addNode(); }));
+    tb.appendChild(mkBtn('mm-btn-delnode', 'Delete node', 'delete the selected node and its edges (⌘/Ctrl+Delete)', function () { MMEditor.deleteNode(); }));
+    tb.appendChild(mkBtn('mm-btn-undo', 'Undo', 'undo (⌘/Ctrl+Z)', function () { MMEditor.undo(); }));
+    tb.appendChild(mkBtn('mm-btn-chrome', 'Editing off', 'hide edit chrome for a clean screenshot (E)', function () {
+      MMEditor.setEditable(!cfg.editable);
+    }));
+    syncExtraButtons();
+  }
+
+  function syncExtraButtons() {
+    var d = $('mm-btn-delnode');
+    if (d) d.disabled = !state.selNode;
+    var u = $('mm-btn-undo');
+    if (u) u.disabled = !undoStack.length;
+    var c = $('mm-btn-chrome');
+    if (c) c.textContent = cfg.editable ? 'Editing off' : 'Editing on';
+  }
+
+  var flashEl = null;
+  function flash(msg) {
+    if (!flashEl) {
+      flashEl = document.createElement('div');
+      flashEl.id = 'mm-flash';
+      flashEl.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);' +
+        'background:#0A1925;color:#fff;font:600 11.5px system-ui,-apple-system,sans-serif;' +
+        'padding:7px 14px;border-radius:8px;z-index:9999;pointer-events:none;opacity:0;' +
+        'transition:opacity .18s ease';
+      document.body.appendChild(flashEl);
+    }
+    flashEl.textContent = msg;
+    flashEl.style.opacity = '1';
+    clearTimeout(flashEl._t);
+    flashEl._t = setTimeout(function () { flashEl.style.opacity = '0'; }, 2200);
+  }
+
+  /* ------------------------------------------------------------ svg clicks */
+
+  function onSvgClick(ev) {
+    var hit = ev.target.closest ? ev.target.closest('.mm-wire-hit, .mm-wire') : null;
+    if (!hit) return;
+    var i = parseInt(hit.getAttribute('data-edge'), 10);
+    if (isNaN(i)) return;
+    ev.stopPropagation();
+    MMEditor.selectEdge(i);
+  }
+
+  /* ------------------------------------------------------------- keyboard */
+
+  function onKeyDown(ev) {
+    if (!ready()) return;
+    // check the focused element too: a key event can be retargeted (or synthesised) at document
+    var typing = isTyping(ev.target) || isTyping(document.activeElement);
+    var meta = ev.metaKey || ev.ctrlKey;
+
+    // A caret parked in a box's text used to swallow both of these — which is exactly
+    // where "+ Node" leaves you, so the first Undo after adding a box was a dead key and
+    // ⌘Delete could not remove the box you had just made. Inside one of OUR rows the
+    // editor's own undo is the right one anyway (focusin snapshots once per editing
+    // session); blur first so the typed text reaches the spec before it is rolled back.
+    // A real <input> (the wire-label field) still keeps the browser's undo.
+    var row = document.activeElement && document.activeElement.closest
+      ? document.activeElement.closest('.mm-t, .mm-d, .mm-rw') : null;
+
+    if (meta && (ev.key === 'z' || ev.key === 'Z') && (!typing || row)) {
+      ev.preventDefault();
+      if (row && row.blur) row.blur();
+      if (ev.shiftKey) MMEditor.redo(); else MMEditor.undo();
+      return;
+    }
+    if (meta && (ev.key === 'Backspace' || ev.key === 'Delete')) {
+      var host = row && row.closest ? row.closest('.mm-node') : null;
+      var inSelected = host && host.getAttribute('data-id') === state.selNode;
+      if (state.selNode && (!typing || inSelected)) {
+        ev.preventDefault();
+        if (row && row.blur) row.blur();
+        MMEditor.deleteNode(state.selNode);
+      }
+      return;
+    }
+    if (ev.key === 'Escape') {
+      var act = document.activeElement;
+      if (typing && act && act.blur) { act.blur(); return; }
+      if (state.connect && state.srcId) { setSrc(null); return; }
+      if (state.connect) { MMEditor.toggleConnect(false); return; }
+      MMEditor.selectEdge(null);
+      selectNode(null);
+      return;
+    }
+    if (typing || meta || ev.altKey) return;
+
+    if (state.selEdge !== null) {
+      var i = state.selEdge;
+      switch (ev.key) {
+        case 'Delete': case 'Backspace': ev.preventDefault(); MMEditor.deleteEdge(i); return;
+        case 'd': MMEditor.toggleDash(i); return;
+        case '[': MMEditor.cycleColor(i, -1); return;
+        case ']': MMEditor.cycleColor(i, 1); return;
+        case 's': MMEditor.cycleSide(i); return;
+        case '-': case '_': MMEditor.nudgeBulge(i, -BULGE_STEP); return;
+        case '=': case '+': MMEditor.nudgeBulge(i, BULGE_STEP); return;
+        case 'a': MMEditor.toggleLabelAbove(i); return;
+      }
+    }
+    if (ev.key === 'c' || ev.key === 'C') { MMEditor.toggleConnect(); return; }
+    if (ev.key === 'e' || ev.key === 'E') { MMEditor.setEditable(!cfg.editable); return; }
+    if (ev.key === 'n' || ev.key === 'N') { ev.preventDefault(); MMEditor.addNode(); return; }
+  }
+
+  /* ------------------------------------------------------------------ init */
+
+  MMEditor.init = function (opts) {
+    if (!ready()) {
+      if (window.console) console.warn('[mindmap] MMEditor.init: engine not ready — read-only');
+      return;
+    }
+    opts = opts || {};
+    if (opts.filename) cfg.filename = opts.filename;
+    var editable = (opts.editable === undefined) ? true : !!opts.editable;
+
+    if (inited) { MMEditor.setEditable(editable); return; }
+    inited = true;
+
+    // Selection styling has to survive every wire rebuild, including renders the
+    // editor did not trigger (boot, resize, MM.redraw). One wrapper, applied once.
+    if (!MMWires.__mmPatched) {
+      var base = MMWires.render;
+      MMWires.render = function () {
+        base.apply(MMWires, arguments);
+        if (inited) applySelection();
+      };
+      MMWires.__mmPatched = true;
+    }
+
+    buildBar();
+    wireToolbar();
+
+    MM.canvas.addEventListener('pointerdown', onPointerDown, false);
+    MM.canvas.addEventListener('dblclick', onDblClick, false);
+    MM.canvas.addEventListener('pointerover', onPointerOver, false);
+    MM.canvas.addEventListener('focusin', onFocusIn, false);
+    MM.canvas.addEventListener('focusout', onFocusOut, false);
+    MM.canvas.addEventListener('input', onInput, false);
+    MM.canvas.addEventListener('paste', onPaste, false);
+    MM.svg.addEventListener('click', onSvgClick, false);
+    document.addEventListener('keydown', onKeyDown, false);
+    window.addEventListener('resize', function () { if (state.selEdge !== null) positionBar(); }, false);
+
+    MMEditor.setEditable(editable);
+  };
+
+})();
+
+</script>
+<script>
+window.MMBoot = function () {
+  var errs = MMLayout.validate(window.MM_SPEC);
+  if (errs.length) MMLayout.showErrors(errs);          // non-fatal; bad edges are skipped
+  MMLayout.build(window.MM_SPEC, document.getElementById('mm-canvas'));
+  MMLayout.layout();          // measure -> place -> size canvas -> place frames
+  MMWires.render();           // draw svg from the LIVE spec
+  MMEditor.init();            // attach handlers (no-op if editor.js absent)
+};
+document.addEventListener('DOMContentLoaded', function () {
+  MMBoot();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { MMLayout.layout(); MMWires.render(); });
+  }
+  window.addEventListener('resize', function () { MMWires.render(); });
+});
+</script>
+</body>
+</html>
