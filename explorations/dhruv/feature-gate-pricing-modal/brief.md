@@ -51,10 +51,13 @@ cards — the two controls stay independent.
 When a discount is running, each plan shows the money and the percentage it saves. The rate is
 the same on both plans; the money differs because the plans do.
 
-A small timer shows the time left on the discount. The offer runs for one hour.
+A small timer shows the time left on the discount. The offer runs for one hour, and the hour
+starts once — per person, not per view. Someone who dismisses the modal and comes back inside the
+hour sees the time that is actually left; someone who comes back after it sees the expired state.
 
 **Plan prices are not shown.** Only the savings appear in the modal; the person sees the price at
-checkout. See *Left open* — this is the decision I have the most doubt about.
+checkout. The savings figure stands on its own and is not stated as a comparison against a base
+price — a deliberate call, recorded in *Left open* with the risk it carries.
 
 Both plans are reachable — this modal can sell either one, not just Gold.
 
@@ -67,7 +70,8 @@ feature list a horizontal scroller. Nothing is cut.
 |---|---|---|
 | default | Discount running, gated feature selected and playing, both plan cards with savings, timer counting | Click a gated feature |
 | no offer | Same layout, no savings figures, no timer, no discount badge | Click a gated feature while no promo is running |
-| offer expired | Timer replaced by a line saying the offer has ended; savings figures come off | The hour runs out with the modal open |
+| offer expired | Timer replaced by a line saying the offer has ended; savings figures come off | The hour runs out with the modal open, or the person returns after it has passed |
+| offer part-spent | Timer shows the remaining minutes, not a fresh hour | The person dismisses and returns inside the hour |
 | pending | The chosen plan's button acknowledges the click before checkout opens | Click buy on either card |
 | already on Pro | The Pro card reads as their current plan and cannot be bought; Gold is the only purchase | A Pro user hits a Gold gate |
 | video unavailable | Still frame in the video area, copy unchanged | Video has not loaded, cannot play, or reduced motion is set |
@@ -92,6 +96,9 @@ does not.
 **By whether a promo is running.** Savings figures, discount badge and timer are present or
 absent together.
 
+**By how much of the hour is left.** The timer is per person and does not restart, so a returning
+visitor sees a partly-spent hour or an expired offer.
+
 **By width.** 390 stacks and scrolls as described above; 1440 is the full side-by-side layout.
 
 Every one of these gets drawn.
@@ -109,22 +116,15 @@ Proposed, not confirmed — correct these:
 
 ## Left open
 
-**What the savings are measured against.** With no price on screen, "save $240" has nothing to
-anchor to, and the person cannot tell whether that is a lot. Price-only-at-checkout also invites
-consumer-protection scrutiny in several markets. I have built the brief as specified; **you** need
-to settle whether the modal states what the saving is measured against, and take a view on the
-disclosure risk.
-
-**Whether the hour restarts on every view.** You chose an hour-long timer and also that the modal
-is identical every time someone sees it. Together those mean the hour resets on each view, so a
-person who reopens the modal always has a fresh hour and the urgency is theatre — noticeable to
-exactly the people who are deliberating. Either the timer is per person and a second view shows
-less time, or it restarts and we accept that. **Yours to settle.**
-
-**Which four to six features are in the list.** Not decided. Needed before anything can be drawn,
-along with a video and a still frame for each. Whoever owns the feature marketing.
+**Which four to six features are in the list.** Dhruv is supplying these, with a video and a
+still frame for each. Nothing can be drawn until they land.
 
 **The savings figures themselves**, and the discount percentage. Real numbers needed.
+
+**Disclosure risk on price-free savings.** Settled by decision: the savings figure stands alone and
+is not measured against a stated base price. Recording the residual risk rather than reopening it
+— several markets require a reference price wherever a saving is advertised, so this is worth a
+look from whoever owns pricing compliance before it ships.
 
 **Frequency.** The modal shows on every gate hit with no cap. Whether that is too often cannot be
 settled by looking at the design — it needs usage data.

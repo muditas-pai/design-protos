@@ -110,6 +110,9 @@ answer; silence is not.
 8. **Can one person meet this more than once, and does anything change the second time?**
 9. **What gets cut, stacked, or reordered when the space is much narrower?**
 10. **What will people ask this to do that it deliberately does not do?**
+11. **What are the controls called — the main one, and anything that changes what is on screen?**
+    Write the label as it will read. A state nobody can name a way into cannot be reached, only
+    described.
 
 Each is here because only a person can answer it and getting it wrong changes what gets built.
 Anything a linter, a token check or a screenshot could settle on its own does not belong here —
