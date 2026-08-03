@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backdrops · presentations.ai marketing backgrounds</title>
+<style>
+  :root{
+    --navy:#0A1925; --navy-2:#1C3550; --blue:#005EFF; --blue-tint:#E6EFFF;
+    --ink:#0A1925; --muted:#5B6B7C; --line:#E3E8EF; --bg:#F7F8FA;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+  header{
+    position:sticky; top:0; z-index:20; background:rgba(247,248,250,.86);
+    backdrop-filter:saturate(180%) blur(12px);
+    border-bottom:1px solid var(--line); padding:14px 24px;
+    display:flex; gap:20px; align-items:center; flex-wrap:wrap;
+  }
+  h1{font-size:15px; font-weight:600; margin:0; letter-spacing:-.01em}
+  h1 small{display:block; font-weight:400; font-size:12px; color:var(--muted); letter-spacing:0}
+  .spacer{flex:1}
+  .ctl{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted)}
+  select,button{
+    font:inherit; font-size:12px; color:var(--ink); background:#fff;
+    border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer;
+  }
+  button:hover{border-color:#C7D0DB}
+  button.primary{background:var(--navy); color:#fff; border-color:var(--navy)}
+  button.primary:hover{background:#152B3F}
+  .switch{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff}
+  .switch button{border:0; border-radius:0; padding:6px 11px; color:var(--muted)}
+  .switch button[aria-pressed="true"]{background:var(--blue-tint); color:var(--blue); font-weight:500}
+
+  main{padding:24px; max-width:1680px; margin:0 auto}
+  .sec-label{
+    font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin:8px 0 12px;
+  }
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(430px,1fr)); gap:22px; margin-bottom:34px}
+  .card{background:#fff; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden}
+  .frame{position:relative; aspect-ratio:16/9; background:#EEF1F5}
+  .frame canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+  .meta{display:flex; align-items:center; gap:10px; padding:10px 13px; border-top:1px solid var(--line)}
+  .nm{font-weight:600; font-size:13px}
+  .rc{font-size:11px; color:var(--muted); font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .meta .spacer{flex:1}
+  .icb{
+    border:1px solid var(--line); background:#fff; border-radius:7px; width:28px; height:26px;
+    display:inline-grid; place-items:center; padding:0; color:var(--muted); font-size:13px;
+  }
+  .icb:hover{color:var(--ink)}
+  .note{color:var(--muted); font-size:12px; max-width:640px; margin:0 0 22px; line-height:1.6}
+  .busy{opacity:.45; pointer-events:none}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Backdrops<small>procedural marketing backgrounds · presentations.ai</small></h1>
+  <div class="spacer"></div>
+
+  <div class="ctl">plate
+    <div class="switch" id="plate">
+      <button data-v="off" aria-pressed="true">off</button>
+      <button data-v="light" aria-pressed="false">light UI</button>
+      <button data-v="dark" aria-pressed="false">dark UI</button>
+    </div>
+  </div>
+
+  <div class="ctl">export
+    <select id="size">
+      <option value="1920x1080">1920 × 1080</option>
+      <option value="2560x1440" selected>2560 × 1440</option>
+      <option value="3840x2160">3840 × 2160</option>
+      <option value="2400x1800">2400 × 1800 (4:3)</option>
+      <option value="2000x2000">2000 × 2000 (square)</option>
+    </select>
+  </div>
+
+  <button id="reroll">Reroll seeds</button>
+  <button class="primary" id="dlall">Download all 10</button>
+</header>
+
+<main>
+  <p class="note">
+    Ten seeded backdrops built for interfaces to sit on: value structure at the edges, a deliberately
+    quiet centre where the window lands, and fine grain throughout so nothing bands. Turn on
+    <strong>plate</strong> to sanity-check a screenshot against each one before exporting.
+  </p>
+
+  <div class="sec-label">Dark · saturated blue field</div>
+  <div class="grid" id="grid-dark"></div>
+
+  <div class="sec-label">Light · blue-tinted, low contrast</div>
+  <div class="grid" id="grid-light"></div>
+</main>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   1. Random + noise
+   ───────────────────────────────────────────────────────────── */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function makePerlin(rand){
+  const perm = new Uint8Array(512);
+  const p = Array.from({length:256}, (_,i)=>i);
+  for(let i=255;i>0;i--){ const j=(rand()*(i+1))|0; const t=p[i]; p[i]=p[j]; p[j]=t; }
+  for(let i=0;i<512;i++) perm[i]=p[i&255];
+
+  const fade = t => t*t*t*(t*(t*6-15)+10);
+  const lerp = (a,b,t) => a+(b-a)*t;
+  const grad = (h,x,y)=>{
+    switch(h&3){ case 0: return  x+y; case 1: return -x+y; case 2: return x-y; default: return -x-y; }
+  };
+
+  return function(x,y){
+    const X = Math.floor(x)&255, Y = Math.floor(y)&255;
+    const xf = x-Math.floor(x), yf = y-Math.floor(y);
+    const u = fade(xf), v = fade(yf);
+    const aa = perm[perm[X]+Y], ab = perm[perm[X]+Y+1];
+    const ba = perm[perm[X+1]+Y], bb = perm[perm[X+1]+Y+1];
+    return lerp(
+      lerp(grad(aa,xf,yf),   grad(ba,xf-1,yf),   u),
+      lerp(grad(ab,xf,yf-1), grad(bb,xf-1,yf-1), u),
+      v
+    ); // roughly -1..1
+  };
+}
+
+function fbm(noise,x,y,oct=4,gain=0.5,lac=2){
+  let a=1, f=1, s=0, n=0;
+  for(let i=0;i<oct;i++){ s += a*noise(x*f, y*f); n += a; a*=gain; f*=lac; }
+  return s/n;
+}
+
+const clamp = (v,a,b)=>v<a?a:v>b?b:v;
+const smoothstep = (e0,e1,x)=>{ const t=clamp((x-e0)/(e1-e0),0,1); return t*t*(3-2*t); };
+
+/* ─────────────────────────────────────────────────────────────
+   2. Helpers
+   ───────────────────────────────────────────────────────────── */
+function newCanvas(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+
+function hexToRgb(hex){
+  const h = hex.replace('#','');
+  const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+
+/* Mask that keeps texture at the edges and calms the centre.
+   `calm` 0 = texture everywhere, 1 = centre fully cleared. */
+function applyCalmMask(cv, calm, W, H){
+  if(calm <= 0.001) return cv;
+  const ctx = cv.getContext('2d');
+  ctx.globalCompositeOperation = 'destination-in';
+  const r = Math.max(W,H) * 0.78;
+  const g = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, r);
+  const floor = 1 - calm;                       // alpha remaining at dead centre
+  g.addColorStop(0.00, `rgba(0,0,0,${floor.toFixed(3)})`);
+  g.addColorStop(0.34, `rgba(0,0,0,${(floor + (1-floor)*0.12).toFixed(3)})`);
+  g.addColorStop(0.62, `rgba(0,0,0,${(floor + (1-floor)*0.62).toFixed(3)})`);
+  g.addColorStop(1.00, 'rgba(0,0,0,1)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation = 'source-over';
+  return cv;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. Texture layers  — each renders opaque strokes on transparent
+   ───────────────────────────────────────────────────────────── */
+const LAYERS = {
+
+  /* Large-scale organic value variation — the thing that stops a gradient
+     from reading as a gradient. Rendered tiny and scaled up smooth. */
+  mottle(ctx,W,H,rand,noise,o,u){
+    const s = o.res ?? 150;
+    const h = Math.max(2, Math.round(s*H/W));
+    const buf = newCanvas(s,h);
+    const bc = buf.getContext('2d');
+    const img = bc.createImageData(s,h);
+    const d = img.data;
+    const [r,g,b] = hexToRgb(o.color);
+    const f = o.freq ?? 2.4;
+    const lo = o.lo ?? 0.18, hi = o.hi ?? 0.88;
+    const warp = o.warp ?? 0;
+    for(let j=0;j<h;j++){
+      for(let i=0;i<s;i++){
+        let x = i/s*f, y = j/s*f;
+        if(warp){
+          x += warp*noise(x*0.6+11.3, y*0.6);
+          y += warp*noise(x*0.6, y*0.6+7.1);
+        }
+        const t = smoothstep(lo, hi, (fbm(noise,x,y,o.octaves ?? 5, o.gain ?? 0.55)+1)/2);
+        const k = (j*s+i)*4;
+        d[k]=r; d[k+1]=g; d[k+2]=b; d[k+3]= (t*(o.alpha ?? 0.4)*255)|0;
+      }
+    }
+    bc.putImageData(img,0,0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(buf,0,0,W,H);
+  },
+
+  /* Curl-ish streamlines through a noise field. The workhorse:
+     reads as brushed light rather than as a pattern. */
+  flow(ctx,W,H,rand,noise,o,u){
+    const count  = o.count ?? 260;
+    const steps  = o.steps ?? 90;
+    const step   = (o.step ?? 7) * u;
+    const freq   = (o.freq ?? 1.1) / 1000 / u;
+    const turns  = o.turns ?? 1.6;
+    ctx.lineCap = 'round';
+    /* Seed from a jittered grid, not pure random — random starts pile up
+       on the field's attractors and knot into visible scratches. */
+    const cols = Math.max(1, Math.round(Math.sqrt(count * W/H)));
+    const rows = Math.max(1, Math.ceil(count/cols));
+    for(let i=0;i<count;i++){
+      const gx = i % cols, gy = (i/cols)|0;
+      let x = ((gx + rand()) / cols) * W*1.3 - W*0.15;
+      let y = ((gy + rand()) / rows) * H*1.3 - H*0.15;
+      const len = Math.round(steps*(0.35+rand()*0.9));
+      ctx.beginPath(); ctx.moveTo(x,y);
+      for(let s=0;s<len;s++){
+        const a = fbm(noise, x*freq, y*freq, o.octaves ?? 3) * Math.PI * 2 * turns;
+        x += Math.cos(a)*step; y += Math.sin(a)*step;
+        ctx.lineTo(x,y);
+        if(x<-W*0.2||x>W*1.2||y<-H*0.2||y>H*1.2) break;
+      }
+      ctx.strokeStyle = o.color;
+      ctx.globalAlpha = (o.alpha ?? 0.1) * (0.35 + rand()*0.9);
+      ctx.lineWidth = (o.width ?? 1) * u * (0.6 + rand()*0.9);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  /* Straight hairlines at an angle, jittered spacing, alpha ramp along
+     the run so it never reads as a repeat. */
+  hairline(ctx,W,H,rand,noise,o,u){
+    const angle   = (o.angle ?? -22) * Math.PI/180;
+    const spacing = (o.spacing ?? 13) * u;
+    const D       = Math.hypot(W,H);
+    const n       = Math.ceil(D/spacing)*2;
+    ctx.save();
+    ctx.translate(W/2,H/2); ctx.rotate(angle); ctx.translate(-D/2,-D/2);
+    for(let i=0;i<n;i++){
+      const y = i*spacing + (rand()-0.5)*spacing*0.55;
+      const x0 = rand()*D*0.35;
+      const x1 = D - rand()*D*0.35;
+      const g = ctx.createLinearGradient(x0,0,x1,0);
+      const col = o.color;
+      g.addColorStop(0,'rgba(0,0,0,0)');
+      g.addColorStop(0.25 + rand()*0.15, col);
+      g.addColorStop(0.7 + rand()*0.2, col);
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.strokeStyle = g;
+      ctx.globalAlpha = (o.alpha ?? 0.16) * (0.3 + rand()*1.0);
+      ctx.lineWidth = (o.width ?? 1) * u;
+      ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+  },
+
+  /* Orthogonal grid; optional perspective convergence to a vanishing point. */
+  grid(ctx,W,H,rand,noise,o,u){
+    const gap = (o.gap ?? 46) * u;
+    ctx.strokeStyle = o.color;
+    ctx.lineWidth = (o.width ?? 1) * u;
+    ctx.globalAlpha = o.alpha ?? 0.14;
+
+    if(o.perspective){
+      const vx = W * (o.vpx ?? 0.5), vy = H * (o.vpy ?? -0.55);
+      for(let x=-W*0.6; x<W*1.6; x+=gap){
+        ctx.beginPath(); ctx.moveTo(x,H*1.15); ctx.lineTo(vx + (x-vx)*0.12, vy + (H*1.15-vy)*0.12); ctx.stroke();
+      }
+      let y = H*1.15, d = gap;
+      while(y > vy + H*0.06){
+        ctx.beginPath(); ctx.moveTo(-W*0.2,y); ctx.lineTo(W*1.2,y); ctx.stroke();
+        d *= (o.compress ?? 0.9); y -= d;
+        if(d < 1.2*u) break;
+      }
+    } else {
+      for(let x=0; x<=W+gap; x+=gap){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+      for(let y=0; y<=H+gap; y+=gap){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+      if(o.majorEvery){
+        ctx.globalAlpha = (o.alpha ?? 0.14) * 2.1;
+        ctx.lineWidth = (o.width ?? 1) * u * 1.15;
+        for(let i=0, x=0; x<=W+gap; x+=gap, i++) if(i % o.majorEvery === 0){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+        for(let i=0, y=0; y<=H+gap; y+=gap, i++) if(i % o.majorEvery === 0){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+      }
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  /* Dot field weighted by a noise mask — density varies, so it reads
+     as atmosphere and not as halftone. */
+  particles(ctx,W,H,rand,noise,o,u){
+    const count = o.count ?? 2600;
+    const freq  = (o.freq ?? 1.6)/1000/u;
+    const cut   = o.cut ?? 0.42;
+    /* noiseMix 1 = density entirely noise-driven (leaves bald patches),
+       0 = flat field. Mid values give variation with full coverage. */
+    const mix   = o.noiseMix ?? 1;
+    ctx.fillStyle = o.color;
+    for(let i=0;i<count;i++){
+      const x = rand()*W, y = rand()*H;
+      const n = (fbm(noise, x*freq, y*freq, 3) + 1) / 2;   // 0..1
+      const w = (1-mix) + mix * smoothstep(cut, 1, n);
+      if(w <= 0.001) continue;
+      const r = (o.r ?? 1.5) * u * (0.35 + w*1.2);
+      ctx.globalAlpha = (o.alpha ?? 0.5) * (0.15 + w * 0.95);
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  /* Scattered nodes linked to near neighbours. Blue-noise-ish placement
+     so clusters don't clump. */
+  network(ctx,W,H,rand,noise,o,u){
+    const target = o.nodes ?? 150;
+    const minD = (o.minDist ?? 46) * u;
+    const linkD = (o.linkDist ?? 132) * u;
+    const pts = [];
+    let guard = target * 40;
+    while(pts.length < target && guard-- > 0){
+      const p = [rand()*W, rand()*H];
+      let ok = true;
+      for(const q of pts){ if((p[0]-q[0])**2 + (p[1]-q[1])**2 < minD*minD){ ok=false; break; } }
+      if(ok) pts.push(p);
+    }
+    ctx.strokeStyle = o.color; ctx.lineWidth = (o.width ?? 1) * u;
+    for(let i=0;i<pts.length;i++){
+      for(let j=i+1;j<pts.length;j++){
+        const d = Math.hypot(pts[i][0]-pts[j][0], pts[i][1]-pts[j][1]);
+        if(d > linkD) continue;
+        ctx.globalAlpha = (o.linkAlpha ?? 0.3) * (1 - d/linkD) ** 1.4;
+        ctx.beginPath(); ctx.moveTo(pts[i][0],pts[i][1]); ctx.lineTo(pts[j][0],pts[j][1]); ctx.stroke();
+      }
+    }
+    ctx.fillStyle = o.nodeColor ?? o.color;
+    for(const p of pts){
+      ctx.globalAlpha = (o.nodeAlpha ?? 0.55) * (0.3 + rand()*0.9);
+      ctx.beginPath(); ctx.arc(p[0],p[1],(o.nodeR ?? 1.8)*u*(0.5+rand()*0.9),0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  /* Iso-lines through an fbm field (marching squares). Topographic —
+     organic contour without being painterly. */
+  contour(ctx,W,H,rand,noise,o,u){
+    const cell = (o.cell ?? 9) * u;
+    const cols = Math.ceil(W/cell)+2, rows = Math.ceil(H/cell)+2;
+    const freq = (o.freq ?? 1.15)/1000/u;
+    const f = new Float32Array(cols*rows);
+    for(let j=0;j<rows;j++)
+      for(let i=0;i<cols;i++)
+        f[j*cols+i] = fbm(noise, i*cell*freq, j*cell*freq, o.octaves ?? 4);
+
+    const levels = o.levels ?? 16;
+    ctx.strokeStyle = o.color;
+    ctx.lineWidth = (o.width ?? 1) * u;
+    ctx.globalAlpha = o.alpha ?? 0.16;
+    ctx.lineCap = 'round';
+
+    const ip = (p1,p2,v1,v2,t)=>{
+      const d = (v2-v1) || 1e-6;
+      const k = (t-v1)/d;
+      return [p1[0]+(p2[0]-p1[0])*k, p1[1]+(p2[1]-p1[1])*k];
+    };
+
+    for(let L=0; L<levels; L++){
+      const t = -0.8 + (1.6*(L+0.5))/levels;
+      ctx.beginPath();
+      for(let j=0;j<rows-1;j++){
+        for(let i=0;i<cols-1;i++){
+          const va=f[j*cols+i], vb=f[j*cols+i+1], vc=f[(j+1)*cols+i+1], vd=f[(j+1)*cols+i];
+          const A=[i*cell,j*cell], B=[(i+1)*cell,j*cell], C=[(i+1)*cell,(j+1)*cell], D=[i*cell,(j+1)*cell];
+          const idx = (va>t?8:0)|(vb>t?4:0)|(vc>t?2:0)|(vd>t?1:0);
+          if(idx===0||idx===15) continue;
+          const top=()=>ip(A,B,va,vb,t), right=()=>ip(B,C,vb,vc,t),
+                bottom=()=>ip(D,C,vd,vc,t), left=()=>ip(A,D,va,vd,t);
+          let segs=[];
+          switch(idx){
+            case 1: case 14: segs=[[left(),bottom()]]; break;
+            case 2: case 13: segs=[[bottom(),right()]]; break;
+            case 3: case 12: segs=[[left(),right()]]; break;
+            case 4: case 11: segs=[[top(),right()]]; break;
+            case 6: case 9:  segs=[[top(),bottom()]]; break;
+            case 7: case 8:  segs=[[left(),top()]]; break;
+            case 5:  segs=[[left(),top()],[bottom(),right()]]; break;
+            case 10: segs=[[left(),bottom()],[top(),right()]]; break;
+          }
+          for(const [p,q] of segs){ ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); }
+        }
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────
+   4. Grain — luminance noise, generated small and scaled up so the
+   preview and the 4K export carry the same apparent tooth.
+   ───────────────────────────────────────────────────────────── */
+function addGrain(ctx, W, H, rand, o){
+  const scale = (o.scale ?? 1.6);
+  const w = Math.max(2, Math.round(W/scale)), h = Math.max(2, Math.round(H/scale));
+  const g = newCanvas(w,h);
+  const gc = g.getContext('2d');
+  const img = gc.createImageData(w,h);
+  const d = img.data;
+  const amt = (o.amount ?? 0.055) * 255;
+  const chroma = o.chroma ?? 0.35;
+  for(let i=0;i<d.length;i+=4){
+    const lum = (rand()*2-1) * amt;
+    d[i]   = clamp(128 + lum + (rand()*2-1)*amt*chroma, 0, 255);
+    d[i+1] = clamp(128 + lum, 0, 255);
+    d[i+2] = clamp(128 + lum + (rand()*2-1)*amt*chroma, 0, 255);
+    d[i+3] = 255;
+  }
+  gc.putImageData(img,0,0);
+  ctx.save();
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.globalAlpha = o.opacity ?? 1;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(g,0,0,W,H);
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. Render one preset
+   ───────────────────────────────────────────────────────────── */
+function render(preset, W, H){
+  const cv = newCanvas(W,H);
+  const ctx = cv.getContext('2d');
+  const u = W / 1600;                        // geometry scale: everything is proportional
+  const rand = mulberry32(preset.seed);
+  const noise = makePerlin(mulberry32(preset.seed ^ 0x9E3779B9));
+
+  /* base field ------------------------------------------------ */
+  const a = (preset.base.angle ?? 120) * Math.PI/180;
+  const D = Math.hypot(W,H)/2;
+  const bg = ctx.createLinearGradient(
+    W/2 - Math.cos(a)*D, H/2 - Math.sin(a)*D,
+    W/2 + Math.cos(a)*D, H/2 + Math.sin(a)*D
+  );
+  (preset.base.stops).forEach(([p,c]) => bg.addColorStop(p,c));
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  /* washes: radial blooms + linear bands (bands give the horizon) */
+  for(const L of preset.lights){
+    ctx.save();
+    ctx.globalCompositeOperation = L.blend ?? 'source-over';
+    ctx.globalAlpha = L.alpha ?? 1;
+    let g;
+    if(L.type === 'band'){
+      const ang = (L.angle ?? 90) * Math.PI/180;
+      const R = Math.hypot(W,H)/2;
+      g = ctx.createLinearGradient(
+        W/2 - Math.cos(ang)*R, H/2 - Math.sin(ang)*R,
+        W/2 + Math.cos(ang)*R, H/2 + Math.sin(ang)*R
+      );
+      (L.stops).forEach(([p,c]) => g.addColorStop(p,c));
+    } else {
+      const r = L.r * Math.max(W,H);
+      g = ctx.createRadialGradient(W*L.x, H*L.y, 0, W*L.x, H*L.y, r);
+      g.addColorStop(0, L.color);
+      g.addColorStop(0.42, L.mid ?? L.color);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+    }
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
+  /* texture layers, each masked then composited ---------------- */
+  for(const layer of preset.layers){
+    const lc = newCanvas(W,H);
+    const lctx = lc.getContext('2d');
+    LAYERS[layer.type](lctx, W, H, rand, noise, layer, u);
+    applyCalmMask(lc, layer.calm ?? preset.calm ?? 0.6, W, H);
+    ctx.save();
+    ctx.globalCompositeOperation = layer.blend ?? 'source-over';
+    ctx.globalAlpha = layer.opacity ?? 1;
+    ctx.drawImage(lc,0,0);
+    ctx.restore();
+  }
+
+  /* vignette -------------------------------------------------- */
+  if(preset.vignette){
+    const v = ctx.createRadialGradient(W*0.5,H*0.48,Math.min(W,H)*0.18, W*0.5,H*0.5, Math.max(W,H)*0.78);
+    v.addColorStop(0,'rgba(0,0,0,0)');
+    v.addColorStop(1, preset.vignette);
+    ctx.fillStyle = v; ctx.fillRect(0,0,W,H);
+  }
+
+  addGrain(ctx, W, H, rand, preset.grain ?? {});
+  return cv;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. Presets — 5 dark, 5 light
+   ───────────────────────────────────────────────────────────── */
+const NAVY='#0A1925', NAVY2='#1C3550', NAVY3='#284B71', BLUE='#005EFF', BLUE_D='#0043B8', BLUE_M='#0055ED';
+
+const PRESETS = [
+/* ── DARK ─────────────────────────────────────────────────── */
+{
+  id:'deep-field', name:'Deep Field', mode:'dark', seed:10111,
+  recipe:'flow-lines · navy → brand blue',
+  base:{ angle:100, stops:[[0,'#10315C'],[0.5,'#0B2340'],[1,'#050D18']] },
+  lights:[
+    {type:'band', angle:96, blend:'source-over', stops:[
+      [0,'rgba(126,178,255,0.16)'],[0.42,'rgba(0,0,0,0)'],[1,'rgba(2,7,15,0.62)']
+    ]},
+    {x:0.24,y:0.78,r:0.52,blend:'screen',color:'rgba(0,94,255,0.60)',mid:'rgba(0,94,255,0.14)'},
+    {x:0.80,y:0.16,r:0.40,blend:'screen',color:'rgba(90,150,230,0.24)',mid:'rgba(90,150,230,0.06)'}
+  ],
+  layers:[
+    {type:'mottle', color:'#5E9BFF', freq:2.6, warp:0.35, alpha:0.30, lo:0.30, hi:0.92, blend:'screen', calm:0.22},
+    {type:'mottle', color:'#020913', freq:1.9, warp:0.25, alpha:0.42, lo:0.42, hi:1.0, blend:'multiply', calm:0.30},
+    {type:'flow', color:'#AFD1FF', count:380, steps:130, step:6, freq:0.8, turns:1.3, alpha:0.20, width:1, blend:'screen', calm:0.46},
+    {type:'flow', color:'#3D8BFF', count:70, steps:170, step:10, freq:0.45, turns:1.05, alpha:0.22, width:3, blend:'screen', calm:0.58}
+  ],
+  vignette:'rgba(3,8,16,0.34)',
+  grain:{amount:0.055, scale:1.5, chroma:0.3, opacity:0.9}
+},
+{
+  id:'signal-grid', name:'Signal Grid', mode:'dark', seed:20222,
+  recipe:'perspective grid · particles',
+  base:{ angle:92, stops:[[0,'#052B63'],[0.58,'#062E6E'],[1,'#030A18']] },
+  lights:[
+    {type:'band', angle:90, blend:'source-over', stops:[
+      [0,'rgba(0,94,255,0.30)'],[0.34,'rgba(10,60,150,0.10)'],[0.60,'rgba(3,9,22,0.30)'],[1,'rgba(1,4,12,0.78)']
+    ]},
+    {x:0.66,y:0.34,r:0.42,blend:'screen',color:'rgba(0,120,255,0.62)',mid:'rgba(0,110,255,0.16)'},
+    {x:0.08,y:0.06,r:0.34,blend:'screen',color:'rgba(0,180,255,0.24)',mid:'rgba(0,180,255,0.05)'}
+  ],
+  layers:[
+    {type:'mottle', color:'#0A2E7A', freq:2.1, warp:0.3, alpha:0.34, lo:0.36, hi:0.95, blend:'screen', calm:0.2},
+    {type:'grid', perspective:true, vpy:-1.35, vpx:0.44, gap:60, compress:0.958, color:'#79B0FF', alpha:0.26, width:1, blend:'screen', calm:0.44},
+    {type:'particles', color:'#DCEBFF', count:4600, freq:1.4, cut:0.3, noiseMix:0.7, r:1.4, alpha:0.42, blend:'screen', calm:0.34}
+  ],
+  vignette:'rgba(1,5,13,0.40)',
+  grain:{amount:0.055, scale:1.5, chroma:0.32, opacity:0.95}
+},
+{
+  id:'constellation', name:'Constellation', mode:'dark', seed:30333,
+  recipe:'network mesh · off-centre bloom',
+  base:{ angle:130, stops:[[0,'#0A1E3A'],[0.55,'#0B1B31'],[1,'#04080F']] },
+  lights:[
+    {type:'band', angle:118, blend:'source-over', stops:[
+      [0,'rgba(70,130,220,0.14)'],[0.5,'rgba(0,0,0,0)'],[1,'rgba(2,5,11,0.62)']
+    ]},
+    {x:0.70,y:0.40,r:0.44,blend:'screen',color:'rgba(0,94,255,0.58)',mid:'rgba(0,94,255,0.14)'},
+    {x:0.16,y:0.88,r:0.34,blend:'screen',color:'rgba(28,60,110,0.5)',mid:'rgba(28,60,110,0.12)'}
+  ],
+  layers:[
+    {type:'mottle', color:'#3E7BD4', freq:2.9, warp:0.4, alpha:0.26, lo:0.34, hi:0.94, blend:'screen', calm:0.22},
+    {type:'network', nodes:260, minDist:30, linkDist:112, color:'#8CBCFF', nodeColor:'#EAF3FF',
+     linkAlpha:0.46, nodeAlpha:0.85, nodeR:1.7, width:1, blend:'screen', calm:0.5},
+    {type:'particles', color:'#BBD8FF', count:1800, freq:2.2, cut:0.5, r:1.1, alpha:0.5, blend:'screen', calm:0.34}
+  ],
+  vignette:'rgba(2,5,11,0.42)',
+  grain:{amount:0.05, scale:1.6, chroma:0.3, opacity:0.9}
+},
+{
+  id:'ion', name:'Ion', mode:'dark', seed:40444,
+  recipe:'electric blue · crossed hairlines',
+  base:{ angle:112, stops:[[0,'#0038A8'],[0.42,'#0052E8'],[1,'#00133B']] },
+  lights:[
+    {type:'band', angle:112, blend:'source-over', stops:[
+      [0,'rgba(0,140,255,0.34)'],[0.46,'rgba(0,0,0,0)'],[1,'rgba(0,8,32,0.70)']
+    ]},
+    {x:0.34,y:0.32,r:0.46,blend:'screen',color:'rgba(60,150,255,0.55)',mid:'rgba(0,110,255,0.16)'},
+    {x:0.94,y:0.90,r:0.40,blend:'screen',color:'rgba(0,200,255,0.34)',mid:'rgba(0,200,255,0.08)'},
+    {x:0.02,y:0.02,r:0.42,blend:'multiply',color:'rgba(2,10,34,0.9)',mid:'rgba(2,10,34,0.45)'}
+  ],
+  layers:[
+    {type:'mottle', color:'#001B52', freq:2.2, warp:0.3, alpha:0.40, lo:0.40, hi:1.0, blend:'multiply', calm:0.24},
+    {type:'hairline', angle:-24, spacing:12, color:'rgba(200,228,255,1)', alpha:0.26, width:1, blend:'screen', calm:0.46},
+    {type:'hairline', angle:62, spacing:44, color:'rgba(140,195,255,1)', alpha:0.18, width:1, blend:'screen', calm:0.6}
+  ],
+  vignette:'rgba(0,7,25,0.38)',
+  grain:{amount:0.065, scale:1.4, chroma:0.4, opacity:1}
+},
+{
+  id:'contour-depth', name:'Contour Depth', mode:'dark', seed:50555,
+  recipe:'topographic iso-lines',
+  base:{ angle:146, stops:[[0,'#0E355E'],[0.5,'#0C2542'],[1,'#050E1B']] },
+  lights:[
+    {type:'band', angle:146, blend:'source-over', stops:[
+      [0,'rgba(90,165,255,0.18)'],[0.5,'rgba(0,0,0,0)'],[1,'rgba(2,7,15,0.60)']
+    ]},
+    {x:0.78,y:0.70,r:0.46,blend:'screen',color:'rgba(0,94,255,0.50)',mid:'rgba(0,94,255,0.12)'},
+    {x:0.20,y:0.20,r:0.36,blend:'screen',color:'rgba(0,160,255,0.26)',mid:'rgba(0,160,255,0.06)'}
+  ],
+  layers:[
+    {type:'mottle', color:'#2E6FC0', freq:2.4, warp:0.35, alpha:0.24, lo:0.34, hi:0.94, blend:'screen', calm:0.22},
+    {type:'contour', cell:7, freq:1.05, levels:22, octaves:4, color:'#8FBEFF', alpha:0.26, width:1, blend:'screen', calm:0.46},
+    {type:'contour', cell:7, freq:1.05, levels:5, octaves:4, color:'#E4F0FF', alpha:0.22, width:2, blend:'screen', calm:0.6}
+  ],
+  vignette:'rgba(2,7,15,0.38)',
+  grain:{amount:0.052, scale:1.55, chroma:0.3, opacity:0.9}
+},
+
+/* ── LIGHT ────────────────────────────────────────────────── */
+/* Light presets: the tint lives in the base gradient, the light/dark
+   structure comes from a band + white mottle (organic patches, never a
+   Gaussian blob), and texture sits near-even — a corner-weighted mask
+   reads as dirt on a pale ground. */
+{
+  id:'paper-blue', name:'Paper Blue', mode:'light', seed:60666,
+  recipe:'tinted paper · soft flow',
+  base:{ angle:108, stops:[[0,'#F2F7FF'],[0.5,'#E4EEFF'],[1,'#CCDDF8']] },
+  lights:[
+    {type:'band', angle:108, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.72)'],[0.52,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.10)']
+    ]}
+  ],
+  layers:[
+    {type:'mottle', color:'#FFFFFF', freq:2.1, warp:0.4, alpha:0.62, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'mottle', color:'#2E6BD0', freq:3.1, warp:0.35, alpha:0.13, lo:0.46, hi:0.98, blend:'multiply', calm:0.0},
+    {type:'flow', color:'#4E82CC', count:300, steps:120, step:7, freq:0.9, turns:1.25, alpha:0.115, width:1, blend:'multiply', calm:0.2}
+  ],
+  vignette:'rgba(120,155,210,0.10)',
+  grain:{amount:0.05, scale:1.5, chroma:0.25, opacity:0.9}
+},
+{
+  id:'mesh-light', name:'Mesh Light', mode:'light', seed:70777,
+  recipe:'network mesh · near-white',
+  base:{ angle:96, stops:[[0,'#F4F8FF'],[0.55,'#E7F0FF'],[1,'#D2E1FA']] },
+  lights:[
+    {type:'band', angle:96, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.75)'],[0.54,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.10)']
+    ]}
+  ],
+  layers:[
+    {type:'mottle', color:'#FFFFFF', freq:1.9, warp:0.35, alpha:0.60, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'mottle', color:'#2E6BD0', freq:2.8, warp:0.3, alpha:0.11, lo:0.48, hi:0.98, blend:'multiply', calm:0.0},
+    {type:'network', nodes:280, minDist:29, linkDist:100, color:'#4E7DC6', nodeColor:'#22497F',
+     linkAlpha:0.42, nodeAlpha:0.7, nodeR:1.5, width:1, blend:'multiply', calm:0.18}
+  ],
+  vignette:'rgba(125,158,212,0.09)',
+  grain:{amount:0.046, scale:1.55, chroma:0.22, opacity:0.85}
+},
+{
+  id:'drift', name:'Drift', mode:'light', seed:80888,
+  recipe:'flow-lines · blue with an orange whisper',
+  base:{ angle:124, stops:[[0,'#FCF8F6'],[0.42,'#EDF3FF'],[1,'#CFDFF9']] },
+  lights:[
+    {type:'band', angle:124, blend:'source-over', stops:[
+      [0,'rgba(255,85,0,0.035)'],[0.22,'rgba(255,255,255,0.5)'],[1,'rgba(0,94,255,0.11)']
+    ]}
+  ],
+  layers:[
+    {type:'mottle', color:'#FFFFFF', freq:2.3, warp:0.5, alpha:0.58, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'mottle', color:'#2E6BD0', freq:3.3, warp:0.4, alpha:0.12, lo:0.46, hi:0.98, blend:'multiply', calm:0.0},
+    {type:'flow', color:'#4173BB', count:240, steps:105, step:7, freq:1.15, turns:1.2, alpha:0.12, width:1.2, blend:'multiply', calm:0.22},
+    {type:'flow', color:'#C4693A', count:38, steps:95, step:8, freq:1.15, turns:1.2, alpha:0.085, width:1.6, blend:'multiply', calm:0.3}
+  ],
+  vignette:'rgba(130,162,210,0.08)',
+  grain:{amount:0.05, scale:1.5, chroma:0.28, opacity:0.9}
+},
+{
+  id:'halftone-field', name:'Halftone Field', mode:'light', seed:90999,
+  recipe:'particle density gradient',
+  base:{ angle:88, stops:[[0,'#F3F8FF'],[0.5,'#E6EFFF'],[1,'#CFDFF9']] },
+  lights:[
+    {type:'band', angle:88, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.70)'],[0.5,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.11)']
+    ]}
+  ],
+  layers:[
+    {type:'mottle', color:'#FFFFFF', freq:1.8, warp:0.35, alpha:0.58, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'particles', color:'#356AB2', count:13000, freq:1.15, cut:0.2, noiseMix:0.62, r:1.4, alpha:0.30, blend:'multiply', calm:0.16}
+  ],
+  vignette:'rgba(126,160,210,0.08)',
+  grain:{amount:0.044, scale:1.6, chroma:0.2, opacity:0.85}
+},
+{
+  id:'blueprint-light', name:'Blueprint Light', mode:'light', seed:101010,
+  recipe:'fine grid · major axes',
+  base:{ angle:118, stops:[[0,'#F3F8FF'],[0.5,'#E5EFFF'],[1,'#CEDEF9']] },
+  lights:[
+    {type:'band', angle:118, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.72)'],[0.52,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.11)']
+    ]}
+  ],
+  layers:[
+    {type:'mottle', color:'#FFFFFF', freq:2.0, warp:0.35, alpha:0.60, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'mottle', color:'#2E6BD0', freq:3.0, warp:0.3, alpha:0.10, lo:0.48, hi:0.98, blend:'multiply', calm:0.0},
+    {type:'grid', gap:28, majorEvery:6, color:'#5C84C6', alpha:0.19, width:1, blend:'multiply', calm:0.2},
+    {type:'hairline', angle:-16, spacing:130, color:'rgba(0,94,255,1)', alpha:0.13, width:1.4, blend:'multiply', calm:0.3}
+  ],
+  vignette:'rgba(122,157,210,0.08)',
+  grain:{amount:0.046, scale:1.55, chroma:0.22, opacity:0.85}
+}
+];
+
+/* ─────────────────────────────────────────────────────────────
+   7. Mock UI plate — for judging a screenshot against the backdrop
+   ───────────────────────────────────────────────────────────── */
+function drawPlate(ctx, W, H, variant){
+  if(variant === 'off') return;
+  const dark = variant === 'dark';
+  const w = W*0.62, h = H*0.66, x = (W-w)/2, y = (H-h)/2 + H*0.02;
+  const r = Math.max(6, W*0.008);
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(4,10,22,0.34)';
+  ctx.shadowBlur = W*0.035; ctx.shadowOffsetY = W*0.012;
+  ctx.fillStyle = dark ? '#12161C' : '#FCFCFD';
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill();
+  ctx.restore();
+
+  const bar = h*0.09;
+  ctx.fillStyle = dark ? '#1A1F26' : '#F3F4F6';
+  ctx.beginPath(); ctx.roundRect(x,y,w,bar,[r,r,0,0]); ctx.fill();
+  ctx.fillStyle = dark ? '#333A44' : '#D7DBE0';
+  for(let i=0;i<3;i++){ ctx.beginPath(); ctx.arc(x+bar*0.62+i*bar*0.46, y+bar*0.5, bar*0.14, 0, Math.PI*2); ctx.fill(); }
+
+  const sw = w*0.24;
+  ctx.fillStyle = dark ? '#0E1217' : '#F7F8FA';
+  ctx.fillRect(x, y+bar, sw, h-bar);
+  ctx.fillStyle = dark ? '#2A313A' : '#DFE3E9';
+  for(let i=0;i<7;i++) ctx.fillRect(x+sw*0.14, y+bar+h*0.07+i*h*0.075, sw*(0.5+((i*37)%40)/100), h*0.022);
+
+  ctx.fillStyle = dark ? '#242B34' : '#E6E9EE';
+  for(let i=0;i<9;i++) ctx.fillRect(x+sw+w*0.06, y+bar+h*0.09+i*h*0.062, (w-sw)*(0.35+((i*53)%50)/100), h*0.021);
+
+  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.08)' : 'rgba(10,25,37,0.09)';
+  ctx.lineWidth = Math.max(1, W*0.0009);
+  ctx.beginPath(); ctx.roundRect(x+0.5,y+0.5,w-1,h-1,r); ctx.stroke();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. UI
+   ───────────────────────────────────────────────────────────── */
+const PREVIEW_W = 1280, PREVIEW_H = 720;
+let plateMode = 'off';
+const cache = new Map();   // id -> preview canvas (backdrop only)
+
+function previewOf(p){
+  if(!cache.has(p.id)) cache.set(p.id, render(p, PREVIEW_W, PREVIEW_H));
+  return cache.get(p.id);
+}
+
+function paint(p, canvas){
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(previewOf(p), 0, 0);
+  drawPlate(ctx, canvas.width, canvas.height, plateMode);
+}
+
+function build(){
+  for(const key of ['dark','light']){
+    const host = document.getElementById('grid-'+key);
+    host.innerHTML = '';
+    for(const p of PRESETS.filter(x=>x.mode===key)){
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="frame"><canvas width="${PREVIEW_W}" height="${PREVIEW_H}"></canvas></div>
+        <div class="meta">
+          <span class="nm">${p.name}</span>
+          <span class="rc">${p.recipe}</span>
+          <span class="spacer"></span>
+          <button class="icb" title="New seed" data-act="seed">↻</button>
+          <button class="icb" title="Download PNG" data-act="dl">↓</button>
+        </div>`;
+      const cv = card.querySelector('canvas');
+      paint(p, cv);
+      card.querySelector('[data-act="seed"]').onclick = () => {
+        p.seed = (Math.random()*1e6)|0; cache.delete(p.id); paint(p, cv);
+      };
+      card.querySelector('[data-act="dl"]').onclick = () => download(p);
+      host.appendChild(card);
+    }
+  }
+}
+
+function exportSize(){
+  const [w,h] = document.getElementById('size').value.split('x').map(Number);
+  return [w,h];
+}
+
+function download(p){
+  const [W,H] = exportSize();
+  const cv = render(p, W, H);
+  cv.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `pai-backdrop-${p.mode}-${p.id}-${W}x${H}.png`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+}
+
+document.getElementById('plate').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  plateMode = b.dataset.v;
+  [...e.currentTarget.children].forEach(c => c.setAttribute('aria-pressed', String(c===b)));
+  document.querySelectorAll('.card').forEach((card,i) => paint(orderedPresets()[i], card.querySelector('canvas')));
+});
+
+function orderedPresets(){
+  return [...PRESETS.filter(p=>p.mode==='dark'), ...PRESETS.filter(p=>p.mode==='light')];
+}
+
+document.getElementById('reroll').onclick = () => {
+  PRESETS.forEach(p => p.seed = (Math.random()*1e6)|0);
+  cache.clear(); build();
+};
+
+document.getElementById('dlall').onclick = async (e) => {
+  const btn = e.currentTarget;
+  btn.disabled = true; const label = btn.textContent;
+  const list = orderedPresets();
+  for(let i=0;i<list.length;i++){
+    btn.textContent = `Rendering ${i+1}/${list.length}…`;
+    await new Promise(r => setTimeout(r, 60));
+    download(list[i]);
+    await new Promise(r => setTimeout(r, 320));
+  }
+  btn.textContent = label; btn.disabled = false;
+};
+
+build();
+</script>
+</body>
+</html>
