@@ -25,7 +25,7 @@ Two rules fall out of that, and they govern every line of copy:
 |---|---|
 | Persona | Anika Bose, Marketing Lead at **Marlow** (fictional cold brew brand) |
 | Pitching | **Trailhead**, a fictional outdoor gear brand |
-| Template | Co-Marketing Partnership Proposal, Marketing tab |
+| Template | Brand Partnership Proposal, Marketing tab |
 | Her campaign idea | "The Early Start" |
 
 ## Storyboard
@@ -46,7 +46,7 @@ Two rules fall out of that, and they govern every line of copy:
 | Time | On screen | Text on screen | VO (long cut) |
 |---|---|---|---|
 | **0:00 to 0:03** | **Dashboard.** Cursor skips the prompt box and clicks **Use a Template** in the quick actions row. | | "You don't always want to start from a blank prompt." |
-| **0:03 to 0:07** | **Gallery.** Select a template, full screen. Cursor taps the **Marketing** tab, the grid reflows, lands on `Co-Marketing Partnership Proposal`. Hold on the tabs about a second: they are what says this is a library of deck types, not colour schemes. | | |
+| **0:03 to 0:07** | **Gallery.** Select a template, full screen. Cursor taps the **Marketing** tab, the grid reflows, lands on `Brand Partnership Proposal`. Hold on the tabs about a second: they are what says this is a library of deck types, not colour schemes. | | |
 | **0:07 to 0:14** | **The authority shot.** Detail lightbox opens. Camera moves down to the filmstrip and scrubs it, slide titles readable as they pass: *Where our audiences overlap · The value exchange · How we will measure it · Next steps.* Hold on the last one. | `Someone already worked out what a good one answers.` | "Someone has already worked out what a partnership proposal has to answer to actually land." |
 | **0:14 to 0:22** | **The braindump.** `Use this Template` opens the split screen. Right: the template's slides, fully designed and populated. Left: the headline `Share your own context, and we'll update the template`, and her notes pasting in, scrolling as they grow. Visibly a mess. `Create Presentation` turns navy. | `You bring what you know.` | "You bring your side of it, in whatever state it's in." |
 | **0:22 to 0:26** | **Simmering.** A shimmer sweeps across the slides on the right, a soft highlight moving over the blur rather than a static frost, about one pass every 1.2s. Left shows the trace: *Developing Presentation Outline · Refining Strategic Narrative · Analyzing Partnership Value.* `Letting it simmer… 33s`. | | |
@@ -90,7 +90,7 @@ who owns this on their side? need a name before the meeting
 
 ## What the template makes her answer
 
-Full content in `co-marketing-partnership-template.md`. Bold rows are the four her braindump never
+Full content in `brand-partnership-proposal-template.md`. Bold rows are the four her braindump never
 touches, which is where the template earns its place.
 
 | Slide | The question it forces |
@@ -124,7 +124,7 @@ Worth doing regardless of the video: the outline is the reason to pick one templ
 and right now you cannot see it before committing.
 
 **The template has to be built.** Its copy is written: card, description and all twelve slides with
-demo content are in `co-marketing-partnership-template.md` beside this file. It does not exist in
+demo content are in `brand-partnership-proposal-template.md` beside this file. It does not exist in
 the Marketing tab yet.
 
 ## Not in this video

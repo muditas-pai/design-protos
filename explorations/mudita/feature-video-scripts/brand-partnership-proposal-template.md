@@ -1,4 +1,4 @@
-# Co-Marketing Partnership Proposal: template content
+# Brand Partnership Proposal: template content
 
 The template Anika picks in the Start from a Template video. This is what ships in the gallery,
 before any user context: the card copy, the detail-panel description, and the twelve slides with
@@ -20,7 +20,7 @@ proposing to **Corva** (accounting software) around an integration launch timed 
 
 | Field | Copy |
 |---|---|
-| Title | Co-Marketing Partnership Proposal |
+| Title | Brand Partnership Proposal |
 | Byline | By Presentations.ai |
 | Category | Marketing |
 
@@ -31,7 +31,7 @@ template in the handoff.
 
 > A partnership only gets signed when both sides can see exactly what they get.
 >
-> This template walks the questions a co-marketing proposal has to answer: where your audiences
+> This template walks the questions a partnership proposal has to answer: where your audiences
 > overlap, what each side puts in, what the campaign actually is, and how you will both know it
 > worked. It keeps the sections partners always ask about, including the value exchange that most
 > proposals leave out. Bring your notes in any state and it fills in around them.
@@ -46,7 +46,7 @@ question it exists to answer), and demo body copy.
 ### 1 · Cover
 
 **Heading:** Ledgerline × Corva
-**Subhead:** Co-marketing partnership proposal
+**Subhead:** Brand partnership proposal
 **Footer:** Prepared for the Corva partnerships team · March 2026
 
 ### 2 · The opportunity
