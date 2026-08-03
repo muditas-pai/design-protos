@@ -43,70 +43,20 @@ Two rules fall out of that, and they govern every line of copy:
 
 ## Shot by shot
 
-### 0:00 to 0:03 · Dashboard
+| Time | On screen | Text on screen | VO (long cut) |
+|---|---|---|---|
+| **0:00 to 0:03** | **Dashboard.** Cursor skips the prompt box and clicks **Use a Template** in the quick actions row. | | "You don't always want to start from a blank prompt." |
+| **0:03 to 0:07** | **Gallery.** Select a template, full screen. Cursor taps the **Marketing** tab, the grid reflows, lands on `Co-Marketing Partnership Proposal`. Hold on the tabs about a second: they are what says this is a library of deck types, not colour schemes. | | |
+| **0:07 to 0:14** | **The authority shot.** Detail lightbox opens. Camera moves down to the filmstrip and scrubs it, slide titles readable as they pass: *Where our audiences overlap · The value exchange · How we will measure it · Next steps.* Hold on the last one. | `Someone already worked out what a good one answers.` | "Someone has already worked out what a partnership proposal has to answer to actually land." |
+| **0:14 to 0:22** | **The braindump.** `Use this Template` opens the split screen. Right: the template's slides, fully designed and populated. Left: the headline `Share your own context, and we'll update the template`, and her notes pasting in, scrolling as they grow. Visibly a mess. `Create Presentation` turns navy. | `You bring what you know.` | "You bring your side of it, in whatever state it's in." |
+| **0:22 to 0:26** | **Simmering.** A shimmer sweeps across the slides on the right, a soft highlight moving over the blur rather than a static frost, about one pass every 1.2s. Left shows the trace: *Developing Presentation Outline · Refining Strategic Narrative · Analyzing Partnership Value.* `Letting it simmer… 33s`. | | |
+| **0:26 to 0:31** | **The editor.** Cut. Slide rail on the left, the full deck, same order as the filmstrip. Camera holds on the rail a full beat before touching the canvas, so the viewer registers that nothing was dropped. | `Nothing left out.` | |
+| **0:31 to 0:36** | **The question she skipped.** Canvas scrolls to **How we will measure it**, filled: bundle units, joint email CTR, combined reach, new-to-file customers each side, cost per new customer. There is not one word about measurement anywhere in her notes. | `Including the question you'd have been asked.` | "Including the ones you'd only discover you'd skipped when someone asks." |
+| **0:36 to 0:40** | **End.** Logo, one navy CTA. | *Don't start from blank.* **Start from what good looks like.** | |
 
-Cursor skips the prompt box and clicks **Use a Template** in the quick actions row.
-
-*VO:* "You don't always want to start from a blank prompt."
-
-### 0:03 to 0:07 · Gallery
-
-Select a template, full screen. Cursor taps the **Marketing** tab, the grid reflows, and lands on
-`Co-Marketing Partnership Proposal`. Hold on the tabs about a second: they are what says this is a
-library of deck types, not a library of colour schemes.
-
-### 0:07 to 0:14 · The authority shot
-
-Detail lightbox opens. Camera moves down to the filmstrip and scrubs it, slide titles readable as
-they pass: *Audience overlap · What you bring · Value exchange · Next steps and owners.* Hold on the
-last one.
-
-**On screen:** `Someone already worked out what a good one answers.`
-
-*VO:* "Someone has already worked out what a partnership proposal has to answer to actually land."
-
-> This is the shot that cannot be cut. It is the only moment in the product where you see what the
-> deck sets out to cover before any of the user's content exists. If the titles are not readable at
-> hero scale, the video is just another generation demo.
-
-### 0:14 to 0:22 · The braindump
-
-`Use this Template` opens the split screen. Right side: the template's slides, fully designed and
-fully populated. Left side: the headline `Share your own context, and we'll update the template`,
-and her notes pasting in, scrolling as they grow. Visibly a mess. `Create Presentation` turns navy.
-
-**On screen:** `You bring what you know.`
-
-*VO:* "You bring your side of it, in whatever state it's in."
-
-### 0:22 to 0:26 · Simmering
-
-A loading shimmer sweeps across the slides on the right, a soft highlight moving over the blur
-rather than a static frost, about one pass every 1.2s. Left side shows the trace: *Developing
-Presentation Outline · Refining Strategic Narrative · Analyzing Partnership Value.* `Letting it
-simmer… 33s`.
-
-### 0:26 to 0:31 · The editor
-
-Cut. Slide rail on the left, the full deck, same order as the filmstrip. Camera holds on the rail
-for a full beat before touching the canvas, so the viewer registers that nothing was dropped.
-
-**On screen:** `Nothing left out.`
-
-### 0:31 to 0:36 · The question she skipped
-
-Canvas scrolls to **Value exchange**, filled: no cash, 12K units against retail space and list
-access, roughly $180K media value each side. She never wrote a word of this.
-
-**On screen:** `Including the question you'd have been asked.`
-
-*VO:* "Including the ones you'd only discover you'd skipped when someone asks."
-
-### 0:36 to 0:40 · End
-
-Logo, one navy CTA.
-
-**On screen:** *Don't start from blank.* **Start from what good looks like.**
+**0:07 is the shot that cannot be cut.** It is the only moment in the product where you see what
+the deck sets out to cover before any of the user's content exists. If the titles are not readable
+at hero scale, the video is just another generation demo.
 
 ## What she types
 
@@ -140,22 +90,22 @@ who owns this on their side? need a name before the meeting
 
 ## What the template makes her answer
 
-The filmstrip titles at 0:09, and the questions behind them. She answered the first seven in her
-notes. She never got to the last five.
+Full content in `co-marketing-partnership-template.md`. Bold rows are the four her braindump never
+touches, which is where the template earns its place.
 
 | Slide | The question it forces |
 |---|---|
-| Why this, why now | Why is this worth doing, and why this quarter |
-| Audience overlap | Do our audiences actually meet, and where |
+| The opportunity | Why is this worth doing, and why this quarter |
+| Where our audiences overlap | Do our audiences actually meet, and where |
 | What we bring | What are we putting in |
 | What you bring | What are we asking of them, said plainly |
-| The idea | What is the actual creative |
-| Deliverables and channels | What gets made, and where does it run |
-| Precedent | Why should they believe we can run this |
+| The campaign | What is the actual creative |
+| **What we would make together** | What gets made, and where does it run |
 | **Timeline** | When does each side have to move |
-| **Success metrics** | How will we both know if it worked |
-| **Value exchange** | Who pays for what, and is it fair |
-| **Next steps and owners** | What happens on Monday, and who does it |
+| **How we will measure it** | How will we both know if it worked |
+| The value exchange | Who puts in what, and is it even |
+| We have done this before | Why should they believe we can run this |
+| **Next steps** | What happens after the meeting, and who owns it |
 
 ## Production notes
 
@@ -173,8 +123,9 @@ depends on does not exist yet. That panel probably wants a slide-outline list be
 Worth doing regardless of the video: the outline is the reason to pick one template over another,
 and right now you cannot see it before committing.
 
-**The template has to exist.** No `Co-Marketing Partnership Proposal` in the Marketing tab means
-either building it or moving the video to one that is already there.
+**The template has to be built.** Its copy is written: card, description and all twelve slides with
+demo content are in `co-marketing-partnership-template.md` beside this file. It does not exist in
+the Marketing tab yet.
 
 ## Not in this video
 
