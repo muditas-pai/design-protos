@@ -85,13 +85,14 @@
   </div>
 
   <button id="reroll">Reroll seeds</button>
-  <button class="primary" id="dlall">Download all 10</button>
+  <button class="primary" id="dlall">Download all 14</button>
 </header>
 
 <main>
   <p class="note">
-    Ten seeded backdrops built for interfaces to sit on: value structure at the edges, a deliberately
-    quiet centre where the window lands, and fine grain throughout so nothing bands. Turn on
+    Seven geometric motifs, each in dark and light. Every one is a reading of what a deck already is:
+    slides stacked, layered, laid out, sliced. Value structure sits at the edges, the centre stays
+    quiet where the window lands, and fine grain runs throughout so nothing bands. Turn on
     <strong>plate</strong> to sanity-check a screenshot against each one before exporting.
   </p>
 
@@ -185,98 +186,241 @@ function applyCalmMask(cv, calm, W, H){
    ───────────────────────────────────────────────────────────── */
 const LAYERS = {
 
-  /* Large-scale organic value variation — the thing that stops a gradient
-     from reading as a gradient. Rendered tiny and scaled up smooth. */
-  mottle(ctx,W,H,rand,noise,o,u){
-    const s = o.res ?? 150;
-    const h = Math.max(2, Math.round(s*H/W));
-    const buf = newCanvas(s,h);
-    const bc = buf.getContext('2d');
-    const img = bc.createImageData(s,h);
-    const d = img.data;
+  /* ── Value texture ─────────────────────────────────────────
+     Modular value variation: a mosaic of hard-edged cells whose
+     value is posterised into steps. Does the job an organic cloud
+     would, without a single curve. */
+  cells(ctx,W,H,rand,noise,o,u){
+    const cw = (o.cell ?? 88) * u;
+    const ch = cw / (o.ratio ?? 16/9);
+    const cols = Math.ceil(W/cw)+1, rows = Math.ceil(H/ch)+1;
+    const f = o.freq ?? 2.0;
+    const steps = o.steps ?? 5;
+    const lo = o.lo ?? 0.28, hi = o.hi ?? 0.94;
     const [r,g,b] = hexToRgb(o.color);
-    const f = o.freq ?? 2.4;
-    const lo = o.lo ?? 0.18, hi = o.hi ?? 0.88;
-    const warp = o.warp ?? 0;
-    for(let j=0;j<h;j++){
-      for(let i=0;i<s;i++){
-        let x = i/s*f, y = j/s*f;
-        if(warp){
-          x += warp*noise(x*0.6+11.3, y*0.6);
-          y += warp*noise(x*0.6, y*0.6+7.1);
-        }
-        const t = smoothstep(lo, hi, (fbm(noise,x,y,o.octaves ?? 5, o.gain ?? 0.55)+1)/2);
-        const k = (j*s+i)*4;
-        d[k]=r; d[k+1]=g; d[k+2]=b; d[k+3]= (t*(o.alpha ?? 0.4)*255)|0;
+    for(let j=0;j<rows;j++){
+      for(let i=0;i<cols;i++){
+        const n = (fbm(noise, (i*cw)/W*f, (j*ch)/W*f, o.octaves ?? 4) + 1) / 2;
+        let t = smoothstep(lo, hi, n);
+        t = Math.round(t*steps)/steps;                 // posterise
+        if(t <= 0) continue;
+        ctx.fillStyle = `rgba(${r},${g},${b},${(t*(o.alpha ?? 0.35)).toFixed(4)})`;
+        ctx.fillRect(i*cw, j*ch, cw+0.75, ch+0.75);    // overlap kills seams
       }
     }
-    bc.putImageData(img,0,0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(buf,0,0,W,H);
   },
 
-  /* Curl-ish streamlines through a noise field. The workhorse:
-     reads as brushed light rather than as a pattern. */
-  flow(ctx,W,H,rand,noise,o,u){
-    const count  = o.count ?? 260;
-    const steps  = o.steps ?? 90;
-    const step   = (o.step ?? 7) * u;
-    const freq   = (o.freq ?? 1.1) / 1000 / u;
-    const turns  = o.turns ?? 1.6;
-    ctx.lineCap = 'round';
-    /* Seed from a jittered grid, not pure random — random starts pile up
-       on the field's attractors and knot into visible scratches. */
-    const cols = Math.max(1, Math.round(Math.sqrt(count * W/H)));
-    const rows = Math.max(1, Math.ceil(count/cols));
-    for(let i=0;i<count;i++){
-      const gx = i % cols, gy = (i/cols)|0;
-      let x = ((gx + rand()) / cols) * W*1.3 - W*0.15;
-      let y = ((gy + rand()) / rows) * H*1.3 - H*0.15;
-      const len = Math.round(steps*(0.35+rand()*0.9));
-      ctx.beginPath(); ctx.moveTo(x,y);
-      for(let s=0;s<len;s++){
-        const a = fbm(noise, x*freq, y*freq, o.octaves ?? 3) * Math.PI * 2 * turns;
-        x += Math.cos(a)*step; y += Math.sin(a)*step;
-        ctx.lineTo(x,y);
-        if(x<-W*0.2||x>W*1.2||y<-H*0.2||y>H*1.2) break;
+  /* ── Motif: STACK ──────────────────────────────────────────
+     A deck seen as itself: 16:9 slides offset and receding.
+     The literal reading of "layers and stacks". */
+  stack(ctx,W,H,rand,noise,o,u){
+    const n     = o.count ?? 16;
+    const topW  = W * (o.w ?? 0.62);
+    const topH  = topW * 9/16;
+    const cx    = W * (o.x ?? 0.5), cy = H * (o.y ?? 0.5);
+    const dx    = (o.dx ?? 30) * u, dy = (o.dy ?? 18) * u;
+    const ds    = o.ds ?? 0.014;
+    const rot   = (o.rot ?? 0) * Math.PI/180;
+    const rad   = (o.radius ?? 12) * u;
+    for(let i=n-1;i>=0;i--){                            // back to front
+      const t = n>1 ? i/(n-1) : 0;                      // 0 = front card
+      const s = 1 - i*ds;
+      const w = topW*s, h = topH*s;
+      const x = cx - w/2 + i*dx, y = cy - h/2 + i*dy;
+      const fade = Math.pow(1-t, o.falloff ?? 1.15);
+      ctx.save();
+      ctx.translate(x+w/2, y+h/2); ctx.rotate(rot*i); ctx.translate(-(x+w/2), -(y+h/2));
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, rad);
+      if(o.fill){
+        ctx.fillStyle = o.fill;
+        ctx.globalAlpha = (o.fillAlpha ?? 0.05) * (0.25 + fade);
+        ctx.fill();
       }
       ctx.strokeStyle = o.color;
-      ctx.globalAlpha = (o.alpha ?? 0.1) * (0.35 + rand()*0.9);
-      ctx.lineWidth = (o.width ?? 1) * u * (0.6 + rand()*0.9);
+      ctx.lineWidth = (o.width ?? 1) * u;
+      ctx.globalAlpha = (o.alpha ?? 0.34) * (0.18 + fade);
       ctx.stroke();
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   },
 
-  /* Straight hairlines at an angle, jittered spacing, alpha ramp along
-     the run so it never reads as a repeat. */
-  hairline(ctx,W,H,rand,noise,o,u){
-    const angle   = (o.angle ?? -22) * Math.PI/180;
-    const spacing = (o.spacing ?? 13) * u;
-    const D       = Math.hypot(W,H);
-    const n       = Math.ceil(D/spacing)*2;
+  /* ── Motif: STRATA ─────────────────────────────────────────
+     Layers seen edge-on, as a cross-section. Bands of varying
+     depth and value with a hairline rule on each seam. */
+  strata(ctx,W,H,rand,noise,o,u){
+    const D = Math.hypot(W,H) * 1.25;
+    const angle = (o.angle ?? 0) * Math.PI/180;
+    const [r,g,b] = hexToRgb(o.color);
     ctx.save();
     ctx.translate(W/2,H/2); ctx.rotate(angle); ctx.translate(-D/2,-D/2);
-    for(let i=0;i<n;i++){
-      const y = i*spacing + (rand()-0.5)*spacing*0.55;
-      const x0 = rand()*D*0.35;
-      const x1 = D - rand()*D*0.35;
-      const g = ctx.createLinearGradient(x0,0,x1,0);
-      const col = o.color;
-      g.addColorStop(0,'rgba(0,0,0,0)');
-      g.addColorStop(0.25 + rand()*0.15, col);
-      g.addColorStop(0.7 + rand()*0.2, col);
-      g.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.strokeStyle = g;
-      ctx.globalAlpha = (o.alpha ?? 0.16) * (0.3 + rand()*1.0);
-      ctx.lineWidth = (o.width ?? 1) * u;
-      ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+    let y = 0;
+    let guard = 200;
+    while(y < D && guard-- > 0){
+      const h = D * ((o.minH ?? 0.035) + rand()*(o.maxH ?? 0.115));
+      const t = rand();
+      ctx.fillStyle = `rgba(${r},${g},${b},${((o.alpha ?? 0.09)*(0.2+t*1.25)).toFixed(4)})`;
+      ctx.fillRect(0, y, D, h);
+      if(o.rule){
+        ctx.fillStyle = o.rule;
+        ctx.globalAlpha = (o.ruleAlpha ?? 0.3) * (0.35 + rand()*0.9);
+        ctx.fillRect(0, y, D, (o.width ?? 1)*u);
+        ctx.globalAlpha = 1;
+      }
+      y += h + D*(o.gap ?? 0.006);
     }
-    ctx.restore(); ctx.globalAlpha = 1;
+    ctx.restore();
   },
 
-  /* Orthogonal grid; optional perspective convergence to a vanishing point. */
+  /* ── Motif: PANES ──────────────────────────────────────────
+     Overlapping translucent planes with hard edges. Value builds
+     where they cross, so depth comes from stacking, not blur. */
+  panes(ctx,W,H,rand,noise,o,u){
+    const n = o.count ?? 6;
+    const rad = (o.radius ?? 16) * u;
+    for(let i=0;i<n;i++){
+      const w = W*((o.minW ?? 0.42) + rand()*(o.varW ?? 0.72));
+      const h = H*((o.minH ?? 0.34) + rand()*(o.varH ?? 0.62));
+      const x = rand()*W - w*0.35;
+      const y = rand()*H - h*0.35;
+      const rot = ((rand()-0.5)*(o.spread ?? 16)) * Math.PI/180;
+      ctx.save();
+      ctx.translate(x+w/2, y+h/2); ctx.rotate(rot); ctx.translate(-(x+w/2), -(y+h/2));
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, rad);
+      if(o.fill){
+        ctx.fillStyle = o.fill;
+        ctx.globalAlpha = (o.fillAlpha ?? 0.06) * (0.5 + rand());
+        ctx.fill();
+      }
+      if(o.color){
+        ctx.strokeStyle = o.color;
+        ctx.lineWidth = (o.width ?? 1) * u;
+        ctx.globalAlpha = (o.alpha ?? 0.24) * (0.4 + rand()*0.9);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  /* ── Motif: FRAMES ─────────────────────────────────────────
+     A contact sheet of 16:9 outlines, density driven by the noise
+     field so it thins out rather than tiling flat. */
+  frames(ctx,W,H,rand,noise,o,u){
+    const cols = o.cols ?? 8;
+    const gap  = o.gap ?? 0.16;
+    const cw   = W/cols;
+    const fw   = cw*(1-gap), fh = fw*9/16;
+    const rowH = fh/(1-gap);
+    const rows = Math.ceil(H/rowH)+1;
+    const rad  = (o.radius ?? 5) * u;
+    const f    = o.freq ?? 0.42;
+    for(let j=0;j<rows;j++){
+      for(let i=0;i<cols;i++){
+        const n = (fbm(noise, i*f, j*f, 3) + 1)/2;
+        const w8 = smoothstep(o.cut ?? 0.3, 1, n);
+        if(w8 <= 0.02) continue;
+        const x = i*cw + (cw-fw)/2, y = j*rowH + (rowH-fh)/2;
+        ctx.beginPath(); ctx.roundRect(x, y, fw, fh, rad);
+        if(o.fill && n > (o.fillCut ?? 0.66)){
+          ctx.fillStyle = o.fill;
+          ctx.globalAlpha = (o.fillAlpha ?? 0.07) * w8;
+          ctx.fill();
+        }
+        ctx.strokeStyle = o.color;
+        ctx.lineWidth = (o.width ?? 1) * u;
+        ctx.globalAlpha = (o.alpha ?? 0.3) * (0.2 + w8);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  /* ── Motif: LAYOUT ─────────────────────────────────────────
+     Recursive rectangle subdivision: the frame splitting itself
+     into slide layouts, wireframe-style. */
+  layout(ctx,W,H,rand,noise,o,u){
+    const min  = (o.min ?? 88) * u;
+    const pad  = (o.pad ?? 7) * u;
+    const rad  = (o.radius ?? 5) * u;
+    ctx.strokeStyle = o.color;
+    ctx.lineWidth = (o.width ?? 1) * u;
+    const leaf = (x,y,w,h)=>{
+      if(w-pad*2 <= 0 || h-pad*2 <= 0) return;
+      ctx.beginPath(); ctx.roundRect(x+pad, y+pad, w-pad*2, h-pad*2, rad);
+      if(o.fill && rand() < (o.fillChance ?? 0.3)){
+        ctx.fillStyle = o.fill;
+        ctx.globalAlpha = (o.fillAlpha ?? 0.06) * (0.4 + rand());
+        ctx.fill();
+      }
+      ctx.globalAlpha = (o.alpha ?? 0.26) * (0.35 + rand()*0.95);
+      ctx.stroke();
+    };
+    const split = (x,y,w,h,d)=>{
+      if(d <= 0 || w < min*2 || h < min*2 || rand() < (o.stop ?? 0.16)) return leaf(x,y,w,h);
+      const vert = w > h ? rand() < 0.78 : rand() < 0.22;
+      const f = 0.3 + rand()*0.4;
+      if(vert){ split(x, y, w*f, h, d-1); split(x+w*f, y, w*(1-f), h, d-1); }
+      else    { split(x, y, w, h*f, d-1); split(x, y+h*f, w, h*(1-f), d-1); }
+    };
+    split(0, 0, W, H, o.depth ?? 7);
+    ctx.globalAlpha = 1;
+  },
+
+  /* ── Motif: NESTED ─────────────────────────────────────────
+     Concentric 16:9 frames. Reads as depth or as zoom levels
+     through a deck. */
+  nested(ctx,W,H,rand,noise,o,u){
+    const n = o.count ?? 14;
+    const cx = W*(o.x ?? 0.5), cy = H*(o.y ?? 0.5);
+    const maxW = W*(o.max ?? 1.7);
+    const ratio = o.ratio ?? 0.87;
+    const rad = (o.radius ?? 14) * u;
+    ctx.strokeStyle = o.color;
+    ctx.lineWidth = (o.width ?? 1) * u;
+    for(let i=0;i<n;i++){
+      const w = maxW*Math.pow(ratio, i), h = w*9/16;
+      const t = n>1 ? i/(n-1) : 0;
+      ctx.globalAlpha = (o.alpha ?? 0.24) * (0.22 + (1-t)*1.05);
+      ctx.beginPath(); ctx.roundRect(cx-w/2, cy-h/2, w, h, rad); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  /* ── Motif: SLATS ──────────────────────────────────────────
+     One frame sliced into slats and pushed out of alignment:
+     a build/reveal transition held still. */
+  slats(ctx,W,H,rand,noise,o,u){
+    const n = o.count ?? 30;
+    const vertical = o.vertical ?? true;
+    const span = vertical ? W : H;
+    const cross = vertical ? H : W;
+    const sw = span/n;
+    const pad = (o.pad ?? 1.5) * u;
+    const [r,g,b] = hexToRgb(o.color);
+    for(let i=0;i<n;i++){
+      const t = i/(n-1||1);
+      const noiseAt = (fbm(noise, t*(o.freq ?? 2.4), 0.5, 3)+1)/2;
+      let len = cross*(o.len ?? 0.62)*(0.35 + noiseAt*1.05);
+      let off = (noiseAt-0.5)*cross*(o.shift ?? 0.3);
+      /* Snap to steps so the envelope reads as a stepped profile rather
+         than a smooth curve — a curve would smuggle an organic silhouette
+         back in through the tops of the slats. */
+      if(o.quant){
+        const q = cross/o.quant;
+        len = Math.round(len/q)*q;
+        off = Math.round(off/q)*q;
+      }
+      const a = (o.alpha ?? 0.1)*(0.2 + noiseAt*1.3);
+      const start = cross*0.5 - len/2 + off;
+      ctx.fillStyle = `rgba(${r},${g},${b},${a.toFixed(4)})`;
+      if(vertical) ctx.fillRect(i*sw+pad, start, sw-pad*2, len);
+      else         ctx.fillRect(start, i*sw+pad, len, sw-pad*2);
+    }
+  },
+
+  /* ── Support: straight rules ───────────────────────────────
+     Orthogonal grid, optionally converging on a vanishing point. */
   grid(ctx,W,H,rand,noise,o,u){
     const gap = (o.gap ?? 46) * u;
     ctx.strokeStyle = o.color;
@@ -307,108 +451,47 @@ const LAYERS = {
     ctx.globalAlpha = 1;
   },
 
-  /* Dot field weighted by a noise mask — density varies, so it reads
-     as atmosphere and not as halftone. */
+  /* Parallel hairlines at an angle, alpha ramped along each run. */
+  hairline(ctx,W,H,rand,noise,o,u){
+    const angle   = (o.angle ?? -22) * Math.PI/180;
+    const spacing = (o.spacing ?? 13) * u;
+    const D       = Math.hypot(W,H);
+    const n       = Math.ceil(D/spacing)*2;
+    ctx.save();
+    ctx.translate(W/2,H/2); ctx.rotate(angle); ctx.translate(-D/2,-D/2);
+    for(let i=0;i<n;i++){
+      const y = i*spacing + (rand()-0.5)*spacing*0.55;
+      const x0 = rand()*D*0.35;
+      const x1 = D - rand()*D*0.35;
+      const g = ctx.createLinearGradient(x0,0,x1,0);
+      const col = o.color;
+      g.addColorStop(0,'rgba(0,0,0,0)');
+      g.addColorStop(0.25 + rand()*0.15, col);
+      g.addColorStop(0.7 + rand()*0.2, col);
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.strokeStyle = g;
+      ctx.globalAlpha = (o.alpha ?? 0.16) * (0.3 + rand()*1.0);
+      ctx.lineWidth = (o.width ?? 1) * u;
+      ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+  },
+
+  /* Square particles — a dot field that stays on the geometric side. */
   particles(ctx,W,H,rand,noise,o,u){
     const count = o.count ?? 2600;
     const freq  = (o.freq ?? 1.6)/1000/u;
     const cut   = o.cut ?? 0.42;
-    /* noiseMix 1 = density entirely noise-driven (leaves bald patches),
-       0 = flat field. Mid values give variation with full coverage. */
     const mix   = o.noiseMix ?? 1;
     ctx.fillStyle = o.color;
     for(let i=0;i<count;i++){
       const x = rand()*W, y = rand()*H;
-      const n = (fbm(noise, x*freq, y*freq, 3) + 1) / 2;   // 0..1
+      const n = (fbm(noise, x*freq, y*freq, 3) + 1) / 2;
       const w = (1-mix) + mix * smoothstep(cut, 1, n);
       if(w <= 0.001) continue;
       const r = (o.r ?? 1.5) * u * (0.35 + w*1.2);
       ctx.globalAlpha = (o.alpha ?? 0.5) * (0.15 + w * 0.95);
-      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  },
-
-  /* Scattered nodes linked to near neighbours. Blue-noise-ish placement
-     so clusters don't clump. */
-  network(ctx,W,H,rand,noise,o,u){
-    const target = o.nodes ?? 150;
-    const minD = (o.minDist ?? 46) * u;
-    const linkD = (o.linkDist ?? 132) * u;
-    const pts = [];
-    let guard = target * 40;
-    while(pts.length < target && guard-- > 0){
-      const p = [rand()*W, rand()*H];
-      let ok = true;
-      for(const q of pts){ if((p[0]-q[0])**2 + (p[1]-q[1])**2 < minD*minD){ ok=false; break; } }
-      if(ok) pts.push(p);
-    }
-    ctx.strokeStyle = o.color; ctx.lineWidth = (o.width ?? 1) * u;
-    for(let i=0;i<pts.length;i++){
-      for(let j=i+1;j<pts.length;j++){
-        const d = Math.hypot(pts[i][0]-pts[j][0], pts[i][1]-pts[j][1]);
-        if(d > linkD) continue;
-        ctx.globalAlpha = (o.linkAlpha ?? 0.3) * (1 - d/linkD) ** 1.4;
-        ctx.beginPath(); ctx.moveTo(pts[i][0],pts[i][1]); ctx.lineTo(pts[j][0],pts[j][1]); ctx.stroke();
-      }
-    }
-    ctx.fillStyle = o.nodeColor ?? o.color;
-    for(const p of pts){
-      ctx.globalAlpha = (o.nodeAlpha ?? 0.55) * (0.3 + rand()*0.9);
-      ctx.beginPath(); ctx.arc(p[0],p[1],(o.nodeR ?? 1.8)*u*(0.5+rand()*0.9),0,Math.PI*2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  },
-
-  /* Iso-lines through an fbm field (marching squares). Topographic —
-     organic contour without being painterly. */
-  contour(ctx,W,H,rand,noise,o,u){
-    const cell = (o.cell ?? 9) * u;
-    const cols = Math.ceil(W/cell)+2, rows = Math.ceil(H/cell)+2;
-    const freq = (o.freq ?? 1.15)/1000/u;
-    const f = new Float32Array(cols*rows);
-    for(let j=0;j<rows;j++)
-      for(let i=0;i<cols;i++)
-        f[j*cols+i] = fbm(noise, i*cell*freq, j*cell*freq, o.octaves ?? 4);
-
-    const levels = o.levels ?? 16;
-    ctx.strokeStyle = o.color;
-    ctx.lineWidth = (o.width ?? 1) * u;
-    ctx.globalAlpha = o.alpha ?? 0.16;
-    ctx.lineCap = 'round';
-
-    const ip = (p1,p2,v1,v2,t)=>{
-      const d = (v2-v1) || 1e-6;
-      const k = (t-v1)/d;
-      return [p1[0]+(p2[0]-p1[0])*k, p1[1]+(p2[1]-p1[1])*k];
-    };
-
-    for(let L=0; L<levels; L++){
-      const t = -0.8 + (1.6*(L+0.5))/levels;
-      ctx.beginPath();
-      for(let j=0;j<rows-1;j++){
-        for(let i=0;i<cols-1;i++){
-          const va=f[j*cols+i], vb=f[j*cols+i+1], vc=f[(j+1)*cols+i+1], vd=f[(j+1)*cols+i];
-          const A=[i*cell,j*cell], B=[(i+1)*cell,j*cell], C=[(i+1)*cell,(j+1)*cell], D=[i*cell,(j+1)*cell];
-          const idx = (va>t?8:0)|(vb>t?4:0)|(vc>t?2:0)|(vd>t?1:0);
-          if(idx===0||idx===15) continue;
-          const top=()=>ip(A,B,va,vb,t), right=()=>ip(B,C,vb,vc,t),
-                bottom=()=>ip(D,C,vd,vc,t), left=()=>ip(A,D,va,vd,t);
-          let segs=[];
-          switch(idx){
-            case 1: case 14: segs=[[left(),bottom()]]; break;
-            case 2: case 13: segs=[[bottom(),right()]]; break;
-            case 3: case 12: segs=[[left(),right()]]; break;
-            case 4: case 11: segs=[[top(),right()]]; break;
-            case 6: case 9:  segs=[[top(),bottom()]]; break;
-            case 7: case 8:  segs=[[left(),top()]]; break;
-            case 5:  segs=[[left(),top()],[bottom(),right()]]; break;
-            case 10: segs=[[left(),bottom()],[top(),right()]]; break;
-          }
-          for(const [p,q] of segs){ ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); }
-        }
-      }
-      ctx.stroke();
+      ctx.fillRect(x, y, r, r);
     }
     ctx.globalAlpha = 1;
   }
@@ -516,201 +599,262 @@ function render(preset, W, H){
 }
 
 /* ─────────────────────────────────────────────────────────────
-   6. Presets — 5 dark, 5 light
-   ───────────────────────────────────────────────────────────── */
-const NAVY='#0A1925', NAVY2='#1C3550', NAVY3='#284B71', BLUE='#005EFF', BLUE_D='#0043B8', BLUE_M='#0055ED';
+/* ─────────────────────────────────────────────────────────────
+   6. Presets — 7 motifs, each in dark and light
 
+   Every motif is geometric and hard-edged, and every one is a
+   reading of what a deck actually is: slides stacked, layered,
+   laid out, sequenced. Nothing organic, nothing painterly.
+   ───────────────────────────────────────────────────────────── */
 const PRESETS = [
 /* ── DARK ─────────────────────────────────────────────────── */
 {
-  id:'deep-field', name:'Deep Field', mode:'dark', seed:10111,
-  recipe:'flow-lines · navy → brand blue',
-  base:{ angle:100, stops:[[0,'#10315C'],[0.5,'#0B2340'],[1,'#050D18']] },
+  id:'stack-dark', name:'Stack', mode:'dark', seed:10111,
+  recipe:'slides offset and receding',
+  base:{ angle:100, stops:[[0,'#11335F'],[0.5,'#0B2340'],[1,'#050D18']] },
   lights:[
     {type:'band', angle:96, blend:'source-over', stops:[
-      [0,'rgba(126,178,255,0.16)'],[0.42,'rgba(0,0,0,0)'],[1,'rgba(2,7,15,0.62)']
+      [0,'rgba(126,178,255,0.15)'],[0.44,'rgba(0,0,0,0)'],[1,'rgba(2,7,15,0.60)']
     ]},
-    {x:0.24,y:0.78,r:0.52,blend:'screen',color:'rgba(0,94,255,0.60)',mid:'rgba(0,94,255,0.14)'},
-    {x:0.80,y:0.16,r:0.40,blend:'screen',color:'rgba(90,150,230,0.24)',mid:'rgba(90,150,230,0.06)'}
+    {x:0.26,y:0.74,r:0.52,blend:'screen',color:'rgba(0,94,255,0.55)',mid:'rgba(0,94,255,0.13)'}
   ],
   layers:[
-    {type:'mottle', color:'#5E9BFF', freq:2.6, warp:0.35, alpha:0.30, lo:0.30, hi:0.92, blend:'screen', calm:0.22},
-    {type:'mottle', color:'#020913', freq:1.9, warp:0.25, alpha:0.42, lo:0.42, hi:1.0, blend:'multiply', calm:0.30},
-    {type:'flow', color:'#AFD1FF', count:380, steps:130, step:6, freq:0.8, turns:1.3, alpha:0.20, width:1, blend:'screen', calm:0.46},
-    {type:'flow', color:'#3D8BFF', count:70, steps:170, step:10, freq:0.45, turns:1.05, alpha:0.22, width:3, blend:'screen', calm:0.58}
+    {type:'cells', color:'#4E8FFF', cell:96, freq:1.9, steps:5, alpha:0.16, lo:0.32, hi:0.94, blend:'screen', calm:0.2},
+    {type:'stack', count:24, w:0.94, x:0.32, y:0.58, dx:34, dy:-19, ds:0.012, radius:14,
+     color:'#AFD1FF', fill:'#2E6BD0', fillAlpha:0.05, alpha:0.40, width:1, blend:'screen', calm:0.42}
   ],
-  vignette:'rgba(3,8,16,0.34)',
+  vignette:'rgba(3,8,16,0.32)',
   grain:{amount:0.055, scale:1.5, chroma:0.3, opacity:0.9}
 },
 {
-  id:'signal-grid', name:'Signal Grid', mode:'dark', seed:20222,
-  recipe:'perspective grid · particles',
-  base:{ angle:92, stops:[[0,'#052B63'],[0.58,'#062E6E'],[1,'#030A18']] },
+  id:'strata-dark', name:'Strata', mode:'dark', seed:20222,
+  recipe:'layers seen edge-on',
+  base:{ angle:92, stops:[[0,'#0A2B5E'],[0.55,'#082448'],[1,'#030A18']] },
   lights:[
     {type:'band', angle:90, blend:'source-over', stops:[
-      [0,'rgba(0,94,255,0.30)'],[0.34,'rgba(10,60,150,0.10)'],[0.60,'rgba(3,9,22,0.30)'],[1,'rgba(1,4,12,0.78)']
+      [0,'rgba(0,94,255,0.26)'],[0.4,'rgba(10,60,150,0.08)'],[1,'rgba(1,4,12,0.72)']
     ]},
-    {x:0.66,y:0.34,r:0.42,blend:'screen',color:'rgba(0,120,255,0.62)',mid:'rgba(0,110,255,0.16)'},
-    {x:0.08,y:0.06,r:0.34,blend:'screen',color:'rgba(0,180,255,0.24)',mid:'rgba(0,180,255,0.05)'}
+    {x:0.68,y:0.30,r:0.44,blend:'screen',color:'rgba(0,120,255,0.5)',mid:'rgba(0,110,255,0.13)'}
   ],
   layers:[
-    {type:'mottle', color:'#0A2E7A', freq:2.1, warp:0.3, alpha:0.34, lo:0.36, hi:0.95, blend:'screen', calm:0.2},
-    {type:'grid', perspective:true, vpy:-1.35, vpx:0.44, gap:60, compress:0.958, color:'#79B0FF', alpha:0.26, width:1, blend:'screen', calm:0.44},
-    {type:'particles', color:'#DCEBFF', count:4600, freq:1.4, cut:0.3, noiseMix:0.7, r:1.4, alpha:0.42, blend:'screen', calm:0.34}
+    {type:'strata', angle:-7, minH:0.028, maxH:0.082, gap:0.005, color:'#5E9BFF',
+     rule:'#CFE4FF', ruleAlpha:0.5, alpha:0.13, width:1, blend:'screen', calm:0.3}
   ],
-  vignette:'rgba(1,5,13,0.40)',
+  vignette:'rgba(1,5,13,0.36)',
   grain:{amount:0.055, scale:1.5, chroma:0.32, opacity:0.95}
 },
 {
-  id:'constellation', name:'Constellation', mode:'dark', seed:30333,
-  recipe:'network mesh · off-centre bloom',
-  base:{ angle:130, stops:[[0,'#0A1E3A'],[0.55,'#0B1B31'],[1,'#04080F']] },
+  id:'panes-dark', name:'Panes', mode:'dark', seed:30333,
+  recipe:'overlapping planes, value builds at the crossings',
+  base:{ angle:126, stops:[[0,'#0C2A4C'],[0.55,'#0A1C33'],[1,'#04080F']] },
   lights:[
     {type:'band', angle:118, blend:'source-over', stops:[
-      [0,'rgba(70,130,220,0.14)'],[0.5,'rgba(0,0,0,0)'],[1,'rgba(2,5,11,0.62)']
+      [0,'rgba(70,130,220,0.15)'],[0.5,'rgba(0,0,0,0)'],[1,'rgba(2,5,11,0.60)']
     ]},
-    {x:0.70,y:0.40,r:0.44,blend:'screen',color:'rgba(0,94,255,0.58)',mid:'rgba(0,94,255,0.14)'},
-    {x:0.16,y:0.88,r:0.34,blend:'screen',color:'rgba(28,60,110,0.5)',mid:'rgba(28,60,110,0.12)'}
+    {x:0.70,y:0.38,r:0.46,blend:'screen',color:'rgba(0,94,255,0.55)',mid:'rgba(0,94,255,0.13)'}
   ],
   layers:[
-    {type:'mottle', color:'#3E7BD4', freq:2.9, warp:0.4, alpha:0.26, lo:0.34, hi:0.94, blend:'screen', calm:0.22},
-    {type:'network', nodes:260, minDist:30, linkDist:112, color:'#8CBCFF', nodeColor:'#EAF3FF',
-     linkAlpha:0.46, nodeAlpha:0.85, nodeR:1.7, width:1, blend:'screen', calm:0.5},
-    {type:'particles', color:'#BBD8FF', count:1800, freq:2.2, cut:0.5, r:1.1, alpha:0.5, blend:'screen', calm:0.34}
+    {type:'cells', color:'#3E7BD4', cell:120, freq:1.6, steps:4, alpha:0.13, lo:0.34, hi:0.94, blend:'screen', calm:0.18},
+    {type:'panes', count:9, spread:14, radius:18, color:'#A6CBFF', fill:'#2E6BD0',
+     fillAlpha:0.055, alpha:0.24, width:1, blend:'screen', calm:0.4}
   ],
-  vignette:'rgba(2,5,11,0.42)',
+  vignette:'rgba(2,5,11,0.36)',
   grain:{amount:0.05, scale:1.6, chroma:0.3, opacity:0.9}
 },
 {
-  id:'ion', name:'Ion', mode:'dark', seed:40444,
-  recipe:'electric blue · crossed hairlines',
-  base:{ angle:112, stops:[[0,'#0038A8'],[0.42,'#0052E8'],[1,'#00133B']] },
+  id:'contact-sheet-dark', name:'Contact Sheet', mode:'dark', seed:40444,
+  recipe:'a grid of 16:9 frames, thinning out',
+  base:{ angle:108, stops:[[0,'#0A2E6E'],[0.45,'#07213F'],[1,'#020A1A']] },
   lights:[
     {type:'band', angle:112, blend:'source-over', stops:[
-      [0,'rgba(0,140,255,0.34)'],[0.46,'rgba(0,0,0,0)'],[1,'rgba(0,8,32,0.70)']
+      [0,'rgba(0,140,255,0.24)'],[0.46,'rgba(0,0,0,0)'],[1,'rgba(0,8,26,0.66)']
     ]},
-    {x:0.34,y:0.32,r:0.46,blend:'screen',color:'rgba(60,150,255,0.55)',mid:'rgba(0,110,255,0.16)'},
-    {x:0.94,y:0.90,r:0.40,blend:'screen',color:'rgba(0,200,255,0.34)',mid:'rgba(0,200,255,0.08)'},
-    {x:0.02,y:0.02,r:0.42,blend:'multiply',color:'rgba(2,10,34,0.9)',mid:'rgba(2,10,34,0.45)'}
+    {x:0.34,y:0.30,r:0.48,blend:'screen',color:'rgba(40,130,255,0.5)',mid:'rgba(0,110,255,0.13)'}
   ],
   layers:[
-    {type:'mottle', color:'#001B52', freq:2.2, warp:0.3, alpha:0.40, lo:0.40, hi:1.0, blend:'multiply', calm:0.24},
-    {type:'hairline', angle:-24, spacing:12, color:'rgba(200,228,255,1)', alpha:0.26, width:1, blend:'screen', calm:0.46},
-    {type:'hairline', angle:62, spacing:44, color:'rgba(140,195,255,1)', alpha:0.18, width:1, blend:'screen', calm:0.6}
+    {type:'frames', cols:9, gap:0.17, freq:0.44, cut:0.2, radius:5, color:'#9CC6FF',
+     fill:'#2E6BD0', fillCut:0.6, fillAlpha:0.14, alpha:0.52, width:1, blend:'screen', calm:0.3}
   ],
-  vignette:'rgba(0,7,25,0.38)',
-  grain:{amount:0.065, scale:1.4, chroma:0.4, opacity:1}
+  vignette:'rgba(0,7,22,0.36)',
+  grain:{amount:0.055, scale:1.5, chroma:0.32, opacity:0.9}
 },
 {
-  id:'contour-depth', name:'Contour Depth', mode:'dark', seed:50555,
-  recipe:'topographic iso-lines',
-  base:{ angle:146, stops:[[0,'#0E355E'],[0.5,'#0C2542'],[1,'#050E1B']] },
+  id:'layout-dark', name:'Layout', mode:'dark', seed:50555,
+  recipe:'the frame subdividing into slide layouts',
+  base:{ angle:140, stops:[[0,'#0F3560'],[0.5,'#0B2340'],[1,'#050E1B']] },
   lights:[
     {type:'band', angle:146, blend:'source-over', stops:[
-      [0,'rgba(90,165,255,0.18)'],[0.5,'rgba(0,0,0,0)'],[1,'rgba(2,7,15,0.60)']
+      [0,'rgba(90,165,255,0.17)'],[0.5,'rgba(0,0,0,0)'],[1,'rgba(2,7,15,0.58)']
     ]},
-    {x:0.78,y:0.70,r:0.46,blend:'screen',color:'rgba(0,94,255,0.50)',mid:'rgba(0,94,255,0.12)'},
-    {x:0.20,y:0.20,r:0.36,blend:'screen',color:'rgba(0,160,255,0.26)',mid:'rgba(0,160,255,0.06)'}
+    {x:0.76,y:0.68,r:0.46,blend:'screen',color:'rgba(0,94,255,0.48)',mid:'rgba(0,94,255,0.11)'}
   ],
   layers:[
-    {type:'mottle', color:'#2E6FC0', freq:2.4, warp:0.35, alpha:0.24, lo:0.34, hi:0.94, blend:'screen', calm:0.22},
-    {type:'contour', cell:7, freq:1.05, levels:22, octaves:4, color:'#8FBEFF', alpha:0.26, width:1, blend:'screen', calm:0.46},
-    {type:'contour', cell:7, freq:1.05, levels:5, octaves:4, color:'#E4F0FF', alpha:0.22, width:2, blend:'screen', calm:0.6}
+    {type:'layout', depth:8, min:80, pad:7, radius:5, stop:0.15, color:'#9CC6FF',
+     fill:'#2E6BD0', fillChance:0.3, fillAlpha:0.06, alpha:0.26, width:1, blend:'screen', calm:0.38}
   ],
-  vignette:'rgba(2,7,15,0.38)',
+  vignette:'rgba(2,7,15,0.34)',
   grain:{amount:0.052, scale:1.55, chroma:0.3, opacity:0.9}
+},
+{
+  id:'nested-dark', name:'Nested', mode:'dark', seed:60666,
+  recipe:'concentric 16:9 frames',
+  base:{ angle:112, stops:[[0,'#0038A8'],[0.42,'#0B2F5E'],[1,'#00112E']] },
+  lights:[
+    {type:'band', angle:112, blend:'source-over', stops:[
+      [0,'rgba(0,140,255,0.30)'],[0.46,'rgba(0,0,0,0)'],[1,'rgba(0,8,32,0.68)']
+    ]},
+    {x:0.40,y:0.38,r:0.48,blend:'screen',color:'rgba(60,150,255,0.5)',mid:'rgba(0,110,255,0.14)'}
+  ],
+  layers:[
+    {type:'nested', count:16, x:0.46, y:0.5, max:1.85, ratio:0.885, radius:16,
+     color:'#BEDCFF', alpha:0.44, width:1, blend:'screen', calm:0.44},
+    {type:'hairline', angle:-24, spacing:15, color:'rgba(190,220,255,1)', alpha:0.075, width:1, blend:'screen', calm:0.5}
+  ],
+  vignette:'rgba(0,7,25,0.36)',
+  grain:{amount:0.06, scale:1.45, chroma:0.36, opacity:1}
+},
+{
+  id:'slats-dark', name:'Slats', mode:'dark', seed:70777,
+  recipe:'one frame sliced, a build held still',
+  base:{ angle:96, stops:[[0,'#0C2E5E'],[0.55,'#09203A'],[1,'#030B16']] },
+  lights:[
+    {type:'band', angle:94, blend:'source-over', stops:[
+      [0,'rgba(110,170,255,0.16)'],[0.44,'rgba(0,0,0,0)'],[1,'rgba(1,6,14,0.62)']
+    ]},
+    {x:0.58,y:0.44,r:0.5,blend:'screen',color:'rgba(0,110,255,0.52)',mid:'rgba(0,100,255,0.12)'}
+  ],
+  layers:[
+    {type:'slats', count:44, vertical:true, quant:14, freq:3.2, len:0.66, shift:0.26, pad:1.5,
+     color:'#A8CCFF', alpha:0.11, blend:'screen', calm:0.34},
+    {type:'slats', count:44, vertical:true, quant:14, freq:3.2, len:0.2, shift:0.5, pad:1.5,
+     color:'#E4F0FF', alpha:0.09, blend:'screen', calm:0.44}
+  ],
+  vignette:'rgba(1,6,14,0.34)',
+  grain:{amount:0.055, scale:1.5, chroma:0.3, opacity:0.9}
 },
 
 /* ── LIGHT ────────────────────────────────────────────────── */
-/* Light presets: the tint lives in the base gradient, the light/dark
-   structure comes from a band + white mottle (organic patches, never a
-   Gaussian blob), and texture sits near-even — a corner-weighted mask
-   reads as dirt on a pale ground. */
 {
-  id:'paper-blue', name:'Paper Blue', mode:'light', seed:60666,
-  recipe:'tinted paper · soft flow',
-  base:{ angle:108, stops:[[0,'#F2F7FF'],[0.5,'#E4EEFF'],[1,'#CCDDF8']] },
+  id:'stack-light', name:'Stack', mode:'light', seed:80888,
+  recipe:'slides offset and receding',
+  base:{ angle:108, stops:[[0,'#F3F8FF'],[0.5,'#E5EFFF'],[1,'#CCDDF8']] },
   lights:[
     {type:'band', angle:108, blend:'source-over', stops:[
-      [0,'rgba(255,255,255,0.72)'],[0.52,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.10)']
+      [0,'rgba(255,255,255,0.70)'],[0.52,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.11)']
     ]}
   ],
   layers:[
-    {type:'mottle', color:'#FFFFFF', freq:2.1, warp:0.4, alpha:0.62, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
-    {type:'mottle', color:'#2E6BD0', freq:3.1, warp:0.35, alpha:0.13, lo:0.46, hi:0.98, blend:'multiply', calm:0.0},
-    {type:'flow', color:'#4E82CC', count:300, steps:120, step:7, freq:0.9, turns:1.25, alpha:0.115, width:1, blend:'multiply', calm:0.2}
+    {type:'cells', color:'#FFFFFF', cell:96, freq:1.9, steps:5, alpha:0.36, lo:0.3, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'cells', color:'#2E6BD0', cell:96, freq:2.6, steps:4, alpha:0.07, lo:0.5, hi:0.98, blend:'multiply', calm:0.0},
+    {type:'stack', count:24, w:0.94, x:0.32, y:0.58, dx:34, dy:-19, ds:0.012, radius:14,
+     color:'#4E7DC6', fill:'#2E6BD0', fillAlpha:0.03, alpha:0.34, width:1, blend:'multiply', calm:0.26}
   ],
-  vignette:'rgba(120,155,210,0.10)',
+  vignette:'rgba(130,162,212,0.09)',
   grain:{amount:0.05, scale:1.5, chroma:0.25, opacity:0.9}
 },
 {
-  id:'mesh-light', name:'Mesh Light', mode:'light', seed:70777,
-  recipe:'network mesh · near-white',
-  base:{ angle:96, stops:[[0,'#F4F8FF'],[0.55,'#E7F0FF'],[1,'#D2E1FA']] },
+  id:'strata-light', name:'Strata', mode:'light', seed:90999,
+  recipe:'layers seen edge-on',
+  base:{ angle:92, stops:[[0,'#F4F8FF'],[0.55,'#E7F0FF'],[1,'#CFDFF9']] },
   lights:[
-    {type:'band', angle:96, blend:'source-over', stops:[
-      [0,'rgba(255,255,255,0.75)'],[0.54,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.10)']
+    {type:'band', angle:90, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.72)'],[0.5,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.12)']
     ]}
   ],
   layers:[
-    {type:'mottle', color:'#FFFFFF', freq:1.9, warp:0.35, alpha:0.60, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
-    {type:'mottle', color:'#2E6BD0', freq:2.8, warp:0.3, alpha:0.11, lo:0.48, hi:0.98, blend:'multiply', calm:0.0},
-    {type:'network', nodes:280, minDist:29, linkDist:100, color:'#4E7DC6', nodeColor:'#22497F',
-     linkAlpha:0.42, nodeAlpha:0.7, nodeR:1.5, width:1, blend:'multiply', calm:0.18}
+    {type:'cells', color:'#FFFFFF', cell:110, freq:1.7, steps:5, alpha:0.34, lo:0.3, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'strata', angle:-7, minH:0.028, maxH:0.082, gap:0.005, color:'#3F79D8',
+     rule:'#20508F', ruleAlpha:0.4, alpha:0.115, width:1, blend:'multiply', calm:0.2}
   ],
-  vignette:'rgba(125,158,212,0.09)',
+  vignette:'rgba(126,160,210,0.08)',
   grain:{amount:0.046, scale:1.55, chroma:0.22, opacity:0.85}
 },
 {
-  id:'drift', name:'Drift', mode:'light', seed:80888,
-  recipe:'flow-lines · blue with an orange whisper',
-  base:{ angle:124, stops:[[0,'#FCF8F6'],[0.42,'#EDF3FF'],[1,'#CFDFF9']] },
-  lights:[
-    {type:'band', angle:124, blend:'source-over', stops:[
-      [0,'rgba(255,85,0,0.035)'],[0.22,'rgba(255,255,255,0.5)'],[1,'rgba(0,94,255,0.11)']
-    ]}
-  ],
-  layers:[
-    {type:'mottle', color:'#FFFFFF', freq:2.3, warp:0.5, alpha:0.58, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
-    {type:'mottle', color:'#2E6BD0', freq:3.3, warp:0.4, alpha:0.12, lo:0.46, hi:0.98, blend:'multiply', calm:0.0},
-    {type:'flow', color:'#4173BB', count:240, steps:105, step:7, freq:1.15, turns:1.2, alpha:0.12, width:1.2, blend:'multiply', calm:0.22},
-    {type:'flow', color:'#C4693A', count:38, steps:95, step:8, freq:1.15, turns:1.2, alpha:0.085, width:1.6, blend:'multiply', calm:0.3}
-  ],
-  vignette:'rgba(130,162,210,0.08)',
-  grain:{amount:0.05, scale:1.5, chroma:0.28, opacity:0.9}
-},
-{
-  id:'halftone-field', name:'Halftone Field', mode:'light', seed:90999,
-  recipe:'particle density gradient',
-  base:{ angle:88, stops:[[0,'#F3F8FF'],[0.5,'#E6EFFF'],[1,'#CFDFF9']] },
-  lights:[
-    {type:'band', angle:88, blend:'source-over', stops:[
-      [0,'rgba(255,255,255,0.70)'],[0.5,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.11)']
-    ]}
-  ],
-  layers:[
-    {type:'mottle', color:'#FFFFFF', freq:1.8, warp:0.35, alpha:0.58, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
-    {type:'particles', color:'#356AB2', count:13000, freq:1.15, cut:0.2, noiseMix:0.62, r:1.4, alpha:0.30, blend:'multiply', calm:0.16}
-  ],
-  vignette:'rgba(126,160,210,0.08)',
-  grain:{amount:0.044, scale:1.6, chroma:0.2, opacity:0.85}
-},
-{
-  id:'blueprint-light', name:'Blueprint Light', mode:'light', seed:101010,
-  recipe:'fine grid · major axes',
-  base:{ angle:118, stops:[[0,'#F3F8FF'],[0.5,'#E5EFFF'],[1,'#CEDEF9']] },
+  id:'panes-light', name:'Panes', mode:'light', seed:101010,
+  recipe:'overlapping planes, value builds at the crossings',
+  base:{ angle:126, stops:[[0,'#F5F9FF'],[0.55,'#E8F0FF'],[1,'#CEDEF9']] },
   lights:[
     {type:'band', angle:118, blend:'source-over', stops:[
-      [0,'rgba(255,255,255,0.72)'],[0.52,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.11)']
+      [0,'rgba(255,255,255,0.68)'],[0.5,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.11)']
     ]}
   ],
   layers:[
-    {type:'mottle', color:'#FFFFFF', freq:2.0, warp:0.35, alpha:0.60, lo:0.34, hi:0.92, blend:'source-over', calm:0.0},
-    {type:'mottle', color:'#2E6BD0', freq:3.0, warp:0.3, alpha:0.10, lo:0.48, hi:0.98, blend:'multiply', calm:0.0},
-    {type:'grid', gap:28, majorEvery:6, color:'#5C84C6', alpha:0.19, width:1, blend:'multiply', calm:0.2},
-    {type:'hairline', angle:-16, spacing:130, color:'rgba(0,94,255,1)', alpha:0.13, width:1.4, blend:'multiply', calm:0.3}
+    {type:'cells', color:'#FFFFFF', cell:120, freq:1.6, steps:4, alpha:0.32, lo:0.3, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'panes', count:9, spread:14, radius:18, color:'#5B87CD', fill:'#2E6BD0',
+     fillAlpha:0.045, alpha:0.22, width:1, blend:'multiply', calm:0.24}
+  ],
+  vignette:'rgba(126,160,210,0.08)',
+  grain:{amount:0.046, scale:1.6, chroma:0.22, opacity:0.85}
+},
+{
+  id:'contact-sheet-light', name:'Contact Sheet', mode:'light', seed:111111,
+  recipe:'a grid of 16:9 frames, thinning out',
+  base:{ angle:100, stops:[[0,'#F4F8FF'],[0.5,'#E6EFFF'],[1,'#CFDFF9']] },
+  lights:[
+    {type:'band', angle:100, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.70)'],[0.5,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.12)']
+    ]}
+  ],
+  layers:[
+    {type:'cells', color:'#FFFFFF', cell:100, freq:1.8, steps:5, alpha:0.34, lo:0.3, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'frames', cols:9, gap:0.17, freq:0.44, cut:0.2, radius:5, color:'#4E7DC6',
+     fill:'#2E6BD0', fillCut:0.6, fillAlpha:0.085, alpha:0.46, width:1, blend:'multiply', calm:0.18}
+  ],
+  vignette:'rgba(126,160,210,0.08)',
+  grain:{amount:0.046, scale:1.55, chroma:0.22, opacity:0.85}
+},
+{
+  id:'layout-light', name:'Layout', mode:'light', seed:121212,
+  recipe:'the frame subdividing into slide layouts',
+  base:{ angle:140, stops:[[0,'#F4F8FF'],[0.5,'#E6EFFF'],[1,'#CEDEF9']] },
+  lights:[
+    {type:'band', angle:140, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.70)'],[0.52,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.12)']
+    ]}
+  ],
+  layers:[
+    {type:'cells', color:'#FFFFFF', cell:104, freq:1.9, steps:5, alpha:0.34, lo:0.3, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'layout', depth:8, min:80, pad:7, radius:5, stop:0.15, color:'#4E7DC6',
+     fill:'#2E6BD0', fillChance:0.3, fillAlpha:0.045, alpha:0.24, width:1, blend:'multiply', calm:0.22}
+  ],
+  vignette:'rgba(124,158,210,0.08)',
+  grain:{amount:0.046, scale:1.55, chroma:0.22, opacity:0.85}
+},
+{
+  id:'nested-light', name:'Nested', mode:'light', seed:131313,
+  recipe:'concentric 16:9 frames',
+  base:{ angle:112, stops:[[0,'#F3F8FF'],[0.45,'#E4EEFF'],[1,'#C9DAF7']] },
+  lights:[
+    {type:'band', angle:112, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.68)'],[0.48,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.13)']
+    ]}
+  ],
+  layers:[
+    {type:'cells', color:'#FFFFFF', cell:112, freq:1.8, steps:5, alpha:0.34, lo:0.3, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'nested', count:16, x:0.46, y:0.5, max:1.85, ratio:0.885, radius:16,
+     color:'#4374BC', alpha:0.4, width:1, blend:'multiply', calm:0.26},
+    {type:'hairline', angle:-24, spacing:22, color:'rgba(0,94,255,1)', alpha:0.075, width:1, blend:'multiply', calm:0.34}
   ],
   vignette:'rgba(122,157,210,0.08)',
+  grain:{amount:0.05, scale:1.5, chroma:0.25, opacity:0.9}
+},
+{
+  id:'slats-light', name:'Slats', mode:'light', seed:141414,
+  recipe:'one frame sliced, a build held still',
+  base:{ angle:96, stops:[[0,'#F4F8FF'],[0.55,'#E6EFFF'],[1,'#CDDDF8']] },
+  lights:[
+    {type:'band', angle:94, blend:'source-over', stops:[
+      [0,'rgba(255,255,255,0.70)'],[0.5,'rgba(255,255,255,0.10)'],[1,'rgba(0,94,255,0.12)']
+    ]}
+  ],
+  layers:[
+    {type:'cells', color:'#FFFFFF', cell:100, freq:1.8, steps:5, alpha:0.5, lo:0.3, hi:0.92, blend:'source-over', calm:0.0},
+    {type:'slats', count:44, vertical:true, quant:14, freq:3.2, len:0.66, shift:0.26, pad:1.5,
+     color:'#3F79D8', alpha:0.085, blend:'multiply', calm:0.2},
+    {type:'slats', count:44, vertical:true, quant:14, freq:3.2, len:0.2, shift:0.5, pad:1.5,
+     color:'#20508F', alpha:0.06, blend:'multiply', calm:0.28}
+  ],
+  vignette:'rgba(126,160,210,0.08)',
   grain:{amount:0.046, scale:1.55, chroma:0.22, opacity:0.85}
 }
 ];
@@ -847,3 +991,4 @@ build();
 </script>
 </body>
 </html>
+
