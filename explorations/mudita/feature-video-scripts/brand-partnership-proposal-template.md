@@ -163,22 +163,118 @@ avoid the conversation, it just moves it into the meeting.
 - How long legal takes on your side
 - The date you need a decision by, and what it holds up
 
-## Open question for the build
+## The same twelve slides, filled
 
-The handoff mock shows the right-hand panel rendering the KPI Report **filled** with its own demo
-content (green slides, real charts, real numbers). That is a different model from the one above.
+The preview render. This is what the gallery thumbnail and the detail lightbox show, so it has to
+make the template look worth using: specific, visually rich, and obviously finished.
 
-Both can be true, and this is how most template galleries work:
+**The example is deliberately B2B.** A fintech integration partnership sits a long way from the
+video's coffee-and-outdoors scenario, so when the right panel changes at 0:26 the transformation
+actually registers. If both examples were consumer lifestyle brands, the cut would read as a
+re-render rather than as her content arriving.
+
+**It also has to obey its own prompts.** Slide 9 names exactly one primary metric because the
+prompt says to. Slide 11 carries a number rather than an adjective, and admits one thing they would
+do differently. A preview render that ignores its own guidance teaches the user to ignore it too.
+Worth checking as a build step.
+
+Example partnership: **Ledgerline** (business banking for small companies) proposing to **Corva**
+(accounting software), around an integration launch timed to tax season.
+
+### 1 · Cover
+
+Ledgerline × Corva
+Partnership proposal
+Prepared for the Corva partnerships team · March 2026
+
+### 2 · The opportunity
+
+- 68% of Corva's small business customers bank outside their accounting tool and reconcile by hand
+- Ledgerline's live sync ships 6 Apr, four weeks before the quarterly filing deadline
+- Neither side builds anything new for this. The integration is the campaign.
+
+### 3 · Where our audiences overlap
+
+| | |
+|---|---|
+| Ledgerline | 240K accounts, mostly companies of 5 to 50 people |
+| Corva | 410K seats, same size band, weighted to services businesses |
+| The overlap | Roughly 90K businesses already using both |
+
+### 4 · What we bring
+
+240K account holders · in-app placement across onboarding and the reconcile screen · lifecycle
+email to 180K opted in · a four-person growth team on this through Q2
+
+### 5 · What you bring
+
+Placement in the app directory and the tax-season hub · one newsletter slot to 410K · two joint
+webinars with your product marketing lead · a co-branded landing page on your domain
+
+### 6 · The campaign
+
+**One Ledger.** Your bank and your books, finally telling the same story. Six weeks, timed to the
+filing deadline, built on the moment reconciliation stops being manual.
+
+### 7 · What we would make together
+
+| Deliverable | Runs on | Owner |
+|---|---|---|
+| Integration launch post | Both blogs | Joint |
+| Two webinars | Corva-hosted | Corva |
+| In-app announcement | Ledgerline | Ledgerline |
+| Newsletter slot, 410K | Corva | Corva |
+| Co-branded landing page | Corva domain | Joint |
+| Three customer stories | Both | Ledgerline |
+
+### 8 · Timeline
+
+March: creative and legal, both sides · 6 Apr: integration ships, Ledgerline · 14 Apr: launch posts
+and in-app, both · 22 Apr and 6 May: webinars, Corva · 1 Jun: wrap and readout, both
+
+### 9 · How we will measure it
+
+Primary: connected accounts.
+Supporting: webinar attendance, landing page conversion, new-to-file customers each side.
+Ledgerline counts a win as connected accounts. Corva counts it as activation rate.
+Readout on 1 Jun.
+
+### 10 · The value exchange
+
+| | Ledgerline | Corva |
+|---|---|---|
+| In kind | Integration engineering, in-app inventory | Directory placement, newsletter, webinar production |
+| Cash | $40K paid support | None |
+| Estimated value | $155K | $170K |
+
+Close enough to even that neither side invoices.
+
+### 11 · We have done this before
+
+Ledgerline × Sagepoint Payroll, Sep 2025. 11.2K connected accounts in eight weeks, 31% of them new
+to Ledgerline, and a three point lift in Sagepoint's activation rate. Next time we would start the
+webinar sequence two weeks earlier.
+
+### 12 · Next steps
+
+Legal review, three weeks, starting on your yes · a named owner on each side · kickoff the week of
+16 Mar · decision needed by 9 Mar to hold the April launch date
+
+## Which state shows where
 
 ```
-gallery thumbnail + detail preview   →   a filled render, so it looks good
-what you actually receive            →   headings, helper lines, prompts
+gallery thumbnail + detail preview   →   filled     (it has to look good)
+what the user actually receives      →   prompted   (it has to ask the questions)
 ```
 
-If that split is right, the filled render is a separate design asset and needs commissioning. If
-instead templates genuinely ship filled with a worked example, then this document is the wrong
-model and the video's 0:14 shot is right as originally written. **Worth settling before either
-gets built**, because it changes what the right-hand panel shows for the whole middle of the video.
+One thing still to settle: **which of the two the split screen shows at 0:14**, after she clicks
+`Use this Template` but before she has typed anything. The handoff mock renders it filled, which is
+what the video script currently describes. Prompted would be the stronger shot, because the right
+panel would visibly be asking the questions her braindump is about to answer, and the cut at 0:26
+becomes questions turning into answers rather than one example replacing another.
+
+It changes what is on screen for the middle twenty seconds of the video, so worth deciding before
+either gets built.
 
 ## Notes for whoever builds it
 
