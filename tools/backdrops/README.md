@@ -1,8 +1,8 @@
 # backdrops
 
 Procedural background images for marketing assets, built for product
-screenshots to sit on top of. Seven geometric motifs, each in a dark and a
-light variant, all in the brand's electric blue.
+screenshots to sit on top of. Seven geometric motifs, each renderable in
+any of four palettes.
 
 ```
 open tools/backdrops/index.html          # or the Pages URL
@@ -15,19 +15,44 @@ recipe plus a seed, so the same seed always gives the same image, and
 ## The idea
 
 The starting reference was how Cursor stages product shots on painterly
-backgrounds. What makes those work isn't the painting, it's four things
-underneath it, and those are what the tool reproduces:
+backgrounds. What makes those work isn't the painting, it's the structure
+underneath it.
+
+**Motif and palette are separate axes.** The motif is the geometry; the
+palette is the treatment. Switching palette re-skins all seven motifs
+without touching the drawing, which is the only way to judge a treatment
+fairly.
 
 | The thing that matters | How it's done here |
 |---|---|
-| Large-scale value structure, not a flat fill | a base gradient plus a **band** wash that gives the frame a light half and a dark half |
-| Variation, so it never reads as a clean gradient | **cells**: a posterised mosaic, hard-edged, driven by noise but quantised into steps |
-| A calm centre, interest at the edges | every motif layer is masked by `calm` before compositing, so the window lands on a quiet area |
-| Fine grain everywhere | per-pixel luminance noise over the whole frame, which also kills gradient banding |
+| Structure, not a flat fill | a base field plus one linear **band** |
+| Variation, so it never reads as a clean gradient | **cells**: a posterised mosaic, hard-edged, quantised into steps |
+| A calm centre, interest at the edges | every motif layer is masked by `calm`, so the window lands on a quiet area |
+| Fine grain everywhere | per-pixel luminance noise, which also kills banding |
 
-**The vocabulary is strictly geometric.** No curves, no organic silhouettes,
-no painterly marks. Where a motif could produce a smooth outline as a
-by-product (the tops of the slats), it's quantised to steps on purpose.
+**No palette uses a radial glow or a vignette.** Both simulate optics (a
+light source, a lens) and that is exactly what reads as dated and
+skeuomorphic. A glow on a navy-to-blue ramp is the 2014 corporate-tech
+look. Depth here comes from geometry overlapping, not from fake light.
+
+**The vocabulary is strictly geometric.** No curves, no organic
+silhouettes, no painterly marks. Where a motif could produce a smooth
+outline as a by-product (the tops of the slats), it's quantised to steps
+on purpose.
+
+## The palettes
+
+| | |
+|---|---|
+| **Ink** (dark) | slate near-neutral, brand blue as punctuation on a few filled elements |
+| **Cobalt** (dark) | flat brand blue, poster-like, geometry in white |
+| **Paper** (light) | near-neutral off-white, brand blue as punctuation |
+| **Mist** (light) | cooler, more tinted blue-grey field |
+
+Brand blue `#005EFF` is deliberately an **accent**, not the ground: it fills
+a handful of frames in Contact Sheet and a few cells in Layout, and nothing
+else. Flooding a whole background with it is both dated and off-brand,
+since blue is meant to mark growth moments rather than carry surfaces.
 
 ## The motifs
 
@@ -44,9 +69,6 @@ applied to it.
 | **Nested** | concentric 16:9 frames. Sits well under a window because it echoes its shape |
 | **Slats** | one frame sliced and pushed out of alignment: a build transition held still |
 
-Dark variants are a saturated blue field, for **light UI** screenshots.
-Light variants are pale and blue-tinted, for **dark UI** screenshots.
-
 ## Using it
 
 | | |
@@ -57,42 +79,38 @@ Light variants are pale and blue-tinted, for **dark UI** screenshots.
 | **↓** on a card | downloads that PNG |
 | **Download all 14** | fires fourteen downloads back to back. Chrome will ask once to allow multiple files |
 
-Files come out named `pai-backdrop-<mode>-<id>-<W>x<H>.png`.
+Files come out named `pai-backdrop-<palette>-<motif>-<W>x<H>.png`.
 
 ## Changing them
 
-A preset is a plain object in `index.html`. To add one, copy the nearest
-preset, change `id`, `name`, `seed` and `recipe`, and adjust:
+`PALETTES` and `MOTIFS` are separate arrays in `index.html`, combined by
+`buildPreset()`. A motif returns its layers as a function of the palette's
+`ink`, so adding either one is independent of the other.
 
 ```
-base      linear gradient, the underlying colour
-lights    washes: {type:'band', angle, stops} for structure,
-          or {x, y, r, color, blend} for a bloom
-layers    cells · stack · strata · panes · frames · layout · nested · slats
-          · grid · hairline · particles
-          each takes calm (0 = even, 1 = centre cleared) and a blend mode
-vignette  corner darkening
-grain     {amount, scale, chroma, opacity}
+palette   base    the underlying field
+          lights  washes: {type:'band', angle, stops}
+                  (radial blooms are still supported but nothing uses them)
+          cells   the posterised mosaic
+          ink     {stroke, fill, accent, blend, a, fa, calm}
+          grain   {amount, scale, chroma, opacity}
+
+motif     layers(ink) -> stack · strata · panes · frames · layout
+                         · nested · slats · grid · hairline · particles
 ```
 
-`id` must be unique across the whole set, including across modes — the
-preview cache is keyed by it, so two presets sharing an id will render as
-each other.
+The seed lives on the **motif**, so switching palette changes only the
+treatment. That is what makes two palettes comparable.
 
-Four things learned the hard way, all worth keeping:
+Things learned the hard way, all worth keeping:
 
-- **Light presets get their light from `cells`, not from a white radial
+- **A glow or a vignette will date the whole thing** no matter how good the
+  geometry is. Structure the field with a linear band instead.
+- **Light palettes get their light from `cells`, not from a white radial
   blob.** A white radial on a tinted base punches the tint out and leaves
   grey mid-tones.
-- **On light presets the mosaic has to stay under the motif.** At `alpha`
-  around 0.5 it wins, and the motif reads as a faint afterthought; 0.32–0.36
-  is about right.
-- **`calm` above ~0.5 is for dark presets only.** On a pale ground, pushing
-  texture out to the edges reads as dirt in the corners rather than as
-  atmosphere. Light presets sit at 0.15–0.3.
-- **A motif that's barely visible is worse than no motif** — it just reads as
-  a slightly dirty gradient. If you can't name the motif at a glance, raise
-  the alpha rather than leaving it subtle.
-
-Colours come from the brand: navy `#0A1925`, brand blue `#005EFF`
-(`#0043B8` / `#0055ED` companions).
+- **A motif that's barely visible is worse than no motif** — it just reads
+  as a slightly dirty gradient. If you can't name the motif at a glance,
+  raise `ink.a` rather than leaving it subtle.
+- **Don't let the mosaic out-shout the motif.** Around `alpha` 0.5 it wins;
+  0.26–0.34 is about right on light, 0.28 on dark.
