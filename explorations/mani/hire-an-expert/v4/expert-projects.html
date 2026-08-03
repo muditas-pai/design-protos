@@ -211,6 +211,41 @@
       background: var(--surface-2); color: var(--fg); font: 500 13px "Inter", sans-serif; cursor: pointer; }
     .cp-close:hover { background: var(--sel); }
 
+    /* confirm dialog (pause / cancel / downgrade) + billing modal */
+    .cf-ov, .bl-ov { position: fixed; inset: 0; z-index: 95; background: rgba(10,25,37,.5);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; }
+    .cf-ov.show, .bl-ov.show { display: flex; }
+    .cf-card { width: 440px; max-width: 92vw; background: #fff; border-radius: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.3); padding: 24px; }
+    .cf-ic { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center;
+      font-size: 22px; background: var(--surface-2); color: var(--fg); margin-bottom: 14px; }
+    .cf-ic.danger { background: #fee2e2; color: #dc2626; }
+    .cf-card h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+    .cf-card p { margin: 0; font-size: 13px; color: var(--fg-2); line-height: 1.55; }
+    .cf-btns { display: flex; gap: 10px; margin-top: 20px; }
+    .cf-btns button { flex: 1; height: 40px; border: 0; border-radius: 6px; cursor: pointer;
+      font: 500 13px "Inter", sans-serif; transition: background 120ms var(--ease); }
+    .cf-keep { background: var(--surface-2); color: var(--fg); }
+    .cf-keep:hover { background: var(--sel); }
+    .cf-go { background: #0A1925; color: #fff; }
+    .cf-go:hover { background: #23303B; }
+    .cf-go.danger { background: #dc2626; }
+    .cf-go.danger:hover { background: #b91c1c; }
+    .bl-card { width: 520px; max-width: 92vw; background: #fff; border-radius: 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.3); padding: 24px; }
+    .bl-card h3 { margin: 0 0 14px; font-size: 18px; font-weight: 600; }
+    .bl-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px;
+      border-bottom: 1px solid var(--line); font-size: 13px; }
+    .bl-row:last-of-type { border-bottom: 0; }
+    .bl-row b { font-weight: 600; }
+    .bl-date { width: 100px; color: var(--fg-2); }
+    .bl-desc { flex: 1; min-width: 0; }
+    .bl-amt { font-weight: 600; white-space: nowrap; }
+    .bl-dl { border: 0; background: transparent; color: var(--brand); cursor: pointer;
+      font: 500 13px "Inter", sans-serif; display: inline-flex; align-items: center; gap: 5px; }
+    .bl-dl:hover { text-decoration: underline; }
+
     /* out-of-decks modal: options left, paddle one-click payment right */
     .np-ov { position: fixed; inset: 0; z-index: 90; background: rgba(10,25,37,.5);
       backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
@@ -222,9 +257,9 @@
       display: grid; place-items: center; cursor: pointer; color: #171717;
       box-shadow: 0 4px 16px rgba(0,0,0,.25); font-size: 18px; }
     .np-close:hover { background: #f2f6ff; }
-    .np-modal { display: grid; grid-template-columns: 420px 1fr;
+    .np-modal { display: grid; grid-template-columns: 420px 1fr; height: 600px;
       background: #fff; border-radius: 12px; box-shadow: 0 24px 80px rgba(0,0,0,.4); }
-    .np-left { background: #f5f5f5; border-right: 1px solid rgba(11,15,20,.06);
+    .np-left { overflow-y: auto; background: #f5f5f5; border-right: 1px solid rgba(11,15,20,.06);
       border-radius: 12px 0 0 12px; padding: 28px 24px 32px; }
     .np-left h3 { margin: 0; font-size: 22px; font-weight: 400; line-height: 1.3; letter-spacing: -0.22px; }
     .np-note { font-size: 12.5px; color: #525252; margin: 8px 0 20px; line-height: 1.5; }
@@ -241,7 +276,7 @@
     .np-line b { font-size: 14.5px; font-weight: 600; }
     .np-oprice { font-size: 13.5px; font-weight: 500; color: #525252; white-space: nowrap; }
     .np-sub { display: block; font-size: 12.5px; color: #737373; margin-top: 3px; }
-    .np-right { padding: 28px 24px; display: flex; flex-direction: column; }
+    .np-right { padding: 28px 24px; display: flex; flex-direction: column; overflow-y: auto; }
     .np-right h4 { margin: 0 0 20px; font-size: 22px; font-weight: 400; letter-spacing: -0.22px; }
     .pp-box { border-radius: 4px; padding: 16px; background: #fff;
       box-shadow: 0 1px 4px -1px rgba(11,15,20,.09), inset 0 0 0 1px rgba(11,15,20,.09); }
@@ -515,6 +550,30 @@
     </div>
   </div>
 
+  <!-- Confirm dialog: pause / cancel / scheduled downgrade -->
+  <div class="cf-ov" id="cf-ov">
+    <div class="cf-card">
+      <span class="cf-ic" id="cf-ic"><i class="ph ph-pause-circle"></i></span>
+      <h3 id="cf-title">Pause membership?</h3>
+      <p id="cf-body"></p>
+      <div class="cf-btns">
+        <button class="cf-keep" onclick="closeConfirm()">Keep membership</button>
+        <button class="cf-go" id="cf-go" onclick="confirmGo()">Pause membership</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Billing & invoices -->
+  <div class="bl-ov" id="bl-ov">
+    <div class="bl-card">
+      <h3>Billing &amp; invoices</h3>
+      <div class="bl-row"><span class="bl-date">Aug 1, 2026</span><span class="bl-desc"><b>Studio membership</b></span><span class="bl-amt">US$2,000</span><button class="bl-dl"><i class="ph ph-download-simple"></i>PDF</button></div>
+      <div class="bl-row"><span class="bl-date">Jul 1, 2026</span><span class="bl-desc"><b>Studio membership</b></span><span class="bl-amt">US$2,000</span><button class="bl-dl"><i class="ph ph-download-simple"></i>PDF</button></div>
+      <div class="bl-row"><span class="bl-date">Jun 1, 2026</span><span class="bl-desc"><b>Studio membership</b></span><span class="bl-amt">US$2,000</span><button class="bl-dl"><i class="ph ph-download-simple"></i>PDF</button></div>
+      <button class="cp-close" onclick="closeBilling()">Close</button>
+    </div>
+  </div>
+
   <!-- Out of decks: options left, paddle one-click payment right -->
   <div class="np-ov" id="np-ov">
     <div class="np-wrap">
@@ -613,11 +672,42 @@
       e.stopPropagation();
       document.getElementById('mc-actions').classList.remove('open');
       if (action === 'Change plan') { openChangePlan(); return; }
-      var msg = action === 'pause' ? 'Membership paused. Your decks and channel stay until Aug 30.'
-              : action === 'billing' ? 'Opening billing and invoices...'
-              : 'We are sorry to see you go. Check your email to confirm cancellation.';
-      showToast(msg);
+      if (action === 'billing') { document.getElementById('bl-ov').classList.add('show'); return; }
+      if (action === 'pause') {
+        openConfirm({
+          icon: 'ph-pause-circle', danger: false,
+          title: 'Pause membership?',
+          body: 'Your current cycle keeps running until Aug 30 as usual. You will not be charged next month, and your plan stays exactly as it is. Resume whenever you are ready.',
+          go: 'Pause membership',
+          onGo: function () { showToast('Membership paused. You will not be charged next month.'); }
+        });
+        return;
+      }
+      openConfirm({
+        icon: 'ph-x-circle', danger: true,
+        title: 'Cancel membership?',
+        body: 'Your membership stays active until Aug 30 and you will not be charged again after that. Delivered decks stay yours.',
+        go: 'Cancel membership',
+        onGo: function () { showToast('We are sorry to see you go. Check your email to confirm cancellation.'); }
+      });
     }
+
+    // Confirm dialog plumbing
+    var cfOnGo = null;
+    function openConfirm(opts) {
+      document.getElementById('cf-ic').innerHTML = '<i class="ph ' + opts.icon + '"></i>';
+      document.getElementById('cf-ic').classList.toggle('danger', !!opts.danger);
+      document.getElementById('cf-title').textContent = opts.title;
+      document.getElementById('cf-body').textContent = opts.body;
+      var go = document.getElementById('cf-go');
+      go.textContent = opts.go;
+      go.classList.toggle('danger', !!opts.danger);
+      cfOnGo = opts.onGo;
+      document.getElementById('cf-ov').classList.add('show');
+    }
+    function closeConfirm() { document.getElementById('cf-ov').classList.remove('show'); cfOnGo = null; }
+    function confirmGo() { var fn = cfOnGo; closeConfirm(); if (fn) fn(); }
+    function closeBilling() { document.getElementById('bl-ov').classList.remove('show'); }
     // Change plan rules: up any time, down only at cycle end
     var TIERS = { 1: 'Essential', 2: 'Studio', 3: 'Unlimited' };
     function currentTier() { return isUnlimited ? 3 : 2; }
@@ -647,8 +737,14 @@
         if (tier === 3) { isUnlimited = true; renderQuota(); }
         showToast('Upgraded to ' + TIERS[tier] + '. Active immediately.');
       } else {
-        // downgrade: only at cycle end
-        showToast('You move to ' + TIERS[tier] + ' on Aug 30, when your current cycle ends.');
+        // downgrade: confirm, takes effect next cycle
+        openConfirm({
+          icon: 'ph-arrow-down', danger: false,
+          title: 'Move to ' + TIERS[tier] + ' next month?',
+          body: 'Downgrades apply from your next cycle. You keep ' + TIERS[cur] + ' until Aug 30, then move to ' + TIERS[tier] + ' on Aug 31. Nothing changes this month. Upgrades always apply immediately.',
+          go: 'Schedule downgrade',
+          onGo: function () { showToast('You move to ' + TIERS[tier] + ' on Aug 31, when your current cycle ends.'); }
+        });
       }
     }
 
@@ -730,6 +826,8 @@
     window.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       if (document.getElementById('ov').classList.contains('show')) closeOverlay();
+      else if (document.getElementById('cf-ov').classList.contains('show')) closeConfirm();
+      else if (document.getElementById('bl-ov').classList.contains('show')) closeBilling();
       else if (document.getElementById('np-ov').classList.contains('show')) closeNp();
       else if (document.getElementById('cp-ov').classList.contains('show')) closeChangePlan();
     });
