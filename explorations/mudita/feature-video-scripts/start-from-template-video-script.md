@@ -123,9 +123,15 @@ depends on does not exist yet. That panel probably wants a slide-outline list be
 Worth doing regardless of the video: the outline is the reason to pick one template over another,
 and right now you cannot see it before committing.
 
-**The template has to be built.** Its copy is written: card, description and all twelve slides with
-demo content are in `brand-partnership-proposal-template.md` beside this file. It does not exist in
-the Marketing tab yet.
+**The template has to be built.** Its copy is written: card, description and all twelve slides are
+in `brand-partnership-proposal-template.md` beside this file. It does not exist in the Marketing tab
+yet.
+
+**Unresolved: does a template ship filled or prompted?** The 0:14 shot above describes the right
+panel as fully populated, which is what the handoff mock shows. The template doc specifies headings
+and prompts instead, with the filled version existing only as the gallery thumbnail. Both are
+defensible and they look completely different on screen for the middle twenty seconds of this
+video. Settle it before either gets built.
 
 ## Not in this video
 

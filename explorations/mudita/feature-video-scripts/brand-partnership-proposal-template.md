@@ -1,20 +1,20 @@
 # Brand Partnership Proposal: template content
 
-The template Anika picks in the Start from a Template video. This is what ships in the gallery,
-before any user context: the card copy, the detail-panel description, and the twelve slides with
-their own demo content.
+What this template contains **before anyone fills it in**. The template Anika picks in the Start
+from a Template video.
 
 Companion to `start-from-template-video-script.md`.
 
-## Why the demo content is B2B
+## The principle
 
-The template's own example is a fintech integration partnership, deliberately far from the video's
-consumer coffee-and-outdoors scenario. At 0:14 the viewer sees this content on the right of the
-split screen, and at 0:26 sees Marlow's. If both examples looked alike, the transformation would
-not register. Different sector, different tone, same twelve headings.
+A template is not a filled deck with the names swapped out. It is a set of questions, laid out and
+designed, waiting for answers. So the pre-fill copy is not lorem and it is not a worked example. It
+is the template telling you what belongs on each slide, in its own voice.
 
-Example partnership in the template: **Ledgerline** (business banking app for small companies)
-proposing to **Corva** (accounting software) around an integration launch timed to tax season.
+That voice is opinionated on purpose. `A number, not an adjective.` `Be specific, not polite.` Those
+lines are the expertise the user is buying, and they are the reason the deck comes out good rather
+than merely complete. They are also the first thing an engineer will try to delete as placeholder
+text, so they need protecting.
 
 ## Gallery card
 
@@ -26,8 +26,7 @@ proposing to **Corva** (accounting software) around an integration launch timed 
 
 ## Detail panel description
 
-Shown beside `Use this Template`. Two short paragraphs, matching the register of the KPI Report
-template in the handoff.
+Shown beside `Use this Template`.
 
 > A partnership only gets signed when both sides can see exactly what they get.
 >
@@ -38,124 +37,156 @@ template in the handoff.
 >
 > Works for brand collaborations, integration launches, sponsorships and channel partnerships.
 
-## The twelve slides
+## The twelve slides, unfilled
 
-Each slide has a **heading** (what shows in the filmstrip and the editor rail), a **subhead** (the
-question it exists to answer), and demo body copy.
+Every slide carries a **heading**, a **helper line** naming the question it exists to answer, and
+**prompts** in the body where the content will go. Headings and helper lines are real copy that
+ships. Prompts are what the user replaces.
 
 ### 1 · Cover
 
-**Heading:** Ledgerline × Corva
-**Subhead:** Brand partnership proposal
-**Footer:** Prepared for the Corva partnerships team · March 2026
+**Heading:** Your company × Their company
+**Helper:** Partnership proposal
+**Footer:** Prepared for [team] · [Month, Year]
 
 ### 2 · The opportunity
 
 **Heading:** The opportunity
-**Subhead:** Why this partnership, and why now
+**Helper:** Why this is worth doing, and why now
 
-- 68% of Corva's small business customers bank outside their accounting tool and reconcile by hand
-- Ledgerline's live sync ships in April, four weeks before the quarterly filing deadline
-- Neither side has to build anything new for this. The integration is the campaign.
+- The thing that is true about their customers that makes this obvious
+- The timing reason. A launch, a season, a deadline
+- Why neither side has to build anything new for it to work
 
 ### 3 · Where our audiences overlap
 
 **Heading:** Where our audiences overlap
-**Subhead:** Who we each reach, and the segment we share
+**Helper:** Who you each reach, and the segment you share
 
-Ledgerline: 240K accounts, mostly companies of 5 to 50 people.
-Corva: 410K seats, same size band, weighted to services businesses.
-Shared and addressable: roughly 90K businesses already using both.
+| Slot | Prompt |
+|---|---|
+| Your reach | The size, and who they are in one line |
+| Their reach | The same, from their side |
+| The overlap | The number that makes this worth a meeting |
 
-### 4 · What Ledgerline brings
+Visual: two bands with a shared section, unlabelled until filled.
 
-**Heading:** What Ledgerline brings
-**Subhead:** What we are putting in
+### 4 · What we bring
 
-240K account holders. In-app placement across onboarding and the reconcile screen. Lifecycle email
-to 180K opted in. A four-person growth team on this through Q2.
+**Heading:** What we bring
+**Helper:** What you are putting in, listed plainly
 
-### 5 · What Corva brings
+- Audience or distribution you control
+- Inventory: placements, emails, channels
+- Production or people you will commit
+- Anything you will pay for
 
-**Heading:** What Corva brings
-**Subhead:** What we are asking for, said plainly
+### 5 · What you bring
 
-Placement in the app directory and the tax-season hub. One newsletter slot to 410K. Two joint
-webinars with your product marketing lead. A co-branded landing page on your domain.
+**Heading:** What you bring
+**Helper:** What you are asking of them. Be specific, not polite
+
+- The placement you actually want
+- The list, and its size
+- The people whose time you need
+- Anything that has to live on their domain
 
 ### 6 · The campaign
 
-**Heading:** The campaign: One Ledger
-**Subhead:** The idea, in one line
+**Heading:** The campaign
+**Helper:** The idea, in one line a stranger would repeat
 
-Your bank and your books, finally telling the same story. Six weeks, timed to the filing deadline,
-built around the moment reconciliation stops being manual.
+- Name it
+- One sentence on what it is
+- One sentence on why it belongs to both of you and not just to you
 
 ### 7 · What we would make together
 
 **Heading:** What we would make together
-**Subhead:** Deliverables, and where each one runs
+**Helper:** Deliverables, where each one runs, and who owns it
 
 | Deliverable | Runs on | Owner |
 |---|---|---|
-| Integration launch post | Both blogs | Joint |
-| Two webinars | Corva-hosted | Corva |
-| In-app announcement | Ledgerline | Ledgerline |
-| Newsletter slot, 410K | Corva | Corva |
-| Co-branded landing page | Corva domain | Joint |
-| Three customer stories | Both | Ledgerline |
+| | | |
+| | | |
+| | | |
+
+Six empty rows. If you cannot fill four, the partnership is a favour, not a campaign.
 
 ### 8 · Timeline
 
 **Heading:** Timeline
-**Subhead:** When each side has to move
+**Helper:** When each side has to move
 
-Mar: creative and legal · 6 Apr: integration ships · 14 Apr: launch posts and in-app ·
-22 Apr and 6 May: webinars · 1 Jun: wrap and readout
+Five markers on a line, each wanting a phase, a date, and whose move it is. Start at the
+commitment, not at the launch.
 
 ### 9 · How we will measure it
 
 **Heading:** How we will measure it
-**Subhead:** The numbers we will both be looking at
+**Helper:** The numbers you will both look at, agreed before you start
 
-Connected accounts (primary) · webinar registrations and attendance · landing page conversion ·
-new-to-file customers on each side · cost per connected account
+- One primary metric. Just one
+- Two or three supporting numbers
+- What each side counts as a win, if those differ
+- The number you will report back on, and when
 
 ### 10 · The value exchange
 
 **Heading:** The value exchange
-**Subhead:** Who puts in what, and whether it is even
+**Helper:** Who puts in what, and whether it is even
 
-No cash either way.
-Ledgerline puts in engineering for the integration, in-app inventory, and $40K of paid support.
-Corva puts in directory placement, the newsletter slot, and webinar production.
-Estimated media value: Ledgerline $155K, Corva $170K. Close enough that neither side invoices.
+| | Your side | Their side |
+|---|---|---|
+| In kind | | |
+| Cash, if any | | |
+| Estimated value | | |
+
+Then say the word "even", or say what makes up the difference. Leaving this slide out does not
+avoid the conversation, it just moves it into the meeting.
 
 ### 11 · We have done this before
 
 **Heading:** We have done this before
-**Subhead:** Precedent, and what it returned
+**Helper:** One precedent, with a number attached
 
-Ledgerline × Sagepoint Payroll, Sep 2025. 11.2K connected accounts in eight weeks, 31% of them new
-to Ledgerline, and a three point lift in Sagepoint's activation rate.
+- The partner, and when
+- What it returned. A number, not an adjective
+- The one thing you would do differently, if it is worth saying
 
 ### 12 · Next steps
 
 **Heading:** Next steps
-**Subhead:** What happens after this meeting, and who owns it
+**Helper:** What happens after this meeting, and who owns it
 
-Legal review, three weeks, starting on your yes · a named owner on each side · kickoff the week of
-16 Mar · decision needed by 9 Mar to hold the April launch date
+- The first action, and whose it is
+- How long legal takes on your side
+- The date you need a decision by, and what it holds up
+
+## Open question for the build
+
+The handoff mock shows the right-hand panel rendering the KPI Report **filled** with its own demo
+content (green slides, real charts, real numbers). That is a different model from the one above.
+
+Both can be true, and this is how most template galleries work:
+
+```
+gallery thumbnail + detail preview   →   a filled render, so it looks good
+what you actually receive            →   headings, helper lines, prompts
+```
+
+If that split is right, the filled render is a separate design asset and needs commissioning. If
+instead templates genuinely ship filled with a worked example, then this document is the wrong
+model and the video's 0:14 shot is right as originally written. **Worth settling before either
+gets built**, because it changes what the right-hand panel shows for the whole middle of the video.
 
 ## Notes for whoever builds it
 
-- **The subheads are the template's actual product.** They are what makes the deck complete rather
-  than merely structured, and they are what survives when the user's content replaces the body. Do
-  not let them get edited out as "placeholder text".
+- **The helper lines ship. They are not placeholder text.** They are what makes the deck good
+  rather than merely complete, and they are the most deletable-looking thing in the file.
 - **Headings must read at filmstrip scale.** They are the shot the video depends on. Nothing longer
-  than about four words except slide 6.
-- **Slides 8 through 12 are the ones users skip on their own.** Timeline, measurement, value
-  exchange, precedent, next steps. If the template earns its place anywhere, it is there.
-- **Keep the demo numbers specific and odd** (`11.2K`, `roughly 90K`, `three point lift`). Round
-  numbers make a template look unfinished.
-- Swap Ledgerline, Corva and Sagepoint for names that clear legal.
+  than four words.
+- **Slides 7 through 9 and 12 are the ones people skip on their own.** Deliverables, timeline,
+  measurement, next steps. If the template earns its place anywhere, it is there.
+- **Prompts are instructions, never lorem.** A user who deletes a prompt without replacing it
+  should be left with a visibly unfinished slide, not a plausible-looking one.
