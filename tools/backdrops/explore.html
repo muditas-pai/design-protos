@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backdrops · beauty pass</title>
+<style>
+  :root{ --ink:#0A1925; --muted:#5B6B7C; --line:#E3E8EF; --bg:#F7F8FA; --blue:#005EFF; --blue-tint:#E6EFFF; }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg); color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  header{position:sticky; top:0; z-index:20; background:rgba(247,248,250,.88);
+    backdrop-filter:saturate(180%) blur(12px); border-bottom:1px solid var(--line);
+    padding:14px 24px; display:flex; gap:20px; align-items:center; flex-wrap:wrap}
+  h1{font-size:15px; font-weight:600; margin:0}
+  h1 small{display:block; font-weight:400; font-size:12px; color:var(--muted)}
+  .spacer{flex:1}
+  .ctl{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted)}
+  button{font:inherit; font-size:12px; color:var(--ink); background:#fff;
+    border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer}
+  .switch{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff}
+  .switch button{border:0; border-radius:0; padding:6px 11px; color:var(--muted)}
+  .switch button[aria-pressed="true"]{background:var(--blue-tint); color:var(--blue); font-weight:500}
+  main{padding:24px; max-width:1500px; margin:0 auto}
+  .note{color:var(--muted); font-size:12px; max-width:660px; margin:0 0 22px; line-height:1.6}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(600px,1fr)); gap:24px}
+  .card{background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden}
+  .frame{position:relative; aspect-ratio:16/9}
+  .frame canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+  .meta{display:flex; align-items:baseline; gap:10px; padding:11px 14px; border-top:1px solid var(--line)}
+  .nm{font-weight:600; font-size:13px}
+  .rc{font-size:11px; color:var(--muted)}
+  .meta .spacer{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>Backdrops · beauty pass<small>eight attempts at pretty, not at meaning</small></h1>
+  <div class="spacer"></div>
+  <div class="ctl">plate
+    <div class="switch" id="plate">
+      <button data-v="off" aria-pressed="true">off</button>
+      <button data-v="light" aria-pressed="false">light UI</button>
+      <button data-v="dark" aria-pressed="false">dark UI</button>
+    </div>
+  </div>
+  <button id="reroll">Reroll</button>
+</header>
+
+<main>
+  <p class="note">
+    No mosaic, no vignette, no centre bloom. Light and colour do the work; geometry stays crisp,
+    large and sparse. Point at the ones worth keeping and I'll take those further.
+  </p>
+  <div class="grid" id="grid"></div>
+</main>
+
+<script>
+/* ── plumbing ─────────────────────────────────────────────── */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function nc(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+
+/* Linear gradient at an angle across the frame. Multiple related hues,
+   not one hue lightened — that is where colour richness comes from. */
+function lin(ctx,W,H,deg,stops){
+  const a=deg*Math.PI/180, R=Math.hypot(W,H)/2;
+  const g=ctx.createLinearGradient(W/2-Math.cos(a)*R,H/2-Math.sin(a)*R,W/2+Math.cos(a)*R,H/2+Math.sin(a)*R);
+  stops.forEach(([p,c])=>g.addColorStop(p,c));
+  return g;
+}
+/* Off-centre soft light. Not a centred bloom and not a vignette — this is
+   what makes a field read as luminous rather than flat. */
+function glowAt(ctx,W,H,x,y,r,inner,outer){
+  const g=ctx.createRadialGradient(W*x,H*y,0,W*x,H*y,Math.max(W,H)*r);
+  g.addColorStop(0,inner); g.addColorStop(0.5,outer); g.addColorStop(1,'rgba(0,0,0,0)');
+  return g;
+}
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+
+/* Very light grain — enough to stop banding, not enough to read as texture. */
+function grain(ctx,W,H,rand,amt=0.022){
+  const s=2, w=Math.round(W/s), h=Math.round(H/s);
+  const b=nc(w,h), bc=b.getContext('2d'), img=bc.createImageData(w,h), d=img.data;
+  for(let i=0;i<d.length;i+=4){ const v=128+(rand()*2-1)*amt*255;
+    d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; }
+  bc.putImageData(img,0,0);
+  ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(b,0,0,W,H); ctx.restore();
+}
+
+/* ── the eight ────────────────────────────────────────────── */
+const VARIANTS = [
+{
+  id:'dusk', name:'Dusk', note:'deep indigo to blue, panes catching light',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle=lin(ctx,W,H,104,[[0,'#1B2E8A'],[0.45,'#123FB8'],[1,'#0A1442']]);
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=glowAt(ctx,W,H,0.24,0.18,0.85,'rgba(94,160,255,0.55)','rgba(60,110,235,0.16)');
+    ctx.globalCompositeOperation='screen'; ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='source-over';
+    const panes=[[0.02,0.44,0.52,0.62],[0.40,0.10,0.46,0.55],[0.62,0.52,0.55,0.60]];
+    for(const [x,y,w,h] of panes){
+      rr(ctx,W*x,H*y,W*w,H*h,18*u);
+      ctx.fillStyle='rgba(190,220,255,0.075)'; ctx.fill();
+      ctx.strokeStyle='rgba(214,234,255,0.30)'; ctx.lineWidth=1*u; ctx.stroke();
+    }
+    grain(ctx,W,H,rand);
+  }
+},
+{
+  id:'prism', name:'Prism', note:'translucent planes building colour where they cross',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle=lin(ctx,W,H,110,[[0,'#0B1030'],[0.6,'#0D1846'],[1,'#070A22']]);
+    ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+    const plates=[
+      [0.00,0.30,0.58,0.66,'rgba(0,88,220,0.42)'],
+      [0.34,0.06,0.52,0.62,'rgba(0,150,230,0.30)'],
+      [0.52,0.40,0.56,0.62,'rgba(96,60,230,0.34)'],
+    ];
+    for(const [x,y,w,h,c] of plates){ rr(ctx,W*x,H*y,W*w,H*h,20*u); ctx.fillStyle=c; ctx.fill(); }
+    ctx.globalCompositeOperation='source-over';
+    for(const [x,y,w,h] of plates){ rr(ctx,W*x,H*y,W*w,H*h,20*u);
+      ctx.strokeStyle='rgba(190,220,255,0.22)'; ctx.lineWidth=1*u; ctx.stroke(); }
+    grain(ctx,W,H,rand);
+  }
+},
+{
+  id:'split', name:'Split', note:'two flat fields, one clean diagonal',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle=lin(ctx,W,H,100,[[0,'#F2F6FF'],[1,'#DCE7FA']]); ctx.fillRect(0,0,W,H);
+    ctx.save(); ctx.beginPath();
+    ctx.moveTo(0,H*0.52); ctx.lineTo(W,H*0.14); ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle=lin(ctx,W,H,100,[[0,'#0B3FD0'],[0.6,'#0A2FA8'],[1,'#071C6E']]);
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=glowAt(ctx,W,H,0.78,0.38,0.6,'rgba(110,180,255,0.42)','rgba(60,120,240,0.12)');
+    ctx.globalCompositeOperation='screen'; ctx.fillRect(0,0,W,H);
+    ctx.restore();
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=1.25*u;
+    ctx.beginPath(); ctx.moveTo(0,H*0.52); ctx.lineTo(W,H*0.14); ctx.stroke();
+    grain(ctx,W,H,rand,0.016);
+  }
+},
+{
+  id:'bands', name:'Bands', note:'graded horizontal layers, blue into cyan',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle=lin(ctx,W,H,92,[[0,'#0A2FA0'],[0.5,'#0B49C8'],[1,'#061436']]);
+    ctx.fillRect(0,0,W,H);
+    const n=7; let y=0;
+    for(let i=0;i<n;i++){
+      const h=H*(0.07+ (i/n)*0.12);
+      const t=i/(n-1);
+      const g=lin(ctx,W,H,0,[[0,`rgba(80,190,255,${(0.16*(1-t)).toFixed(3)})`],
+                             [1,`rgba(120,110,255,${(0.13*t).toFixed(3)})`]]);
+      ctx.fillStyle=g; ctx.fillRect(0,y,W,h);
+      ctx.fillStyle=`rgba(200,232,255,${(0.30-0.02*i).toFixed(3)})`;
+      ctx.fillRect(0,y,W,1*u);
+      y+=h;
+      if(y>H) break;
+    }
+    grain(ctx,W,H,rand);
+  }
+},
+{
+  id:'glass', name:'Glass', note:'a receding stack of lit panels',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle=lin(ctx,W,H,108,[[0,'#12256E'],[0.55,'#0E3AA8'],[1,'#08122F']]);
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=glowAt(ctx,W,H,0.72,0.24,0.8,'rgba(120,190,255,0.42)','rgba(60,120,235,0.12)');
+    ctx.globalCompositeOperation='screen'; ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='source-over';
+    const n=7, aw=W*0.72, ah=aw*9/16;
+    for(let i=n-1;i>=0;i--){
+      const s=1-i*0.045, w=aw*s, h=ah*s;
+      const x=W*0.26-w/2+i*W*0.055, y=H*0.56-h/2-i*H*0.045;
+      const f=1-i/n;
+      rr(ctx,x,y,w,h,16*u);
+      ctx.fillStyle=`rgba(180,215,255,${(0.05*f+0.015).toFixed(3)})`; ctx.fill();
+      ctx.strokeStyle=`rgba(214,236,255,${(0.34*f+0.06).toFixed(3)})`; ctx.lineWidth=1*u; ctx.stroke();
+    }
+    grain(ctx,W,H,rand);
+  }
+},
+{
+  id:'sweep', name:'Sweep', note:'high key, one soft colour sweep',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle='#FBFCFE'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=glowAt(ctx,W,H,0.12,0.92,1.05,'rgba(0,94,255,0.34)','rgba(80,150,255,0.10)');
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=glowAt(ctx,W,H,0.92,0.10,0.7,'rgba(120,90,255,0.16)','rgba(120,90,255,0.05)');
+    ctx.fillRect(0,0,W,H);
+    rr(ctx,W*0.30,H*0.22,W*0.56,H*0.62,18*u);
+    ctx.strokeStyle='rgba(30,70,150,0.20)'; ctx.lineWidth=1*u; ctx.stroke();
+    grain(ctx,W,H,rand,0.014);
+  }
+},
+{
+  id:'deep', name:'Deep', note:'near-black, a few luminous rectangles',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle=lin(ctx,W,H,100,[[0,'#0A1226'],[0.6,'#070C1B'],[1,'#04070F']]);
+    ctx.fillRect(0,0,W,H);
+    const lit=[[0.06,0.16,0.30,0.34],[0.44,0.50,0.34,0.36],[0.70,0.10,0.26,0.30]];
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<lit.length;i++){
+      const [x,y,w,h]=lit[i];
+      const g=lin(ctx,W,H,120,[[0,'rgba(0,110,255,0.42)'],[1,'rgba(0,40,150,0.10)']]);
+      rr(ctx,W*x,H*y,W*w,H*h,14*u); ctx.fillStyle=g; ctx.fill();
+    }
+    ctx.globalCompositeOperation='source-over';
+    for(const [x,y,w,h] of lit){ rr(ctx,W*x,H*y,W*w,H*h,14*u);
+      ctx.strokeStyle='rgba(150,200,255,0.34)'; ctx.lineWidth=1*u; ctx.stroke(); }
+    grain(ctx,W,H,rand);
+  }
+},
+{
+  id:'duo', name:'Duotone', note:'flat brand blue, one large quiet grid',
+  draw(ctx,W,H,rand,u){
+    ctx.fillStyle=lin(ctx,W,H,104,[[0,'#0B4AE0'],[0.55,'#0A3CC0'],[1,'#082E96']]);
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=glowAt(ctx,W,H,0.82,0.16,0.75,'rgba(150,200,255,0.30)','rgba(120,180,255,0.08)');
+    ctx.globalCompositeOperation='screen'; ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='source-over';
+    const gap=W/9;
+    ctx.strokeStyle='rgba(255,255,255,0.13)'; ctx.lineWidth=1*u;
+    for(let x=gap;x<W;x+=gap){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y=gap;y<H;y+=gap){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    grain(ctx,W,H,rand,0.018);
+  }
+}
+];
+
+/* ── plate ────────────────────────────────────────────────── */
+function drawPlate(ctx,W,H,variant){
+  if(variant==='off') return;
+  const dark=variant==='dark';
+  const w=W*0.62,h=H*0.66,x=(W-w)/2,y=(H-h)/2+H*0.02,r=Math.max(6,W*0.008);
+  ctx.save(); ctx.shadowColor='rgba(4,10,22,0.34)'; ctx.shadowBlur=W*0.035; ctx.shadowOffsetY=W*0.012;
+  ctx.fillStyle=dark?'#12161C':'#FCFCFD'; rr(ctx,x,y,w,h,r); ctx.fill(); ctx.restore();
+  const bar=h*0.09;
+  ctx.fillStyle=dark?'#1A1F26':'#F3F4F6'; ctx.beginPath(); ctx.roundRect(x,y,w,bar,[r,r,0,0]); ctx.fill();
+  ctx.fillStyle=dark?'#333A44':'#D7DBE0';
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(x+bar*0.62+i*bar*0.46,y+bar*0.5,bar*0.14,0,Math.PI*2);ctx.fill();}
+  const sw=w*0.24;
+  ctx.fillStyle=dark?'#0E1217':'#F7F8FA'; ctx.fillRect(x,y+bar,sw,h-bar);
+  ctx.fillStyle=dark?'#2A313A':'#DFE3E9';
+  for(let i=0;i<7;i++) ctx.fillRect(x+sw*0.14,y+bar+h*0.07+i*h*0.075,sw*(0.5+((i*37)%40)/100),h*0.022);
+  ctx.fillStyle=dark?'#242B34':'#E6E9EE';
+  for(let i=0;i<9;i++) ctx.fillRect(x+sw+w*0.06,y+bar+h*0.09+i*h*0.062,(w-sw)*(0.35+((i*53)%50)/100),h*0.021);
+}
+
+/* ── ui ───────────────────────────────────────────────────── */
+const PW=1280, PH=720;
+let plateMode='off', seed=1;
+const cache=new Map();
+
+function renderVariant(v,W,H){
+  const cv=nc(W,H), ctx=cv.getContext('2d');
+  v.draw(ctx,W,H,mulberry32(seed*7919+v.id.length),W/1600);
+  return cv;
+}
+function paint(v,cv){
+  if(!cache.has(v.id)) cache.set(v.id, renderVariant(v,PW,PH));
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(cache.get(v.id),0,0);
+  drawPlate(ctx,cv.width,cv.height,plateMode);
+}
+function build(){
+  const host=document.getElementById('grid'); host.innerHTML='';
+  for(const v of VARIANTS){
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML=`<div class="frame"><canvas width="${PW}" height="${PH}"></canvas></div>
+      <div class="meta"><span class="nm">${v.name}</span><span class="rc">${v.note}</span></div>`;
+    paint(v,card.querySelector('canvas'));
+    host.appendChild(card);
+  }
+}
+document.getElementById('plate').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  plateMode=b.dataset.v;
+  [...e.currentTarget.children].forEach(c=>c.setAttribute('aria-pressed',String(c===b)));
+  document.querySelectorAll('.card').forEach((card,i)=>paint(VARIANTS[i],card.querySelector('canvas')));
+});
+document.getElementById('reroll').onclick=()=>{ seed=(Math.random()*1e6)|0; cache.clear(); build(); };
+build();
+</script>
+</body>
+</html>
