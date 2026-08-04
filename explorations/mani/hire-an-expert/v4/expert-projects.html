@@ -405,6 +405,7 @@
     <div class="demo-seg" role="tablist" aria-label="Quota demo">
       <button type="button" class="is-active" data-q="left">2 decks left</button>
       <button type="button" data-q="zero">0 left</button>
+      <button type="button" data-q="bronze">Studio Bronze plan</button>
       <button type="button" data-q="unlimited">Studio Gold plan</button>
       <button type="button" data-q="oneoff">One-off order</button>
     </div>
@@ -484,8 +485,8 @@
         <div class="member-card">
           <div class="mc-up">
             <span class="up-ic"><i class="ph-bold ph-infinity"></i></span>
-            <span class="up-txt">Shipping more than 4 decks a month? <b>Go Studio Gold for $4,000/month.</b></span>
-            <button class="up-cta" onclick="openOverlay('retainer-checkout.html?plan=unlimited')">Upgrade<i class="ph ph-arrow-right"></i></button>
+            <span class="up-txt" id="up-txt">Shipping more than 4 decks a month? <b>Go Studio Gold for $4,000/month.</b></span>
+            <button class="up-cta" id="up-cta" onclick="openOverlay('retainer-checkout.html?plan=unlimited')">Upgrade<i class="ph ph-arrow-right"></i></button>
           </div>
         </div>
 
@@ -667,13 +668,15 @@
 
     var isUnlimited = false;
     var isOneoff = false;
+    var isBronze = false;
     var seg = document.querySelectorAll('.demo-seg button');
     seg.forEach(function (btn) {
       btn.addEventListener('click', function () {
         seg.forEach(function (b) { b.classList.toggle('is-active', b === btn); });
         isUnlimited = btn.dataset.q === 'unlimited';
         isOneoff = btn.dataset.q === 'oneoff';
-        decksLeft = btn.dataset.q === 'zero' ? 0 : 2;
+        isBronze = btn.dataset.q === 'bronze';
+        decksLeft = btn.dataset.q === 'zero' ? 0 : (isBronze ? 1 : 2);
         renderQuota();
       });
     });
@@ -683,7 +686,16 @@
       document.body.classList.toggle('sc-oneoff', isOneoff);
       document.body.classList.toggle('q-zero', !isUnlimited && !isOneoff && decksLeft === 0);
       if (isOneoff) return;
-      document.getElementById('plan-tag').textContent = isUnlimited ? 'Studio Gold' : 'Studio Silver';
+      document.getElementById('plan-tag').textContent = isUnlimited ? 'Studio Gold' : (isBronze ? 'Studio Bronze' : 'Studio Silver');
+      var upTxt = document.getElementById('up-txt');
+      var upCta = document.getElementById('up-cta');
+      if (isBronze) {
+        upTxt.innerHTML = 'Need more than 1 deck a month? <b>Go Studio Silver for $2,000/month.</b>';
+        upCta.onclick = function () { openOverlay('retainer-checkout.html?plan=studio'); };
+      } else {
+        upTxt.innerHTML = 'Shipping more than 4 decks a month? <b>Go Studio Gold for $4,000/month.</b>';
+        upCta.onclick = function () { openOverlay('retainer-checkout.html?plan=unlimited'); };
+      }
     }
 
     // Manage popover
@@ -733,7 +745,7 @@
     function closeBilling() { document.getElementById('bl-ov').classList.remove('show'); }
     // Change plan rules: up any time, down only at cycle end
     var TIERS = { 1: 'Studio Bronze', 2: 'Studio Silver', 3: 'Studio Gold' };
-    function currentTier() { return isUnlimited ? 3 : 2; }
+    function currentTier() { return isUnlimited ? 3 : (isBronze ? 1 : 2); }
     function openChangePlan() {
       var cur = currentTier();
       document.querySelectorAll('.cp-row').forEach(function (r) {
@@ -757,7 +769,9 @@
       closeChangePlan();
       if (tier > cur) {
         // upgrade: immediate
-        if (tier === 3) { isUnlimited = true; renderQuota(); }
+        if (tier === 3) { isUnlimited = true; isBronze = false; }
+        else if (tier === 2) { isBronze = false; decksLeft = 2; }
+        renderQuota();
         showToast('Upgraded to ' + TIERS[tier] + '. Active immediately.');
       } else {
         // downgrade: confirm, takes effect next cycle
