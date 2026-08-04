@@ -160,6 +160,7 @@
   .pp-sub { margin-top: 6px; font-size: 13px; color: #525252; }
   .pp-divider { border-bottom: 1px solid rgba(11,15,20,0.09); margin: 14px 0; }
   .pp-due { font-size: 14px; font-weight: 500; }
+  .pp-upnote { margin-top: 12px; font-size: 12.5px; line-height: 1.5; color: #525252; }
   .pp-card-row {
     display: flex; align-items: center; gap: 8px;
     margin-top: 14px; font-size: 13px; color: #171717; font-weight: 500;
@@ -451,6 +452,8 @@
             </div>
           </div>
 
+          <div class="pp-upnote" id="pp-upnote" hidden></div>
+
           <div class="pp-card-row">
             <i class="ph ph-credit-card"></i>
             <span id="pp-card-label">Visa &bull;&bull;&bull;&bull; 4242</span>
@@ -463,7 +466,7 @@
           </label>
 
           <div class="pp-actions">
-            <button type="button" class="pp-confirm" onclick="showSuccess()">Confirm Payment</button>
+            <button type="button" class="pp-confirm" id="pp-confirm" onclick="showSuccess()">Confirm Payment</button>
           </div>
 
           <div class="pay-foot">
@@ -613,7 +616,7 @@
     <div class="success-card">
       <i class="ph-fill ph-check-circle ok-ic"></i>
       <h3 id="succ-title">Your Studio retainer is live</h3>
-      <p>We are setting up your shared Slack or MS Teams channel. Your designer says hello within 2 hours.</p>
+      <p id="succ-sub">We are setting up your shared Slack or MS Teams channel. Your designer says hello within 2 hours.</p>
       <button onclick="finish()">Done</button>
     </div>
   </div>
@@ -647,7 +650,10 @@
                ['ph-chats-circle', 'Direct Slack or MS Teams line to your designer'],
                ['ph-arrow-counter-clockwise', 'Unlimited tweaks till you are happy']] }
   };
-  var ENTRY = (new URLSearchParams(location.search).get('plan') || 'studio').toLowerCase();
+  var QS = new URLSearchParams(location.search);
+  var UPGRADE = (QS.get('ctx') || '').toLowerCase() === 'upgrade';
+  var FROM_LABEL = { bronze: 'Studio Bronze', silver: 'Studio Silver' }[(QS.get('from') || 'silver').toLowerCase()] || 'Studio Silver';
+  var ENTRY = (QS.get('plan') || 'studio').toLowerCase();
   if (!PLANS[ENTRY]) ENTRY = 'studio';
   var SELECTED = ENTRY;
 
@@ -686,6 +692,17 @@
     set('pp-renew', 'US' + fmt(p.price) + '/month');
     set('pay-btn', 'Pay ' + fmt(p.price));
     set('succ-title', 'Your ' + p.label + ' retainer is live');
+    if (UPGRADE) {
+      set('left-title', 'Upgrade your membership');
+      set('pp-title', 'Upgrade to ' + p.label);
+      set('pp-plan', p.label + ' membership');
+      set('pp-confirm', 'Confirm Upgrade');
+      set('succ-title', 'You are on ' + p.label);
+      set('succ-sub', 'Your upgrade applies immediately and your new cycle starts today. Anything in progress carries straight over.');
+      var un = document.getElementById('pp-upnote');
+      un.hidden = false;
+      un.textContent = 'Applies immediately. Replaces your ' + FROM_LABEL + ' plan, and your new monthly cycle starts today.';
+    }
     document.getElementById('points').innerHTML = p.points.map(function (pt) {
       return '<li><i class="ph ' + pt[0] + '"></i>' + pt[1] + '</li>';
     }).join('');
