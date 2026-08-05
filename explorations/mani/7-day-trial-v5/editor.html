@@ -3859,6 +3859,18 @@
     <iframe id="deck-ready-frame" src="" title="Where does this deck go next?"></iframe>
   </div>
 
+  <!-- ── BUY CHECKOUT (Upgrade modal from design-harness) ────────
+       Buy Now CTAs open this Stripe-style Upgrade modal instead of the
+       trial checkout. v5's own copy of checkout-without-offer.html. -->
+  <style>
+    #buy-frame { position: fixed; inset: 0; z-index: 710; display: none; }
+    #buy-frame.is-open { display: block; }
+    #buy-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  </style>
+  <div id="buy-frame" aria-hidden="true">
+    <iframe id="buy-frame-if" src="" title="Upgrade"></iframe>
+  </div>
+
   <!-- ── FEATURE MODAL (latest design, embedded) ─────────────────
        v5's own copy of pricing/feature-modal.html in plain mode:
        no offer chip, no 20% off, Try Pro / Try Gold CTAs. -->
@@ -4196,7 +4208,41 @@
       var co = document.getElementById('checkout-modal');
       var coPlan = 'pro';
       var coMode = 'trial'; // 'trial' (Try for Free) | 'buy' (Buy Now)
+      // Buy Now → the Stripe-style Upgrade modal (buy-checkout.html)
+      var bf = document.getElementById('buy-frame');
+      var bfi = document.getElementById('buy-frame-if');
+      function openBuyCheckout(plan) {
+        coPlan = plan === 'gold' ? 'gold' : 'pro';
+        coMode = 'buy';
+        if (!bfi.dataset.loaded) {
+          bfi.dataset.loaded = '1';
+          bfi.src = 'buy-checkout.html';
+          bfi.addEventListener('load', function () {
+            try { if (bfi.contentWindow.setPlan) bfi.contentWindow.setPlan(coPlan); } catch (e) {}
+          });
+        } else {
+          try { if (bfi.contentWindow.setPlan) bfi.contentWindow.setPlan(coPlan); } catch (e) {}
+        }
+        bf.classList.add('is-open');
+        bf.setAttribute('aria-hidden', 'false');
+      }
+      function closeBuyCheckout() {
+        bf.classList.remove('is-open');
+        bf.setAttribute('aria-hidden', 'true');
+        maybeReturnToDeck();
+      }
+      window.addEventListener('message', function (e) {
+        if (!e.data || !e.data.type) return;
+        if (e.data.type === 'v5-buy-close') closeBuyCheckout();
+        if (e.data.type === 'v5-buy-paid') {
+          returnToDeck = false;
+          bf.classList.remove('is-open');
+          startTrial(e.data.plan === 'gold' ? 'gold' : 'pro', 'buy');
+        }
+      });
+
       function openCheckout(plan, mode) {
+        if (mode === 'buy') { openBuyCheckout(plan); return; }
         coPlan = plan === 'gold' ? 'gold' : 'pro';
         coMode = mode === 'buy' ? 'buy' : 'trial';
         var p = CO_PLANS[coPlan];
@@ -4384,6 +4430,7 @@
       // Escape closes whichever v5 layer is on top
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
+        if (bf.classList.contains('is-open')) { closeBuyCheckout(); e.stopImmediatePropagation(); return; }
         if (co.classList.contains('is-open')) { closeCheckout(); e.stopImmediatePropagation(); return; }
         if (ff.classList.contains('is-open')) { closeFeatureModal(); e.stopImmediatePropagation(); return; }
         if (tm.classList.contains('is-open')) { closeTrialModal(); e.stopImmediatePropagation(); return; }
