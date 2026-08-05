@@ -3856,6 +3856,18 @@
     <iframe id="deck-ready-frame" src="" title="Where does this deck go next?"></iframe>
   </div>
 
+  <!-- ── FEATURE MODAL (latest design, embedded) ─────────────────
+       v5's own copy of pricing/feature-modal.html in plain mode:
+       no offer chip, no 20% off, Try Pro / Try Gold CTAs. -->
+  <style>
+    #feature-frame { position: fixed; inset: 0; z-index: 650; display: none; }
+    #feature-frame.is-open { display: block; }
+    #feature-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  </style>
+  <div id="feature-frame" aria-hidden="true">
+    <iframe id="feature-frame-if" src="" title="Premium features"></iframe>
+  </div>
+
   <!-- ── SHARE MODAL ─────────────────────────────────────────────── -->
   <style>
     #share-modal .v5-card { width: min(460px, 92vw); padding: 24px 26px 22px; }
@@ -4061,8 +4073,52 @@
         document.getElementById('fm-ft').textContent = f.label;
         document.getElementById('fm-fd').textContent = f.desc;
       }
-      function openFeatureModal(key) { setFeature(key); fm.classList.add('is-open'); }
-      function closeFeatureModal() { fm.classList.remove('is-open'); }
+      // v5.1: route into the embedded feature-modal.html (latest design)
+      // instead of the built-in panel. Key map: editor keys → dp data-feat.
+      var FEAT_KEY_MAP = { export: 'export', invite: 'team', ultra: 'ultra', brand: 'brandkit', knowledge: 'knowledge', refresh: 'refresh', templates: 'templates', projects: 'projects', analytics: 'analytics' };
+      var ff = document.getElementById('feature-frame');
+      var ffi = document.getElementById('feature-frame-if');
+      var ffWired = false;
+      function openFeatureModal(key) {
+        var feat = FEAT_KEY_MAP[key] || 'export';
+        if (!ffi.dataset.loaded) {
+          ffi.dataset.loaded = '1';
+          ffi.src = 'feature-modal.html';
+          ffi.addEventListener('load', function () { wireFeatureFrame(); selectFeat(feat); });
+        } else {
+          reopenFeatureFrame(feat);
+        }
+        ff.classList.add('is-open');
+        ff.setAttribute('aria-hidden', 'false');
+      }
+      function closeFeatureModal() { ff.classList.remove('is-open'); ff.setAttribute('aria-hidden', 'true'); }
+      function featureDoc() { try { return ffi.contentDocument; } catch (e) { return null; } }
+      function selectFeat(feat) {
+        var doc = featureDoc();
+        if (!doc) return;
+        var item = doc.querySelector('[data-feat="' + feat + '"]');
+        if (item) item.click();
+      }
+      function reopenFeatureFrame(feat) {
+        var doc = featureDoc();
+        if (!doc) return;
+        var r = doc.getElementById('reopen');
+        if (r) r.click(); // the file's own open() — restarts its media
+        selectFeat(feat);
+      }
+      function wireFeatureFrame() {
+        if (ffWired) return;
+        var doc = featureDoc();
+        if (!doc) return;
+        ffWired = true;
+        var x = doc.getElementById('dp-close');
+        if (x) x.addEventListener('click', closeFeatureModal);
+        var pro = doc.getElementById('dp-cta');
+        if (pro) pro.addEventListener('click', function () { closeFeatureModal(); openCheckout('pro'); });
+        var gold = doc.getElementById('dp-cta-gold');
+        if (gold) gold.addEventListener('click', function () { closeFeatureModal(); openCheckout('gold'); });
+        doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeFeatureModal(); });
+      }
       window.openFeatureModal = openFeatureModal;
       fm.querySelectorAll('[data-fm-close]').forEach(function (b) { b.addEventListener('click', closeFeatureModal); });
 
@@ -4207,7 +4263,7 @@
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
         if (co.classList.contains('is-open')) { closeCheckout(); e.stopImmediatePropagation(); return; }
-        if (fm.classList.contains('is-open')) { closeFeatureModal(); e.stopImmediatePropagation(); return; }
+        if (ff.classList.contains('is-open')) { closeFeatureModal(); e.stopImmediatePropagation(); return; }
         if (tm.classList.contains('is-open')) { closeTrialModal(); e.stopImmediatePropagation(); return; }
         if (sh.classList.contains('is-open')) { closeShare(); e.stopImmediatePropagation(); return; }
         if (dr.classList.contains('is-open')) { closeDeckReady(); e.stopImmediatePropagation(); return; }
