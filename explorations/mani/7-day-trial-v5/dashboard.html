@@ -625,10 +625,13 @@
     // v5: the new feature modal (feature-modal.html) replaces the old
     // fmodal. Same overlay design as the editor's gates.
     var FEAT_KEY_MAP = { projects: 'projects', export: 'export', analytics: 'analytics', invite: 'team', fonts: 'fonts', colors: 'colors', assign: 'assign' };
-    var ffEl = document.getElementById('feature-frame');
-    var ffIf = document.getElementById('feature-frame-if');
+    var ffEl = null, ffIf = null; // markup sits below this script — resolve lazily
     var ffWired = false;
-    function featureDoc() { try { return ffIf.contentDocument; } catch (e) { return null; } }
+    function ensureFF() {
+      if (!ffEl) { ffEl = document.getElementById('feature-frame'); ffIf = document.getElementById('feature-frame-if'); }
+      return !!ffEl;
+    }
+    function featureDoc() { try { return ensureFF() ? ffIf.contentDocument : null; } catch (e) { return null; } }
     function selectNewFeat(feat) {
       var doc = featureDoc();
       if (!doc) return;
@@ -636,7 +639,7 @@
       if (item) item.click();
     }
     function routeCheckout(plan, mode) {
-      ffEl.classList.remove('is-open');
+      if (ensureFF()) ffEl.classList.remove('is-open');
       if (window.parent !== window) window.parent.postMessage({ type: 'v5-open-editor-checkout', plan: plan, mode: mode }, '*');
       else location.href = 'editor.html?state=ready&modal=checkout&plan=' + plan + '&mode=' + mode;
     }
@@ -658,6 +661,7 @@
       doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') ffEl.classList.remove('is-open'); });
     }
     window.openFeaturesModal = function (featKey) {
+      if (!ensureFF()) return;
       var feat = FEAT_KEY_MAP[featKey] || 'projects';
       if (!ffIf.dataset.loaded) {
         ffIf.dataset.loaded = '1';
