@@ -622,11 +622,54 @@
       document.querySelectorAll('.fmodal-feat').forEach(function (el) { el.classList.toggle('is-active', el === item); });
       document.getElementById('fmodalPreview').src = item.dataset.preview;
     }
+    // v5: the new feature modal (feature-modal.html) replaces the old
+    // fmodal. Same overlay design as the editor's gates.
+    var FEAT_KEY_MAP = { projects: 'projects', export: 'export', analytics: 'analytics', invite: 'team', fonts: 'fonts', colors: 'colors', assign: 'assign' };
+    var ffEl = document.getElementById('feature-frame');
+    var ffIf = document.getElementById('feature-frame-if');
+    var ffWired = false;
+    function featureDoc() { try { return ffIf.contentDocument; } catch (e) { return null; } }
+    function selectNewFeat(feat) {
+      var doc = featureDoc();
+      if (!doc) return;
+      var item = doc.querySelector('[data-feat="' + feat + '"]');
+      if (item) item.click();
+    }
+    function routeCheckout(plan, mode) {
+      ffEl.classList.remove('is-open');
+      if (window.parent !== window) window.parent.postMessage({ type: 'v5-open-editor-checkout', plan: plan, mode: mode }, '*');
+      else location.href = 'editor.html?state=ready&modal=checkout&plan=' + plan + '&mode=' + mode;
+    }
+    function wireFeatureFrame() {
+      if (ffWired) return;
+      var doc = featureDoc();
+      if (!doc) return;
+      ffWired = true;
+      var x = doc.getElementById('dp-close');
+      if (x) x.addEventListener('click', function () { ffEl.classList.remove('is-open'); });
+      var pro = doc.getElementById('dp-cta');
+      if (pro) pro.addEventListener('click', function () { routeCheckout('pro', 'trial'); });
+      var gold = doc.getElementById('dp-cta-gold');
+      if (gold) gold.addEventListener('click', function () { routeCheckout('gold', 'trial'); });
+      var proBuy = doc.getElementById('dp-buy');
+      if (proBuy) proBuy.addEventListener('click', function () { routeCheckout('pro', 'buy'); });
+      var goldBuy = doc.getElementById('dp-buy-gold');
+      if (goldBuy) goldBuy.addEventListener('click', function () { routeCheckout('gold', 'buy'); });
+      doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') ffEl.classList.remove('is-open'); });
+    }
     window.openFeaturesModal = function (featKey) {
-      var m = document.getElementById('featuresModal');
-      if (featKey) selectFeat(document.querySelector('.fmodal-feat[data-feat="' + featKey + '"]'));
-      m.classList.add('open');
-      m.setAttribute('aria-hidden', 'false');
+      var feat = FEAT_KEY_MAP[featKey] || 'projects';
+      if (!ffIf.dataset.loaded) {
+        ffIf.dataset.loaded = '1';
+        ffIf.src = 'feature-modal.html';
+        ffIf.addEventListener('load', function () { wireFeatureFrame(); selectNewFeat(feat); });
+      } else {
+        var doc = featureDoc();
+        if (doc) { var r = doc.getElementById('reopen'); if (r) r.click(); }
+        selectNewFeat(feat);
+      }
+      ffEl.classList.add('is-open');
+      ffEl.setAttribute('aria-hidden', 'false');
     };
     window.closeFeaturesModal = function () {
       var m = document.getElementById('featuresModal');
@@ -691,7 +734,17 @@
     }
   }
   </script>
-  <div id="agentation-root"></div>
+    <!-- New feature modal (v5 feature-modal.html) as fullscreen overlay -->
+  <style>
+    #feature-frame { position: fixed; inset: 0; z-index: 1200; display: none; }
+    #feature-frame.is-open { display: block; }
+    #feature-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  </style>
+  <div id="feature-frame" aria-hidden="true">
+    <iframe id="feature-frame-if" src="" title="Premium features"></iframe>
+  </div>
+
+<div id="agentation-root"></div>
   <script type="module">
     import React from 'react';
     import { createRoot } from 'react-dom/client';

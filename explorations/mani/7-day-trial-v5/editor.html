@@ -4297,12 +4297,13 @@
       var up = document.getElementById('upgrade-btn');
       if (up) up.addEventListener('click', function () { openTrialModal('upgrade'); });
 
-      // Export as PPT (topbar + presentation bar) → feature modal, or export when on trial
+      // Export as PPT (topbar + presentation bar) → deck-ready overlay
+      // (same modal as the last slide), or export straight away on trial.
       document.querySelectorAll('[data-export-ppt]').forEach(function (b) {
         b.addEventListener('click', function (e) {
           e.preventDefault();
           if (trialActive()) { toast('Exporting your deck as PowerPoint…'); return; }
-          openFeatureModal('export');
+          openDeckReady();
         });
       });
 
@@ -4341,7 +4342,7 @@
       document.getElementById('sv-export-btn').addEventListener('click', function () {
         closeShare();
         if (trialActive()) { toast('Exporting your deck as PowerPoint…'); return; }
-        openFeatureModal('export');
+        openDeckReady();
       });
       document.querySelectorAll('button').forEach(function (b) {
         if (b.textContent.trim() === 'Share' && !b.dataset.v5wired) {
@@ -4360,9 +4361,13 @@
         });
       }
 
-      // ?modal=trial → open the plan picker on load (dashboard deep link)
-      if (new URLSearchParams(location.search).get('modal') === 'trial') {
+      // Dashboard deep links: ?modal=trial → plan picker;
+      // ?modal=checkout&plan=pro|gold&mode=trial|buy → checkout directly.
+      var qs = new URLSearchParams(location.search);
+      if (qs.get('modal') === 'trial') {
         setTimeout(openTrialModal, 400);
+      } else if (qs.get('modal') === 'checkout') {
+        setTimeout(function () { openCheckout(qs.get('plan') || 'pro', qs.get('mode') || 'trial'); }, 400);
       }
 
       // Re-Generate Slides: visible from the start (product look), inert in
