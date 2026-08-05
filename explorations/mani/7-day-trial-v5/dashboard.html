@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<!-- key screen: dashboard · owner: Tyo (derived from Figma "AMJ '26 — Dashboard" by Mudita, 9 Jun 2026 — pending owner review)
+     source: figma.com/design/T3VGugpHgpvi3jHsBm43Cn  node 182:11533 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>7 Day Trial v5 · Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hedvig+Letters+Serif:opsz@12..24&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <style>
+    /* ── tokens (from the Figma file's variable set) ───────────────────────── */
+    :root {
+      --bg: #fafafa;            /* page / sidebar canvas        (bg/secondary)   */
+      --surface: #ffffff;       /* main, cards, elevated        (bg/primary)     */
+      --surface-2: #f5f5f5;     /* tertiary fills               (bg/tertiary)    */
+      --fg: #171717;            /* primary text                 (text/primary)   */
+      --fg-2: #525252;          /* secondary text               (text/secondary) */
+      --fg-3: #a3a3a3;          /* tertiary / placeholder       (text/tertiary)  */
+      --brand: #005eff;         /* brand blue                   (text/brand)     */
+      --brand-tint: #e6efff;    /* brand badge fill             (bg/brand-inv)   */
+      --brand-100: #b6daff;     /* brand ramp — drives the gradient-fill chips   */
+      --brand-300: #0095ff;
+      --brand-600: #0059ff;
+      --brand-900: #002464;
+      --brand-gradient: radial-gradient(162.36% 178.84% at 13.64% -1.28%,
+        var(--brand-100) 0%, var(--brand-300) 31.73%, var(--brand-600) 76.78%, var(--brand-900) 100%);
+      --ink: #0b0f14;           /* inverted ink (dark btn, rings)                */
+      --line: rgba(11,15,20,0.09);
+      --line-strong: rgba(11,15,20,0.20);
+      --sel: rgba(22,30,39,0.08);
+      --d1: rgba(11,15,20,0.06);
+      --d2: rgba(11,15,20,0.09);
+      --inner: rgba(255,255,255,0.8);
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+      --sh-card: 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-card-hover: 0 8px 24px -6px var(--d2), 0 2px 6px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-prompt: 0 24px 40px -16px var(--d2), 0 4px 6px 0 var(--d2), 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-btn: 0 1px 2px 1px var(--d1), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-pill: 0 2px 6px 0 var(--d2), 0 0 0 1px var(--d1), inset 0 0 0 1px var(--inner);
+      --sh-ring: 0 0 0 .75px var(--ink), 0 0 0 2px rgba(11,15,20,0.48);
+    }
+    /* wider-gamut brand ramp on P3 displays */
+    @supports (color: color(display-p3 1 1 1)) {
+      :root {
+        --brand-100: color(display-p3 0.7608 0.8471 1);
+        --brand-300: color(display-p3 0.3216 0.5686 1);
+        --brand-600: color(display-p3 0 0.3333 0.9294);
+        --brand-900: color(display-p3 0 0.1333 0.3608);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: "Inter", system-ui, sans-serif; font-size: 14px;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── sidebar ───────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 260px; min-width: 260px; height: 100%;
+      background: var(--bg); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+    }
+    .ws {
+      display: flex; align-items: center; gap: 8px;
+      padding: 11px 12px; border-bottom: 1px solid var(--line);
+    }
+    .ws-avatar {
+      width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+      background: linear-gradient(135deg, #ff5a3c, #e0422a);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+      display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px;
+    }
+    .ws-name { flex: 1; min-width: 0; font-weight: 500; color: var(--fg);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--brand-tint); color: var(--brand);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 34px; line-height: 1.33;
+    }
+    .ws .badge { cursor: pointer; }
+    .ws .caret { color: var(--fg-2); font-size: 18px; }
+
+    .nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-label { padding: 8px 8px 2px; color: var(--fg-2); font-size: 14px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px; height: 36px;
+      padding: 8px; border-radius: 6px; color: var(--fg-2); cursor: pointer;
+      text-decoration: none; transition: background 140ms var(--ease);
+    }
+    .nav-item i { font-size: 20px; flex-shrink: 0; }
+    .nav-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-item:hover { background: var(--sel); }
+    .nav-item.is-active { background: var(--sel); color: var(--fg); font-weight: 600; }
+    .divider { height: 1px; background: var(--line); margin: 6px 0; box-shadow: 0 1px 0 0 var(--inner); }
+    .sidebar-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 8px; }
+
+    /* ── main ──────────────────────────────────────────────────────────────── */
+    .main { flex: 1; min-width: 0; height: 100%; background: var(--surface); overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 10px; }
+    .main::-webkit-scrollbar-thumb { background: rgba(11,15,20,0.12); border-radius: 99px; border: 3px solid var(--surface); }
+
+    .topbar {
+      height: 56px; display: flex; align-items: center; justify-content: flex-end;
+      gap: 10px; padding: 0 24px; position: sticky; top: 0; z-index: 5;
+      background: var(--surface);
+    }
+    .trial {
+      display: flex; align-items: center; gap: 8px; height: 36px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 6px; padding: 4px 4px 4px 10px;
+    }
+    .trial-text { font-weight: 500; color: var(--fg); white-space: nowrap; }
+    .btn-upgrade {
+      display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 14px;
+      background: var(--brand); color: #fff; border: 0; border-radius: 4px;
+      font: 500 14px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
+      transition: transform 120ms var(--ease), filter 120ms var(--ease);
+    }
+    .btn-upgrade i { font-size: 16px; }
+    .btn-upgrade:hover { filter: brightness(1.07); }
+    .btn-upgrade:active { transform: scale(0.97); }
+    .icon-btn {
+      width: 36px; height: 36px; display: grid; place-items: center;
+      border: 0; background: transparent; color: var(--fg-2); border-radius: 4px;
+      cursor: pointer; font-size: 20px; transition: background 140ms var(--ease);
+    }
+    .icon-btn:hover { background: var(--sel); }
+    .avatar {
+      width: 28px; height: 28px; border-radius: 999px; margin-left: 4px; flex-shrink: 0;
+      background: url("https://i.pravatar.cc/56?img=12") center/cover, var(--surface-2);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+    }
+
+    /* ── hero ──────────────────────────────────────────────────────────────── */
+    .hero { padding: 48px 24px 24px; display: flex; flex-direction: column; align-items: center; }
+    .hero h1 { /* design-system heading-3xl: 2rem · -0.0075em · 400, Inter */
+      font-family: "Inter", system-ui, sans-serif; font-weight: 400;
+      font-size: 2rem; line-height: normal; letter-spacing: -0.0075em;
+      color: var(--fg); margin: 0 0 24px; text-align: center;
+    }
+    .prompt {
+      width: 100%; max-width: 680px; background: var(--surface);
+      border-radius: 6px; padding: 8px; box-shadow: var(--sh-prompt);
+    }
+    .prompt-field {
+      height: 140px; background: var(--bg); border: 1px dashed var(--line-strong);
+      border-radius: 2px; padding: 20px; display: flex; align-items: flex-start; gap: 8px;
+    }
+    .prompt-field .ph-text { color: var(--fg-3); font-size: 16px; line-height: 1.5; }
+    .prompt-field .ph-text u { text-underline-offset: 2px; }
+    .prompt-field i { color: var(--fg-3); font-size: 20px; margin-top: 1px; }
+
+    .pills { display: flex; gap: 12px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 0; border-radius: 52px;
+      padding: 4px 16px 4px 4px; box-shadow: var(--sh-pill); cursor: pointer;
+      font: 500 14px "Inter", sans-serif; color: var(--fg);
+      transition: transform 120ms var(--ease), box-shadow 160ms var(--ease);
+    }
+    .pill:hover { box-shadow: var(--sh-pill), 0 6px 16px -6px var(--d2); transform: translateY(-1px); }
+    .pill:active { transform: translateY(0) scale(0.98); }
+    /* grey chip; the glyph itself carries the brand gradient (from the Handoff frame) */
+    .pill-ic { width: 40px; height: 40px; border-radius: 34px; font-size: 22px;
+      display: grid; place-items: center; background: var(--surface-2); }
+    .pill-ic i { background: var(--brand-gradient); -webkit-background-clip: text;
+      background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+
+    /* ── files ─────────────────────────────────────────────────────────────── */
+    .files { padding: 24px; }
+    .files-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .tabs { display: flex; align-items: center; gap: 12px; }
+    .chip {
+      height: 28px; display: inline-flex; align-items: center; padding: 0 12px;
+      background: var(--surface); border-radius: 4px; box-shadow: var(--sh-btn);
+      font-size: 12px; color: var(--fg-2); cursor: pointer; white-space: nowrap;
+      transition: background 140ms var(--ease);
+    }
+    .chip:hover { background: var(--surface-2); }
+    .chip.is-active { color: var(--fg); box-shadow: var(--sh-ring); background: var(--surface); }
+    .toggle {
+      display: flex; align-items: center; gap: 2px; height: 28px; padding: 2px;
+      background: var(--surface-2); border-radius: 4px; box-shadow: var(--sh-btn);
+    }
+    .toggle button {
+      width: 24px; height: 24px; display: grid; place-items: center; border: 0;
+      background: transparent; color: var(--fg-2); border-radius: 2px; cursor: pointer; font-size: 16px;
+    }
+    .toggle button.is-active { background: var(--surface); color: var(--fg); box-shadow: var(--sh-ring); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--surface); border-radius: 6px; overflow: hidden;
+      box-shadow: var(--sh-card); cursor: pointer;
+      transition: box-shadow 220ms var(--ease), transform 160ms var(--ease);
+    }
+    .card:hover { box-shadow: var(--sh-card-hover); transform: translateY(-2px); }
+    .card-body { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .card-title {
+      font-weight: 500; color: var(--fg); line-height: 1.43;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-sub { font-size: 12px; color: var(--fg-2); line-height: 1.33;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* deck covers — six distinct mock slides, kept self-contained (no raster assets) */
+    .cover { position: relative; aspect-ratio: 366 / 202; overflow: hidden; padding: 16px;
+      display: flex; flex-direction: column; }
+    .cover > * { position: relative; z-index: 1; }
+    .cover .eyebrow { font-size: 8px; letter-spacing: 1.6px; text-transform: uppercase; font-weight: 600; }
+    .cover .head { font-weight: 700; line-height: 1.16; }
+
+    /* 1 · navy editorial */
+    .cv1 { background: linear-gradient(135deg,#0a1c38,#0e2a52); color:#fff; justify-content:flex-end; }
+    .cv1 .eyebrow { position:absolute; top:16px; left:16px; color:rgba(255,255,255,.5); }
+    .cv1 .head { font-family:"Hedvig Letters Serif",Georgia,serif; font-weight:400; font-size:17px; width:74%; }
+    .cv1 .rule { position:absolute; top:15px; right:16px; width:46px; height:4px; border-radius:2px; background:#ff5a3c; }
+
+    /* 2 · warm report / bar chart */
+    .cv2 { background:#fbf3e3; color:#2a1d0c; }
+    .cv2 .eyebrow { color:#b4791b; }
+    .cv2 .head { font-size:15px; width:82%; margin-top:6px; }
+    .cv2 .bars { position:absolute; left:16px; right:16px; bottom:14px; height:42%;
+      display:flex; align-items:flex-end; gap:6px; }
+    .cv2 .bars i { flex:1; border-radius:3px 3px 0 0; background:linear-gradient(#f1ad3c,#d97b12); }
+
+    /* 3 · bold gradient */
+    .cv3 { background:linear-gradient(120deg,#7c3aed,#2563eb); color:#fff; justify-content:center; }
+    .cv3 .eyebrow { position:absolute; top:16px; left:16px; color:rgba(255,255,255,.7); }
+    .cv3 .head { font-size:23px; font-weight:800; letter-spacing:-.4px; width:84%; }
+    .cv3 .orb { position:absolute; right:-26px; top:-26px; width:120px; height:120px; border-radius:50%;
+      background:radial-gradient(circle at 32% 32%, rgba(255,255,255,.4), transparent 62%); z-index:0; }
+
+    /* 4 · minimal light */
+    .cv4 { background:#f6f6f4; color:#111; }
+    .cv4 .eyebrow { color:#9a9a96; }
+    .cv4 .head { font-size:18px; font-weight:700; width:80%; margin-top:auto; letter-spacing:-.2px; }
+    .cv4 .wm { position:absolute; bottom:16px; right:16px; font-size:9px; letter-spacing:2px; font-weight:700; color:#111; }
+    .cv4 .tick { position:absolute; top:16px; right:16px; width:18px; height:18px; border-radius:50%; border:2px solid #111; }
+
+    /* 5 · forest green / donut */
+    .cv5 { background:linear-gradient(160deg,#0f3d2e,#14543c); color:#fff; justify-content:flex-end; }
+    .cv5 .eyebrow { position:absolute; top:16px; left:16px; color:rgba(255,255,255,.55); }
+    .cv5 .head { font-size:16px; font-weight:700; width:64%; }
+    .cv5 .donut { position:absolute; top:22px; right:18px; width:60px; height:60px; border-radius:50%;
+      background:conic-gradient(#7fe7b0 0 64%, rgba(255,255,255,.18) 64% 100%);
+      -webkit-mask:radial-gradient(closest-side, transparent 58%, #000 60%);
+      mask:radial-gradient(closest-side, transparent 58%, #000 60%); }
+
+    /* 6 · mono dark grid */
+    .cv6 { background:#111114; color:#fff; justify-content:flex-end; }
+    .cv6::before { content:""; position:absolute; inset:0; z-index:0;
+      background:repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 26px),
+                 repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 26px); }
+    .cv6 .eyebrow { position:absolute; top:16px; left:16px; color:rgba(255,255,255,.5); }
+    .cv6 .head { font-size:20px; font-weight:800; letter-spacing:-.4px; width:82%; }
+    .cv6 .dot { position:absolute; top:18px; right:18px; width:10px; height:10px; border-radius:50%;
+      background:#34d399; box-shadow:0 0 0 4px rgba(52,211,153,.25); }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="ws">
+        <div class="ws-avatar">F</div>
+        <span class="ws-name">Foursquare</span>
+        <span class="badge">Upgrade</span>
+        <i class="ph ph-caret-down caret"></i>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item is-active"><i class="ph ph-house-simple"></i><span>Home</span></a>
+        <a class="nav-item"><i class="ph ph-file"></i><span>Created by Me</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <div class="nav-label">Projects</div>
+        <a class="nav-item"><i class="ph ph-plus"></i><span>Create project</span><span class="badge" style="flex:none;">Pro</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <a class="nav-item"><i class="ph ph-layout"></i><span>Templates</span></a>
+        <a class="nav-item"><i class="ph ph-pencil-ruler"></i><span>Hire an Expert</span></a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <nav class="nav" style="padding:0;">
+          <a class="nav-item"><i class="ph ph-gear"></i><span>Workspace settings</span></a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- ── Main ────────────────────────────────────────────────────────── -->
+    <main class="main">
+      <header class="topbar">
+        <div class="trial">
+          <span class="trial-text">🚀 Start your trial for $0</span>
+          <button class="btn-upgrade"><i class="ph ph-rocket-launch"></i>Try Pro</button>
+        </div>
+        <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
+        <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
+        <button class="icon-btn" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+        <div class="avatar" role="img" aria-label="Your profile"></div>
+      </header>
+
+      <section class="hero">
+        <h1>Start your next presentation</h1>
+        <div class="prompt">
+          <div class="prompt-field">
+            <span class="ph-text">Type here to start, or <u>drop in a file</u></span>
+            <i class="ph ph-upload-simple"></i>
+          </div>
+        </div>
+        <div class="pills">
+          <button class="pill"><span class="pill-ic"><i class="ph-fill ph-file-arrow-up"></i></span>Upload &amp; share link</button>
+          <button class="pill"><span class="pill-ic"><i class="ph-fill ph-microsoft-powerpoint-logo"></i></span>Import PPT</button>
+          <button class="pill"><span class="pill-ic"><i class="ph-fill ph-pencil-ruler"></i></span>Hire an Expert</button>
+        </div>
+      </section>
+
+      <section class="files">
+        <div class="files-head">
+          <div class="tabs">
+            <span class="chip is-active">Recent</span>
+            <span class="chip">Starred</span>
+            <span class="chip">Download</span>
+            <span class="chip">Recently deleted</span>
+          </div>
+          <div class="toggle">
+            <button aria-label="List view"><i class="ph ph-list-bullets"></i></button>
+            <button class="is-active" aria-label="Grid view"><i class="ph ph-squares-four"></i></button>
+          </div>
+        </div>
+
+        <div class="grid">
+
+          <article class="card">
+            <div class="cover cv1">
+              <span class="eyebrow">Board Update</span><span class="rule"></span>
+              <div class="head">Q4 Executive Update: Performance review and 2026 strategic outlook</div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Q4 Board Update and 2026 Strategic Priorities</div>
+              <div class="card-sub">In Drafts • Created by You</div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============== PRICING MODAL (prompt / pills / Try Pro) ============== -->
+  <style>
+    .pmodal { position: fixed; inset: 0; z-index: 1000; display: none; }
+    .pmodal.open { display: block; }
+    .pmodal-backdrop { position: absolute; inset: 0; background: rgba(11,15,20,0.45); backdrop-filter: blur(2px); }
+    /* Open/close transitions: backdrop fades, card pops in with a slight rise */
+    .pmodal.open .pmodal-backdrop { animation: pm-fade .24s ease both; }
+    .pmodal.open .pmodal-wrap { animation: pm-pop .38s cubic-bezier(.34,1.4,.64,1) both; }
+    .pmodal.open.closing .pmodal-backdrop { animation: pm-fade-out .18s ease both; }
+    .pmodal.open.closing .pmodal-wrap { animation: pm-pop-out .18s ease both; }
+    @keyframes pm-fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pm-fade-out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes pm-pop {
+      from { opacity: 0; transform: translate(-50%, -50%) translateY(18px) scale(.95); }
+      to   { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
+    }
+    @keyframes pm-pop-out {
+      from { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
+      to   { opacity: 0; transform: translate(-50%, -50%) translateY(10px) scale(.97); }
+    }
+    .pmodal-wrap {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: min(1120px, 94vw); height: min(86vh, 820px);
+    }
+    .pmodal-card {
+      position: relative; width: 100%; height: 100%;
+      background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.30);
+    }
+    .pmodal-close {
+      position: absolute; top: 0; right: -44px; z-index: 2;
+      width: 34px; height: 34px; border-radius: 999px;
+      border: 0; background: #fff;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+      font: 400 16px/1 Inter, system-ui, sans-serif; color: #171717;
+    }
+    .pmodal-close:hover { background: #f4f6fa; }
+    #pricingModalFrame {
+      position: absolute; top: 0; left: 50%;
+      width: 1280px; height: calc(100% / var(--pm-scale, 1));
+      transform: translateX(-50%) scale(var(--pm-scale, 1));
+      transform-origin: top center; border: 0; display: block;
+    }
+  </style>
+  <!-- ============== PREMIUM FEATURES MODAL (PRO-gated sidebar items) ============== -->
+  <style>
+    .fmodal { position: fixed; inset: 0; z-index: 1001; display: none; }
+    .fmodal.open { display: block; }
+    .fmodal-backdrop { position: absolute; inset: 0; background: rgba(11,15,20,0.45); backdrop-filter: blur(2px); }
+    .fmodal.open .fmodal-backdrop { animation: pm-fade .24s ease both; }
+    .fmodal.open .fmodal-card { animation: pm-pop .38s cubic-bezier(.34,1.4,.64,1) both; }
+    .fmodal.open.closing .fmodal-backdrop { animation: pm-fade-out .18s ease both; }
+    .fmodal.open.closing .fmodal-card { animation: pm-pop-out .18s ease both; }
+    .fmodal-card {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: min(780px, 94vw); background: #fff; border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.30);
+      padding: 28px 32px 32px;
+      font-family: "Inter", system-ui, sans-serif;
+    }
+    .fmodal-close {
+      position: absolute; top: 0; right: -44px;
+      width: 34px; height: 34px; border-radius: 999px; border: 0;
+      background: #fff; color: #171717; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    }
+    .fmodal-close:hover { background: #f4f6fa; }
+    .fmodal-title { margin: 0 0 22px; text-align: center; font-size: 22px; font-weight: 600; color: #0b0f14; letter-spacing: -0.01em; }
+    .fmodal-body { display: grid; grid-template-columns: 232px 1fr; gap: 24px; align-items: start; }
+    .fmodal-feats { display: flex; flex-direction: column; gap: 2px; max-height: 340px; overflow-y: auto; scrollbar-width: thin; }
+    .fmodal-feat {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; border: 0; border-radius: 10px; background: transparent;
+      cursor: pointer; text-align: left; font-family: inherit; width: 100%;
+    }
+    .fmodal-feat i { font-size: 18px; color: #171717; margin-top: 1px; }
+    .fmodal-feat .lbl { font-size: 14px; font-weight: 500; color: #171717; line-height: 1.35; }
+    .fmodal-feat .sub { display: none; font-size: 12px; color: #6b7280; line-height: 1.4; margin-top: 2px; }
+    .fmodal-feat:hover { background: #f7f7f8; }
+    .fmodal-feat.is-active { background: #f3f4f6; }
+    .fmodal-feat.is-active .sub { display: block; }
+    .fmodal-right { display: flex; flex-direction: column; gap: 16px; }
+    .fmodal-preview {
+      border: 1px solid #e5e7eb; border-radius: 8px; background: #f6f8fc;
+      overflow: hidden; aspect-ratio: 16 / 10.2;
+    }
+    .fmodal-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .fmodal-cta {
+      width: 100%; height: 46px; border: 0; border-radius: 6px;
+      background: #0A1925; color: #fff; font: 600 15px/1 Inter, system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .fmodal-cta:hover { background: #23303B; }
+  </style>
+  <div class="fmodal" id="featuresModal" aria-hidden="true">
+    <div class="fmodal-backdrop" onclick="closeFeaturesModal()"></div>
+    <div class="fmodal-card">
+      <button class="fmodal-close" onclick="closeFeaturesModal()" aria-label="Close"><i class="ph ph-x"></i></button>
+      <h2 class="fmodal-title">Upgrade for premium features</h2>
+      <div class="fmodal-body">
+        <div class="fmodal-feats" id="fmodalFeats">
+          <button class="fmodal-feat is-active" data-feat="projects" data-preview="assets/previews/preview-projects.png">
+            <i class="ph ph-folder"></i>
+            <span><span class="lbl">Projects</span><span class="sub">Organize related decks in shared team spaces.</span></span>
+          </button>
+          <button class="fmodal-feat" data-preview="assets/previews/preview-v2.png">
+            <i class="ph ph-export"></i>
+            <span><span class="lbl">Export presentations</span><span class="sub">Download as PowerPoint, PDF, or image to share anywhere.</span></span>
+          </button>
+          <button class="fmodal-feat" data-preview="assets/previews/preview-analytics.png">
+            <i class="ph ph-chart-bar"></i>
+            <span><span class="lbl">Analytics</span><span class="sub">Track views, engagement, and viewer location.</span></span>
+          </button>
+          <button class="fmodal-feat" data-feat="invite" data-preview="assets/previews/preview-invite-team.png">
+            <i class="ph ph-users-three"></i>
+            <span><span class="lbl">Invite team members</span><span class="sub">Co-edit decks in real time, with comments.</span></span>
+          </button>
+          <button class="fmodal-feat" data-preview="assets/previews/preview-ai-models.png">
+            <i class="ph ph-text-aa"></i>
+            <span><span class="lbl">Font pair</span><span class="sub">Curated font pairings that keep decks on-brand.</span></span>
+          </button>
+          <button class="fmodal-feat" data-preview="assets/previews/preview-shared-knowledge.png">
+            <i class="ph ph-palette"></i>
+            <span><span class="lbl">Color palette</span><span class="sub">Custom brand colors applied across every slide.</span></span>
+          </button>
+          <button class="fmodal-feat" data-preview="assets/previews/preview-v2.png">
+            <i class="ph ph-cursor-click"></i>
+            <span><span class="lbl">Assign slide</span><span class="sub">Hand off individual slides to teammates.</span></span>
+          </button>
+        </div>
+        <div class="fmodal-right">
+          <div class="fmodal-preview"><img id="fmodalPreview" src="assets/previews/preview-projects.png" alt="" /></div>
+          <button class="fmodal-cta" onclick="closeFeaturesModal(); openCheckoutModal();">Try Pro for Free</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pmodal" id="pricingModal" aria-hidden="true">
+    <div class="pmodal-backdrop" onclick="closePricingModal()"></div>
+    <div class="pmodal-wrap">
+      <div class="pmodal-card">
+        <iframe id="pricingModalFrame" src="" title="Pricing"></iframe>
+      </div>
+      <button class="pmodal-close" onclick="closePricingModal()" aria-label="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- Trial flow wiring: prompt / pills / Try Pro open the pricing modal here
+       (both standalone and iframed). Card opens the editor in "ready" state —
+       handled by the parent when iframed via index.html. -->
+  <script>
+  (function(){
+    var PRICING_MODAL_TITLE = 'Start your 7 day free trial. Choose a plan';
+    var wired = false;
+
+    function fitModal() {
+      var card = document.querySelector('.pmodal-card');
+      var f = document.getElementById('pricingModalFrame');
+      if (!card || !f) return;
+      var s = card.clientWidth / 1280;
+      if (s > 1) s = 1;
+      f.style.setProperty('--pm-scale', s);
+    }
+    window.addEventListener('resize', fitModal);
+
+    function injectModalBits(f) {
+      var doc;
+      try { doc = f.contentDocument; } catch (e) { return; }
+      if (!doc) return;
+      var p = doc.querySelector('.relative.mx-auto > p:first-of-type');
+      if (p) p.textContent = PRICING_MODAL_TITLE;
+      if (!doc.getElementById('pmodal-style')) {
+        var st = doc.createElement('style');
+        st.id = 'pmodal-style';
+        st.textContent =
+          'body > .relative.mx-auto > button[aria-label="Close"]{display:none!important;}' +
+          'html,body{margin:0!important;scrollbar-width:none!important;-ms-overflow-style:none!important;}' +
+          'html::-webkit-scrollbar,body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}';
+        doc.head.appendChild(st);
+      }
+      // CTA → show the checkout inside this same modal.
+      doc.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('button');
+        if (!btn) return;
+        var t = (btn.textContent || '').trim().toLowerCase();
+        if (t.indexOf('buy') !== -1 || t.indexOf('try for free') !== -1) {
+          f.src = 'checkout.html?ctx=modal&t=' + Date.now();
+        }
+      }, true);
+    }
+
+    window.openPricingModal = function () {
+      if (window.parent !== window) window.parent.postMessage({ type: 'v5-open-editor-trial' }, '*');
+      else location.href = 'editor.html?state=ready&modal=trial';
+      return;
+      var m = document.getElementById('pricingModal');
+      var f = document.getElementById('pricingModalFrame');
+      // NB: f.src on an src="" iframe reflects the page URL (truthy) — use a flag.
+      if (!f.dataset.loaded) { f.dataset.loaded = '1'; f.src = 'pricing.html?modal=1&t=' + Date.now(); }
+      m.classList.add('open');
+      m.setAttribute('aria-hidden', 'false');
+      fitModal();
+      if (!wired) {
+        wired = true;
+        f.addEventListener('load', function(){ injectModalBits(f); fitModal(); });
+      }
+    };
+    // Open the modal directly on the checkout screen (premium-features CTA).
+    window.openCheckoutModal = function () {
+      if (window.parent !== window) window.parent.postMessage({ type: 'v5-open-editor-trial' }, '*');
+      else location.href = 'editor.html?state=ready&modal=trial';
+      return;
+      var m = document.getElementById('pricingModal');
+      var f = document.getElementById('pricingModalFrame');
+      f.dataset.loaded = '1';
+      f.src = 'checkout.html?ctx=modal&t=' + Date.now();
+      m.classList.add('open');
+      m.setAttribute('aria-hidden', 'false');
+      fitModal();
+      if (!wired) {
+        wired = true;
+        f.addEventListener('load', function(){ injectModalBits(f); fitModal(); });
+      }
+    };
+    window.closePricingModal = function () {
+      var m = document.getElementById('pricingModal');
+      if (m.classList.contains('closing')) return;
+      m.classList.add('closing');
+      setTimeout(function () {
+        m.classList.remove('open', 'closing');
+        m.setAttribute('aria-hidden', 'true');
+      }, 190);
+    };
+
+    // Messages from the checkout loaded inside the modal iframe.
+    window.addEventListener('message', function (e) {
+      if (!e.data || !e.data.type) return;
+      if (e.data.type === 'trial-checkout-back') {
+        document.getElementById('pricingModalFrame').src = 'pricing.html?modal=1&t=' + Date.now();
+      }
+      if (e.data.type === 'trial-checkout-close') {
+        window.closePricingModal();
+        document.getElementById('pricingModalFrame').src = 'pricing.html?modal=1&t=' + Date.now();
+      }
+      if (e.data.type === 'trial-open-deck') {
+        window.closePricingModal();
+        if (window.parent !== window) window.parent.postMessage({ type: 'trial-open-deck' }, '*');
+        else location.href = 'editor.html?state=ready';
+      }
+    });
+
+    // ── Premium features modal (PRO-gated sidebar items) ─────────────────
+    function selectFeat(item) {
+      if (!item) return;
+      document.querySelectorAll('.fmodal-feat').forEach(function (el) { el.classList.toggle('is-active', el === item); });
+      document.getElementById('fmodalPreview').src = item.dataset.preview;
+    }
+    window.openFeaturesModal = function (featKey) {
+      var m = document.getElementById('featuresModal');
+      if (featKey) selectFeat(document.querySelector('.fmodal-feat[data-feat="' + featKey + '"]'));
+      m.classList.add('open');
+      m.setAttribute('aria-hidden', 'false');
+    };
+    window.closeFeaturesModal = function () {
+      var m = document.getElementById('featuresModal');
+      if (m.classList.contains('closing')) return;
+      m.classList.add('closing');
+      setTimeout(function () {
+        m.classList.remove('open', 'closing');
+        m.setAttribute('aria-hidden', 'true');
+      }, 190);
+    };
+    document.getElementById('fmodalFeats').addEventListener('click', function (ev) {
+      selectFeat(ev.target.closest('.fmodal-feat'));
+    });
+
+    document.addEventListener('click', function(ev){
+      // Existing presentation → editor in "deck ready" state (parent handles
+      // this when iframed via index.html).
+      var card = ev.target.closest('.card');
+      if (card) {
+        ev.preventDefault(); ev.stopPropagation();
+        if (window.parent !== window) window.parent.postMessage({ type: 'v5-open-editor' }, '*');
+        else location.href = 'editor.html?state=ready';
+        return;
+      }
+      // "Hire an Expert" (sidebar item or prompt pill) → open the Hire an Expert exploration.
+      var hire = ev.target.closest(".nav-item, .pill");
+      if (hire && /hire an expert/i.test(hire.textContent || "")) {
+        ev.preventDefault(); ev.stopPropagation();
+        return; // kept inert in v5
+      }
+      // "Workspace settings" sidebar item → settings page.
+      var settings = ev.target.closest('.nav-item');
+      if (settings && /workspace settings/i.test(settings.textContent || '')) {
+        ev.preventDefault(); ev.stopPropagation();
+        return; // settings kept out of v5
+        return;
+      }
+      // PRO-gated sidebar items → features modal on the matching tab.
+      var proItem = ev.target.closest('.nav-item');
+      if (proItem && proItem.querySelector('.badge')) {
+        ev.preventDefault(); ev.stopPropagation();
+        var label = (proItem.textContent || '').toLowerCase();
+        window.openFeaturesModal(label.indexOf('invite') !== -1 ? 'invite' : 'projects');
+        return;
+      }
+      // Prompt / pills (Upload, Import) / Try Pro / Upgrade badge → modal here.
+      var hit = ev.target.closest('.prompt, .prompt-field, .pill, .btn-upgrade, .ws .badge');
+      if (hit) { ev.preventDefault(); ev.stopPropagation(); window.openPricingModal(); }
+    }, true);
+  })();
+  </script>
+
+  <!-- Agentation (local link toolbar) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+    }
+  }
+  </script>
+  <div id="agentation-root"></div>
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { Agentation } from 'agentation';
+    createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+  </script>
+</body>
+</html>

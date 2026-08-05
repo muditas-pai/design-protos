@@ -143,9 +143,9 @@
   .generate-btn:hover { background: #1a2940; }
   .generate-btn:active { transform: scale(0.98); }
 
-  /* === VIEW 3: EDITOR (iframe) === */
-  #view-editor.view.active { display: flex; }
-  #view-editor { background: #E5E5E5; height: 100vh; overflow: hidden; }
+  /* === VIEW 3/4: EDITOR + DASHBOARD (iframes) === */
+  #view-editor.view.active, #view-dashboard.view.active { display: flex; }
+  #view-editor, #view-dashboard { background: #E5E5E5; height: 100vh; overflow: hidden; }
 </style>
 </head>
 <body class="pai">
@@ -208,6 +208,11 @@
   <iframe id="editorFrame" src="" title="Editor" style="width:100%;height:100vh;border:0;display:block;background:#E5E5E5;"></iframe>
 </section>
 
+<!-- ============== VIEW 4: DASHBOARD (iframe) ============== -->
+<section id="view-dashboard" class="view">
+  <iframe id="dashboardFrame" src="" title="Dashboard" style="width:100%;height:100vh;border:0;display:block;background:#E5E5E5;"></iframe>
+</section>
+
 <div id="agentation-root"></div>
 <script type="module">
   import React from 'react';
@@ -233,10 +238,20 @@
     grid.appendChild(b);
   });
 
-  // Editor home button → back to the prompt screen
+  // Cross-frame routing: editor home → dashboard; dashboard card → ready editor;
+  // dashboard upsell CTAs → ready editor with the plan picker open.
   window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'v5-home') go('describe');
+    if (!e.data || !e.data.type) return;
+    if (e.data.type === 'v5-home') go('dashboard');
+    if (e.data.type === 'v5-open-editor') openEditor('?state=ready');
+    if (e.data.type === 'v5-open-editor-trial') openEditor('?state=ready&modal=trial');
   });
+
+  function openEditor(query) {
+    document.getElementById('editorFrame').src = 'editor.html' + query + '&t=' + Date.now();
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-editor').classList.add('active');
+  }
 
   function go(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -245,6 +260,10 @@
     if (view === 'editor') {
       // Fresh load each run so the generation streaming starts from zero.
       document.getElementById('editorFrame').src = 'editor.html?t=' + Date.now();
+    }
+    if (view === 'dashboard') {
+      const f = document.getElementById('dashboardFrame');
+      if (!f.dataset.loaded) { f.dataset.loaded = '1'; f.src = 'dashboard.html'; }
     }
   }
   window.go = go;
