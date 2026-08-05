@@ -4028,6 +4028,13 @@
         dr.classList.add('is-open');
         dr.setAttribute('aria-hidden', 'false');
       }
+      var returnToDeck = false;
+      function drHide() { dr.classList.remove('is-open'); dr.setAttribute('aria-hidden', 'true'); }
+      function maybeReturnToDeck() {
+        var back = returnToDeck && !trialActive();
+        returnToDeck = false;
+        if (back) openDeckReady();
+      }
       function closeDeckReady() {
         dr.classList.remove('is-open');
         dr.setAttribute('aria-hidden', 'true');
@@ -4047,20 +4054,21 @@
         doc.head.appendChild(st);
         var x = doc.querySelector('.modal-close');
         if (x) x.addEventListener('click', closeDeckReady);
+        function fromDeck(fn) { return function (e) { if (e) e.preventDefault(); returnToDeck = true; drHide(); fn(); }; }
         doc.querySelectorAll('.tier-pro .tier-cta').forEach(function (b) {
-          b.addEventListener('click', function () { openCheckout('pro', 'trial'); });
+          b.addEventListener('click', fromDeck(function () { openCheckout('pro', 'trial'); }));
         });
         doc.querySelectorAll('.tier-gold .tier-cta').forEach(function (b) {
-          b.addEventListener('click', function () { openCheckout('gold', 'trial'); });
+          b.addEventListener('click', fromDeck(function () { openCheckout('gold', 'trial'); }));
         });
         doc.querySelectorAll('.tier-pro .tier-buy').forEach(function (b) {
-          b.addEventListener('click', function () { openCheckout('pro', 'buy'); });
+          b.addEventListener('click', fromDeck(function () { openCheckout('pro', 'buy'); }));
         });
         doc.querySelectorAll('.tier-gold .tier-buy').forEach(function (b) {
-          b.addEventListener('click', function () { openCheckout('gold', 'buy'); });
+          b.addEventListener('click', fromDeck(function () { openCheckout('gold', 'buy'); }));
         });
         var ex = doc.querySelector('.explore-link');
-        if (ex) ex.addEventListener('click', function (e) { e.preventDefault(); openTrialModal('upgrade'); });
+        if (ex) ex.addEventListener('click', fromDeck(function () { openTrialModal(); }));
         doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDeckReady(); });
       }
       presNext = v5Advance;
@@ -4089,7 +4097,7 @@
       // ────────────────────────────────────────────────────────────
       var tm = document.getElementById('trial-modal');
       function openTrialModal() { tm.classList.add('is-open'); }
-      function closeTrialModal() { tm.classList.remove('is-open'); }
+      function closeTrialModal() { tm.classList.remove('is-open'); maybeReturnToDeck(); }
       window.openTrialModal = openTrialModal;
       tm.querySelectorAll('[data-tm-close]').forEach(function (b) { b.addEventListener('click', closeTrialModal); });
 
@@ -4213,7 +4221,7 @@
         sb.textContent = buy ? 'Pay ' + p.annual : 'Start your free trial';
         co.classList.add('is-open');
       }
-      function closeCheckout() { co.classList.remove('is-open'); }
+      function closeCheckout() { co.classList.remove('is-open'); maybeReturnToDeck(); }
       co.querySelectorAll('[data-co-close]').forEach(function (b) { b.addEventListener('click', closeCheckout); });
       co.querySelector('.co-compare').addEventListener('click', function () { closeCheckout(); openTrialModal('upgrade'); });
       co.querySelectorAll('.co-tab').forEach(function (t) {
@@ -4243,6 +4251,7 @@
         }, 1200);
       });
       document.getElementById('cs-continue').addEventListener('click', function () {
+        returnToDeck = false;
         closeCheckout();
         startTrial(coPlan, coMode);
       });
