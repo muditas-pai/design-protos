@@ -117,24 +117,40 @@
       gap: 10px; padding: 0 24px; position: sticky; top: 0; z-index: 5;
       background: var(--surface);
     }
-    /* blue offer chip; bob + glow ported from the pricing close-nudge chip
-       (pricing/v7.3 .pro-discount-chip). Rounded pill, box-shadow glow ring. */
+    /* Offer lockup, frozen from offer-lockup.html (blue to coral).
+       Chip bobs left-right with a glow ring and a slow sheen sweep; the
+       arrow tip sits behind the chip so the seam never shows. */
+    :root {
+      --offer-fill: linear-gradient(96deg, #0067FF 0%, #7B52D0 46%, #FF5A45 100%);
+      --offer-fill-hot: linear-gradient(96deg, #1E78FF 0%, #8C63DC 46%, #FF6E5B 100%);
+      --offer-tip: #FF5A45;
+      --offer-ring: 138, 82, 200;
+      --offer-shadow: 96, 70, 190;
+    }
+    .offer-wrap { position: relative; display: none; }
+    .offer-wrap.is-on { display: inline-flex; }
+    .offer-wrap::after {
+      content: ''; position: absolute; right: -3px; top: 50%; z-index: 0;
+      width: 9px; height: 9px; background: var(--offer-tip);
+      border-radius: 1px;
+      animation: offer-bob-tip 2.6s ease-in-out infinite;
+    }
     .offer {
-      position: relative; display: none; align-items: center; gap: 6px;
-      background: #0055ED; color: #fff;
+      position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px;
+      background: var(--offer-fill); color: #fff;
       font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
-      padding: 6px 14px; border-radius: 999px;
+      padding: 6px 14px; border-radius: 999px; overflow: hidden;
       white-space: nowrap; font-variant-numeric: tabular-nums;
       animation: offer-bob 2.6s ease-in-out infinite,
                  offer-glow 2.2s ease-in-out infinite;
     }
-    .offer.is-on { display: inline-flex; }
-    /* arrow tip pointing at the trial box / Upgrade button */
-    .offer::after {
-      content: ''; position: absolute; right: -3px; top: 50%;
-      width: 8px; height: 8px; background: #0055ED;
-      transform: translateY(-50%) rotate(45deg); border-radius: 1px;
+    .offer::before {
+      content: ''; position: absolute; inset: 0; z-index: 0;
+      background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.38) 50%, transparent 80%);
+      transform: translateX(-120%);
+      animation: offer-sheen 4.4s ease-in-out infinite;
     }
+    .offer > * { position: relative; z-index: 1; }
     .offer i { font-size: 13px; }
     .offer b { font-weight: 800; }
     /* dashboard chip bounces left-right (pricing card chip bounces up-down) */
@@ -142,13 +158,19 @@
       0%, 100% { transform: translateX(-3px); }
       50%      { transform: translateX(3px); }
     }
+    @keyframes offer-bob-tip {
+      0%, 100% { transform: translate(-3px, -50%) rotate(45deg); }
+      50%      { transform: translate(3px, -50%) rotate(45deg); }
+    }
     @keyframes offer-glow {
-      0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
-                             0 0 0 0   rgba(0, 85, 237, 0.55); }
-      70%      { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
-                             0 0 0 9px rgba(0, 85, 237, 0); }
-      100%     { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
-                             0 0 0 0   rgba(0, 85, 237, 0); }
+      0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.16),
+                             0 0 0 0   rgba(var(--offer-ring), 0.5); }
+      70%      { box-shadow: 0 4px 10px rgba(0,0,0,0.16),
+                             0 0 0 9px rgba(var(--offer-ring), 0); }
+    }
+    @keyframes offer-sheen {
+      0%, 62%   { transform: translateX(-120%); }
+      88%, 100% { transform: translateX(120%); }
     }
     .trial {
       display: flex; align-items: center; gap: 10px; height: 36px;
@@ -158,13 +180,17 @@
     .trial-text { font-weight: 500; color: var(--fg); white-space: nowrap; }
     .btn-upgrade {
       display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 14px;
-      background: var(--brand); color: #fff; border: 0; border-radius: 4px;
-      font: 500 14px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
-      transition: transform 120ms var(--ease), filter 120ms var(--ease);
+      background: var(--offer-fill); color: #fff; border: 0; border-radius: 5px;
+      font: 600 14px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
+      box-shadow: 0 2px 8px -2px rgba(var(--offer-shadow), 0.55);
+      transition: transform 120ms var(--ease), box-shadow 160ms var(--ease), background 200ms var(--ease);
     }
     .btn-upgrade i { font-size: 16px; }
-    .btn-upgrade:hover { filter: brightness(1.07); }
-    .btn-upgrade:active { transform: scale(0.97); }
+    .btn-upgrade:hover {
+      background: var(--offer-fill-hot); transform: translateY(-1px);
+      box-shadow: 0 6px 16px -4px rgba(var(--offer-shadow), 0.6);
+    }
+    .btn-upgrade:active { transform: translateY(0) scale(0.98); }
     .icon-btn {
       width: 36px; height: 36px; display: grid; place-items: center;
       border: 0; background: transparent; color: var(--fg-2); border-radius: 4px;
@@ -312,7 +338,7 @@
     <!-- ── Main ────────────────────────────────────────────────────────── -->
     <main class="main">
       <header class="topbar">
-        <span class="offer"><b>20% OFF</b>&middot;<i class="ph-fill ph-clock"></i>Ends in <span id="offer-timer">42:15</span></span>
+        <span class="offer-wrap"><span class="offer"><b>20% OFF</b>&middot;<i class="ph-fill ph-clock"></i>Ends in <span id="offer-timer">42:15</span></span></span>
         <div class="trial">
           <span class="trial-text">🔥 Trial: 7 days left</span>
           <button class="btn-upgrade" onclick="location.href='pricing.html'"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button>
@@ -402,7 +428,7 @@
     // close-nudge flow (?offer=1 from pricing.html, then remembered for the
     // session). Timer syncs to the pricing page's one-hour bump when present.
     (function () {
-      var chip = document.querySelector('.offer');
+      var chip = document.querySelector('.offer-wrap');
       var el = document.getElementById('offer-timer');
       var flagged = new URLSearchParams(location.search).has('offer');
       try {
