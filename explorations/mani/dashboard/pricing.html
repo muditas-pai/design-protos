@@ -2223,7 +2223,7 @@
 
           <div class="mt-3 flex flex-col gap-[8px]" style="width:312px;">
             <div class="pro-cta-wrap group">
-              <button class="gold-btn w-full h-12 rounded-[4px] flex items-center justify-center text-[16px] font-bold text-white">
+              <button id="gold-ind-cta" class="gold-btn w-full h-12 rounded-[4px] flex items-center justify-center text-[16px] font-bold text-white">
                 Get Gold
               </button>
               <span class="pro-discount-chip hidden" id="gold-discount-chip">20% off</span>
@@ -4019,7 +4019,10 @@
         successTimerInterval = setInterval(tickSuccessTimer, 1000);
       });
 
-      claimBtn.addEventListener('click', closeModal);
+      claimBtn.addEventListener('click', function () {
+        closeModal();
+        if (typeof window.openCheckout === 'function') window.openCheckout('silver');
+      });
       closeBtn.addEventListener('click', closeModal);
 
       window.openFeedbackModal = openModal;
@@ -4419,10 +4422,12 @@
 
       closeBtn.addEventListener('click', close);
       proBtn.addEventListener('click', () => {
-        window.location.href = 'checkout.html?promo=PROANNUAL60';
+        close();
+        if (typeof window.openCheckout === 'function') window.openCheckout('silver');
       });
       goldBtn.addEventListener('click', () => {
-        window.location.href = 'checkout.html?promo=GOLDANNUAL25';
+        close();
+        if (typeof window.openCheckout === 'function') window.openCheckout('gold');
       });
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && backdrop.dataset.open === 'true') close();
@@ -4433,6 +4438,445 @@
       window.closeDiscountPopup = close;
     })();
   </script>
+
+<!-- ── Checkout modal ──────────────────────────────────────────────────────
+     Opens from any Get Silver / Get Gold action. Left column carries the
+     plan choice and what it includes, right column takes payment. The offer
+     chip and the struck prices only appear while the one-hour bump is live,
+     so checkout never advertises a discount the rest of the flow has ended. -->
+<style>
+  .co-backdrop {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(10, 25, 37, 0.72);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+  }
+  .co-backdrop[data-open="true"] {
+    opacity: 1; visibility: visible; pointer-events: auto;
+    transition: opacity 0.22s ease, visibility 0s linear 0s;
+  }
+  .co-stack {
+    position: relative;
+    transform: translateY(20px) scale(0.96); opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.22, 1.4, 0.36, 1), opacity 0.24s ease;
+  }
+  .co-backdrop[data-open="true"] .co-stack { transform: none; opacity: 1; }
+
+  .co-card {
+    display: grid; grid-template-columns: 506px 584px;
+    width: min(1090px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px); overflow: hidden;
+    background: #ffffff; border-radius: 10px;
+    box-shadow: 0 32px 64px -20px rgba(10,25,37,0.45), 0 0 0 1px rgba(10,25,37,0.08);
+  }
+  /* X floats outside the card, top right */
+  .co-close {
+    position: absolute; top: -14px; right: -14px; z-index: 3;
+    width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    background: #ffffff; border: 0; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 4px 14px -2px rgba(10,25,37,0.35); color: #171717;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .co-close:hover { background: #f4f6fa; transform: scale(1.06); }
+  .co-close i { font-size: 16px; }
+
+  /* ── left: plan ─────────────────────────────────────────────────────── */
+  .co-left { padding: 30px 28px; background: #fbfbfc; overflow-y: auto; }
+  .co-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  .co-title { font-size: 21px; font-weight: 700; color: #171717; margin: 0; }
+  .co-compare {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    font-size: 14px; font-weight: 600; color: #005eff; cursor: pointer;
+    background: none; border: 0; padding: 0;
+  }
+  .co-compare:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* offer chip: same lockup the dashboard and the nudge use */
+  .co-offer {
+    position: relative; display: none; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 999px;
+    background: linear-gradient(96deg, #0067FF 0%, #7B52D0 46%, #FF5A45 100%);
+    color: #ffffff; font-size: 12px; font-weight: 700;
+    font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden;
+    animation: co-bob 2.6s ease-in-out infinite, co-glow 2.2s ease-in-out infinite;
+  }
+  .co-offer.is-on { display: inline-flex; }
+  .co-offer::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.38) 50%, transparent 80%);
+    transform: translateX(-120%); animation: co-sheen 4.4s ease-in-out infinite;
+  }
+  .co-offer > * { position: relative; z-index: 1; }
+  .co-offer i { font-size: 13px; }
+  @keyframes co-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  @keyframes co-glow {
+    0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.16), 0 0 0 0 rgba(138,82,200,0.5); }
+    70%      { box-shadow: 0 4px 10px rgba(0,0,0,0.16), 0 0 0 9px rgba(138,82,200,0); }
+    100%     { box-shadow: 0 4px 10px rgba(0,0,0,0.16), 0 0 0 0 rgba(138,82,200,0); }
+  }
+  @keyframes co-sheen {
+    0%, 62%   { transform: translateX(-120%); }
+    88%, 100% { transform: translateX(120%); }
+  }
+
+  .co-plans {
+    background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;
+  }
+  .co-plan {
+    display: flex; align-items: flex-start; gap: 12px; width: 100%;
+    padding: 16px 18px; background: #ffffff; border: 0; cursor: pointer; text-align: left;
+    transition: background 0.14s ease;
+  }
+  .co-plan + .co-plan { border-top: 1px solid #eef0f3; }
+  .co-plan:hover { background: #fafbfc; }
+  .co-radio {
+    width: 18px; height: 18px; margin-top: 2px; border-radius: 999px; flex: none;
+    border: 1.5px solid #c5cad1; display: grid; place-items: center;
+    transition: border-color 0.14s ease;
+  }
+  .co-plan.is-on .co-radio { border-color: #171717; border-width: 2px; }
+  .co-plan.is-on .co-radio::after {
+    content: ''; width: 9px; height: 9px; border-radius: 999px; background: #171717;
+  }
+  .co-plan-name { font-size: 15px; font-weight: 700; color: #171717; line-height: 1.2; }
+  .co-plan-sub { font-size: 12.5px; color: #6b7280; margin-top: 3px; }
+  .co-plan-right { margin-left: auto; text-align: right; }
+  .co-plan-price { display: flex; align-items: baseline; justify-content: flex-end; gap: 7px; }
+  .co-strike { font-size: 14px; color: #9aa1ab; text-decoration: line-through; }
+  .co-now { font-size: 16px; font-weight: 700; color: #171717; }
+  .co-save { font-size: 12.5px; font-weight: 600; color: #005eff; margin-top: 3px; }
+
+  .co-feats { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+  .co-feats li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #171717; }
+  .co-feats i { font-size: 18px; color: #17a34a; flex: none; }
+
+  /* ── right: payment ─────────────────────────────────────────────────── */
+  .co-right { padding: 30px 28px; overflow-y: auto; }
+  .co-pay-title { font-size: 19px; font-weight: 700; color: #171717; margin: 0 0 16px; }
+  .co-testrow { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .co-testtag {
+    background: #005eff; color: #fff; font-size: 12px; font-weight: 600;
+    padding: 4px 9px; border-radius: 4px;
+  }
+  .co-testlink { font-size: 13px; color: #171717; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .co-label { display: block; font-size: 13.5px; font-weight: 500; color: #374151; margin: 0 0 7px; }
+  .co-field {
+    width: 100%; height: 46px; padding: 0 14px;
+    border: 1px solid #d8dce1; border-radius: 6px; background: #fff;
+    font: 400 14px 'Inter', sans-serif; color: #171717; outline: none;
+    transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  }
+  .co-field::placeholder { color: #9aa1ab; }
+  .co-field:focus { border-color: #005eff; box-shadow: 0 0 0 3px rgba(0,94,255,0.12); }
+  .co-group { margin-bottom: 18px; }
+  .co-card-box { border: 1px solid #d8dce1; border-radius: 6px; overflow: hidden; }
+  .co-card-box:focus-within { border-color: #005eff; box-shadow: 0 0 0 3px rgba(0,94,255,0.12); }
+  .co-card-box .co-field { border: 0; border-radius: 0; box-shadow: none; }
+  .co-card-box .co-field:focus { box-shadow: none; }
+  .co-card-num { position: relative; display: flex; align-items: center; border-bottom: 1px solid #e5e7eb; }
+  .co-brands { position: absolute; right: 12px; display: flex; gap: 4px; pointer-events: none; }
+  .co-brand {
+    width: 26px; height: 17px; border-radius: 3px; display: grid; place-items: center;
+    font-size: 7px; font-weight: 800; color: #fff; letter-spacing: -0.02em;
+  }
+  .co-brand.visa { background: #1a1f71; }
+  .co-brand.mc { background: #eb001b; }
+  .co-brand.amex { background: #016fd0; }
+  .co-brand.disc { background: #f76b1c; }
+  .co-card-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .co-card-row .co-field + .co-field { border-left: 1px solid #e5e7eb; }
+  .co-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .co-select {
+    width: 100%; height: 46px; padding: 0 36px 0 14px; appearance: none;
+    border: 1px solid #d8dce1; border-radius: 6px; background: #fff;
+    font: 400 14px 'Inter', sans-serif; color: #171717; outline: none; cursor: pointer;
+  }
+  .co-select-wrap { position: relative; }
+  .co-select-wrap i { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none; font-size: 14px; }
+  .co-note { font-size: 12.5px; color: #6b7280; margin: 0 0 24px; }
+  .co-submit {
+    width: 100%; height: 52px; border: 0; border-radius: 6px; cursor: pointer;
+    background: #0A1925; color: #fff; font: 700 16px 'Inter', sans-serif;
+    transition: background 0.16s ease, transform 0.12s ease;
+  }
+  .co-submit:hover { background: #17293a; }
+  .co-submit:active { transform: scale(0.995); }
+  .co-terms { font-size: 12.5px; color: #4b5563; text-align: center; margin: 14px 0 0; }
+  .co-legal { font-size: 11px; color: #9aa1ab; text-align: center; margin: 22px 0 0; line-height: 1.6; }
+  .co-legal a { color: #6b7280; text-decoration: underline; text-underline-offset: 2px; }
+  .co-legal .paddle { font-weight: 800; color: #4b5563; letter-spacing: -0.02em; }
+
+  @media (max-width: 1120px) {
+    .co-card { grid-template-columns: 1fr; max-height: calc(100vh - 48px); overflow-y: auto; }
+    .co-close { top: 8px; right: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .co-stack { transition: none; }
+    .co-offer { animation: none; }
+    .co-offer::before { display: none; }
+  }
+</style>
+
+<div class="co-backdrop" id="co-backdrop" role="dialog" aria-modal="true" aria-labelledby="co-title" data-open="false">
+  <div class="co-stack">
+    <button class="co-close" id="co-close" type="button" aria-label="Close"><i class="ph ph-x"></i></button>
+    <div class="co-card">
+
+      <!-- plan -->
+      <div class="co-left">
+        <div class="co-head">
+          <h2 class="co-title" id="co-title">Upgrade</h2>
+          <span class="co-offer" id="co-offer">
+            <i class="ph-fill ph-clock"></i><span>Offer ends in <span id="co-timer">59:09</span></span>
+          </span>
+          <button class="co-compare" id="co-compare" type="button">Compare Plans<i class="ph-bold ph-arrow-right"></i></button>
+        </div>
+
+        <div class="co-plans" role="radiogroup" aria-label="Plan">
+          <button class="co-plan is-on" type="button" data-plan="silver" role="radio" aria-checked="true">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span>
+              <span class="co-plan-name">Silver Plan</span>
+              <span class="co-plan-sub">Our most popular plan</span>
+            </span>
+            <span class="co-plan-right">
+              <span class="co-plan-price">
+                <span class="co-strike" data-strike>$240</span>
+                <span class="co-now" data-now>$192</span>
+              </span>
+              <span class="co-save" data-save>Save $48</span>
+            </span>
+          </button>
+          <button class="co-plan" type="button" data-plan="gold" role="radio" aria-checked="false">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span>
+              <span class="co-plan-name">Gold Plan</span>
+              <span class="co-plan-sub">Our most powerful plan</span>
+            </span>
+            <span class="co-plan-right">
+              <span class="co-plan-price">
+                <span class="co-strike" data-strike>$1,200</span>
+                <span class="co-now" data-now>$960</span>
+              </span>
+              <span class="co-save" data-save>Save $240</span>
+            </span>
+          </button>
+        </div>
+
+        <ul class="co-feats" id="co-feats"></ul>
+      </div>
+
+      <!-- payment -->
+      <div class="co-right">
+        <h3 class="co-pay-title">Payment method</h3>
+        <div class="co-testrow">
+          <span class="co-testtag">Test Mode</span>
+          <span class="co-testlink">View Testing Instructions</span>
+        </div>
+
+        <div class="co-group">
+          <label class="co-label" for="co-name">Name on card</label>
+          <input class="co-field" id="co-name" type="text" placeholder="Cardholder name" autocomplete="off" />
+        </div>
+
+        <div class="co-group">
+          <span class="co-label">Card details</span>
+          <div class="co-card-box">
+            <div class="co-card-num">
+              <input class="co-field" type="text" placeholder="xxxx xxxx xxxx xxxx" inputmode="numeric" autocomplete="off" aria-label="Card number" />
+              <span class="co-brands" aria-hidden="true">
+                <span class="co-brand visa">VISA</span>
+                <span class="co-brand mc">MC</span>
+                <span class="co-brand amex">AMEX</span>
+                <span class="co-brand disc">DISC</span>
+              </span>
+            </div>
+            <div class="co-card-row">
+              <input class="co-field" type="text" placeholder="MM / YY" inputmode="numeric" autocomplete="off" aria-label="Expiry" />
+              <input class="co-field" type="text" placeholder="CVV" inputmode="numeric" autocomplete="off" aria-label="Security code" />
+            </div>
+          </div>
+        </div>
+
+        <div class="co-two co-group">
+          <div>
+            <label class="co-label" for="co-country">Country</label>
+            <span class="co-select-wrap">
+              <select class="co-select" id="co-country">
+                <option>United States</option>
+                <option>India</option>
+                <option>United Kingdom</option>
+                <option>Germany</option>
+                <option>Singapore</option>
+              </select>
+              <i class="ph ph-caret-down"></i>
+            </span>
+          </div>
+          <div>
+            <label class="co-label" for="co-zip">ZIP code</label>
+            <input class="co-field" id="co-zip" type="text" inputmode="numeric" autocomplete="off" />
+          </div>
+        </div>
+        <p class="co-note">We collect this information to prevent fraud and secure your payment.</p>
+
+        <button class="co-submit" id="co-submit" type="button">Subscribe now</button>
+        <p class="co-terms" id="co-terms"></p>
+
+        <p class="co-legal">
+          Sold by <span class="paddle">paddle</span> 30 Old Bailey, London, EC4M 7AU, UK. Provided by Slide craft technologies PVT LTD.<br>
+          <a href="#">Support</a> &nbsp; <a href="#">Terms</a> &nbsp; <a href="#">Privacy</a>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var backdrop = document.getElementById('co-backdrop');
+    if (!backdrop) return;
+    var offer   = document.getElementById('co-offer');
+    var timerEl = document.getElementById('co-timer');
+    var featsEl = document.getElementById('co-feats');
+    var termsEl = document.getElementById('co-terms');
+    var plans   = backdrop.querySelectorAll('.co-plan');
+    var HOUR    = 60 * 60 * 1000;
+    var interval = null;
+
+    // List prices are annual totals. The bump takes 20% off, matching the
+    // discount the cards and the close nudge are already showing.
+    var PLANS = {
+      silver: {
+        list: 240, label: 'Silver',
+        feats: ['5,000 Credits', 'Export to PowerPoint and Google Slides',
+                'Advanced AI models and agents', 'View tracking and analytics',
+                'Basic brand customization'],
+      },
+      gold: {
+        list: 1200, label: 'Gold',
+        feats: ['50,000 Credits', 'Everything in Silver', 'Ultra AI model',
+                'Shared knowledge base and projects', 'Refresh data across a deck',
+                'Full brand kit control'],
+      },
+    };
+
+    function money(n) { return '$' + n.toLocaleString('en-US'); }
+    function bumpStart() {
+      var st = 0;
+      try { st = parseInt(localStorage.getItem('proBumpStart') || '0', 10); } catch (e) {}
+      return st && (Date.now() - st) < HOUR ? st : 0;
+    }
+    function selected() {
+      var on = backdrop.querySelector('.co-plan.is-on');
+      return on ? on.dataset.plan : 'silver';
+    }
+
+    function renderPrices() {
+      var bumped = !!bumpStart();
+      plans.forEach(function (el) {
+        var p = PLANS[el.dataset.plan];
+        var now = bumped ? Math.round(p.list * 0.8) : p.list;
+        el.querySelector('[data-now]').textContent = money(now);
+        var strike = el.querySelector('[data-strike]');
+        var save = el.querySelector('[data-save]');
+        strike.textContent = money(p.list);
+        strike.style.display = bumped ? '' : 'none';
+        save.textContent = 'Save ' + money(p.list - now);
+        save.style.display = bumped ? '' : 'none';
+      });
+      offer.classList.toggle('is-on', bumped);
+      renderTerms();
+    }
+
+    function renderTerms() {
+      var p = PLANS[selected()];
+      var bumped = !!bumpStart();
+      var now = bumped ? Math.round(p.list * 0.8) : p.list;
+      termsEl.textContent = bumped
+        ? money(now) + ' now, then ' + money(p.list) + '/year from 7 Aug 2027. Cancel anytime.'
+        : money(now) + '/year. Cancel anytime.';
+    }
+
+    function renderFeats() {
+      featsEl.innerHTML = PLANS[selected()].feats.map(function (f) {
+        return '<li><i class="ph-fill ph-check-circle"></i>' + f + '</li>';
+      }).join('');
+    }
+
+    function selectPlan(name) {
+      plans.forEach(function (el) {
+        var on = el.dataset.plan === name;
+        el.classList.toggle('is-on', on);
+        el.setAttribute('aria-checked', String(on));
+      });
+      renderFeats();
+      renderTerms();
+    }
+
+    function tick() {
+      var st = bumpStart();
+      if (!st) { offer.classList.remove('is-on'); renderPrices(); return; }
+      var left = Math.max(0, HOUR - (Date.now() - st));
+      var t = Math.floor(left / 1000);
+      timerEl.textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' +
+                            String(t % 60).padStart(2, '0');
+    }
+
+    function open(plan) {
+      selectPlan(plan || 'silver');
+      renderPrices();
+      backdrop.dataset.open = 'true';
+      document.body.style.overflow = 'hidden';
+      tick();
+      if (interval) clearInterval(interval);
+      interval = setInterval(tick, 1000);
+    }
+    function close() {
+      backdrop.dataset.open = 'false';
+      document.body.style.overflow = '';
+      if (interval) { clearInterval(interval); interval = null; }
+    }
+
+    plans.forEach(function (el) {
+      el.addEventListener('click', function () { selectPlan(el.dataset.plan); });
+    });
+    document.getElementById('co-close').addEventListener('click', close);
+    document.getElementById('co-compare').addEventListener('click', close);
+    backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && backdrop.dataset.open === 'true') close();
+    });
+    document.getElementById('co-submit').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      setTimeout(function () {
+        btn.disabled = false;
+        btn.textContent = 'Subscribe now';
+        close();
+      }, 1400);
+    });
+
+    window.openCheckout = open;
+
+    // Every buy action on the page routes here rather than a separate screen.
+    [['pro-ind-cta', 'silver'], ['gold-ind-cta', 'gold'],
+     ['sum-pro-cta', 'silver'], ['sum-gold-cta', 'gold']].forEach(function (pair) {
+      var el = document.getElementById(pair[0]);
+      if (!el) return;
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        open(pair[1]);
+      });
+    });
+  })();
+</script>
 
   <!-- Agentation: visual feedback toolbar (bottom-right). React is loaded via esm.sh CDN. -->
   <div id="agentation-root"></div>
