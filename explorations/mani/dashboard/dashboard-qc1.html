@@ -1054,7 +1054,7 @@
         const activeIcon = item.querySelector('i');
         const activeCls = item.dataset.iconActive;
         if (activeIcon && activeCls) activeIcon.className = activeCls;
-        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (!reordering) item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         syncForItem(item);
         swapMedia(item);
       }
@@ -1095,6 +1095,8 @@
       // Locked entries in the sidebar open this modal on the feature they
       // belong to. Offer mode follows the dashboard's own offer state, so the
       // countdown chip only shows once the pricing nudge has been seen.
+      var baseOrder = null;
+      var reordering = false;
       window.openFeatureModal = function (feat) {
         // Offer mode tracks the same live bump the topbar chip does, so the
         // modal never advertises a discount the dashboard is not showing.
@@ -1105,13 +1107,26 @@
         } catch (e) {}
         document.body.classList.toggle('mode-offer', seen);
         document.body.classList.toggle('mode-plain', !seen);
+        // The feature the user clicked leads the list, with the rest following
+        // in their normal order, so the reason the modal opened is the first
+        // thing read rather than something to hunt for mid-scroll.
+        if (!baseOrder) baseOrder = Array.prototype.slice.call(
+          featList.querySelectorAll('.dp-feat-item'));
         var item = featList.querySelector('.dp-feat-item[data-feat="' + feat + '"]');
+        baseOrder.forEach(function (el) {
+          if (el !== item) featList.appendChild(el);
+        });
+        if (item) featList.insertBefore(item, featList.firstChild);
+        featList.scrollTop = 0;
+
+        reordering = true;
         if (item && !item.classList.contains('is-active')) {
           activateFeat(item);
         } else {
           syncForItem(item || featList.querySelector('.dp-feat-item.is-active'));
         }
-        if (item) item.scrollIntoView({ block: 'center' });
+        reordering = false;
+        featList.scrollTop = 0;
         open();
       };
     })();
