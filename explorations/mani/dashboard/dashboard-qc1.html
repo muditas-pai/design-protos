@@ -1096,8 +1096,13 @@
       // belong to. Offer mode follows the dashboard's own offer state, so the
       // countdown chip only shows once the pricing nudge has been seen.
       window.openFeatureModal = function (feat) {
+        // Offer mode tracks the same live bump the topbar chip does, so the
+        // modal never advertises a discount the dashboard is not showing.
         var seen = false;
-        try { seen = sessionStorage.getItem('dashOffer20') === '1'; } catch (e) {}
+        try {
+          var st = Number(localStorage.getItem('proBumpStart')) || 0;
+          seen = st > 0 && (Date.now() - st) < 60 * 60 * 1000;
+        } catch (e) {}
         document.body.classList.toggle('mode-offer', seen);
         document.body.classList.toggle('mode-plain', !seen);
         var item = featList.querySelector('.dp-feat-item[data-feat="' + feat + '"]');
@@ -1123,34 +1128,45 @@
   </script>
 
   <script>
-    // 20% offer chip: shown only after the user has been through the pricing
-    // close-nudge flow (?offer=1 from pricing.html, then remembered for the
-    // session). Timer syncs to the pricing page's one-hour bump when present.
+    // 20% offer chip. The dashboard starts clean: nothing shows until the
+    // user has actually been through the pricing close-nudge, which stamps
+    // proBumpStart and sends them back with ?offer=1. The chip then lives
+    // exactly as long as that one-hour offer does, so a later visit with an
+    // expired offer is clean again. ?offer=0 resets the flow for a rerun.
     (function () {
       var chip = document.querySelector('.offer-wrap');
       var el = document.getElementById('offer-timer');
-      var flagged = new URLSearchParams(location.search).has('offer');
-      try {
-        if (flagged) sessionStorage.setItem('dashOffer20', '1');
-        flagged = flagged || sessionStorage.getItem('dashOffer20') === '1';
-      } catch (e) {}
-      if (!flagged) return;
-      chip.classList.add('is-on');
-
       var HOUR = 60 * 60 * 1000;
+      var param = new URLSearchParams(location.search).get('offer');
+
+      if (param === '0') {
+        try {
+          localStorage.removeItem('proBumpStart');
+          sessionStorage.removeItem('dashOffer20');
+        } catch (e) {}
+        return;
+      }
+
       var start = null;
       try { start = Number(localStorage.getItem('proBumpStart')) || null; } catch (e) {}
-      var t = 42 * 60 + 15;
+      // ?offer=1 without a stamped bump means the chip was asked for directly,
+      // so start the hour here rather than showing a dead countdown.
+      if (!start && param === '1') {
+        start = Date.now();
+        try { localStorage.setItem('proBumpStart', String(start)); } catch (e) {}
+      }
+      if (!start) return;
+
+      var left = HOUR - (Date.now() - start);
+      if (left <= 0) return;
+      chip.classList.add('is-on');
+
       function tick() {
-        if (start) {
-          var left = Math.max(0, HOUR - (Date.now() - start));
-          t = Math.floor(left / 1000);
-        } else {
-          t = t > 0 ? t - 1 : 42 * 60 + 15;
-        }
-        var m = String(Math.floor(t / 60)).padStart(2, '0');
-        var s = String(t % 60).padStart(2, '0');
-        el.textContent = m + ':' + s;
+        var ms = Math.max(0, HOUR - (Date.now() - start));
+        var t = Math.floor(ms / 1000);
+        el.textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' +
+                         String(t % 60).padStart(2, '0');
+        if (ms <= 0) chip.classList.remove('is-on');
       }
       tick();
       setInterval(tick, 1000);
