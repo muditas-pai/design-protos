@@ -120,7 +120,7 @@
     /* blue offer chip; bob + glow ported from the pricing close-nudge chip
        (pricing/v7.3 .pro-discount-chip). Rounded pill, box-shadow glow ring. */
     .offer {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: none; align-items: center; gap: 6px;
       background: #0055ED; color: #fff;
       font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
       padding: 6px 14px; border-radius: 999px;
@@ -128,11 +128,13 @@
       animation: offer-bob 2.6s ease-in-out infinite,
                  offer-glow 2.2s ease-in-out infinite;
     }
+    .offer.is-on { display: inline-flex; }
     .offer i { font-size: 13px; }
     .offer b { font-weight: 800; }
+    /* dashboard chip bounces left-right (pricing card chip bounces up-down) */
     @keyframes offer-bob {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-3px); }
+      0%, 100% { transform: translateX(-3px); }
+      50%      { transform: translateX(3px); }
     }
     @keyframes offer-glow {
       0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
@@ -274,7 +276,7 @@
       <div class="ws">
         <div class="ws-avatar">M</div>
         <span class="ws-name">Mani_v2</span>
-        <span class="ws-upgrade" onclick="location.href='../pricing/v7.3.html'">Upgrade</span>
+        <span class="ws-upgrade" onclick="location.href='pricing.html'">Upgrade</span>
         <span class="caret-btn"><i class="ph ph-caret-down"></i></span>
       </div>
 
@@ -307,7 +309,7 @@
         <span class="offer"><b>20% OFF</b>&middot;<i class="ph-fill ph-clock"></i>Ends in <span id="offer-timer">42:15</span></span>
         <div class="trial">
           <span class="trial-text">🔥 Trial: 7 days left</span>
-          <button class="btn-upgrade" onclick="location.href='../pricing/v7.3.html'"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button>
+          <button class="btn-upgrade" onclick="location.href='pricing.html'"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button>
         </div>
         <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
         <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
@@ -390,16 +392,37 @@
   </div>
 
   <script>
-    // offer countdown: ticks down from 42:15, loops
+    // 20% offer chip: shown only after the user has been through the pricing
+    // close-nudge flow (?offer=1 from pricing.html, then remembered for the
+    // session). Timer syncs to the pricing page's one-hour bump when present.
     (function () {
+      var chip = document.querySelector('.offer');
       var el = document.getElementById('offer-timer');
+      var flagged = new URLSearchParams(location.search).has('offer');
+      try {
+        if (flagged) sessionStorage.setItem('dashOffer20', '1');
+        flagged = flagged || sessionStorage.getItem('dashOffer20') === '1';
+      } catch (e) {}
+      if (!flagged) return;
+      chip.classList.add('is-on');
+
+      var HOUR = 60 * 60 * 1000;
+      var start = null;
+      try { start = Number(localStorage.getItem('proBumpStart')) || null; } catch (e) {}
       var t = 42 * 60 + 15;
-      setInterval(function () {
-        t = t > 0 ? t - 1 : 42 * 60 + 15;
+      function tick() {
+        if (start) {
+          var left = Math.max(0, HOUR - (Date.now() - start));
+          t = Math.floor(left / 1000);
+        } else {
+          t = t > 0 ? t - 1 : 42 * 60 + 15;
+        }
         var m = String(Math.floor(t / 60)).padStart(2, '0');
         var s = String(t % 60).padStart(2, '0');
         el.textContent = m + ':' + s;
-      }, 1000);
+      }
+      tick();
+      setInterval(tick, 1000);
     })();
   </script>
 
