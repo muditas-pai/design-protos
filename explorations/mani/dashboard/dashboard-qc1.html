@@ -373,7 +373,7 @@
     top: 20px; left: 30px;
     display: inline-flex; align-items: center; gap: 4px;
     padding: 6px 12px 6px 8px;
-    background: radial-gradient(145.58% 149.6% at 29.59% -25%, #C2D8FF 0%, #5291FF 31.73%, #0055ED 76.78%, #00225C 100%); color: #ffffff;
+    background: var(--offer-fill); color: #ffffff;
     font-size: 12px; font-weight: 500; letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -390,11 +390,11 @@
 
   @keyframes pro-chip-glow {
     0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
-                           0 0 0 0   rgba(82, 145, 255, 0.55); }
+                           0 0 0 0   rgba(var(--offer-ring), 0.55); }
     70%      { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
-                           0 0 0 9px rgba(82, 145, 255, 0); }
+                           0 0 0 9px rgba(var(--offer-ring), 0); }
     100%     { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
-                           0 0 0 0   rgba(82, 145, 255, 0); }
+                           0 0 0 0   rgba(var(--offer-ring), 0); }
   }
 
   @keyframes gold-shimmer {
@@ -410,7 +410,7 @@
     position: absolute;
     left: 50%; margin-left: -4px; bottom: -4px;
     width: 8px; height: 8px;
-    background: #0055ED;
+    background: var(--offer-tip-flat);
     border-radius: 1px;
     transform: rotate(45deg);
     z-index: -1;
@@ -688,6 +688,15 @@
 
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
+  <!-- Palette is stamped before first paint so the offer never flashes the
+       wrong color on load. -->
+  <script>
+    (function () {
+      var v = 'v2';
+      try { v = localStorage.getItem('offerTheme') || 'v2'; } catch (e) {}
+      document.documentElement.setAttribute('data-offer-theme', v);
+    })();
+  </script>
 </head>
 <body>
   <div class="app">
@@ -1767,6 +1776,86 @@
 
   })();
 </script>
+
+
+  <!-- ── Offer palette explorer ─────────────────────────────────────────────
+       Three candidate paints for every offer surface: pill, Upgrade button,
+       pricing chips, close nudge, feature modal and checkout. Declared on the
+       html element so one switch repaints the whole screen, and stored so the
+       choice survives the dashboard to pricing to checkout journey. -->
+  <style>
+    /* v1 · blue to coral: bridges product blue into the offer accent */
+    html[data-offer-theme="v1"] {
+      --offer-fill: linear-gradient(96deg, #0067FF 0%, #7B52D0 46%, #FF5A45 100%);
+      --offer-fill-hot: linear-gradient(96deg, #1E78FF 0%, #8C63DC 46%, #FF6E5B 100%);
+      --offer-tip: #FF5A45; --offer-tip-flat: #7B52D0;
+      --offer-ring: 138, 82, 200; --offer-shadow: 96, 70, 190;
+    }
+    /* v2 · brand ramp, exact: the design system's gradient-brand-03 verbatim */
+    html[data-offer-theme="v2"] {
+      --offer-fill: radial-gradient(145.58% 149.6% at 29.59% -25%, #C2D8FF 0%, #5291FF 31.73%, #0055ED 76.78%, #00225C 100%);
+      --offer-fill-hot: radial-gradient(145.58% 149.6% at 29.59% -25%, #D6E5FF 0%, #6C9FFF 31.73%, #1667F5 76.78%, #062F73 100%);
+      --offer-tip: #0055ED; --offer-tip-flat: #0055ED;
+      --offer-ring: 82, 145, 255; --offer-shadow: 0, 85, 237;
+    }
+    /* v3 · brand ramp, flipped: same stops dark to light */
+    html[data-offer-theme="v3"] {
+      --offer-fill: linear-gradient(96deg, #00225C 0%, #0055ED 32%, #5291FF 77%, #C2D8FF 100%);
+      --offer-fill-hot: linear-gradient(96deg, #062F73 0%, #1667F5 32%, #6C9FFF 77%, #D6E5FF 100%);
+      --offer-tip: #C2D8FF; --offer-tip-flat: #8FB6FF;
+      --offer-ring: 0, 85, 237; --offer-shadow: 0, 60, 180;
+    }
+
+    .pal {
+      position: fixed; left: 16px; bottom: 16px; z-index: 900;
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px; border-radius: 999px;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px -6px rgba(11,15,20,0.28), 0 0 0 1px rgba(11,15,20,0.08);
+      font: 600 11px "Inter", system-ui, sans-serif;
+    }
+    .pal-label { padding-left: 8px; color: #737373; letter-spacing: 0.04em; }
+    .pal-btn {
+      width: 34px; height: 26px; display: grid; place-items: center;
+      border: 0; border-radius: 999px; cursor: pointer; color: #525252;
+      background: transparent; font: inherit;
+    }
+    .pal-btn:hover { background: rgba(11,15,20,0.06); }
+    .pal-btn[aria-pressed="true"] { background: #0A1925; color: #fff; }
+    .pal-swatch {
+      width: 26px; height: 26px; border-radius: 999px; border: 0; cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(11,15,20,0.12);
+    }
+    @media print { .pal { display: none; } }
+  </style>
+
+  <div class="pal" role="group" aria-label="Offer palette">
+    <span class="pal-label">OFFER</span>
+    <button class="pal-btn" type="button" data-pal="v1" aria-pressed="false" title="Blue to coral">v1</button>
+    <button class="pal-btn" type="button" data-pal="v2" aria-pressed="false" title="Brand ramp, exact">v2</button>
+    <button class="pal-btn" type="button" data-pal="v3" aria-pressed="false" title="Brand ramp, flipped">v3</button>
+  </div>
+
+  <script>
+    (function () {
+      var KEY = 'offerTheme';
+      function apply(v) {
+        document.documentElement.setAttribute('data-offer-theme', v);
+        document.querySelectorAll('[data-pal]').forEach(function (b) {
+          b.setAttribute('aria-pressed', String(b.dataset.pal === v));
+        });
+      }
+      var saved = 'v2';
+      try { saved = localStorage.getItem(KEY) || 'v2'; } catch (e) {}
+      apply(saved);
+      document.querySelectorAll('[data-pal]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          apply(b.dataset.pal);
+          try { localStorage.setItem(KEY, b.dataset.pal); } catch (e) {}
+        });
+      });
+    })();
+  </script>
 
 </body>
 </html>
