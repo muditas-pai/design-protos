@@ -127,8 +127,14 @@
       --offer-ring: 138, 82, 200;
       --offer-shadow: 96, 70, 190;
     }
-    .offer-wrap { position: relative; display: none; }
+    .offer-wrap {
+      position: relative; display: none;
+      border: 0; padding: 0; background: none; cursor: pointer;
+      font: inherit; color: inherit;
+    }
     .offer-wrap.is-on { display: inline-flex; }
+    .offer-wrap:hover .offer { background: var(--offer-fill-hot); }
+    .offer-wrap:active .offer { transform: scale(0.97); animation-play-state: paused; }
     .offer-wrap::after {
       content: ''; position: absolute; right: -3px; top: 50%; z-index: 0;
       width: 9px; height: 9px; background: var(--offer-tip);
@@ -735,7 +741,7 @@
     <!-- ── Main ────────────────────────────────────────────────────────── -->
     <main class="main">
       <header class="topbar">
-        <span class="offer-wrap"><span class="offer"><b>20% OFF</b>&middot;<i class="ph-fill ph-clock"></i>Ends in <span id="offer-timer">42:15</span></span></span>
+        <button class="offer-wrap" type="button" id="offer-chip" aria-label="Claim 20% off"><span class="offer"><b>20% OFF</b>&middot;<i class="ph-fill ph-clock"></i>Ends in <span id="offer-timer">42:15</span></span></button>
         <div class="trial">
           <span class="trial-text">🔥 Trial: 7 days left</span>
           <button class="btn-upgrade" onclick="location.href='pricing.html'"><i class="ph-fill ph-rocket-launch"></i><span>Upgrade</span></button>
@@ -1185,6 +1191,13 @@
       }
       tick();
       setInterval(tick, 1000);
+
+      // With the clock already running the user has seen the offer, so the
+      // chip is the shortcut straight to payment: both plans, no detour
+      // back through pricing.
+      chip.addEventListener('click', function () {
+        if (typeof window.openCheckout === 'function') window.openCheckout('silver');
+      });
     })();
   </script>
 
@@ -1197,5 +1210,560 @@
     createRoot(document.getElementById('agentation-root'))
       .render(React.createElement(Agentation));
   </script>
+<!-- ── Checkout modal ──────────────────────────────────────────────────────
+     Built from Figma AMJ 26 Handoff, node 2558:3184. Opens from any Get
+     Silver / Get Gold action. The timer chip, struck prices, and savings
+     only render while the one-hour bump is live, so checkout never
+     advertises a discount the rest of the flow has ended.
+     Payment brand marks are the exported Figma SVGs in assets/checkout;
+     interface icons use the page's Phosphor set. -->
+<style>
+  :root {
+    --offer-fill: linear-gradient(96deg, #0067FF 0%, #7B52D0 46%, #FF5A45 100%);
+    --offer-tip-flat: #7B52D0;
+  }
+  .co-backdrop {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+  }
+  .co-backdrop[data-open="true"] {
+    opacity: 1; visibility: visible; pointer-events: auto;
+    transition: opacity 0.22s ease, visibility 0s linear 0s;
+  }
+  .co-stack {
+    position: relative;
+    transform: translateY(18px) scale(0.97); opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.22, 1.4, 0.36, 1), opacity 0.24s ease;
+  }
+  .co-backdrop[data-open="true"] .co-stack { transform: none; opacity: 1; }
+
+  .co-card {
+    display: grid; grid-template-columns: 540px 1fr;
+    width: 1080px; max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 48px);
+    background: #ffffff; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 24px 60px -18px rgba(10,25,37,0.45);
+  }
+  /* close floats outside the card, top right */
+  .co-close {
+    position: absolute; top: -14px; right: -14px; z-index: 3;
+    width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+    background: #fafafa; border: 0; border-radius: 24px; cursor: pointer; color: #171717;
+    box-shadow: 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .co-close:hover { background: #f1f3f6; transform: scale(1.06); }
+  .co-close i { font-size: 20px; }
+
+  /* ── left: plan ─────────────────────────────────────────────────────── */
+  .co-left {
+    background: #f5f5f5; border-right: 1px solid rgba(11,15,20,0.06);
+    padding: 31px 24px; overflow-y: auto;
+  }
+  .co-head { position: relative; display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .co-title {
+    font-size: 24px; font-weight: 400; line-height: 1.3; letter-spacing: -0.24px;
+    color: #171717; margin: 0;
+  }
+  .co-compare {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 4px; height: 28px;
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font: 500 14px/1.43 'Inter', sans-serif; color: #1a6eff;
+  }
+  .co-compare i { font-size: 20px; }
+  .co-compare:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* timer chip with the pointer beneath it */
+  /* centred on the panel, not wedged between the title and the link */
+  .co-offer {
+    position: absolute; left: 50%; top: 50%; z-index: 1;
+    transform: translate(-50%, -50%);
+    display: none; flex-direction: column; align-items: center;
+  }
+  .co-offer.is-on { display: flex; }
+  .co-offer-pill {
+    position: relative; display: inline-flex; align-items: center; gap: 4px;
+    height: 28px; padding: 6px 12px 6px 8px; border-radius: 999px;
+    background: var(--offer-fill); color: #ffffff;
+    font: 600 12px 'Inter', sans-serif; white-space: nowrap;
+    font-variant-numeric: tabular-nums; overflow: hidden;
+    box-shadow: 0 2px 8px -2px rgba(96,70,190,0.55);
+  }
+  .co-offer-pill i { font-size: 14px; }
+  .co-offer-pill::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.38) 50%, transparent 80%);
+    transform: translateX(-120%); animation: co-sheen 4.4s ease-in-out infinite;
+  }
+  .co-offer-pill > * { position: relative; z-index: 1; }
+  .co-offer-tip {
+    width: 12px; height: 8.5px; margin-top: -1px;
+    background: var(--offer-tip-flat); clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+  .co-offer.is-on { animation: co-bob 2.6s ease-in-out infinite; }
+  /* the chip is centred by transform, so the bob has to carry that offset */
+  @keyframes co-bob {
+    0%, 100% { transform: translate(-50%, -50%); }
+    50%      { transform: translate(-50%, calc(-50% - 3px)); }
+  }
+  @keyframes co-sheen {
+    0%, 62%   { transform: translateX(-120%); }
+    88%, 100% { transform: translateX(120%); }
+  }
+
+  .co-plans {
+    background: #ffffff; border-radius: 4px; padding: 4px 16px;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    transition: background-image 0.24s ease, box-shadow 0.24s ease;
+  }
+  .co-plan {
+    display: flex; align-items: flex-start; gap: 16px; width: 100%;
+    padding: 16px 0; background: none; border: 0; cursor: pointer; text-align: left;
+  }
+  .co-plan + .co-plan { border-top: 1px solid rgba(11,15,20,0.09); }
+  .co-radio {
+    width: 16px; height: 16px; margin-top: 2px; flex: none; border-radius: 999px;
+    border: 1px solid #c2c7ce; background: #fff; display: grid; place-items: center;
+    transition: border-color 0.14s ease;
+  }
+  .co-plan.is-on .co-radio { border-color: #0b0f14; border-width: 1.5px; }
+  .co-plan.is-on .co-radio::after {
+    content: ''; width: 8px; height: 8px; border-radius: 999px; background: #0b0f14;
+  }
+  .co-plan-main { flex: 1; min-width: 0; }
+  .co-plan-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .co-plan-name { font: 500 14px/1.2 'Inter', sans-serif; color: #171717; }
+  .co-plan-sub { display: block; font: 400 12px/1.33 'Inter', sans-serif; color: #a3a3a3; margin-top: 6px; }
+  .co-price { display: inline-flex; align-items: baseline; gap: 6px; font: 500 14px/1.2 'Inter', sans-serif; }
+  .co-strike { color: #a3a3a3; text-decoration: line-through; }
+  .co-now { color: #171717; }
+  .co-save { display: block; font: 400 12px/1.33 'Inter', sans-serif; color: #005eff; text-align: right; margin-top: 6px; }
+  .co-plan-right { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+
+  /* Gold treatment, carried over from the early renewal screen: warm card
+     wash, gold hairline, and a slow shimmer across the price. */
+  .co-left[data-plan="gold"] .co-plans {
+    background-image: linear-gradient(180deg, #faf0d6 0%, #fdf9ec 40%, #ffffff 80%);
+    box-shadow: 0 0 0 1px #e6d19e, 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+  .co-left[data-plan="gold"] .co-plan[data-plan="gold"] .co-now {
+    background: linear-gradient(92deg, #8a5a10, #c9932a 40%, #f2d688 50%, #c9932a 60%, #8a5a10);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: co-gold-shimmer 2.6s linear infinite;
+  }
+  .co-left[data-plan="gold"] .co-plan[data-plan="gold"] .co-radio { border-color: #8a5a10; }
+  .co-left[data-plan="gold"] .co-plan[data-plan="gold"] .co-radio::after { background: #8a5a10; }
+  .co-left[data-plan="gold"] .co-feats i { color: #c9932a; }
+  @keyframes co-gold-shimmer {
+    0%   { background-position: 120% 0; }
+    100% { background-position: -80% 0; }
+  }
+  /* Arriving from Get Gold shows the Gold card on its own, the way the early
+     renewal screen presents a single gold plan. */
+  .co-left[data-only="gold"] .co-plan[data-plan="silver"] { display: none; }
+  .co-left[data-only="gold"] .co-plan[data-plan="gold"] { border-top: 0; }
+  .co-switch {
+    display: none; margin-top: 10px; background: none; border: 0; padding: 0; cursor: pointer;
+    font: 500 12px/1.33 'Inter', sans-serif; color: #1a6eff;
+  }
+  .co-left[data-only="gold"] .co-switch { display: inline-block; }
+  .co-switch:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .co-feats { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .co-feats li { display: flex; align-items: center; gap: 10px; font: 400 14px/1.43 'Inter', sans-serif; color: #525252; }
+  .co-feats i { font-size: 14px; color: #17a34a; flex: none; }
+
+  /* ── right: payment ─────────────────────────────────────────────────── */
+  .co-right { padding: 32px 30px; overflow-y: auto; }
+  .co-pay-title {
+    font: 400 24px/1.3 'Inter', sans-serif; letter-spacing: -0.24px; color: #171717;
+    margin: 0 0 24px;
+  }
+  .co-tabs { display: flex; align-items: center; border-bottom: 1px solid rgba(11,15,20,0.09); }
+  .co-tab {
+    display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 2px 8px;
+    background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
+    font: 500 14px/1.43 'Inter', sans-serif; color: #171717;
+    margin-bottom: -1px;
+  }
+  .co-tab.is-on { border-bottom-color: #0b0f14; }
+  .co-tab:not(.is-on) { color: #525252; }
+  .co-tab > i { font-size: 20px; }
+  /* Each mark keeps the outer box Figma drew and the leaf size it exported,
+     so nothing is stretched to fill. */
+  .co-mark { display: grid; place-items: center; flex: none; overflow: hidden; }
+  .co-mark img { display: block; }
+  .co-mark.upi { width: 20px; height: 20px; }
+  .co-mark.upi img { width: 14.13px; height: 20px; }
+  .co-wallets { display: inline-flex; align-items: center; gap: 6px; }
+  .co-mark.wallet { width: 20px; height: 20px; border-radius: 999px; }
+  .co-mark.wallet img { width: 20px; height: 20px; }
+  .co-mark.gpay { background: #e5e5e5; }
+  .co-mark.gpay img { width: 13.29px; height: 11.33px; }
+  .co-mark.cred { background: #000000; }
+  .co-mark.cred img { width: 8.75px; height: 10.44px; }
+
+  .co-fields { margin-top: 24px; }
+  .co-label { display: block; font: 500 14px/1.43 'Inter', sans-serif; color: #525252; margin: 0 0 6px; }
+  .co-input {
+    position: relative; display: flex; align-items: center; gap: 8px;
+    padding: 12px; border-radius: 4px; background: #ffffff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+    transition: box-shadow 0.14s ease;
+  }
+  .co-input:focus-within { box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1.5px #005eff; }
+  .co-input input {
+    flex: 1; min-width: 0; border: 0; outline: none; background: none; padding: 0;
+    font: 400 14px/1.43 'Inter', sans-serif; color: #171717;
+  }
+  .co-input input::placeholder { color: #a3a3a3; }
+  .co-brands { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+  .co-brands img { width: 24px; height: 16px; display: block; }
+  .co-brands .co-mark.jcb { width: 23px; height: 16px; }
+  .co-brands .co-mark.jcb img { width: 22.59px; height: 16px; }
+  .co-cvc-mark { width: 24px; height: 16px; display: block; flex: none; }
+  .co-group { margin-bottom: 20px; }
+  .co-two { display: grid; grid-template-columns: 47.82% 47.82%; justify-content: space-between; }
+
+  .co-select {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    height: 44px; padding: 0 12px; border-radius: 4px; background: #ffffff; cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 1px rgba(11,15,20,0.06),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    position: relative;
+  }
+  .co-select select {
+    position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+  }
+  .co-select span { font: 400 14px/1.43 'Inter', sans-serif; color: #525252; }
+  .co-select i { font-size: 16px; color: #525252; }
+
+  .co-legal-note { font: 400 12px/1.33 'Inter', sans-serif; color: #525252; margin: 0 0 24px; }
+  .co-pay {
+    width: 100%; height: 44px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #000000; color: #ffffff; font: 500 14px/1.43 'Inter', sans-serif;
+    box-shadow: 0 0 0 1px rgba(26,26,26,0.06), 0 1px 2px 0 rgba(26,26,26,0.09);
+    transition: background 0.16s ease, transform 0.12s ease;
+  }
+  .co-pay:hover { background: #1a1a1a; }
+  .co-pay:active { transform: scale(0.995); }
+  .co-foot {
+    display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px;
+    font: 400 12px 'Inter', sans-serif; color: #525252;
+  }
+  .co-foot .powered { display: inline-flex; align-items: center; gap: 8px; }
+  .co-foot .powered img { width: 39.33px; height: 16px; display: block; }
+  .co-foot .rule { width: 1px; height: 18px; background: rgba(26,26,26,0.09); }
+  .co-foot .links { display: inline-flex; align-items: center; gap: 12px; }
+  .co-foot .links span { cursor: pointer; }
+  .co-foot .links span:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+  @media (max-width: 1140px) {
+    .co-card { grid-template-columns: 1fr; overflow-y: auto; }
+    .co-left { border-right: 0; border-bottom: 1px solid rgba(11,15,20,0.06); }
+    .co-close { top: 8px; right: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .co-stack { transition: none; }
+    .co-offer { animation: none; }
+    .co-offer-pill::before { display: none; }
+  }
+</style>
+
+<div class="co-backdrop" id="co-backdrop" role="dialog" aria-modal="true" aria-labelledby="co-title" data-open="false">
+  <div class="co-stack">
+    <button class="co-close" id="co-close" type="button" aria-label="Close"><i class="ph ph-x"></i></button>
+    <div class="co-card">
+
+      <!-- plan -->
+      <div class="co-left" id="co-left" data-plan="silver">
+        <div class="co-head">
+          <h2 class="co-title" id="co-title">Upgrade</h2>
+          <span class="co-offer" id="co-offer">
+            <span class="co-offer-pill">
+              <i class="ph-fill ph-clock"></i><span>Offer ends in <span id="co-timer">59:56</span></span>
+            </span>
+            <span class="co-offer-tip" aria-hidden="true"></span>
+          </span>
+          <button class="co-compare" id="co-compare" type="button">Compare Plans<i class="ph ph-arrow-right"></i></button>
+        </div>
+
+        <div class="co-plans" role="radiogroup" aria-label="Plan">
+          <button class="co-plan is-on" type="button" data-plan="silver" role="radio" aria-checked="true">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span class="co-plan-main">
+              <span class="co-plan-top">
+                <span class="co-plan-name">Silver Plan</span>
+                <span class="co-plan-right">
+                  <span class="co-price">
+                    <span class="co-strike" data-strike>$240</span>
+                    <span class="co-now" data-now>$192</span>
+                  </span>
+                  <span class="co-save" data-save>Save $48</span>
+                </span>
+              </span>
+              <span class="co-plan-sub">Our most popular plan</span>
+            </span>
+          </button>
+          <button class="co-plan" type="button" data-plan="gold" role="radio" aria-checked="false">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span class="co-plan-main">
+              <span class="co-plan-top">
+                <span class="co-plan-name">Gold Plan</span>
+                <span class="co-plan-right">
+                  <span class="co-price">
+                    <span class="co-strike" data-strike>$1,200</span>
+                    <span class="co-now" data-now>$960</span>
+                  </span>
+                  <span class="co-save" data-save>Save $240</span>
+                </span>
+              </span>
+              <span class="co-plan-sub">Our most powerful plan</span>
+            </span>
+          </button>
+        </div>
+
+        <button class="co-switch" id="co-switch" type="button">See Silver instead</button>
+
+        <ul class="co-feats" id="co-feats"></ul>
+      </div>
+
+      <!-- payment -->
+      <div class="co-right">
+        <h3 class="co-pay-title">Payment Method</h3>
+
+        <div class="co-tabs" role="tablist" aria-label="Payment method">
+          <button class="co-tab is-on" type="button" role="tab" aria-selected="true" data-pay="card">
+            <i class="ph ph-credit-card"></i>Credit/Debit card
+          </button>
+          <button class="co-tab" type="button" role="tab" aria-selected="false" data-pay="upi">
+            <span class="co-mark upi"><img src="assets/checkout/upi.svg" alt="" /></span>UPI/QR Code
+            <span class="co-wallets" aria-hidden="true">
+              <span class="co-mark wallet gpay"><img src="assets/checkout/googlepay.svg" alt="" /></span>
+              <span class="co-mark wallet"><img src="assets/checkout/phonepe.svg" alt="" /></span>
+              <span class="co-mark wallet cred"><img src="assets/checkout/cred.svg" alt="" /></span>
+              <span class="co-mark wallet"><img src="assets/checkout/amazonpay.svg" alt="" /></span>
+            </span>
+          </button>
+        </div>
+
+        <div class="co-fields" id="co-pay-card">
+          <div class="co-group">
+            <label class="co-label" for="co-cardnum">Card details</label>
+            <div class="co-input">
+              <input id="co-cardnum" type="text" inputmode="numeric" autocomplete="off" placeholder="1234 1234 1234 1234" />
+              <span class="co-brands" aria-hidden="true">
+                <img src="assets/checkout/visa.svg" alt="" />
+                <img src="assets/checkout/mastercard.svg" alt="" />
+                <img src="assets/checkout/amex.svg" alt="" />
+                <span class="co-mark jcb"><img src="assets/checkout/jcb.svg" alt="" /></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="co-two co-group">
+            <div>
+              <label class="co-label" for="co-exp">Expiration date</label>
+              <div class="co-input">
+                <input id="co-exp" type="text" inputmode="numeric" autocomplete="off" placeholder="MM / YY" />
+              </div>
+            </div>
+            <div>
+              <label class="co-label" for="co-cvc">CVC</label>
+              <div class="co-input">
+                <input id="co-cvc" type="text" inputmode="numeric" autocomplete="off" placeholder="CVC" />
+                <img class="co-cvc-mark" src="assets/checkout/cvc.svg" alt="" aria-hidden="true" />
+              </div>
+            </div>
+          </div>
+
+          <div class="co-group">
+            <span class="co-label">Country</span>
+            <div class="co-select">
+              <span id="co-country-label">India</span>
+              <i class="ph ph-caret-down" aria-hidden="true"></i>
+              <select id="co-country" aria-label="Country">
+                <option selected>India</option>
+                <option>United States</option>
+                <option>United Kingdom</option>
+                <option>Germany</option>
+                <option>Singapore</option>
+              </select>
+            </div>
+          </div>
+
+          <p class="co-legal-note">By providing your card information, you allow PRESENTATIONS AI PTE. LTD to charge your card for future payments in accordance with their terms.</p>
+        </div>
+
+        <div class="co-fields" id="co-pay-upi" hidden>
+          <p class="co-legal-note" style="margin-bottom:20px;">Scan the QR code with any UPI app to complete the payment. The code refreshes every 5 minutes.</p>
+        </div>
+
+        <button class="co-pay" id="co-submit" type="button">Pay now</button>
+
+        <div class="co-foot">
+          <span class="powered">Powered by <img src="assets/checkout/stripe.svg" alt="Stripe" /></span>
+          <span class="rule" aria-hidden="true"></span>
+          <span class="links"><span>Terms</span><span>Privacy</span></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var backdrop = document.getElementById('co-backdrop');
+    if (!backdrop) return;
+    var offer   = document.getElementById('co-offer');
+    var timerEl = document.getElementById('co-timer');
+    var featsEl = document.getElementById('co-feats');
+    var plans   = backdrop.querySelectorAll('.co-plan');
+    var HOUR    = 60 * 60 * 1000;
+    var interval = null;
+
+    // List prices are annual totals; the bump takes the same 20% the cards
+    // and the close nudge are already showing. Basic is the free tier's
+    // paid-equivalent line, so it never discounts.
+    var PLANS = {
+      silver: { list: 240, discountable: true,
+        feats: ['5,000 Credits', 'Export to PowerPoint and Google Slides',
+                'Advanced AI models and agents', 'View tracking and analytics',
+                'Basic brand customization'] },
+      gold:   { list: 1200, discountable: true,
+        feats: ['50,000 Credits', 'Everything in Silver', 'Ultra AI model',
+                'Shared knowledge base and projects', 'Refresh data across a deck',
+                'Full brand kit control'] },
+    };
+
+    function money(n) { return '$' + n.toLocaleString('en-US'); }
+    function bumpStart() {
+      var st = 0;
+      try { st = parseInt(localStorage.getItem('proBumpStart') || '0', 10); } catch (e) {}
+      return st && (Date.now() - st) < HOUR ? st : 0;
+    }
+    function selected() {
+      var on = backdrop.querySelector('.co-plan.is-on');
+      return on ? on.dataset.plan : 'silver';
+    }
+
+    function renderPrices() {
+      var bumped = !!bumpStart();
+      plans.forEach(function (el) {
+        var p = PLANS[el.dataset.plan];
+        var off = bumped && p.discountable;
+        var now = off ? Math.round(p.list * 0.8) : p.list;
+        el.querySelector('[data-now]').textContent = money(now);
+        var strike = el.querySelector('[data-strike]');
+        var save = el.querySelector('[data-save]');
+        if (strike) { strike.textContent = money(p.list); strike.style.display = off ? '' : 'none'; }
+        if (save) { save.textContent = 'Save ' + money(p.list - now); save.style.display = off ? '' : 'none'; }
+      });
+      offer.classList.toggle('is-on', bumped);
+    }
+
+    function renderFeats() {
+      featsEl.innerHTML = PLANS[selected()].feats.map(function (f) {
+        return '<li><i class="ph-fill ph-check-circle"></i>' + f + '</li>';
+      }).join('');
+    }
+
+    var leftPanel = document.getElementById('co-left');
+
+    function selectPlan(name) {
+      plans.forEach(function (el) {
+        var on = el.dataset.plan === name;
+        el.classList.toggle('is-on', on);
+        el.setAttribute('aria-checked', String(on));
+      });
+      leftPanel.dataset.plan = name;
+      renderFeats();
+    }
+
+    function tick() {
+      var st = bumpStart();
+      if (!st) { renderPrices(); return; }
+      var t = Math.floor(Math.max(0, HOUR - (Date.now() - st)) / 1000);
+      timerEl.textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' +
+                            String(t % 60).padStart(2, '0');
+    }
+
+    function open(plan) {
+      // Coming from Get Gold, Gold stands alone; anywhere else shows both.
+      if (plan === 'gold') leftPanel.dataset.only = 'gold';
+      else leftPanel.removeAttribute('data-only');
+      selectPlan(plan || 'silver');
+      renderPrices();
+      backdrop.dataset.open = 'true';
+      document.body.style.overflow = 'hidden';
+      tick();
+      if (interval) clearInterval(interval);
+      interval = setInterval(tick, 1000);
+    }
+    function close() {
+      backdrop.dataset.open = 'false';
+      document.body.style.overflow = '';
+      if (interval) { clearInterval(interval); interval = null; }
+    }
+
+    plans.forEach(function (el) {
+      el.addEventListener('click', function () { selectPlan(el.dataset.plan); });
+    });
+    document.getElementById('co-switch').addEventListener('click', function () {
+      leftPanel.removeAttribute('data-only');
+      selectPlan('silver');
+    });
+
+    backdrop.querySelectorAll('.co-tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        backdrop.querySelectorAll('.co-tab').forEach(function (t) {
+          var on = t === tab;
+          t.classList.toggle('is-on', on);
+          t.setAttribute('aria-selected', String(on));
+        });
+        document.getElementById('co-pay-card').hidden = tab.dataset.pay !== 'card';
+        document.getElementById('co-pay-upi').hidden = tab.dataset.pay !== 'upi';
+      });
+    });
+
+    var countrySel = document.getElementById('co-country');
+    countrySel.addEventListener('change', function () {
+      document.getElementById('co-country-label').textContent = countrySel.value;
+    });
+
+    document.getElementById('co-close').addEventListener('click', close);
+    document.getElementById('co-compare').addEventListener('click', function () {
+      close();
+      location.href = 'pricing.html';
+    });
+    backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && backdrop.dataset.open === 'true') close();
+    });
+    document.getElementById('co-submit').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      setTimeout(function () {
+        btn.disabled = false;
+        btn.textContent = 'Pay now';
+        close();
+      }, 1400);
+    });
+
+    window.openCheckout = open;
+
+  })();
+</script>
+
 </body>
 </html>
