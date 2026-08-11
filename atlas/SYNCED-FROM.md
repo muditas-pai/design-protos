@@ -82,9 +82,10 @@ They share class names — `button-primary`, `text-heading-2xl` — and have **d
 values**: atlas's radius and spacing scales were decided in atlas, and copying either file
 over the other would silently restyle every screen built against the other.
 
-Ninety-nine existing protos link `../../../design-system/pai.css`. Nothing under `atlas/`
-links that file, and nothing outside `atlas/` links `atlas/design-system/pai.css`. The two
-trees do not touch, on purpose. **Do not merge them**, in either direction.
+A hundred and three existing protos link `../../../design-system/pai.css`, and they are live
+on Pages. Nothing under `atlas/` links that file, and nothing outside `atlas/` links
+`atlas/design-system/pai.css`. The two trees do not touch, on purpose. **Do not merge them**,
+in either direction.
 
 **Icons split the same way.** Protos outside `atlas/` pull Phosphor from
 `unpkg.com/@phosphor-icons/web@2.1.1`. Atlas vendors it at `atlas/design-system/icons/`

@@ -146,7 +146,7 @@ design-system gap; `designs/loop-check/loop-check.html` shows the local workarou
 
 | | |
 |---|---|
-| `design-protos/design-system/pai.css` | 513 lines. What the other 99 protos link, and what they are live on Pages against |
+| `design-protos/design-system/pai.css` | 513 lines. What the other 103 protos link, and what they are live on Pages against |
 | `atlas/design-system/pai.css` | 2,646 lines. What everything under `atlas/` links |
 
 They share 179 selectors and **60 of those have different declarations** — `.button-small`
