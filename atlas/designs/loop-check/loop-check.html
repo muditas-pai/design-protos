@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Presentation ready — loop check</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../design-system/icons/regular.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="../../design-system/pai.tailwind.js"></script>
+<link rel="stylesheet" href="../../design-system/pai.css" />
+<style>
+  /* ── machinery: leave alone ─────────────────────────────────────────── */
+
+  /* State switching. One line per state, EXACTLY ONE SPACE between the two
+     selectors — lining them up in a column can delete the space and set
+     display:contents on <body> itself, which renders a clean picture of the
+     wrong thing. A [data-state] element is a bare wrapper, never a button,
+     img or anything that draws itself: display:contents deletes its box. */
+  body [data-state] { display: none; }
+  body[data-state="default"] [data-state~="default"] { display: contents; }
+  body[data-state="building"] [data-state~="building"] { display: contents; }
+
+  /* Freeze: ?freeze=1 must produce a deterministic picture. */
+  body[data-freeze="1"], body[data-freeze="1"] *,
+  body[data-freeze="1"] *::before, body[data-freeze="1"] *::after {
+    animation-delay: 0s !important;
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    caret-color: transparent !important;
+  }
+
+  /* Tokens, not the literals templates/screen.html ships with. The template is
+     stale here — atlas's own screens (hire-an-expert, single-export-vs-pro)
+     write this block in tokens, and the literal version costs 5 lint errors
+     that are nobody's design decision. Fix belongs upstream; see README.md. */
+  .atlas-unknown-state {
+    position: fixed; top: var(--space-xs); left: var(--space-xs); z-index: var(--z-tooltip);
+    background: var(--bg-danger); color: var(--text-inverted-primary);
+    font: 700 14px/1.4 Inter, sans-serif;
+    padding: var(--space-2xs) var(--space-sm); border-radius: var(--rounded-base);
+  }
+
+  /* ── your rules below. Two selectors' worth of specificity, or a Tailwind
+        utility on the same element silently wins. ───────────────────────── */
+
+  /* The modal is sized off the picture: 420px of slide is the smallest a cover
+     reads as a real deck rather than as an icon of one, and the card derivative
+     (800px) covers that at 2x with room to spare.
+     max-width, never width: .pai-modal ships width:100%, and overriding it with
+     a fixed one pushes the modal past a 390px viewport and takes the dismiss
+     button off the screen with it. */
+  body .lc-modal { max-width: 452px; }
+
+  /* The picture is the body's only child, so it carries the body's rhythm
+     itself rather than sitting inside another box. */
+  body .lc-cover { margin: 0; }
+
+  body .lc-progress { display: block; margin: 0 0 var(--space-xs); }
+  body .lc-progress-label { display: block; color: var(--text-secondary); }
+
+  /* DESIGN SYSTEM GAP. .pai-modal-dismiss sits outside the shell — left:100%,
+     8px clear — and below the house's 600px breakpoint there is no outside:
+     the modal is as wide as the layer's padding lets it be, so the button
+     lands off the right of the viewport. Tucked inside here. The component
+     has no narrow-viewport answer of its own, and it needs one. 600 is the
+     system's own breakpoint, not an invented device size. */
+  @media (max-width: 600px) {
+    body .pai-modal-dismiss { left: auto; right: var(--space-xs); top: var(--space-xs); }
+  }
+</style>
+</head>
+<body class="pai">
+<script>
+  // The contract with the render. It reads this — never a comment.
+  window.__atlas = {
+    states: ["default", "building"],   // every state the screen builds, happy path first
+    params: {},            // other URL settings that change the picture; usually empty
+  };
+  const ATLAS_T0 = 1780000000000; // the only blessed clock origin. No Date.now(), no Math.random().
+  (function () {
+    const S = window.__atlas.states;
+    const q = new URLSearchParams(location.search);
+    const s = q.get("state");
+    document.body.dataset.state = S.includes(s) ? s : S[0];
+    document.body.dataset.freeze = q.get("freeze") === "1" ? "1" : "0";
+    if (s && !S.includes(s)) {
+      const b = document.createElement("div");
+      b.textContent = "unknown state: " + s;
+      b.className = "atlas-unknown-state";
+      document.body.appendChild(b);
+    }
+  })();
+</script>
+
+<div class="pai-modal-layer">
+  <div class="pai-scrim"></div>
+
+  <!-- data-atlas-frame on the modal itself, not on a wrapper round the layer:
+       .pai-modal-layer is position:fixed, so a plain div round it has no box at
+       all and the render photographs a zero-height strip. The dismiss button
+       sits off the modal's right edge, inside the render's 48px margin. -->
+  <div class="pai-modal lc-modal" data-atlas-frame role="dialog" aria-modal="true" aria-labelledby="lcTitle">
+    <div class="pai-modal-header">
+      <div>
+        <h2 class="pai-modal-title" id="lcTitle">
+          <span data-state="default">Your presentation is ready</span>
+          <span data-state="building">We're building your presentation</span>
+        </h2>
+        <p class="pai-modal-subtitle">
+          <span data-state="default">Fifteen slides, in the template you picked.</span>
+          <span data-state="building">This takes about a minute. You can keep working.</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="pai-modal-body">
+      <span data-state="building">
+        <span class="pai-progress pai-progress-thin lc-progress" style="--value:.6"><span class="pai-progress-bar"></span></span>
+        <span class="text-body-sm-regular lc-progress-label">Building slide 9 of 15</span>
+      </span>
+      <!-- The data-state wrapper is bare on purpose. display:contents deletes
+           the box it is on, and .pai-thumbnail IS a box — its aspect-ratio and
+           its hairline edge live there. -->
+      <span data-state="default">
+        <span class="pai-thumbnail lc-cover">
+          <img src="../../assets/decks/ibm-cost-of-a-data-breach/card/01.jpg" alt="" width="800" height="450" />
+        </span>
+      </span>
+    </div>
+
+    <div class="pai-modal-actions">
+      <span data-state="default">
+        <button class="button-style button-medium button-tertiary" type="button">
+          <span class="button-label">Download PPT</span>
+        </button>
+        <button class="button-style button-medium button-primary" type="button">
+          <span class="button-label">Open in editor</span>
+        </button>
+      </span>
+      <span data-state="building">
+        <button class="button-style button-medium button-tertiary" type="button">
+          <span class="button-label">Cancel</span>
+        </button>
+      </span>
+    </div>
+
+    <button class="pai-modal-dismiss" type="button" aria-label="Close"><i class="ph ph-x"></i></button>
+  </div>
+</div>
+
+<script>
+  window.__atlasReady = document.fonts.ready
+    .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+</script>
+</body>
+</html>
