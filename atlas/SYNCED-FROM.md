@@ -69,6 +69,10 @@ the system with no edit.
 
 So: **about 8 MB vendored, 29 MB of assets left behind, one flag away.**
 
+The two heavy asset tiers are **gitignored**, so `--full-assets` is a local convenience and
+never repo weight. A plain `./sync.sh` leaves them alone once pulled — rsync does not delete
+what it excludes — and `./sync.sh --light-assets` is how you send them back.
+
 ---
 
 ## What is NOT shared with the rest of design-protos

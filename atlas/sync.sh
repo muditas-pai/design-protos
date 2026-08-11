@@ -7,6 +7,11 @@
 #   ./sync.sh ~/code/agentic-atlas     # source: somewhere else
 #   ATLAS_SRC=~/code/agentic-atlas ./sync.sh
 #   ./sync.sh --full-assets            # also bring the 29 MB left out by default
+#   ./sync.sh --light-assets           # and to send those 29 MB back again
+#
+# Full assets are gitignored: they are a local convenience, never repo weight.
+# A plain run leaves whatever you already pulled alone — it will not throw away
+# 29 MB you asked for. --light-assets is how you undo it.
 #
 # What it does NOT touch: your own designs/<slug>/ folders, README.md,
 # SYNCED-FROM.md, CLAUDE.md, this script. Everything else under atlas/ is a
@@ -17,11 +22,13 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FULL_ASSETS=0
+LIGHT_ASSETS=0
 SRC=""
 for arg in "$@"; do
   case "$arg" in
     --full-assets) FULL_ASSETS=1 ;;
-    -h|--help) sed -n '3,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --light-assets) LIGHT_ASSETS=1 ;;
+    -h|--help) sed -n '3,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) SRC="$arg" ;;
   esac
 done
@@ -80,12 +87,20 @@ for slug in "${REFERENCE_DESIGNS[@]}"; do
 done
 
 # ── assets: everything except the two heavy tiers ────────────────────────────
+# rsync does not delete what it excludes, so a plain run leaves full assets you
+# already pulled in place. --light-assets adds --delete-excluded to remove them.
 ASSET_EXCLUDES=(--exclude '.DS_Store')
+ASSET_MODE="full"
 if [ "$FULL_ASSETS" -eq 0 ]; then
   ASSET_EXCLUDES+=(--exclude 'decks/*/full/' --exclude 'features/*.mp4' --exclude 'features/*.webm')
+  ASSET_MODE="light"
+  if [ "$LIGHT_ASSETS" -eq 1 ]; then
+    ASSET_EXCLUDES+=(--delete-excluded)
+    ASSET_MODE="light, pruning what was pulled before"
+  fi
 fi
 rsync -a --delete "${ASSET_EXCLUDES[@]}" "$SRC/assets" "$HERE/"
-echo "sync:   + assets$([ "$FULL_ASSETS" -eq 1 ] && echo ' (full)' || echo ' (light)')"
+echo "sync:   + assets ($ASSET_MODE)"
 
 # ── provenance ──────────────────────────────────────────────────────────────
 COMMIT="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo unknown)"

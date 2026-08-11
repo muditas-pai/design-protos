@@ -165,8 +165,12 @@ Same story for icons: protos outside `atlas/` pull Phosphor from unpkg, atlas ve
 ./sync.sh                      # from ../../agentic-atlas
 ./sync.sh ~/code/agentic-atlas # from somewhere else
 ./sync.sh --full-assets        # plus the 29 MB of full-size slides and feature clips
+./sync.sh --light-assets       # and to send those 29 MB back
 ```
 
 It re-stamps `SYNCED-FROM.md` with the atlas commit it copied. Your own `designs/<slug>/`
 folders are never touched, with one exception: the four vendored reference slugs listed in
 `SYNCED-FROM.md`.
+
+The full assets are gitignored, so pulling them is a local decision that costs the repo
+nothing. `SYNCED-FROM.md` has the full table of what was left out and why.
