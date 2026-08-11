@@ -1,0 +1,669 @@
+<!-- canon: deck-analytics · source: Figma JAS '26 Handoff — 334:3748 (deck, median time) · 334:4199 (completion) · 334:4443 (views) · 334:4915 (viewer drill-down) · rebuilt on the design system 6 Aug 2026 -->
+<!--
+  A TWO-STEP FLOW, NOT TWO SCREENS
+  ================================
+  Step 1 is the deck: three stat tabs over a whole audience.
+  Step 2 is one viewer: the same deck seen through one person's session.
+  A viewer row is the door between them, and the back arrow is the way home.
+  Both live in one modal shell, because it IS one modal — the header swaps,
+  the shell does not.
+
+  WHAT MOVED, AND WHY
+  ===================
+  The Figma tokens ARE the design system's tokens — pai.css was ported from this
+  file — so almost nothing had to move. What did:
+
+    modal width    808          → .pai-modal-portrait, which publishes
+                                  min(808px, 92vw) and is documented as "the
+                                  analytics modal's, measured off JAS '26".
+                                  This is the screen that width was measured off.
+    shell          header on grey, content on a white card
+                                → .pai-modal + .pai-modal-panel, the published
+                                  layered modal. Its 0 4px 4px padding is exactly
+                                  the handoff's header x=4 w=800 and panel y=80.
+    dismiss        28px at +8    → .pai-modal-dismiss, which puts it there itself.
+    elevation-2/3/4              → --elevation-02/03/04
+    heading-2xl · body-base/sm · overline-small
+                                 → the published ramp, unchanged. Exact matches,
+                                   including heading-2xl's -1% tracking.
+    per-slide bar  8px, pill, light-blue→brand
+                                → .pai-progress / .pai-progress-bar: 6px, square
+                                  corners, navy→brand. See about.md — three
+                                  deltas taken as published rather than forked.
+    stat tabs      bespoke       → .tabs-strip .tabs-track .tabs-stretch, with the
+                                  published .tabs-indicator doing the underline.
+    viewer list    bespoke rows  → .pai-table .pai-table-interactive, whose
+                                  overline header is already what the handoff drew.
+    back control   44px icon     → .button-style .button-large .icon-only .button-ghost
+    avatars        32 / 48       → .pai-avatar 36 / .pai-avatar-large 44. Neither
+                                  32 nor 48 is on the published scale.
+    chart tooltip  bespoke       → .pai-tooltip + .text-overline-small
+
+  THE HANDOFF DOES NOT AGREE WITH ITSELF — five ways, all reconciled in about.md.
+  The short version: the bar geometry in both charts is the SAME twelve heights
+  reused, so it is placeholder shape rather than data. Where a consistent number
+  could be DERIVED it was; where it needs a product definition it is flagged and
+  left alone. Nothing here is an invented figure.
+
+  STATES — every one reachable from the URL:
+    ?view=deck|viewer   ?tab=time|completion|views   ?viewer=1|2|3|4
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Deck analytics · Monthly Business Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../design-system/icons/regular.css" />
+<link rel="stylesheet" href="../../design-system/pai.css" />
+<style>
+  /* DESIGN SYSTEM GAP — pai.css sets box-sizing nowhere. Third screen to carry
+     this reset locally; the reason not to fix it centrally is unchanged. */
+  *, *::before, *::after{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; background:var(--bg-tertiary); }
+
+  /* The shell is .pai-modal .pai-modal-portrait unchanged — 808 is published.
+     Only the height rule is this design's: it grows with its tab and stops at
+     the viewport, after which the PANEL scrolls. Unlike early-renewal, this
+     screen fits .pai-modal's own arrangement exactly, so the published
+     overflow behaviour is the one that applies. */
+  .da-modal{ max-height:calc(100vh - var(--space-6xl)); }
+
+  /* ---- header: on the shell, not on the card ------------------------------- */
+  .da-head{
+    flex:none; display:flex; align-items:center; gap:var(--space-sm);
+    padding:var(--space-md) var(--space-xl);
+  }
+  .da-head-back{ flex:none; margin-left:calc(var(--space-sm) * -1); }
+  /* 85.33 x 48 is 16:9 at the handoff's height, and it is the design's own
+     geometry rather than anything the system publishes. */
+  .da-thumb{
+    flex:none; width:85.33px; height:48px; overflow:hidden;
+    border-radius:var(--rounded-base); background:var(--bg-quaternary);
+  }
+  .da-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .da-head-text{ min-width:0; }
+  /* One style across the whole line. The handoff sets the deck's name a shade
+     lighter than "Analytics for", which splits a single sentence into two
+     voices — the quoted name is the subject, not an aside. */
+  .da-head-text h2{ margin:0; color:var(--text-primary); }  /* .text-heading-base */
+  .da-head-text p{ margin:var(--space-2xs) 0 0; color:var(--text-secondary); }
+
+  /* ---- the stat tabs ------------------------------------------------------- */
+  /* .tab-item is published as a single-line label 40px tall. This tab is a
+     figure over a label, 87px tall and left-aligned — so the SIZE is overridden
+     and everything else is the component: the track's hairline, the sliding
+     .tabs-indicator, the selected weight. Flagged in about.md as the one place
+     the tab component has the behaviour but not the shape. */
+  .da-tabs{ flex:none; }
+  .da-tabs .tab-item{
+    height:87px; padding:var(--space-md) var(--space-xl) 0;
+    flex-direction:column; align-items:flex-start; justify-content:flex-start;
+    gap:var(--space-2xs);
+  }
+  .da-stat-figure{ color:var(--text-primary); }   /* .text-heading-2xl */
+  .da-stat-label{
+    display:flex; align-items:center; gap:var(--space-xs);
+    color:var(--text-secondary); font-weight:400;
+  }
+  .is-selected .da-stat-label{ color:var(--text-primary); }
+  .da-stat-label .ph{ font-size:var(--icon-sm); }
+
+  /* ---- the scrolling body -------------------------------------------------- */
+  /* The top pad is a rung above the other three: content set 24px under a rule
+     that runs the full panel reads as attached to it. The handoff leaves 32 here
+     and it is on the scale exactly. */
+  .da-body{ padding:var(--space-2xl) var(--space-xl) var(--space-xl); }
+  /* A rung wider again under the TAB STRIP, because what sits above is 87px of
+     figures rather than one 63px line — a taller thing above needs more room
+     under it to stop reading as part of it. The handoff draws 54 here against
+     the drill-down's 32; 48 is the nearest rung (54 → 48, like 28 → 24).
+     Keyed off the strip being there rather than off which step it is, so the
+     gap follows the reason for it. */
+  .da-tabs + .da-body{ padding-top:var(--space-4xl); }
+  /* Child of the PANE, not of the body — the panes sit between the two, so a
+     `.da-body > section` selector matched nothing and every stacked section was
+     running into the one above it. */
+  .da-pane > section + section{ margin-top:var(--space-2xl); }
+  .da-pane > .pai-divider{ margin:var(--space-xl) calc(var(--space-xl) * -1); width:auto; }
+
+  /* ---- per-slide time rows ------------------------------------------------- */
+  .da-slides{ display:flex; flex-direction:column; gap:var(--space-md); }
+  .da-slide-name{ color:var(--text-primary); }   /* .text-body-base-regular */
+  .da-slide-row{ display:flex; align-items:center; gap:var(--space-md); margin-top:var(--space-2xs); }
+  .da-slide-row .pai-progress{ flex:1 1 auto; }
+  .da-slide-time{
+    flex:none; width:48px; text-align:right;
+    color:var(--text-secondary); font-variant-numeric:tabular-nums;
+  }
+  /* A slide nobody reached is an empty track, not a hairline of colour. */
+  .da-slide-row .pai-progress[data-zero] .pai-progress-bar{ display:none; }
+
+  /* ---- one viewer's total, on the drill-down ------------------------------- */
+  /* margin:0 on the <dl> itself, not just on its dt/dd. The UA gives a dl 1em top
+     and bottom, which was adding an invisible 16px above this line AND 16 below
+     it — so the gap under the rule measured 48 where the CSS said 32. */
+  .da-total{
+    margin:0; display:flex; align-items:baseline; justify-content:space-between;
+    gap:var(--space-md); padding:var(--space-md) var(--space-xl);
+    border-bottom:1px solid var(--border-secondary);
+  }
+  .da-total dt{ margin:0; color:var(--text-primary); }
+  .da-total dd{ margin:0; color:var(--text-primary); font-variant-numeric:tabular-nums; }
+
+  /* ---- the two column charts ----------------------------------------------
+     DESIGN SYSTEM GAP — the system publishes no chart primitives at all: no
+     plot frame, no axis, no gridline, no vertical bar. .pai-progress is the
+     only bar it has and it is horizontal by construction. Everything in this
+     block is local, built from tokens, and is the largest single gap either
+     canonical screen has turned up. */
+  .da-chart{ display:grid; grid-template-columns:var(--space-4xl) 1fr; }
+  .da-chart-plot{
+    position:relative; grid-column:2; height:260px;
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap:var(--space-2xs);
+  }
+  .da-grid{ position:absolute; inset:0; pointer-events:none; }
+  .da-grid span{
+    position:absolute; left:0; right:0; height:0;
+    border-top:1px solid var(--border-tertiary);
+  }
+  .da-ticks{
+    grid-column:1; position:relative; height:260px;
+    color:var(--text-tertiary); text-align:right; padding-right:var(--space-sm);
+  }
+  .da-ticks span{ position:absolute; right:var(--space-sm); transform:translateY(-50%); }
+  .da-bar{
+    position:relative; flex:1 1 0; min-width:0; max-width:18px;
+    border-radius:var(--rounded-sm) var(--rounded-sm) 0 0;
+    background-image:linear-gradient(180deg, var(--bg-brand) 0%, var(--app-200) 100%);
+    cursor:default;
+  }
+  /* A zero-height bar is invisible, so a day with no views gets a hairline that
+     says "measured, and it was nothing" rather than nothing at all. */
+  .da-bar[data-empty]{ min-height:var(--space-3xs); background-image:none; background:var(--border-quaternary); }
+  .da-axis{
+    grid-column:2; display:flex; justify-content:space-between; gap:var(--space-2xs);
+    margin-top:var(--space-xs); color:var(--text-tertiary);
+  }
+  /* The label column matches the bar column exactly — same flex basis, same cap —
+     so a label sits under its own bar and nothing drifts. A label wider than its
+     column (the one carrying a month) overflows the box centred rather than
+     growing it, which is what the handoff draws: "15 July" is 36 wide over a
+     16px bar, and it spills left into the tick gutter. Growing it instead is
+     what bunched every other label against the right edge. */
+  .da-axis span{
+    flex:1 1 0; max-width:18px; text-align:center; white-space:nowrap; overflow:visible;
+  }
+
+  .da-chart-wrap{ position:relative; }
+  .da-chart-wrap .pai-tooltip{
+    position:absolute; z-index:20; pointer-events:none;
+    opacity:0; transition:opacity .12s ease;
+    max-width:200px; text-align:left;
+  }
+  .da-chart-wrap .pai-tooltip.is-on{ opacity:1; }
+  .da-tip-figure{ display:block; color:var(--text-white); }   /* .text-heading-xl */
+  .da-tip-label{ display:block; margin-top:var(--space-2xs); color:var(--text-inverted-secondary); }
+  .da-tip-name{ display:block; margin-top:var(--space-xs); color:var(--text-white); }
+
+  /* ---- the two donuts ------------------------------------------------------ */
+  .da-splits{ display:grid; grid-template-columns:1fr 1fr; gap:var(--space-xl); }
+  .da-split h3{ margin:0 0 var(--space-md); color:var(--text-primary); }
+  .da-split-card{
+    display:flex; align-items:center; gap:var(--space-2xl);
+    padding:var(--space-md) var(--space-xl);
+    border:1px solid var(--border-secondary); border-radius:var(--rounded-base);
+  }
+  .da-donut{ flex:none; width:80px; height:80px; transform:rotate(-90deg); }
+  .da-donut circle{ fill:none; stroke-width:14; }
+  .da-legend{ flex:1; min-width:0; margin:0; display:flex; flex-direction:column; gap:var(--space-sm); }
+  .da-legend div{ display:flex; align-items:center; gap:var(--space-sm); }
+  .da-legend .sw{ flex:none; width:10px; height:10px; border-radius:var(--rounded-sm); }
+  .da-legend dt{ flex:1; min-width:0; color:var(--text-primary); }
+  .da-legend dd{
+    margin:0; flex:none; color:var(--text-primary);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ---- the viewer table ---------------------------------------------------- */
+  /* .pai-table publishes the overline header the handoff already drew, and its
+     hairline between rows. The handoff separates rows with 24px of air instead;
+     the hairline is taken because it is the published table and a list you can
+     click wants its rows bounded. */
+  .da-viewers th:first-child, .da-viewers td:first-child{ padding-left:0; }
+  .da-viewers th:last-child,  .da-viewers td:last-child { padding-right:0; }
+  .da-viewer{ display:flex; align-items:center; gap:var(--space-sm); }
+  .da-viewer-name{ display:block; color:var(--text-primary); }
+  .da-viewer-meta{ display:block; color:var(--text-tertiary); }
+  .da-when{ color:var(--text-secondary); white-space:nowrap; }
+  .da-viewers tbody tr{ cursor:pointer; }
+  .da-viewers tbody tr:focus-visible{
+    outline:none; box-shadow:0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted);
+  }
+
+  /* ---- which step is on ---------------------------------------------------- */
+  .da-step{ display:none; }
+  .da-step.is-on{ display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+  .da-pane{ display:none; }
+  .da-pane.is-on{ display:block; }
+
+  /* ---- the switchers, which are not part of the design --------------------- */
+  .da-bar-demo{
+    position:fixed; top:var(--space-md); left:var(--space-md); z-index:500;
+    display:flex; flex-wrap:wrap; gap:var(--space-xs);
+  }
+  .da-bar-demo .pai-switcher{ box-shadow:var(--elevation-02); }
+</style>
+</head>
+
+<body class="pai" data-view="deck" data-tab="time">
+
+<nav class="da-bar-demo" aria-label="Demo controls">
+  <div class="pai-switcher pai-switcher-small" role="radiogroup" aria-label="Step" id="segView">
+    <label class="pai-switcher-option"><input type="radio" name="da-view" value="deck" checked /><span>1 · Deck</span></label>
+    <label class="pai-switcher-option"><input type="radio" name="da-view" value="viewer" /><span>2 · Viewer</span></label>
+  </div>
+</nav>
+
+<div class="pai-modal-layer">
+  <div class="pai-scrim"></div>
+
+  <div class="pai-modal pai-modal-portrait da-modal" role="dialog" aria-modal="true" aria-labelledby="daTitle">
+
+    <!-- ══ step 1 · the deck ════════════════════════════════════════════════ -->
+    <div class="da-step is-on" id="stepDeck">
+
+      <div class="da-head">
+        <div class="da-thumb">
+          <img src="../../assets/decks/palantir-q1-investor/thumb/01.jpg" alt="" width="85" height="48" />
+        </div>
+        <div class="da-head-text">
+          <h2 class="text-heading-base" id="daTitle">Analytics for “Monthly Business Review”</h2>
+          <p class="text-body-base-regular">Published on 15 July 2026</p>
+        </div>
+      </div>
+
+      <div class="pai-modal-panel">
+        <div class="tabs-strip tabs-track tabs-stretch da-tabs" role="tablist" aria-label="Metric" id="daTabs">
+          <button class="tab-item is-selected" type="button" role="tab" data-tab="time" aria-selected="true">
+            <span class="da-stat-figure text-heading-2xl">3:12 minutes</span>
+            <span class="da-stat-label text-body-base-regular"><i class="ph ph-clock" aria-hidden="true"></i>Median time</span>
+          </button>
+          <button class="tab-item" type="button" role="tab" data-tab="completion" aria-selected="false">
+            <span class="da-stat-figure text-heading-2xl">78%</span>
+            <span class="da-stat-label text-body-base-regular"><i class="ph ph-flag" aria-hidden="true"></i>Completion rate</span>
+          </button>
+          <button class="tab-item" type="button" role="tab" data-tab="views" aria-selected="false">
+            <span class="da-stat-figure text-heading-2xl">128</span>
+            <span class="da-stat-label text-body-base-regular"><i class="ph ph-eye" aria-hidden="true"></i>Views</span>
+          </button>
+          <span class="tabs-indicator tabs-indicator-glide" id="daInk"></span>
+        </div>
+
+        <div class="pai-modal-body da-body">
+
+          <!-- median time: a bar per slide, and who watched -->
+          <div class="da-pane is-on" id="paneTime" role="tabpanel">
+            <section class="da-slides" id="deckSlides"></section>
+            <section>
+              <table class="pai-table pai-table-interactive da-viewers">
+                <thead>
+                  <tr>
+                    <th scope="col">Viewer</th>
+                    <th scope="col">Last opened</th>
+                    <th scope="col" class="pai-table-numeric">Time viewed</th>
+                  </tr>
+                </thead>
+                <tbody id="viewerRows"></tbody>
+              </table>
+            </section>
+          </div>
+
+          <!-- completion: how far down the deck people got -->
+          <div class="da-pane" id="paneCompletion" role="tabpanel">
+            <section class="da-chart-wrap">
+              <div class="da-chart" id="chartCompletion"></div>
+              <span class="pai-tooltip" id="tipCompletion" role="tooltip"></span>
+            </section>
+          </div>
+
+          <!-- views: when they came, and how they got here -->
+          <div class="da-pane" id="paneViews" role="tabpanel">
+            <section class="da-chart-wrap">
+              <div class="da-chart" id="chartViews"></div>
+              <span class="pai-tooltip" id="tipViews" role="tooltip"></span>
+            </section>
+            <hr class="pai-divider" />
+            <section class="da-splits">
+              <div class="da-split">
+                <h3 class="text-body-base-medium">Channel breakdown</h3>
+                <div class="da-split-card" id="splitChannel"></div>
+              </div>
+              <div class="da-split">
+                <h3 class="text-body-base-medium">Device breakdown</h3>
+                <div class="da-split-card" id="splitDevice"></div>
+              </div>
+            </section>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ step 2 · one viewer ══════════════════════════════════════════════ -->
+    <div class="da-step" id="stepViewer">
+
+      <div class="da-head">
+        <button class="button-style button-large icon-only button-ghost da-head-back" type="button"
+                id="daBack" aria-label="Back to deck analytics">
+          <i class="ph ph-arrow-left" aria-hidden="true"></i>
+        </button>
+        <span class="pai-avatar pai-avatar-large" id="vwAvatar" aria-hidden="true"><i class="ph ph-user"></i></span>
+        <div class="da-head-text">
+          <h2 class="text-heading-base"><span id="vwTitle"></span> “Monthly Business Review”</h2>
+          <p class="text-body-base-regular" id="vwMeta"></p>
+        </div>
+      </div>
+
+      <div class="pai-modal-panel">
+        <dl class="da-total">
+          <dt class="text-body-base-regular">Time spent on presentation</dt>
+          <dd class="text-heading-2xl" id="vwTotal"></dd>
+        </dl>
+        <div class="pai-modal-body da-body">
+          <section class="da-slides" id="viewerSlides"></section>
+        </div>
+      </div>
+    </div>
+
+    <button class="pai-modal-dismiss" type="button" aria-label="Close"><i class="ph ph-x" aria-hidden="true"></i></button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── the deck ─────────────────────────────────────────────────────────────
+     Eight slides, not the aggregate frame's six or the completion chart's
+     twelve. Eight is the only count the handoff states as CONTENT — the
+     drill-down names all eight — where six and twelve are frame heights.
+
+     `engaged` is read off the completion chart's designed bar heights against
+     its own 0–100% axis (249,146,104,104,91,91,57,66 over a 260px span). The
+     names and the seconds are the handoff's own. */
+  const SLIDES = [
+    { name: "Company Overview",                                            sec: 22, engaged: 95.8 },
+    { name: "Increasing monetisation of user cohorts",                     sec: 41, engaged: 56.2 },
+    { name: "Broad Geographic Reach",                                      sec: 39, engaged: 40.0 },
+    { name: "Increasing monetisation of user cohorts",                     sec: 13, engaged: 40.0 },
+    { name: "Where any person or community can create their dreams online", sec: 20, engaged: 35.0 },
+    { name: "Increasing monetisation of user cohorts",                     sec: 12, engaged: 35.0 },
+    { name: "Increasing monetisation of user cohorts",                     sec:  0, engaged: 21.9 },
+    { name: "Increasing monetisation of user cohorts",                     sec:  0, engaged: 25.4 }
+  ];
+
+  /* Views per day. The handoff's twelve bar heights sum to ~156 against its own
+     axis while the headline says 128 — so the SHAPE is kept and the values are
+     scaled to land on 128 exactly. Largest-remainder, so they sum, not round to,
+     the published figure. */
+  const VIEW_DAYS = ["15 July","16","17","18","19","20","21","22","23","24","25","26"];
+  const VIEW_SHAPE = [20, 57, 20, 7, 66, 249, 146, 104, 57, 91, 104, 91];
+  const VIEWS_TOTAL = 128;
+  const VIEWS_AXIS  = 40;
+
+  const CHANNELS = [
+    { label: "Direct Link", pct: 55, tone: "var(--bg-brand)" },
+    { label: "LinkedIn",    pct: 15, tone: "var(--bg-success)" },
+    { label: "Email",       pct: 30, tone: "var(--bg-warning)" }
+  ];
+  const DEVICES = [
+    { label: "Desktop", pct: 60, tone: "var(--bg-brand)" },
+    { label: "Tablet",  pct: 10, tone: "var(--bg-success)" },
+    { label: "Mobile",  pct: 30, tone: "var(--bg-warning)" }
+  ];
+
+  /* The four rows the handoff draws. `secs` is their own total, and the
+     drill-down's per-slide times are derived from it — see viewerSlides(). */
+  const VIEWERS = [
+    { id: "1", where: "London", agent: "Chrome • MacOS", opened: "1 hr ago",   secs: 141, tint: "pai-avatar-danger"  },
+    { id: "2", where: "London", agent: "Chrome • MacOS", opened: "2 days ago", secs: 251, tint: "pai-avatar-warning" },
+    { id: "3", where: "Mumbai", agent: "Chrome • MacOS", opened: "2 days ago", secs: 251, tint: "pai-avatar-info"    },
+    { id: "4", where: "London", agent: "Chrome • MacOS", opened: "2 days ago", secs: 251, tint: "pai-avatar-success" }
+  ];
+
+  const $ = id => document.getElementById(id);
+  const state = { view: "deck", tab: "time", viewer: "1" };
+
+  const clock = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+
+  /* Largest remainder — the parts sum to the whole rather than rounding near it. */
+  function apportion(shape, total) {
+    const sum = shape.reduce((a, b) => a + b, 0);
+    const exact = shape.map(h => (h / sum) * total);
+    const out = exact.map(Math.floor);
+    let left = total - out.reduce((a, b) => a + b, 0);
+    exact.map((v, i) => [v - Math.floor(v), i])
+         .sort((a, b) => b[0] - a[0])
+         .forEach(([, i]) => { if (left > 0) { out[i]++; left--; } });
+    return out;
+  }
+  const VIEWS = apportion(VIEW_SHAPE, VIEWS_TOTAL);
+
+  /* ── per-slide time bars ─────────────────────────────────────────────────
+     Width is the slide's own seconds against the longest slide. The handoff
+     drew widths that contradict their labels — 13 sec wider than 20 sec — so
+     the bar is derived from the number beside it instead. */
+  function slideBars(el, secs) {
+    const longest = Math.max(...secs, 1);
+    el.innerHTML = secs.map((sec, i) => {
+      const value = sec / longest;
+      return `<div>
+          <div class="da-slide-name text-body-base-regular">${i + 1}. ${SLIDES[i].name}</div>
+          <div class="da-slide-row">
+            <div class="pai-progress" style="--value:${value.toFixed(4)}" ${sec ? "" : "data-zero"}
+                 role="progressbar" aria-valuemin="0" aria-valuemax="${longest}" aria-valuenow="${sec}"
+                 aria-label="Time on slide ${i + 1}">
+              <div class="pai-progress-bar"></div>
+            </div>
+            <span class="da-slide-time text-body-base-regular">${sec} sec</span>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  /* ── a column chart ──────────────────────────────────────────────────────
+     Local, because the design system publishes no chart primitives at all. */
+  function columnChart(el, tip, opts) {
+    const { values, labels, axisMax, ticks, format, caption } = opts;
+    el.innerHTML =
+      `<div class="da-ticks text-body-sm-regular">${
+        ticks.map(t => `<span style="top:${(1 - t / axisMax) * 100}%">${format.tick(t)}</span>`).join("")
+      }</div>
+       <div class="da-chart-plot">
+         <div class="da-grid">${
+           ticks.map(t => `<span style="top:${(1 - t / axisMax) * 100}%"></span>`).join("")
+         }</div>
+         ${values.map((v, i) =>
+           `<div class="da-bar" style="height:${(v / axisMax) * 100}%" ${v ? "" : "data-empty"}
+                 data-i="${i}" tabindex="0" role="img"
+                 aria-label="${labels[i]}: ${format.value(v)}"></div>`).join("")
+         }
+       </div>
+       <div class="da-axis text-body-sm-regular">${
+         labels.map(l => `<span>${l}</span>`).join("")
+       }</div>`;
+
+    // The tooltip reports the bar it is on. The handoff's read 72% while sitting
+    // on a bar drawn at 35%, which is the one thing here that could only be a
+    // wiring mistake rather than a judgement.
+    const show = bar => {
+      const i = +bar.dataset.i;
+      tip.innerHTML =
+        `<span class="da-tip-figure text-heading-xl">${format.value(values[i])}</span>
+         <span class="da-tip-label text-overline-small">${caption}</span>
+         <span class="da-tip-name text-body-base-regular">${format.name(i)}</span>`;
+      const plot = el.querySelector(".da-chart-plot").getBoundingClientRect();
+      const box  = bar.getBoundingClientRect();
+      const wrap = tip.offsetParent.getBoundingClientRect();
+      tip.classList.add("is-on");
+      const half = tip.offsetWidth / 2;
+      const left = box.left - wrap.left + box.width / 2 - half;
+      tip.style.left = Math.max(0, Math.min(left, plot.right - wrap.left - tip.offsetWidth)) + "px";
+      tip.style.top  = (box.top - wrap.top - tip.offsetHeight - 8) + "px";
+    };
+    el.querySelectorAll(".da-bar").forEach(bar => {
+      bar.addEventListener("mouseenter", () => show(bar));
+      bar.addEventListener("focus", () => show(bar));
+      bar.addEventListener("mouseleave", () => tip.classList.remove("is-on"));
+      bar.addEventListener("blur", () => tip.classList.remove("is-on"));
+    });
+  }
+
+  /* ── a donut ─────────────────────────────────────────────────────────────
+     One circle per slice, drawn with stroke-dasharray on a shared circumference
+     and offset by what came before, so the parts cannot drift out of the whole. */
+  function donut(el, parts) {
+    const R = 33, C = 2 * Math.PI * R;
+    let at = 0;
+    const arcs = parts.map(p => {
+      const seg = `<circle cx="40" cy="40" r="${R}" stroke="${p.tone}"
+                    stroke-dasharray="${(p.pct / 100 * C).toFixed(2)} ${C.toFixed(2)}"
+                    stroke-dashoffset="${(-at / 100 * C).toFixed(2)}"></circle>`;
+      at += p.pct;
+      return seg;
+    }).join("");
+    el.innerHTML =
+      `<svg class="da-donut" viewBox="0 0 80 80" role="img"
+            aria-label="${parts.map(p => `${p.label} ${p.pct}%`).join(", ")}">${arcs}</svg>
+       <dl class="da-legend text-body-base-regular">${
+         parts.map(p => `<div>
+             <span class="sw" style="background:${p.tone}"></span>
+             <dt>${p.label}</dt><dd>${p.pct}%</dd>
+           </div>`).join("")
+       }</dl>`;
+  }
+
+  /* ── the viewer table ────────────────────────────────────────────────────── */
+  function viewerRows() {
+    $("viewerRows").innerHTML = VIEWERS.map(v =>
+      `<tr tabindex="0" data-viewer="${v.id}">
+         <td>
+           <span class="da-viewer">
+             <span class="pai-avatar ${v.tint}" aria-hidden="true"><i class="ph ph-user"></i></span>
+             <span>
+               <span class="da-viewer-name text-body-base-regular">Visitor from ${v.where}</span>
+               <span class="da-viewer-meta text-body-sm-regular">${v.agent}</span>
+             </span>
+           </span>
+         </td>
+         <td class="da-when text-body-base-regular">${v.opened}</td>
+         <td class="pai-table-numeric da-when text-body-base-regular">${clock(v.secs)} min</td>
+       </tr>`).join("");
+
+    $("viewerRows").querySelectorAll("tr").forEach(row => {
+      const go = () => { state.viewer = row.dataset.viewer; setView("viewer"); };
+      row.addEventListener("click", go);
+      row.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+      });
+    });
+  }
+
+  /* ── the drill-down ──────────────────────────────────────────────────────
+     A viewer's per-slide seconds are the deck's shape apportioned to THEIR
+     total, so the eight bars sum to the duration their row advertises. The
+     handoff shows one viewer's numbers on every viewer; this is the same shape,
+     told truthfully per person. */
+  function renderViewer() {
+    const v = VIEWERS.find(x => x.id === state.viewer) || VIEWERS[0];
+    const secs = apportion(SLIDES.map(s => s.sec), v.secs);
+    $("vwTitle").textContent = `Visitor from ${v.where}’s analytics for`;
+    $("vwMeta").textContent  = `${v.agent} • Last opened ${v.opened}`;
+    $("vwTotal").textContent = `${clock(v.secs)} minutes`;
+    $("vwAvatar").className  = `pai-avatar pai-avatar-large ${v.tint}`;
+    slideBars($("viewerSlides"), secs);
+  }
+
+  /* ── steps and tabs ──────────────────────────────────────────────────────── */
+  function moveInk() {
+    const on = $("daTabs").querySelector(".is-selected");
+    $("daInk").style.width = on.offsetWidth + "px";
+    $("daInk").style.transform = `translateX(${on.offsetLeft}px)`;
+  }
+
+  function setTab(tab) {
+    state.tab = tab;
+    $("daTabs").querySelectorAll(".tab-item").forEach(t => {
+      const on = t.dataset.tab === tab;
+      t.classList.toggle("is-selected", on);
+      t.setAttribute("aria-selected", String(on));
+    });
+    $("paneTime").classList.toggle("is-on", tab === "time");
+    $("paneCompletion").classList.toggle("is-on", tab === "completion");
+    $("paneViews").classList.toggle("is-on", tab === "views");
+    document.body.dataset.tab = tab;
+    moveInk();
+    writeUrl();
+  }
+
+  function setView(view) {
+    state.view = view;
+    $("stepDeck").classList.toggle("is-on", view === "deck");
+    $("stepViewer").classList.toggle("is-on", view === "viewer");
+    document.body.dataset.view = view;
+    $("segView").querySelector(`input[value="${view}"]`).checked = true;
+    if (view === "viewer") renderViewer(); else moveInk();
+    writeUrl();
+  }
+
+  function writeUrl() {
+    const u = new URL(location);
+    u.searchParams.set("view", state.view);
+    u.searchParams.set("tab", state.tab);
+    u.searchParams.set("viewer", state.viewer);
+    history.replaceState(null, "", u);
+  }
+
+  /* ── wire it up ──────────────────────────────────────────────────────────── */
+  slideBars($("deckSlides"), SLIDES.map(s => s.sec));
+  viewerRows();
+  donut($("splitChannel"), CHANNELS);
+  donut($("splitDevice"), DEVICES);
+
+  columnChart($("chartCompletion"), $("tipCompletion"), {
+    values: SLIDES.map(s => s.engaged),
+    labels: SLIDES.map((s, i) => String(i + 1)),
+    axisMax: 100, ticks: [0, 50, 100], caption: "Users engaged",
+    format: { tick: t => t + "%", value: v => Math.round(v) + "%", name: i => `“${SLIDES[i].name}”` }
+  });
+
+  columnChart($("chartViews"), $("tipViews"), {
+    values: VIEWS, labels: VIEW_DAYS,
+    axisMax: VIEWS_AXIS, ticks: [0, 20, 40], caption: "Views",
+    format: { tick: t => String(t), value: v => String(v),
+              name: i => VIEW_DAYS[i] + (i ? " July" : "") }
+  });
+
+  $("daTabs").addEventListener("click", e => {
+    const t = e.target.closest(".tab-item");
+    if (t) setTab(t.dataset.tab);
+  });
+  $("daBack").addEventListener("click", () => setView("deck"));
+  $("segView").addEventListener("change", e => setView(e.target.value));
+  addEventListener("resize", () => { if (state.view === "deck") moveInk(); });
+
+  const q = new URLSearchParams(location.search);
+  const pick = (k, allowed, fallback) => allowed.includes(q.get(k)) ? q.get(k) : fallback;
+  state.viewer = pick("viewer", VIEWERS.map(v => v.id), "1");
+  setTab(pick("tab", ["time", "completion", "views"], "time"));
+  setView(pick("view", ["deck", "viewer"], "deck"));
+  requestAnimationFrame(moveInk);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!-- canon: feature-modal · source: muditas-pai/design-protos explorations/mani/pricing/feature-modal.html (Figma 217:7704, box 2132:1984) · rebuilt on the design system 3 Aug 2026 -->
+<!--
+  WHAT MOVED, AND WHY
+  ===================
+  A rebuild, not a copy. Every value the design system publishes now comes from it,
+  so the differences below are the system asserting itself rather than drift:
+
+    modal radius   4px          → var(--rounded-lg), 8px. The settled annotation is
+                                  "8px rounding radius for all modals".
+    scrim          rgba(10,25,37,.72) + blur(1px)
+                                → var(--bg-scrim) + var(--bg-scrim-blur). Black at 50%
+                                  with a real 8px blur: the blur does the separating,
+                                  so the scrim does not need to be near-opaque.
+    modal shadow   4 hand-written layers
+                                → var(--elevation-04), the overlay step.
+    export icon    ph-fill      → ph. "Do use only Phosphor outline icons"; the source
+                                  filled this one glyph and no other.
+    feature rows   bespoke      → .listitem / .listitem-interactive / .is-selected
+    tier badges    bespoke      → .pai-badge-pro, .pai-badge-gold
+    the two CTAs   bespoke      → .button-primary, .button-gold-shimmer
+    media          local jpgs   → assets/features/, where three features have the
+                                  real clip and the still doubles as its poster.
+
+  DESIGN SYSTEM GAP — the offer chip. A filled brand-blue pill with a downward tail,
+  a countdown, and a bob-and-glow animation. Nothing published is a near miss: .pai-badge
+  is a 18px tint, .chip-style is an outlined control. Built from tokens below and flagged
+  rather than forced into a component it is not.
+
+  INVENTED COPY — "Meet and edit" has no description in the source; its DESCS entry is
+  missing while all sixteen others are present. One is written here and marked in the
+  data so it is not mistaken for shipped copy.
+
+  HEIGHT — 538, not the source's 600. See about.md: the source's 600 was arbitrary and
+  left 62px of dead space under the CTAs. This is what the right column needs.
+
+  MODES — ?mode=offer (default) · plain · trial. Same three the source carries.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Feature modal · Access premium features</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../design-system/icons/regular.css" />
+<link rel="stylesheet" href="../../design-system/pai.css" />
+<style>
+  /* DESIGN SYSTEM GAP — pai.css sets box-sizing nowhere, so a padded, fixed-width
+     column silently comes out wider than declared by exactly its padding and border.
+     Cost me 53px on the left column before I measured it. Left local rather than
+     added to pai.css: flipping the whole system to border-box would move layout on
+     every screen already built against content-box. */
+  *, *::before, *::after{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; background:var(--bg-tertiary); }
+
+  /* .pai-modal supplies the surface, the radius and elevation-04. Only the geometry
+     is this design's own: 940 x 600, two columns, and it does not grow with content. */
+  /* 538, not the source's 600. That 600 was never derived from anything — the source
+     positions its content absolutely, so nothing pushed back against it and 62px fell
+     to the floor under the CTAs. This is what the right column actually needs:
+     media 337 + 20 + name + description + 32 + CTA 44 + 32. */
+  .fm-modal{
+    flex-direction:row; width:940px; max-width:none; height:538px; max-height:none;
+  }
+  /* No overflow:hidden on the shell — .pai-modal-dismiss lives outside its right edge
+     by design, and clipping the shell clipped the close button clean off. Each column
+     rounds its own outer corners instead. */
+  .fm-left { border-radius:var(--rounded-lg) 0 0 var(--rounded-lg); overflow:hidden; }
+  .fm-right{ border-radius:0 var(--rounded-lg) var(--rounded-lg) 0; overflow:hidden; }
+
+  /* ---- left column: the offer, the pitch, the list ------------------------ */
+  .fm-left{
+    position:relative; flex:none; width:341px; display:flex; flex-direction:column;
+    padding:var(--space-xl) var(--space-lg) var(--space-md) var(--space-2xl);
+    border-right:1px solid var(--border-tertiary);
+  }
+
+  /* GAP — see the header. A filled brand pill with a tail; nothing published fits. */
+  .fm-offer{
+    position:relative; align-self:flex-start; display:inline-flex; align-items:center;
+    gap:var(--space-2xs); padding:var(--space-2xs) var(--space-sm) var(--space-2xs) var(--space-xs);
+    background:var(--bg-brand); color:var(--text-white);
+    border-radius:var(--rounded-full); white-space:nowrap;
+    font-variant-numeric:tabular-nums;   /* type is .text-body-sm-medium */
+    animation:fm-bob 2.6s ease-in-out infinite, fm-glow 2.2s ease-in-out infinite;
+  }
+  .fm-offer .ph{ font-size:var(--icon-xs); }
+  .fm-offer::after{
+    content:''; position:absolute; left:50%;
+    margin-left:calc(var(--space-2xs) * -1); bottom:calc(var(--space-2xs) * -1);
+    width:var(--space-xs); height:var(--space-xs); background:var(--bg-brand);
+    border-radius:var(--rounded-sm); transform:rotate(45deg); z-index:-1;
+  }
+  @keyframes fm-bob{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-3px) } }
+  /* The pulse is the brand colour fading out, so it is derived from --bg-brand
+     rather than written as the hex it happens to be today. */
+  @keyframes fm-glow{
+    0%,100%{ box-shadow:0 4px 10px var(--drop-3),
+                        0 0 0 0 color-mix(in srgb, var(--bg-brand) 55%, transparent) }
+    70%    { box-shadow:0 4px 10px var(--drop-3),
+                        0 0 0 9px color-mix(in srgb, var(--bg-brand) 0%, transparent) }
+  }
+
+  .fm-title{
+    margin:var(--space-md) var(--space-2xl) 0 0; max-width:280px;
+    font-size:1.5rem; font-weight:500; line-height:2rem; letter-spacing:-0.02em;
+    color:var(--text-primary); text-wrap:balance;
+  }
+  .fm-title em{
+    font-style:normal; text-decoration:underline; text-decoration-thickness:2px;
+    text-underline-offset:4px;
+  }
+  .fm-title .accent{ color:var(--text-brand); font-weight:600; }
+
+  /* ---- the feature list -------------------------------------------------- */
+  .fm-listwrap{ position:relative; flex:1 1 auto; min-height:0; margin-top:var(--space-xl); }
+  .fm-list{
+    height:100%; overflow-y:auto; padding-right:var(--space-xs);
+    display:flex; flex-direction:column; gap:var(--space-xs);
+    scrollbar-width:thin; scrollbar-color:var(--border-quaternary) transparent;
+  }
+  .fm-list::-webkit-scrollbar{ width:var(--space-2xs); }
+  .fm-list::-webkit-scrollbar-thumb{ background:var(--border-quaternary); border-radius:var(--rounded-full); }
+  .fm-list .listitem .listitem-title{ flex:0 1 auto; }
+  .fm-list .listitem .pai-badge{ flex:none; }
+
+  /* The list runs to the modal's edge, so both ends fade rather than clip. */
+  .fm-fade{
+    position:absolute; left:0; right:var(--space-xs); height:var(--space-5xl);
+    pointer-events:none; z-index:2; opacity:0; transition:opacity .2s ease;
+  }
+  .fm-fade.is-on{ opacity:1; }
+  .fm-fade-top{
+    top:0;
+    background:linear-gradient(0deg, transparent 0%, var(--bg-elevated) 100%);
+    -webkit-mask-image:linear-gradient(0deg, transparent 0%, #000 70%);
+            mask-image:linear-gradient(0deg, transparent 0%, #000 70%);
+  }
+  .fm-fade-bottom{
+    bottom:0;
+    background:linear-gradient(180deg, transparent 0%, var(--bg-elevated) 100%);
+    -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 70%);
+            mask-image:linear-gradient(180deg, transparent 0%, #000 70%);
+  }
+
+  /* ---- right column: the media, then what it is and what it costs -------- */
+  .fm-right{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+  .fm-media{
+    flex:none; aspect-ratio:16/9; background:var(--bg-tertiary); overflow:hidden;
+  }
+  .fm-media img, .fm-media video{ width:100%; height:100%; object-fit:cover; display:block; }
+  .fm-detail{
+    flex:1 1 auto; display:flex; flex-direction:column;
+    padding:var(--space-lg) var(--space-2xl) var(--space-2xl);
+  }
+  .fm-detail h3{ margin:0; color:var(--text-primary); }   /* type is .text-heading-xl */
+  .fm-detail p{
+    margin:var(--space-xs) 0 0; max-width:56ch;
+    color:var(--text-secondary); text-wrap:pretty;   /* type is .text-body-base-regular */
+    /* Reserved at two lines. Seven of the seventeen features describe themselves in
+       one and ten in two, so without this the modal loses 20px of height on seven of
+       them and the CTAs move under the cursor as you read down the list. */
+    min-height:calc(2 * 1.43em);
+  }
+  .fm-ctas{ display:flex; gap:var(--space-xs); margin-top:var(--space-2xl); }
+  .fm-ctas .button-style{ flex:1; gap:var(--space-2xs); }   /* height is .button-large's */
+  .fm-ctas .save{ opacity:.72; font-weight:400; }
+  .fm-ctas .save::before{ content:'·'; margin:0 var(--space-2xs) 0 var(--space-3xs); }
+
+  /* Plain mode has no offer, so the pitch starts where the chip was. */
+  body[data-mode="plain"] .fm-offer{ display:none; }
+  body[data-mode="plain"] .fm-title{ margin-top:0; }
+  body[data-mode="plain"] .fm-ctas .save{ display:none; }
+
+  /* ---- the mode switcher, not part of the design ------------------------- */
+  .fm-bar{
+    position:fixed; top:var(--space-md); left:var(--space-md); z-index:500;
+    display:flex; gap:var(--space-3xs); padding:var(--space-3xs);
+    background:var(--bg-elevated); border-radius:var(--rounded-lg);
+    box-shadow:var(--elevation-02);
+  }
+  .fm-bar button{
+    border:0; cursor:pointer; font-family:inherit;   /* type is .text-body-sm-medium */
+    padding:var(--space-2xs) var(--space-sm); border-radius:var(--rounded-base);
+    background:transparent; color:var(--text-secondary);
+  }
+  .fm-bar button[aria-current="true"]{ background:var(--bg-primary-inverted); color:var(--text-white); }
+</style>
+<style>
+/* ── PINNED 5 Aug 2026 · NOT MIGRATED ───────────────────────────────────────
+   One design-system value changed under this screen, for contrast, and this
+   artifact is the record of what was built and judged on 31 Jul. The old value
+   is held here so it re-renders as it did.
+
+     --text-warning-secondary   amber-600 #CA8A04 → amber-800 #854D0E
+        .pai-badge-gold text measured 2.66:1 on its own tint; needs 4.5.
+
+   .button-gold-shimmer was changed and changed back, so nothing pins it.
+
+   This block is the marker: a screen carrying one is a screen still waiting to
+   be walked. Migrating means opening it, looking at it, and deleting this. */
+:root{ --text-warning-secondary:#CA8A04; }
+</style>
+</head>
+
+<body class="pai" data-mode="offer">
+
+<nav class="fm-bar" id="bar" aria-label="Mode"></nav>
+
+<div class="pai-modal-layer">
+  <div class="pai-scrim"></div>
+
+  <div class="pai-modal fm-modal" role="dialog" aria-modal="true" aria-labelledby="fmTitle">
+    <div class="fm-left">
+      <span class="fm-offer text-body-sm-medium"><i class="ph ph-clock"></i>Offer ends in <span id="fmTimer">59:57</span></span>
+      <h2 class="fm-title" id="fmTitle"></h2>
+
+      <div class="fm-listwrap">
+        <div class="fm-fade fm-fade-top" id="fadeTop"></div>
+        <div class="fm-list" id="fmList" role="listbox" aria-label="Premium features"></div>
+        <div class="fm-fade fm-fade-bottom is-on" id="fadeBottom"></div>
+      </div>
+    </div>
+
+    <div class="fm-right">
+      <div class="fm-media" id="fmMedia"></div>
+      <div class="fm-detail">
+        <h3 class="text-heading-xl" id="fmName"></h3>
+        <p class="text-body-base-regular" id="fmDesc"></p>
+        <div class="fm-ctas">
+          <button class="button-style button-large button-primary" type="button">
+            Buy Pro<span class="save">Save $48</span>
+          </button>
+          <button class="button-style button-large button-gold-shimmer" type="button">
+            Buy Gold<span class="save">Save $300</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <button class="pai-modal-dismiss" type="button" aria-label="Close"><i class="ph ph-x"></i></button>
+  </div>
+</div>
+
+<script>
+(function () {
+  // slug · tier · label · icon · asset in assets/features/ · description
+  const F = [
+    ["export","pro","Export presentations","export","export","Download your presentations as PowerPoint, PDF, or image files for offline use and sharing."],
+    ["ultra","gold","Ultra AI model","sparkle","ultra-models","Our most powerful model, for the highest quality content and design output."],
+    ["brandkit","pro","Brand kit","swatches","brand-kit","Add your logo, fonts, and colors once, and every deck comes out on-brand."],
+    ["knowledge","gold","Shared knowledge base","book-open","project-knowledge","Upload your files once. The AI references them on every slide, so your decks stay accurate and on-message."],
+    ["team","pro","Invite team members","users-three","invite-members","Bring your team into one workspace to co-edit decks in real time, with comments."],
+    ["refresh","gold","Refresh data","arrows-clockwise","refresh-from-source","Update every chart and number across the deck in one click, so nothing goes stale."],
+    ["templates","pro","Templates","layout","templates","Start from professionally designed, on-brand templates."],
+    ["analytics","pro","Analytics","chart-bar","analytics","Track views, engagement, and viewer location. See exactly how your deck performs after you share it."],
+    ["projects","pro","Projects","folder","projects","Group related decks into shared spaces, so everyone knows where the latest version lives."],
+    ["fonts","pro","Font pair","text-aa","fonts","Set your brand fonts once, and they apply across every deck you create."],
+    ["colors","pro","Color palette","palette","colours","Lock in your brand colors, and every slide stays on palette automatically."],
+    ["assign","pro","Assign slide","cursor","assign-slides","Hand specific slides to the right teammate, so everyone knows exactly what they own."],
+    ["promodel","pro","Pro AI model","star-four","pro-models","Enhanced quality on every generation: smarter content, sharper design."],
+    ["slidecount","pro","Slide count","cards","long-decks","Generate longer decks, up to 21+ slides in one go, without splitting your story."],
+    ["comments","pro","Comments","chat-centered-dots","comments","Leave feedback right on the slide, and resolve it without leaving the deck."],
+    ["present","pro","Meet and present","projector-screen","meet-and-present","Present live to remote audiences in real time, straight from the editor."],
+    // INVENTED — the source has no description for this one. Not shipped copy.
+    ["meetedit","pro","Meet and edit","pencil-simple","meet-and-edit","Edit the deck together on a call, with everyone's cursor on the slide."],
+  ];
+  // the three features whose media is a real clip; the still is also its poster
+  const CLIPS = new Set(["export","team","analytics"]);
+  const A = "../../assets/features/";
+
+  const MODES = [["offer","Close nudge offer"],["plain","No offer"],["trial","7-day trial expired free users"]];
+  const list = document.getElementById("fmList");
+  const bar  = document.getElementById("bar");
+  let mode = new URLSearchParams(location.search).get("mode");
+  if (!MODES.some(m => m[0] === mode)) mode = "offer";
+
+  bar.innerHTML = MODES.map(([k, label]) =>
+    `<button type="button" class="text-body-sm-medium" data-mode="${k}" aria-current="${k === mode}">${label}</button>`).join("");
+  bar.onclick = e => { const b = e.target.closest("button"); if (b) setMode(b.dataset.mode); };
+
+  list.innerHTML = F.map(([slug, tier, label, icon], i) =>
+    `<button class="listitem listitem-medium listitem-interactive${i ? "" : " is-selected"}"
+             type="button" role="option" aria-selected="${!i}" data-slug="${slug}">
+       <i class="ph ph-${icon} listitem-icon"></i>
+       <span class="listitem-title">${label}</span>
+       <span class="pai-badge pai-badge-${tier}">${tier}</span>
+     </button>`).join("");
+
+  function select(slug) {
+    const f = F.find(x => x[0] === slug);
+    list.querySelectorAll(".listitem").forEach(el => {
+      const on = el.dataset.slug === slug;
+      el.classList.toggle("is-selected", on);
+      el.setAttribute("aria-selected", String(on));
+    });
+    document.getElementById("fmMedia").innerHTML = CLIPS.has(slug)
+      ? `<video poster="${A}${f[4]}.jpg" autoplay muted loop playsinline>
+           <source src="${A}${f[4]}.webm" type="video/webm">
+           <source src="${A}${f[4]}.mp4" type="video/mp4"></video>`
+      : `<img src="${A}${f[4]}.jpg" alt="" width="1200" height="676">`;
+    document.getElementById("fmName").textContent = f[2];
+    document.getElementById("fmDesc").textContent = f[5];
+    title(f[2]);
+  }
+
+  function title(name) {
+    const el = document.getElementById("fmTitle");
+    if (mode === "trial") {
+      el.innerHTML = 'Your 7-day free trial has ended. Continue with Pro or Gold at <span class="accent">20% off</span>';
+      return;
+    }
+    const tail = mode === "plain"
+      ? " and lots more with Pro or Gold"
+      : ' and lots more with Pro or Gold at <span class="accent">20% off</span>';
+    el.innerHTML = "Access <em></em>" + tail;
+    el.querySelector("em").textContent = name;
+  }
+
+  function setMode(next) {
+    mode = next;
+    document.body.dataset.mode = next;
+    bar.querySelectorAll("button").forEach(b => b.setAttribute("aria-current", String(b.dataset.mode === next)));
+    const u = new URL(location); u.searchParams.set("mode", next); history.replaceState(null, "", u);
+    select(list.querySelector(".is-selected").dataset.slug);
+  }
+
+  list.onclick = e => { const b = e.target.closest(".listitem"); if (b) select(b.dataset.slug); };
+
+  // both fades track the scroll, so neither shows against an end that is already flush
+  const top = document.getElementById("fadeTop"), bottom = document.getElementById("fadeBottom");
+  list.onscroll = () => {
+    top.classList.toggle("is-on", list.scrollTop > 4);
+    bottom.classList.toggle("is-on", list.scrollTop + list.clientHeight < list.scrollHeight - 4);
+  };
+
+  // one clock constant, counting down from the source's own starting value
+  let left = 59 * 60 + 57;
+  const timer = document.getElementById("fmTimer");
+  setInterval(() => {
+    left = Math.max(0, left - 1);
+    timer.textContent = String(Math.floor(left / 60)).padStart(2, "0") + ":" + String(left % 60).padStart(2, "0");
+  }, 1000);
+
+  document.body.dataset.mode = mode;
+  select("export");
+  requestAnimationFrame(() => list.onscroll());
+})();
+</script>
+</body>
+</html>

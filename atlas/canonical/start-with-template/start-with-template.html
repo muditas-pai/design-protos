@@ -1,0 +1,906 @@
+<!-- canon: start-with-template · source: Figma JAS '26 Handoff 1:2798 "Use a Template" · rebuilt on the design system 7 Aug 2026 -->
+<!--
+  A FLOW, NOT A SCREEN
+  ====================
+  Six frames on the board. The first is the dashboard, which is its own canonical
+  screen already, so this file is frames two to six — and those are three
+  surfaces, not five:
+
+    gallery      1:2980   pick a template
+    detail       1:3085   one opened, as a modal OVER the gallery
+    context      1:3224   tell it about your deck   ── empty
+                 1:3260                             ── typed, submit live
+                 1:3294                             ── running
+
+  One file, because it is one flow and the point of a canonical flow is that you
+  can walk it. The detail modal draws the gallery behind it in the handoff, which
+  settles the question: they are one surface with a layer, not two screens.
+
+  WHAT MOVED, AND WHY
+  ===================
+    the card          bespoke   → the same card canonical/dashboard settled from
+                                  663:1769: one clipped container, cover flush to
+                                  the top, --elevation-01. A template and a deck
+                                  are the same object on a shelf.
+    category row      "chip" in the handoff, drawn as tabs
+                                → .tabs-strip + .tab-item + .tabs-indicator
+    search            bespoke   → .pai-search.pai-search-large. The size goes on
+                                  the WRAPPER — .pai-input-large lands on the
+                                  same 44 by a route that skips the component.
+    the two prompts   bespoke   → .pai-prompt whole, brand strip included. A
+                                  template decides the layout; a brand kit
+                                  decides logo, colours and voice. Still open.
+    modal + scrim     bespoke   → .pai-modal .pai-modal-dismiss .pai-scrim
+    author           bespoke    → .pai-avatar-small
+    every icon       mixed      → Phosphor, vendored, regular and fill
+
+  WHAT THE HANDOFF SAYS IS UNFINISHED — its own notes, carried rather than
+  guessed at:
+    · "On hover, thumbnail should show different slides" — built.
+    · "Will work on a shader for this loading state" — the generating step is a
+      pasted screenshot in the board, not a design. What is here is read off
+      that screenshot and is the most honest thing available; it is not a
+      rebuild of something drawn.
+    · Two further steps are LABELLED on the board and not drawn at all —
+      "Editor loading state" and "Presentation view". The flow stops where the
+      design stops.
+
+  STATES — every one reachable from the URL, and declared to the render in
+  window.__atlas below. They are STEPS, not states of one screen; see the note
+  on that declaration for why the harness's word is borrowed anyway.
+    ?state=gallery|detail|context|generating   ?typed=0|1
+    ?step=… still reads, so links written before this survive.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Start with a template · presentations.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../design-system/icons/regular.css" />
+<link rel="stylesheet" href="../../design-system/icons/fill.css" />
+<link rel="stylesheet" href="../../design-system/pai.css" />
+<style>
+  /* DESIGN SYSTEM GAP — pai.css sets box-sizing nowhere. Fifth screen carrying
+     this reset locally; the reason not to fix it centrally is unchanged. */
+  *, *::before, *::after{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; background:var(--bg-subtle); }
+
+  /* The bar's height, named once because two steps now have to reserve it
+     themselves — see .tw-bar. */
+  /* ---- the render's two hooks ------------------------------------------
+     freeze: the shimmer and the spinner make every screenshot of the
+     generating step a different picture, so a render without this is
+     non-deterministic and a judge is looking at whichever frame it caught.
+     unknown-state: a state nobody built has to be VISIBLE, or it screenshots
+     as a clean pass of the gallery. */
+  body[data-freeze="1"], body[data-freeze="1"] *,
+  body[data-freeze="1"] *::before, body[data-freeze="1"] *::after{
+    animation-delay:0s !important; animation-duration:0s !important;
+    transition-duration:0s !important; transition-delay:0s !important;
+    caret-color:transparent !important;
+  }
+  .atlas-unknown-state{
+    position:fixed; inset-inline:0; top:0; z-index:99;
+    background:var(--bg-danger); color:var(--text-inverted-primary);
+    padding:var(--space-sm); text-align:center;
+  }
+
+  .tw-app{ height:100%; position:relative; --tw-bar-h:68px; }
+
+  /* ---- the bar that carries the way out ------------------------------------
+     68 tall, and the only thing on every step. Back sits left, dismiss right —
+     the two are not a pair: back walks the flow, dismiss leaves it.
+
+     It floats over the step rather than sitting above it in a column, because
+     the handoff's right-hand panel starts at y=0 and runs the full height —
+     1:3225 is 528 x 600 in a 600 frame. As a row the bar pushed that panel down
+     68px and the tint stopped short of the top, which read as a band across the
+     screen rather than as one side of it. The bar carries no background of its
+     own, so there is nothing to overlay with. */
+  .tw-bar{
+    position:absolute; top:0; left:0; right:0; z-index:60;
+    height:var(--tw-bar-h); display:flex; align-items:center; justify-content:space-between;
+    padding:0 var(--space-lg); pointer-events:none;
+  }
+  .tw-bar > *{ pointer-events:auto; }
+
+  .tw-step{ display:none; height:100%; min-height:0; }
+  .tw-step.is-on{ display:flex; }
+
+  /* A step that covers another one goes over the bar as well as over the step.
+     The bar sits at 60 so the gallery cannot scroll a card over the back button
+     — but a scrim that dims the whole screen except its two corner controls is
+     saying those two still work, and they do not: the scrim is above them and
+     swallows the click. Behind the scrim they read the way they behave. */
+  .tw-layer{ position:relative; z-index:70; }
+
+  /* ══ gallery ═════════════════════════════════════════════════════════════ */
+  .tw-gallery{ flex-direction:column; overflow-y:auto; }
+  .tw-gallery-head{ flex:none; text-align:center; padding:var(--tw-bar-h) var(--space-lg) 0; }
+  .tw-title{ margin:0; color:var(--text-primary); }   /* .text-heading-3xl */
+  /* 546 is the handoff's, centred like everything else in this band. */
+  .tw-search{ width:546px; max-width:100%; margin:var(--space-xl) auto 0; }
+
+  /* The handoff calls these chips and draws them as tabs — an underline on the
+     selected one, no fill on the rest. Tabs is what they are: they switch the
+     region below rather than filter something you already chose. */
+  .tw-cats{ margin-top:var(--space-xl); justify-content:center; flex-wrap:wrap; }
+
+  /* auto-fill rather than a hard 3. At the 1148 cap it still lays out three, so
+     nothing moves at the width this was drawn at — but below ~1000 it drops to
+     two instead of squeezing three cards down to the point where you cannot read
+     the deck inside them, which is the only reason to show a cover at all. */
+  .tw-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));
+    gap:var(--space-xl); width:1148px; max-width:100%;
+    margin:var(--space-2xl) auto 0; padding:0 var(--space-lg) var(--space-4xl);
+  }
+
+  /* The card is canonical/dashboard's, unchanged — a template and a deck are the
+     same object on a shelf, and the two screens sit one click apart. */
+  .tw-card{
+    display:block; text-align:left; width:100%; padding:0; cursor:pointer;
+    border:0; font-family:inherit; overflow:hidden;
+    background:var(--bg-elevated); border-radius:var(--rounded-md);
+    box-shadow:var(--elevation-01);
+    transition:box-shadow 160ms var(--ease-out-strong);
+  }
+  .tw-card:hover{ box-shadow:var(--elevation-02); }
+  .tw-card:focus-visible{
+    outline:none;
+    box-shadow:0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted);
+  }
+  .tw-card-cover{
+    display:block; aspect-ratio:16/9; overflow:hidden; position:relative;
+    background:var(--bg-quaternary);
+  }
+  .tw-card-cover img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    position:absolute; inset:0; opacity:0; transition:opacity 180ms linear;
+  }
+  .tw-card-cover img.is-on{ opacity:1; }
+  /* The handoff's own note on this frame: "On hover, thumbnail should show
+     different slides." So the cover cycles the template's slides while the
+     pointer is on it — the card answers "what is in this?" without opening it.
+     Crossfaded rather than swapped, because a hard cut at this size reads as a
+     glitch; and it returns to slide one on leave, so the shelf is never left
+     showing a card mid-deck. */
+  .tw-card-progress{
+    position:absolute; left:var(--space-xs); right:var(--space-xs); bottom:var(--space-xs);
+    display:flex; gap:var(--space-3xs); opacity:0; transition:opacity 180ms linear;
+  }
+  .tw-card:hover .tw-card-progress{ opacity:1; }
+  .tw-card-progress span{
+    flex:1; height:var(--space-3xs); border-radius:var(--rounded-full);
+    background:rgba(255,255,255,0.45);
+  }
+  .tw-card-progress span.is-on{ background:var(--bg-elevated); }
+  .tw-card-body{ display:block; padding:var(--space-sm); }
+  .tw-card-title{
+    display:block; color:var(--text-primary);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .tw-card-sub{ display:block; margin-top:var(--space-2xs); color:var(--text-secondary); }
+
+  /* ══ detail — a layer on the gallery, not a screen ══════════════════════ */
+  /* 1120 x 540 in the handoff. .pai-modal supplies surface, radius and
+     elevation-04; only the geometry is this design's. */
+  /* No fixed height. The handoff's 540 was measured against a strip of bare
+     100px thumbnails; a selected ring reaches 4px past them on every side, and
+     a fixed height has nowhere to put that — the flex column takes it out of
+     the strip, which is a scroll box, so the ring gets cut off at the bottom.
+     Growing 13px is the cheaper of the two: it keeps the stage AND the
+     thumbnails at a true 16:9, which is what the strip is for. */
+  /* min() rather than a flat 1120: below ~1170 the modal was wider than the
+     layer it sits in and simply hung off the side of the screen. Both columns
+     then shrink from their drawn widths in proportion, so the split stays what
+     it was — the preview keeps a max so it never grows past the size the stage
+     was designed at.
+
+     The extra 48 is .pai-modal-dismiss's room. That button sits OUTSIDE the
+     modal box — `left:100%` plus a margin — so a modal that fills the layer
+     exactly pushes its own close control off the screen. Nothing below 1216
+     moves for this; at the width this was drawn at the min() still picks 1120. */
+  .tw-detail{
+    flex-direction:row; max-width:none; max-height:none;
+    width:min(1120px, 100% - var(--space-4xl));
+  }
+  .tw-detail-preview{
+    flex:1 1 736px; max-width:736px; min-width:0; display:flex; flex-direction:column;
+    padding:var(--space-md); gap:var(--space-md);
+    border-right:1px solid var(--border-secondary);
+    border-radius:var(--rounded-lg) 0 0 var(--rounded-lg);
+  }
+  /* Neither of these may shrink. A flex column takes space from whatever will
+     give it, and both of these are ratio-locked — shrinking either is how a
+     16:9 stops being 16:9. */
+  .tw-detail-stage{
+    flex:none; aspect-ratio:16/9; overflow:hidden; position:relative;
+    border-radius:var(--rounded-base); background:var(--bg-quaternary);
+  }
+  .tw-detail-stage img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .tw-detail-stage::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow:inset 0 0 0 1px var(--border-secondary);
+  }
+  /* The filmstrip runs past the right edge in the handoff — the deck is longer
+     than the panel, and saying so is the point. */
+  /* align-items:flex-start is what makes these 16:9. A flex row stretches its
+     items by default, so the buttons were being pulled to the row's height and
+     aspect-ratio — which only sets a height when one is not otherwise
+     determined — never got to say anything. They were 179 wide by whatever the
+     tallest thing in the row happened to be.
+
+     The padding is the selected ring's room. .shadow-focus-image reaches 4px
+     OUTSIDE the box, and this is a scroll container, which cuts an outset shadow
+     at its own edge — so the strip carries 4px for it to live in. */
+  /* The right margin cancels the PANEL's padding, not the strip's own, so the
+     strip runs to the divider rather than stopping 16px short of it. A cut-off
+     thumbnail is the point — it says the deck continues — but it has to be cut
+     off by the edge of the panel, not by an invisible line inside it, or it
+     reads as a layout mistake instead of as more content.
+     The handoff draws it the same way: 1:3217 is 760 wide inside a 736 panel. */
+  .tw-strip{
+    flex:none;
+    display:flex; align-items:flex-start; gap:var(--space-sm);
+    overflow-x:auto; padding:var(--space-2xs);
+    margin:calc(var(--space-2xs) * -1) calc(var(--space-md) * -1)
+           calc(var(--space-2xs) * -1) calc(var(--space-2xs) * -1);
+  }
+  .tw-strip button{
+    position:relative; flex:none; width:179px; aspect-ratio:16/9;
+    padding:0; border:0; cursor:pointer;
+    overflow:hidden; border-radius:var(--rounded-base); background:var(--bg-quaternary);
+    transition:box-shadow 160ms var(--ease-out-strong);
+  }
+  .tw-strip button img{ width:100%; height:100%; object-fit:cover; display:block; }
+  /* Selected is .shadow-focus-image's composition — the published treatment for
+     exactly this, and the README says why: "image ... at 2px (thumbnails,
+     because a dark stroke on a dark slide is no stroke at all)". Which is the
+     failure this strip had. Half these slides are near-black, and a near-black
+     ring on them is nothing; the 2px of page colour underneath is what makes it
+     an edge on a dark slide and a light one alike.
+     Composed in the rule rather than taken as a class, the way the README says
+     to — it resolves --bg-elevated on the element, so a dark panel would move
+     it for free. */
+  .tw-strip button.is-selected{
+    box-shadow:0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--border-primary-inverted);
+  }
+  /* The resting hairline stays an overlay: it sits ON the picture, and an inset
+     shadow on the button would paint under it — the trap .pai-avatar documents. */
+  .tw-strip button::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow:inset 0 0 0 1px var(--border-secondary);
+  }
+  .tw-strip button.is-selected::after{ box-shadow:none; }
+
+  .tw-detail-info{
+    flex:1 1 384px; min-width:0; display:flex; flex-direction:column;
+    padding:var(--space-md) var(--space-xl) var(--space-xl);
+    gap:var(--space-md); overflow-y:auto;
+  }
+  .tw-detail-info h3{ margin:0; color:var(--text-primary); }   /* .text-heading-2xl */
+  .tw-author{ display:flex; align-items:center; gap:var(--space-xs); color:var(--text-secondary); }
+  .tw-detail-desc{ margin:0; color:var(--text-secondary); }
+  .tw-detail-acts{ display:flex; gap:var(--space-xs); flex-wrap:wrap; }
+  .tw-share-label{ display:block; color:var(--text-tertiary); }   /* .text-overline-small */
+  .tw-share{ display:flex; gap:var(--space-xs); margin-top:var(--space-xs); }
+
+  /* ══ context ═════════════════════════════════════════════════════════════ */
+  /* Two tracks, and the right one is a PROPORTION rather than a number. 41.25%
+     is 528/1280 — the handoff's own split — so the two halves stay 752/528 at
+     the width it was drawn at and hold that ratio at every other width instead
+     of the left half absorbing all of the growth on its own.
+
+     The clamp is what stops a proportion from being silly at the extremes: below
+     ~900 the panel would be too narrow for two recognisable thumbnails, and on
+     an ultrawide 41% of the screen is more slide than anyone asked for. */
+  .tw-context.is-on{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) clamp(360px, 41.25%, 640px);
+  }
+  /* No fixed left padding any more. `(100% - 624px) / 2` is symmetric padding
+     that centres the content block in whatever the left track turns out to be,
+     and `max()` gives it a floor so it never runs to the edge on a narrow
+     window. At the handoff's 752 the sum is (752-624)/2 = 64, which is exactly
+     the offset the handoff draws — so centring reproduces the design at the
+     design width and stays composed everywhere else. A left-aligned block was
+     only ever right because the column was barely wider than the block.
+
+     Vertically the same idea: `center` rather than pinned to the top, weighted
+     above the middle by the heavier bottom padding, because optical centre sits
+     higher than geometric centre. `safe` keeps the top of the content reachable
+     if a short window ever makes it overflow — without it a centred flex column
+     pushes its first line out of the scroll container's reach. */
+  .tw-context-left{
+    min-width:0; overflow-y:auto;
+    display:flex; flex-direction:column; justify-content:safe center;
+    padding-block:calc(var(--tw-bar-h) + var(--space-3xl))
+                  calc(var(--tw-bar-h) + var(--space-6xl));
+    padding-inline:max(var(--space-lg), (100% - 624px) / 2);
+  }
+  /* Two clauses, two weights. The first is what to do, the second is what you
+     get for it — holding both at primary makes it one long instruction, and
+     holding the second at secondary makes it the promise it is. */
+  .tw-context-title{ margin:0 0 var(--space-2xl); max-width:520px; color:var(--text-primary); }
+  .tw-context-title span{ color:var(--text-tertiary); }
+  /* The prompt is .pai-prompt, and this screen sets its WIDTH and nothing else.
+
+     Everything I had layered on top came from reading the Figma rather than the
+     component: a dashed edge, a 148px floor, a restated radius the box already
+     publishes. Each looked like a small local addition and together they were a
+     second prompt box wearing the first one's classes — the exact drift the
+     component exists to stop. The handoff is a picture of a prompt; pai.css is
+     the prompt.
+
+     What that costs is the dashed "drop a file here" edge, and it is worth
+     saying what replaced it: the placeholder still says "or drop in a file",
+     and dragging one over lights .pai-prompt-edge — the component's OWN focus
+     stroke, because a file arriving and a caret arriving mean the same thing to
+     this box. No new visual language for a state the system already draws.
+
+     The brand strip stays omitted. That is composition, not override: the strip
+     is where a deck's identity gets chosen and the template has already chosen
+     it, which is what 1:3243 draws too. */
+  .tw-context-prompt{ width:100%; }
+
+  /* The template's own slides, alongside. Two columns, because at this width a
+     third makes each one too small to recognise — and recognising them is the
+     entire reason the panel is here. */
+  /* --bg-quaternary, which is 1:3225's own fill. Without it the two halves are
+     one surface and the split is invisible — which is what made an unequal
+     division read as no division at all. The ratio is the grid's job; the tint
+     is what lets you see there is a ratio.
+
+     Padding all round now, not just on the right: 26 in the handoff, 24 on the
+     scale. Previously the slides sat flush to the left edge of their own panel,
+     which only looked deliberate while the panel had no colour.
+
+     The top clears the bar rather than matching the handoff's 17. The handoff
+     draws no dismiss on this frame — back is the only way out of it — so its
+     slides can start 17 from the top of the screen. This flow keeps dismiss on
+     every step, and at 17 the button landed on the second slide. Either the
+     button goes or the row does; the button is the only way out of four steps
+     without walking back through all of them, so the row moves. */
+  .tw-context-slides{
+    min-width:0; overflow-y:auto; background:var(--bg-quaternary);
+    padding:calc(var(--tw-bar-h) + var(--space-md)) var(--space-xl) var(--space-md);
+  }
+  .tw-slide-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:var(--space-lg); }
+  /* No elevation. On a tinted panel these are what the deck looks like, not
+     cards sitting on a surface — the handoff gives them a radius and nothing
+     else, and a lift here would make eight slides read as eight objects. */
+  .tw-slide{
+    aspect-ratio:16/9; overflow:hidden; border-radius:var(--rounded-base);
+    background:var(--bg-tertiary);
+  }
+  .tw-slide img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* ══ generating ══════════════════════════════════════════════════════════ */
+  /* The slides go out of focus while they are being rewritten — the deck you
+     picked is still there, it is just not the truth yet. That is .pai-rewriting
+     now, the third member of the skeleton / shimmer family: content that is
+     present and being REPLACED rather than refreshed. It graduated for the same
+     reason the timeline did — this screen was the second place to want it, and
+     the first was a distinction the system had already half-written. */
+  /* The run log is .pai-timeline, whole. It was built here first — head, rail,
+     6px dot, shimmer, expanding body — and then turned out to exist already in
+     production as pitchdeckdoclist's chat flow loader, which is what 1:3294 is
+     a screenshot of. A thing two places need is a component, so it moved into
+     the design system and this screen now writes three rules for it: where it
+     sits, how far it is from the head, and the one colour that is this screen's
+     rather than the component's.
+
+     That move also took the 6px dot with it. The spacing scale steps 4 to 8, so
+     no screen could write that dot without a literal; the component owns the
+     number now, and this file is back to zero lint errors. */
+  .tw-timeline-head .pai-spinner{ color:var(--text-brand); }
+
+  /* No step switcher. The other canonical screens carry one because their states
+     are alternatives — sixteen scenarios nobody can reach by using the screen.
+     A flow's states are not alternatives, they are a sequence, and it already
+     has the controls to walk it: a card opens the detail, Use this Template
+     moves on, Create Presentation runs it, and back steps home. A switcher here
+     would be a second way to do what the screen already does, sitting on top of
+     the screen it is meant to be showing.
+
+     Every step is still addressable — ?step= is read on load and written on
+     every move, which is what that switcher was really for. */
+</style>
+</head>
+
+<body class="pai" data-step="gallery" data-typed="0">
+
+<script>
+  /* The contract with tools/render/render.py. First child of <body>: the body
+     exists, nothing has painted, so setting the step here cannot flash.
+
+     `states` is the harness's word and it is a STRETCH here. Everywhere else it
+     means one screen under different conditions — atlas-checklist defines it as
+     "every state the finished thing will ever be in" and then says "a run works
+     one of them". These four are not conditions of one screen; they are four
+     screens in a sequence, each with its own layout and its own logic. The
+     harness has no concept of a flow — brief is the only stage that says the
+     word, and everything downstream scores one screen.
+
+     Declared as states anyway, because `?state=` is the only addressing
+     mechanism the render has. Inventing a `?step=` vocabulary the tooling
+     cannot read would buy nothing: the render would photograph the gallery four
+     times and call it a flow. The word is borrowed; the pictures are the point.
+
+     `typed` is a genuine param by the harness's own definition — a variation
+     that is not a state, the same screen differing by what is in the box. */
+  window.__atlas = {
+    states: ["gallery", "detail", "context", "generating"],
+    params: { typed: ["0", "1"] },
+  };
+  (function () {
+    const S = window.__atlas.states;
+    const q = new URLSearchParams(location.search);
+    /* ?step= is what this screen shipped with and what every link written
+       before today says. It stays readable so those links survive. */
+    const s = q.get("state") ?? q.get("step");
+    document.body.dataset.state = S.includes(s) ? s : S[0];
+    document.body.dataset.freeze = q.get("freeze") === "1" ? "1" : "0";
+    if (s && !S.includes(s)) {              // a state nobody built
+      const b = document.createElement("div");
+      b.textContent = "unknown state: " + s;
+      b.className = "atlas-unknown-state";
+      document.body.appendChild(b);
+    }
+  })();
+</script>
+
+<div class="tw-app" data-atlas-frame>
+
+  <div class="tw-bar">
+    <button class="button-style button-large button-tertiary button-circle" type="button" id="back" aria-label="Back">
+      <i class="ph ph-arrow-left"></i>
+    </button>
+    <button class="button-style button-large button-tertiary button-circle" type="button" aria-label="Close">
+      <i class="ph ph-x"></i>
+    </button>
+  </div>
+
+  <!-- ══ 1 · gallery ═════════════════════════════════════════════════════ -->
+  <div class="tw-step tw-gallery is-on" id="stepGallery">
+    <div class="tw-gallery-head">
+      <h1 class="tw-title text-heading-3xl">Select a template</h1>
+
+      <div class="tw-search">
+        <span class="pai-search pai-search-large">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <input class="pai-input" type="search" placeholder="Search for templates…" aria-label="Search for templates" />
+        </span>
+      </div>
+
+      <div class="tabs-strip tabs-strip-small tw-cats" role="tablist" aria-label="Category" id="cats"></div>
+    </div>
+
+    <div class="tw-grid" id="grid"></div>
+  </div>
+
+  <!-- ══ 2 · detail — a layer over the gallery ═══════════════════════════ -->
+  <div class="tw-step tw-layer" id="stepDetail">
+    <div class="pai-modal-layer">
+      <div class="pai-scrim"></div>
+
+      <div class="pai-modal tw-detail" role="dialog" aria-modal="true" aria-labelledby="dtTitle">
+        <div class="tw-detail-preview">
+          <div class="tw-detail-stage">
+            <img id="dtStage" src="../../assets/decks/refresh-capabilities/full/01.jpg" alt="" width="1920" height="1080" />
+          </div>
+          <div class="tw-strip" id="dtStrip"></div>
+        </div>
+
+        <div class="tw-detail-info">
+          <h3 class="text-heading-2xl" id="dtTitle">Capabilities Deck</h3>
+
+          <div class="tw-author text-body-base-regular">
+            <span class="pai-avatar pai-avatar-small"><img src="../../assets/avatars/saravanan.jpg" alt="" /></span>
+            by <a class="pai-link-inline" href="#">Saravanan</a>
+          </div>
+
+          <button class="button-style button-large button-primary" type="button" id="useTemplate">
+            <span class="button-label">Use this Template</span>
+          </button>
+
+          <p class="tw-detail-desc text-body-base-regular">
+            A studio capabilities deck: what you do, who you have done it for, and what it costs.
+            Start here when the job is to introduce a team rather than to report on one — the
+            structure carries a pitch from first slide to pricing without needing a narrative of
+            your own.
+          </p>
+
+          <div class="tw-detail-acts">
+            <button class="button-style button-small button-tertiary" type="button">
+              <i class="ph ph-play" aria-hidden="true"></i><span class="button-label">Preview</span>
+            </button>
+            <button class="button-style button-small button-tertiary" type="button">
+              <i class="ph ph-microsoft-powerpoint-logo" aria-hidden="true"></i><span class="button-label">Export as PowerPoint</span>
+            </button>
+          </div>
+
+          <div>
+            <span class="tw-share-label text-overline-small">Share</span>
+            <div class="tw-share">
+              <button class="button-style button-small button-tertiary button-circle" type="button" aria-label="Copy link"><i class="ph ph-link"></i></button>
+              <button class="button-style button-small button-tertiary button-circle" type="button" aria-label="Share on Facebook"><i class="ph ph-facebook-logo"></i></button>
+              <button class="button-style button-small button-tertiary button-circle" type="button" aria-label="Share on LinkedIn"><i class="ph ph-linkedin-logo"></i></button>
+              <button class="button-style button-small button-tertiary button-circle" type="button" aria-label="Share on X"><i class="ph ph-x-logo"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <button class="pai-modal-dismiss" type="button" id="dtClose" aria-label="Close"><i class="ph ph-x"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 3 · context ═════════════════════════════════════════════════════ -->
+  <div class="tw-step tw-context" id="stepContext">
+    <div class="tw-context-left">
+      <h1 class="tw-context-title text-heading-3xl">
+        Share your own context,<br /><span>and we’ll update the template</span>
+      </h1>
+
+      <div class="pai-prompt tw-context-prompt" id="ctxPrompt">
+        <div class="pai-prompt-edge"></div>
+        <div class="pai-prompt-brand">
+          <i class="ph-fill ph-swatches pai-icon-brand" aria-hidden="true"></i>
+          <span>Set up Brand Kit to use your logo, colours, and voice</span>
+          <span class="pai-badge pai-badge-pro">Pro</span>
+          <i class="ph ph-caret-right" aria-hidden="true"></i>
+        </div>
+        <div class="pai-prompt-box">
+          <textarea class="pai-prompt-input" id="ctx" rows="1"
+                    placeholder="Type here, or drop in a file"
+                    aria-label="Tell us about your deck"></textarea>
+          <div class="pai-prompt-toolbar">
+            <button class="button-style button-small button-tertiary" type="button">
+              <i class="ph ph-upload-simple" aria-hidden="true"></i><span class="button-label">Upload files, or links</span>
+            </button>
+            <button class="button-style button-small button-tertiary" type="button">
+              <i class="ph ph-sparkle" aria-hidden="true"></i><span class="button-label">Standard Model</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+            </button>
+            <button class="button-style button-small button-primary button-disabled button-disabled-40 pai-prompt-submit"
+                    type="button" id="create" disabled><span class="button-label">Create Presentation</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tw-context-slides">
+      <div class="tw-slide-grid" id="ctxSlides"></div>
+    </div>
+  </div>
+
+  <!-- ══ 4 · generating ══════════════════════════════════════════════════ -->
+  <div class="tw-step tw-context tw-generating" id="stepGenerating">
+    <div class="tw-context-left">
+      <div class="pai-timeline-head tw-timeline-head">
+        <span class="pai-timeline-head-icon"><span class="pai-spinner pai-spinner-sm" role="status" aria-label="Working"></span></span>
+        <span class="pai-timeline-head-label">Letting it simmer…</span>
+        <span class="pai-timeline-elapsed" id="elapsed">33s</span>
+      </div>
+      <ol class="pai-timeline" id="runSteps"></ol>
+    </div>
+
+    <div class="tw-context-slides">
+      <div class="tw-slide-grid" id="genSlides"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── the shelf ────────────────────────────────────────────────────────────
+     Four deck libraries is what the repo carries, and the handoff's grid wants
+     six, so the set repeats once. That is a stated placeholder rather than a
+     pretence: a real gallery has six different templates, and the duplication
+     is visible on purpose so nobody mistakes this for the catalogue. */
+  const DECKS = [
+    { slug: "refresh-capabilities",         name: "Capabilities Deck" },
+    { slug: "palantir-q1-investor",         name: "Quarterly Business Review" },
+    { slug: "nayture-brand-like-patagonia", name: "Brand Story" },
+    { slug: "ibm-cost-of-a-data-breach",    name: "Research Report" }
+  ];
+  const CARDS = [0, 1, 2, 3, 0, 1].map(i => DECKS[i]);
+
+  const CATEGORIES = ["Sales", "All", "Marketing", "Strategy", "Education", "Branding",
+                      "Development", "Customer Service", "Research", "Human Resources", "Operations"];
+
+  /* The template the flow opens. Its slides carry both the filmstrip and the
+     panel beside the prompt, so the deck you picked is the deck you keep
+     seeing — which is most of what makes this read as one flow. */
+  const PICKED = "refresh-capabilities";
+  const asset = (slug, size, n) => `../../assets/decks/${slug}/${size}/${String(n).padStart(2, "0")}.jpg`;
+
+  /* Every deck in assets/decks/ is fifteen slides — its own index.json says so
+     in the line "Four decks, fifteen slides each, in three sizes". The filmstrip
+     and the panel beside the prompt both showed a truncated set, which made the
+     template look shorter than it is: a shelf that says "15 slides" and then
+     shows you six is answering a question nobody asked. Named once here rather
+     than fetched, so the screen still opens off the filesystem. */
+  const SLIDE_COUNT = 15;
+  const slideNumbers = Array.from({ length: SLIDE_COUNT }, (_, i) => i + 1);
+
+  /* The shape is 1:3294's — six steps, the finished ones ahead of the running
+     one, each openable. The WORDS are not: that frame is a pasted screenshot of
+     a different deck being generated, so it reads "Refining Financial
+     Narrative", "Analyzing Financial Performance", "Searched Duolingo" while a
+     studio capabilities deck is on screen beside it.
+     A run log that describes someone else's deck is the same defect as a bar
+     that contradicts its own label. These say what this template and this
+     context would actually produce. Adapted, and said so in about.md. */
+  /* Each row opens. The body is what that step actually worked out — the run log
+     is a record you can read, not a progress bar with labels on it, and a row
+     that carries a caret and opens onto nothing is worse than a row with no
+     caret. Written for THIS template and THIS context: a twelve-person brand and
+     packaging studio pitching a mid-market food brand for a retainer. */
+  const RUN = [
+    { label: "Developing Presentation Outline", body:
+      "Fifteen slides in the template, and the brief is a retainer pitch rather " +
+      "than a new-business introduction — they already know the work. Dropping " +
+      "the credentials slide and giving the space to how a retainer runs " +
+      "month to month. Order: who we are, the work, how we'd work together, " +
+      "what it costs." },
+    { label: "Refining Studio Introduction", body:
+      "\"Twelve people\" is doing more work here than a list of disciplines " +
+      "would. A mid-market food brand is choosing between a studio this size " +
+      "and an agency four times it, so the number is the argument. Cut the " +
+      "founding date and the client logo wall — neither answers the question " +
+      "they are actually asking." },
+    { label: "Analyzing Past Work", body:
+      "Six projects in the template's case-study slides. Keeping the two that " +
+      "are brand and packaging for food or drink, and one adjacent retail " +
+      "piece for range. The other three are tech and would read as a studio " +
+      "showing everything it has ever done." },
+    { label: "Refining Capability Narrative", body:
+      "The template splits capability into Branding and Strategy & Planning. " +
+      "Merging them: for a retainer the question is not which services exist " +
+      "but what arrives each month, so this becomes one slide describing a " +
+      "working rhythm rather than two describing a menu." },
+    { label: "Searched the client's site", body:
+      "Three own-brand ranges, all sold through grocery rather than direct. " +
+      "Packaging is doing the selling, which moves it ahead of identity in the " +
+      "order. Their last refresh reads as roughly two years old — worth naming " +
+      "as the thing this retainer would keep from happening again." },
+    { label: "Refining Pricing Section", body:
+      "The template prices by project. A retainer needs a monthly band and " +
+      "what sits inside it, so this becomes three tiers by volume of work with " +
+      "the middle one marked as the usual starting point. Holding the numbers " +
+      "until the value slide has landed." }
+  ];
+
+  const $ = id => document.getElementById(id);
+  const state = { step: "gallery", typed: false };
+
+  /* ── gallery ─────────────────────────────────────────────────────────────── */
+  $("cats").innerHTML = CATEGORIES.map((c, i) =>
+    `<button class="tab-item tab-item-small${i ? "" : " is-selected"}" type="button" role="tab"
+             aria-selected="${!i}">${c}</button>`).join("") +
+    /* No .tabs-indicator-glide yet. The glide is for MOVING between tabs, and at
+       this point the indicator has never been anywhere — it is 0 wide at x=0, so
+       shipping the transition with the markup means the first positioning is an
+       animation, and the line slides in from the left on load.
+       It is added after the first paint, below. */
+    `<span class="tabs-indicator" id="catInk"></span>`;
+
+  $("grid").innerHTML = CARDS.map((d, i) =>
+    `<button class="tw-card" type="button" data-slug="${d.slug}">
+       <span class="tw-card-cover">
+         ${[1,2,3,4].map((n, j) =>
+           `<img class="${j ? "" : "is-on"}" src="${asset(d.slug, "card", n)}" alt="" loading="lazy" />`).join("")}
+         <span class="tw-card-progress" aria-hidden="true">
+           ${[0,1,2,3].map((_, j) => `<span class="${j ? "" : "is-on"}"></span>`).join("")}
+         </span>
+       </span>
+       <span class="tw-card-body">
+         <span class="tw-card-title text-body-base-medium">${d.name}</span>
+         <span class="tw-card-sub text-body-sm-regular">By Presentations.ai</span>
+       </span>
+     </button>`).join("");
+
+  /* The handoff's note on this frame: "On hover, thumbnail should show different
+     slides." One timer per card, started on enter and cleared on leave — and it
+     resets to the first slide, so the shelf is never left showing a card
+     part-way through a deck it is no longer being asked about. */
+  $("grid").querySelectorAll(".tw-card").forEach(card => {
+    const shots = [...card.querySelectorAll(".tw-card-cover img")];
+    const pips  = [...card.querySelectorAll(".tw-card-progress span")];
+    let at = 0, timer = null;
+    const show = i => {
+      shots.forEach((s, j) => s.classList.toggle("is-on", i === j));
+      pips.forEach((p, j) => p.classList.toggle("is-on", i === j));
+    };
+    card.addEventListener("mouseenter", () => {
+      timer = setInterval(() => { at = (at + 1) % shots.length; show(at); }, 900);
+    });
+    card.addEventListener("mouseleave", () => {
+      clearInterval(timer); at = 0; show(0);
+    });
+    card.addEventListener("click", () => setStep("detail"));
+  });
+
+  function moveCatInk() {
+    const on = $("cats").querySelector(".is-selected");
+    if (!on) return;
+    $("catInk").style.width = on.offsetWidth + "px";
+    $("catInk").style.transform = `translateX(${on.offsetLeft}px)`;
+  }
+  $("cats").addEventListener("click", e => {
+    const t = e.target.closest(".tab-item");
+    if (!t) return;
+    $("cats").querySelectorAll(".tab-item").forEach(x => {
+      const on = x === t;
+      x.classList.toggle("is-selected", on);
+      x.setAttribute("aria-selected", String(on));
+    });
+    moveCatInk();
+  });
+
+  /* ── detail ──────────────────────────────────────────────────────────────── */
+  $("dtStrip").innerHTML = slideNumbers.map((n, i) =>
+    `<button type="button" class="${i ? "" : "is-selected"}" data-n="${n}" aria-label="Slide ${n}">
+       <img src="${asset(PICKED, "card", n)}" alt="" loading="lazy" />
+     </button>`).join("");
+
+  $("dtStrip").addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    $("dtStrip").querySelectorAll("button").forEach(x => x.classList.toggle("is-selected", x === b));
+    $("dtStage").src = asset(PICKED, "full", b.dataset.n);
+  });
+
+  $("dtClose").addEventListener("click", () => setStep("gallery"));
+  $("useTemplate").addEventListener("click", () => setStep("context"));
+
+  /* ── context + generating share the template's slides ─────────────────────
+     Same deck, same order, same pictures — twice. The only difference is that
+     the generating copy carries .pai-rewriting, which is the point: it is the
+     SAME slides going soft, not a second set that replaced them. */
+  const slides = (extra = "") => slideNumbers.map(n =>
+    `<div class="tw-slide${extra}"><img src="${asset(PICKED, "card", n)}" alt="" loading="lazy" /></div>`).join("");
+  $("ctxSlides").innerHTML = slides();
+  $("genSlides").innerHTML = slides(" pai-rewriting");
+
+  function setTyped(on) {
+    state.typed = on;
+    document.body.dataset.typed = on ? "1" : "0";
+    const b = $("create");
+    b.disabled = !on;
+    b.classList.toggle("button-disabled", !on);
+    b.classList.toggle("button-disabled-40", !on);
+    writeUrl();
+  }
+  $("ctx").addEventListener("input", e => setTyped(e.target.value.trim().length > 0));
+  $("ctx").addEventListener("focus", () => $("ctxPrompt").classList.add("is-focused"));
+  $("ctx").addEventListener("blur",  () => $("ctxPrompt").classList.remove("is-focused"));
+
+  /* The placeholder offers a drop, so the box answers one — with .is-focused,
+     the component's own state, rather than a drag style invented for the
+     occasion. A file arriving and a caret arriving mean the same thing here:
+     this is where it is going. */
+  ["dragenter", "dragover"].forEach(t => $("ctx").addEventListener(t, e => {
+    e.preventDefault(); $("ctxPrompt").classList.add("is-focused");
+  }));
+  ["dragleave", "drop"].forEach(t => $("ctx").addEventListener(t, e => {
+    e.preventDefault(); $("ctxPrompt").classList.remove("is-focused");
+  }));
+
+  $("create").addEventListener("click", () => setStep("generating"));
+
+  /* ── generating ──────────────────────────────────────────────────────────── */
+  /* Not "four done, two to go". Every line is something that has happened; the
+     last one is the one being written, and the header carries what is live. */
+  $("runSteps").innerHTML = RUN.map((s, i) =>
+    `<li class="pai-timeline-item${i === RUN.length - 1 ? " is-active" : ""}">
+       <span class="pai-timeline-rail" aria-hidden="true"><span class="pai-timeline-dot"></span></span>
+       <div class="pai-timeline-body">
+         <button class="pai-timeline-label" type="button" aria-expanded="false" aria-controls="runBody${i}">
+           <span>${s.label}</span><i class="ph ph-caret-right" aria-hidden="true"></i>
+         </button>
+         <div class="pai-timeline-detail" id="runBody${i}"><div><p>${s.body}</p></div></div>
+       </div>
+     </li>`).join("");
+
+  /* One open at a time — six bodies at once is a wall of text where a log was,
+     and the point of the caret is that you can look INTO one step. */
+  $("runSteps").addEventListener("click", e => {
+    const b = e.target.closest(".pai-timeline-label");
+    if (!b) return;
+    const li = b.closest("li"), open = !li.classList.contains("is-open");
+    $("runSteps").querySelectorAll("li").forEach(x => {
+      x.classList.remove("is-open");
+      const btn = x.querySelector(".pai-timeline-label");
+      btn.setAttribute("aria-expanded", "false");
+      btn.querySelector(".ph").className = "ph ph-caret-right";
+    });
+    if (open) {
+      li.classList.add("is-open");
+      b.setAttribute("aria-expanded", "true");
+      b.querySelector(".ph").className = "ph ph-caret-down";
+    }
+  });
+
+  /* ── steps ───────────────────────────────────────────────────────────────── */
+  const STEPS = { gallery: "stepGallery", detail: "stepDetail",
+                  context: "stepContext", generating: "stepGenerating" };
+
+  function setStep(step) {
+    state.step = step;
+    Object.entries(STEPS).forEach(([k, id]) => $(id).classList.toggle("is-on", k === step));
+    /* Both, and they are not the same thing. `data-state` is the render's, set
+       before paint by the inline script and kept in step here. `data-step` is
+       this screen's own and is what its CSS reads — renaming it would be a
+       rewrite for no gain. */
+    document.body.dataset.state = step;
+    document.body.dataset.step = step;
+    /* The gallery stays mounted under the detail modal — that is what the
+       handoff draws, and it is why this is one surface with a layer. */
+    if (step === "detail") $("stepGallery").classList.add("is-on");
+    /* Behind the scrim the bar is dimmed and the scrim eats its clicks, but a
+       Tab key does not know that — so it goes properly inert while the modal is
+       open. Otherwise focus lands on a control you cannot see and cannot press. */
+    document.querySelector(".tw-bar").inert = step === "detail";
+    if (step === "gallery") requestAnimationFrame(moveCatInk);
+    writeUrl();
+  }
+
+  /* Back walks the flow rather than leaving it. */
+  $("back").addEventListener("click", () => {
+    const order = ["gallery", "detail", "context", "generating"];
+    const i = order.indexOf(state.step);
+    setStep(order[Math.max(0, i - 1)]);
+  });
+  addEventListener("resize", moveCatInk);
+
+  /* Writes `state`, and clears any `step` it was opened with — so a URL copied
+     out of the address bar is the one the render would use, not the one this
+     screen used to speak. */
+  function writeUrl() {
+    const u = new URL(location);
+    u.searchParams.set("state", state.step);
+    u.searchParams.delete("step");
+    u.searchParams.set("typed", state.typed ? "1" : "0");
+    history.replaceState(null, "", u);
+  }
+
+  const q = new URLSearchParams(location.search);
+  const pick = (k, allowed, fb) => allowed.includes(q.get(k)) ? q.get(k) : fb;
+  if (q.get("typed") === "1") {
+    $("ctx").value = "We are a 12-person studio, mostly brand and packaging. The deck is for a "
+      + "retainer pitch to a mid-market food brand — they know us from a one-off project last year.";
+    setTyped(true);
+  } else {
+    setTyped(false);
+  }
+  /* The inline script already resolved this before paint, alias and all — read
+     it back rather than parsing the URL a second time and risking two answers. */
+  setStep(document.body.dataset.state);
+
+  /* Put the indicator where it belongs, let that paint, and only THEN allow it
+     to move. Two frames, not one: the first commits the width and offset with
+     no transition on the element, the second turns the transition on. Doing
+     both in a single frame lets the browser coalesce them and the line
+     animates in from nothing, which is the thing this avoids. */
+  moveCatInk();
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    $("catInk").classList.add("tabs-indicator-glide")));
+})();
+</script>
+<script>
+  /* What the render waits on. Last in <body>, after everything that triggers a
+     font load — a picture taken before the webfont lands measures a fallback. */
+  window.__atlasReady = document.fonts.ready
+    .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+</script>
+</body>
+</html>

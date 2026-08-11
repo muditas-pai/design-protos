@@ -1,0 +1,1007 @@
+<!-- canon: early-renewal · source: muditas-pai/design-protos explorations/mani/pricing/early-renewal.html · rebuilt on the design system 6 Aug 2026 -->
+<!--
+  WHAT MOVED, AND WHY
+  ===================
+  A rebuild, not a copy. Every value the design system publishes now comes from
+  it, so the differences below are the system asserting itself rather than drift:
+
+    modal radius   12px         → var(--rounded-lg), 8px. The settled annotation
+                                  is "8px rounding radius for all modals".
+    modal shadow   0 24px 80px rgba(0,0,0,.4)
+                                → var(--elevation-04), the overlay step.
+    page + scrim   flat #3d3d3d → --bg-tertiary page under .pai-scrim, which is
+                                  black at 50% with a real 8px blur.
+    close button   40px, hand-placed at right:-54px
+                                → .pai-modal-dismiss, 28px, wherever it puts it.
+    credit meter   bespoke 6px pill, brand fill
+                                → .pai-progress / .pai-progress-bar. Square
+                                  corners and the navy→brand ramp are the
+                                  component's; see about.md for what that costs.
+    radios         bespoke 5px ring
+                                → .pai-radio
+    plan cards     hand-written shadow
+                                → var(--elevation-01), which the source's three
+                                  layers already were, written out longhand.
+    pool picker    bespoke dropdown
+                                → .pai-select + .dropdown-menu-style
+    payment tabs   bespoke      → .tabs-strip .tabs-track + .tab-item
+    fields         div.placeholder
+                                → real .pai-input-large, so focus is the field's
+    country        bespoke      → .pai-select-large, opening upward
+    the two CTAs   bespoke      → .button-style .button-large .button-primary
+    tier chips     bespoke      → .pai-badge -neutral / -gold / -success
+    tooltip        bespoke      → .pai-tooltip .pai-tooltip-bottom-center
+    demo bar       bespoke      → .pai-switcher .pai-switcher-small ×3
+    spark glyph    hand-drawn SVG
+                                → ph ph-sparkle. It WAS Phosphor's sparkle,
+                                  pasted as a path; "no hand-drawn SVG where a
+                                  Phosphor icon exists".
+    icons          CDN, three weights
+                                → vendored regular only.
+
+  DESIGN SYSTEM GAPS — eight, each flagged at the rule that needs it. Three are
+  the SECOND screen to hit the same wall, which is the roll-up's threshold for a
+  PR candidate rather than an observation:
+    1. no badge tone names a promotion (the "50% off" badge)     · 2nd screen
+    2. pai.css sets box-sizing nowhere                           · 2nd screen
+    3. .pai-modal solves overflow only for header/body/actions   · 2nd screen
+    4. .pai-progress' track colour IS this panel's surface
+    5. .pai-progress ramps navy→brand — built for progress THROUGH something,
+       not for a gauge of what is LEFT, which wants the opposite
+    6. the gold card's wash, ring and text shimmer have no token
+    7. .pai-tooltip publishes one max-width, sized for a label not a paragraph
+    8. .pai-link is written for an <a>; on a <button> the UA chrome survives it
+
+  WHAT IS NOT FAITHFUL — one thing: the source's min-height:600 is gone. Ten of
+  the sixteen states are taller than 600 anyway, and where the floor bit it held
+  the modal open over emptiness — 195px of blank grey in Gold + Paddle. Measured,
+  in about.md.
+
+  LEFT AS IT WAS, DELIBERATELY — the payment tab strip has one tab, which is a
+  leftover from the 3 Aug UPI removal rather than a design. Kept, because whether
+  a second method returns is a product question this rebuild cannot answer. If it
+  is not coming back, this is the first thing to change.
+
+  STATES — every one reachable from the URL, and the switchers write it back:
+    ?plan=silver|gold|teambuy|teams   ?credits=zero|low   ?pay=stripe|paddle
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Early renewal · Get more credits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../design-system/icons/regular.css" />
+<link rel="stylesheet" href="../../design-system/pai.css" />
+<style>
+  /* DESIGN SYSTEM GAP — pai.css sets box-sizing nowhere, so a padded, fixed-width
+     column comes out wider than declared by exactly its padding. Left local
+     rather than added to pai.css: flipping the whole system to border-box would
+     move layout on every screen already built against content-box. */
+  *, *::before, *::after{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; background:var(--bg-tertiary); }
+
+  /* DESIGN SYSTEM GAP — .pai-modal caps itself at calc(100vh - 96px) and lets
+     .pai-modal-body do the scrolling underneath that cap. A two-column modal has
+     no body to scroll, so the cap simply clips the taller column, and
+     .pai-modal-layer is position:fixed, which leaves no way to reach what was
+     clipped. Measured, not guessed: at a 762px viewport the Buy Team scenario
+     put its last link 42px BELOW the shell, on the scrim.
+     So the layer scrolls instead, which is what a fixed-position ancestor of an
+     over-tall child should have been doing. margin:auto rather than the layer's
+     align-items:center — a centred flex item that outgrows its container loses
+     its top edge to the scroll origin, and auto margins clamp to 0 instead. */
+  .pai-modal-layer{ overflow-y:auto; align-items:flex-start; }
+
+  /* .pai-modal supplies the surface, the radius and elevation-04. The only
+     geometry that is this design's own is the width: 1068, with a 540px left
+     column. Height is whatever the content needs.
+     The source's min-height:600 is gone, and it is the one substantive change
+     here. Measured across all sixteen states: ten of them are taller than 600
+     anyway, so the floor did nothing; and where it did bite it was holding the
+     modal open over emptiness — 195px of blank grey in Gold + Paddle, which is
+     one small card and a three-line summary propped apart by a number. */
+  .er-modal{
+    flex-direction:row; margin:auto;
+    width:1068px; max-width:none; max-height:none;
+  }
+
+  /* No overflow:hidden anywhere on the shell — .pai-modal-dismiss lives outside
+     its right edge, and both columns open dropdowns that must escape their box.
+     Each column rounds its own outer corners instead, which is enough because
+     nothing inside either one reaches a corner. */
+  .er-left { border-radius:var(--rounded-lg) 0 0 var(--rounded-lg); }
+  .er-right{ border-radius:0 var(--rounded-lg) var(--rounded-lg) 0; }
+
+  /* ---- left column: what is left, and what it costs to refill --------------- */
+  /* A plain block, not a flex column. Nothing in here is distributed, and as a
+     flex column its children shrank to fit the modal instead of setting it:
+     the Teams card was being squeezed 10px and the bottom padding eaten with it.
+     The RIGHT column does need flex — its footer sits on margin-top:auto. */
+  .er-left{
+    flex:none; width:540px;
+    padding:var(--space-2xl) var(--space-xl) var(--space-3xl);
+    background:var(--bg-tertiary); border-right:1px solid var(--border-tertiary);
+  }
+
+  /* ---- the credit meter ---------------------------------------------------- */
+  .er-meter{ margin-bottom:var(--space-xl); }
+  .er-meter-row{ display:flex; align-items:center; gap:var(--space-xs); }
+  .er-meter-row .ph{ font-size:var(--icon-md); color:var(--text-primary); }
+  .er-meter-num{ font-variant-numeric:tabular-nums; }  /* type is .text-heading-2xl */
+  /* --text-tertiary, which the source used here, measures 2.4:1 on this panel and
+     needs 4.5. Secondary is 7.4:1, and the hierarchy survives it — "of 5,000" is
+     12px against "credits left" at 14px, so size is already doing that work. */
+  .er-meter-of{ margin-left:auto; color:var(--text-secondary); }
+  /* DESIGN SYSTEM GAP — .pai-progress publishes one track colour, --bg-tertiary,
+     which is exactly this panel's own surface, so the track disappears on it.
+     Moved one step to --bg-quaternary, which is still the semantic layer. The
+     component wants a surface-aware track, or a variant for a tinted panel. */
+  .er-meter .pai-progress{ margin-top:var(--space-xs); background:var(--bg-quaternary); }
+
+  /* ---- the headline and its explainer -------------------------------------- */
+  .er-head h2{ margin:0; color:var(--text-primary); }  /* type is .text-heading-2xl */
+  .er-tip{
+    position:relative; display:inline-flex; vertical-align:-2px;
+    color:var(--text-tertiary); cursor:pointer; margin-left:var(--space-2xs);
+  }
+  .er-tip .ph{ font-size:var(--icon-sm); }
+  .er-tip:hover, .er-tip:focus-visible{ color:var(--text-secondary); }
+  /* DESIGN SYSTEM GAP — .pai-tooltip publishes max-width:192px, which is a label's
+     width. This one carries two sentences and a date range; at 192 it is seven
+     lines in a column narrower than the icon it hangs off. 280 local, and the
+     system wants a -wide. Showing it belongs to the screen, like the dropdown. */
+  .er-tip .pai-tooltip{
+    position:absolute; left:50%; top:calc(100% + var(--space-xs)); z-index:20;
+    width:max-content; max-width:280px; transform:translateX(-50%);
+    opacity:0; visibility:hidden; transition:opacity .15s ease, visibility .15s;
+  }
+  .er-tip:hover .pai-tooltip, .er-tip:focus-within .pai-tooltip{ opacity:1; visibility:visible; }
+
+  /* ---- the plan cards ------------------------------------------------------ */
+  /* One zone per scenario. Only one is ever in the document's flow. */
+  .er-zone{ display:none; }
+  .er-zone.is-on{ display:block; }
+
+  .er-card{
+    margin-top:var(--space-xl); padding:var(--space-lg) var(--space-md);
+    background:var(--bg-elevated); border-radius:var(--rounded-base);
+    box-shadow:var(--elevation-01);
+  }
+  .er-card + .er-card{ margin-top:var(--space-md); }
+  /* DESIGN SYSTEM GAP — the gold card's wash and ring. bg-gradient-gold is a
+     saturated horizontal fill built for a button, not a soft vertical wash, and
+     no token publishes the ring. Both literal here and flagged. The gold family
+     as a whole (#faf0d6 · #fdf9ec · #e6d19e · #c9932a · #8a5a10) is the one part
+     of this screen the semantic layer cannot describe. */
+  .er-card-gold{
+    background-image:linear-gradient(180deg,#faf0d6 0%,#fdf9ec 40%,var(--white) 80%);
+    box-shadow:0 0 0 1px #e6d19e, 0 1px 2px 0 var(--drop-2), inset 0 0 0 1px var(--inner-1);
+  }
+
+  .er-row{ display:flex; gap:var(--space-lg); align-items:flex-start; cursor:pointer; }
+  .er-row > .pai-radio{ margin-top:var(--space-2xs); }
+  /* Gold-renewal is the only plan on offer in its scenario, so there is nothing
+     to choose between and a radio would be a control with one position. */
+  .er-zone-gold .pai-radio{ display:none; }
+  .er-row-body{ flex:1; min-width:0; }
+
+  .er-line{ display:flex; align-items:center; justify-content:space-between; gap:var(--space-xs); }
+  .er-name{ color:var(--text-secondary); white-space:nowrap; }  /* .text-body-base-medium */
+  .er-name .pai-badge{ margin-left:var(--space-2xs); vertical-align:1px; }
+  .er-price{ display:flex; align-items:center; gap:var(--space-2xs); white-space:nowrap; }
+  /* Also secondary rather than the source's tertiary — 2.4:1 on the gold card's
+     wash. Nothing is lost: the rule through it is what says this price is the
+     old one, and a colour difference on top of it was never carrying that. */
+  .er-strike{ color:var(--text-secondary); text-decoration:line-through; }
+  .er-amount{ color:var(--text-secondary); }
+  .er-per{ color:var(--text-secondary); }
+  .er-saved{ display:flex; justify-content:flex-end; color:var(--text-brand); }
+
+  /* No icon in front of the number, on either card. The meter above has the
+     sparkle and the cards do not, which is what keeps 5,000 and 50,000 starting
+     at the same x — an icon on the gold one alone steps its number 28px right,
+     and two prices you are meant to compare stop lining up. */
+  .er-credits{ display:flex; align-items:center; gap:var(--space-xs); margin-top:var(--space-2xs); }
+  /* Takes .text-heading-2xl for the size, line-height and tracking, and departs
+     on one leg of the tuple: weight. The ramp publishes 1.5rem at 400 only, and
+     this is the number the card exists to show. The meter's number above is the
+     same class unchanged — the two sitting at 400 and 700 IS the hierarchy, and
+     writing it as one override rather than a second face is what makes that
+     legible in the markup. The source's -0.02em went with the ramp's -0.01em:
+     0.24px against 0.48px per character, which is not a design. */
+  .er-credits-num{ font-weight:700; color:var(--text-primary); font-variant-numeric:tabular-nums; }
+  .er-credits-label{ color:var(--text-secondary); }
+  .er-card-gold .er-credits{ margin-top:0; }
+  /* Gold's number shimmers. No published text treatment does this — .button-gold-shimmer
+     is a fill sweeping under a label, not a gradient clipped to glyphs. */
+  .er-card-gold .er-credits-num{
+    background:linear-gradient(92deg,#8a5a10,#c9932a 40%,#f2d688 50%,#c9932a 60%,#8a5a10);
+    background-size:200% 100%;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:er-gold-shimmer 2.6s linear infinite;
+  }
+  @keyframes er-gold-shimmer{ from{ background-position:120% 0; } to{ background-position:-80% 0; } }
+  @media (prefers-reduced-motion: reduce){
+    .er-card-gold .er-credits-num{ animation:none; background-position:50% 0; }
+  }
+
+  /* Carry-forward only exists when there is something left to carry. */
+  .er-carry{ display:none; align-items:center; gap:var(--space-2xs); margin-top:var(--space-xs); color:var(--text-secondary); }
+  body[data-credits="low"] .er-carry{ display:inline-flex; }
+  .er-zone-teams .er-carry, .er-zone-teambuy .er-carry{ margin-top:var(--space-sm); }
+
+  .er-card .pai-divider{ margin-top:var(--space-sm); }
+  .er-points{
+    list-style:none; margin:var(--space-sm) 0 0; padding:0;
+    display:flex; flex-direction:column; gap:var(--space-xs);
+  }
+  .er-points li{ display:flex; align-items:flex-start; gap:var(--space-xs); color:var(--text-secondary); }
+  .er-points li .ph{ font-size:var(--icon-sm); flex:none; color:var(--text-secondary); }
+
+  /* ---- teams: the pool picker ---------------------------------------------- */
+  .er-seats{ margin-top:var(--space-2xs); width:fit-content; }
+  /* "Unlimited" is the one word on the screen that is a quantity without a
+     number, and the sweep is what stands in for the digits. Nothing published
+     draws type this way. See about.md — this is on the take-with-care list. */
+  .er-seats-grad{
+    background:linear-gradient(90deg,#002464,#0059ff,#0095ff,#b6daff,#0095ff,#0059ff,#002464);
+    background-size:200% auto; background-position:200% center;
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+    animation:er-seats-sweep 3.5s linear infinite;
+  }
+  @keyframes er-seats-sweep{ from{ background-position:200% center; } to{ background-position:0% center; } }
+  @media (prefers-reduced-motion: reduce){
+    .er-seats-grad{ animation:none; background-position:50% center; }
+  }
+  .er-dd-label{ margin:var(--space-md) 0 var(--space-2xs); color:var(--text-secondary); }
+  .er-pool{ max-width:300px; }
+  .er-pool .dropdown-item-style .pai-badge{ flex:none; }
+  /* The published select marks its answer with a trailing check. Here the trailing
+     slot already carries the volume discount, so the check follows it rather than
+     replacing it, and it is drawn only on the option that is the answer. */
+  .er-pool .er-check{ flex:none; color:var(--text-primary); visibility:hidden; }
+  .er-pool [aria-selected="true"] .er-check{ visibility:visible; }
+
+  /* DESIGN SYSTEM GAP — .pai-link is written for an <a>. It sets colour, decoration
+     and a radius, and nothing else, so on a <button> the UA border, grey face,
+     padding and font all survive it: "Change" drew a bordered grey box with the
+     link inside it. Any screen styling a button as a link has to re-reset this,
+     which means every screen does it slightly differently. */
+  .er-linkbtn{ background:none; border:0; padding:0; font-family:inherit; }
+  .er-switch{ margin-top:var(--space-md); width:fit-content; }
+
+  /* ---- right column: how it gets paid for ---------------------------------- */
+  .er-right{
+    flex:1 1 auto; min-width:0; display:flex; flex-direction:column;
+    padding:var(--space-2xl) var(--space-xl) var(--space-xl);
+    background:var(--bg-elevated);
+  }
+  .er-right h2{ margin:0 0 var(--space-xl); color:var(--text-primary); }
+  .er-pane{ display:none; flex:1; flex-direction:column; }
+  .er-pane.is-on{ display:flex; }
+
+  .er-right .tabs-strip{ margin-bottom:var(--space-xl); }
+  .er-right .tab-item .ph{ font-size:var(--icon-md); margin-right:var(--space-xs); }
+
+  .er-field{ margin-bottom:var(--space-lg); }
+  .er-field > label{ display:block; margin-bottom:var(--space-2xs); color:var(--text-secondary); }
+  .er-pair{ display:grid; grid-template-columns:1fr 1fr; gap:var(--space-lg); }
+  .er-pair .er-field{ margin-bottom:var(--space-lg); }
+
+  /* DESIGN SYSTEM GAP-ADJACENT — the system publishes .pai-search, a wrapper that
+     lays its own two icons over a real .pai-input, but nothing general for a field
+     carrying something at its trailing edge. Same technique, local, and the field
+     underneath is the published one so focus and error can never drift from it.
+     Two names, because the two fields carry different things: the card field
+     carries four brand LOGOS, the CVC field carries one ICON of where the number
+     sits on the card. One name covering both would say neither. */
+  .er-adorn{ position:relative; display:block; }
+  .er-adorn > .er-logos,
+  .er-adorn > .er-cvc-icon{
+    position:absolute; right:var(--space-sm); top:50%; transform:translateY(-50%);
+    display:flex; align-items:center; gap:var(--space-2xs); pointer-events:none;
+  }
+  .er-adorn > .er-logos img,
+  .er-adorn > .er-cvc-icon img{ width:24px; height:16px; display:block; }
+  .er-adorn-cards > .pai-input{ padding-right:124px; }
+  .er-adorn-cvc   > .pai-input{ padding-right:var(--space-3xl); }
+
+  .er-disclaimer{ margin:0 0 var(--space-lg); color:var(--text-secondary); }
+  .er-pay{ width:100%; }
+
+  .er-foot{
+    display:flex; align-items:center; justify-content:center; gap:var(--space-md);
+    margin-top:auto; padding-top:var(--space-lg); color:var(--text-secondary);
+  }
+  .er-foot-by{ display:flex; align-items:center; gap:var(--space-xs); }
+  .er-foot-by img{ height:16px; display:block; }
+  .er-foot .pai-divider-vertical{ height:18px; align-self:center; }
+  .er-foot-links{ display:flex; gap:var(--space-sm); }
+
+  /* ---- paddle: a saved card, and one press --------------------------------- */
+  .er-summary{
+    padding:var(--space-md); background:var(--bg-elevated);
+    border-radius:var(--rounded-base); box-shadow:var(--elevation-01);
+  }
+  .er-summary-line{ display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-xs); }
+  /* "Inside a card a divider runs end to end." pai.css implements that only for
+     .dropdown-menu-style, which cancels its own padding with negative margins; a
+     card has to do it by hand. Cancelled here because this line divides the whole
+     summary — unlike the one in a plan card, which divides the row body and
+     already runs the full width of the thing it is dividing. */
+  .er-summary .pai-divider{
+    width:auto; margin:var(--space-sm) calc(var(--space-md) * -1);
+  }
+  .er-summary-note{ margin:var(--space-2xs) 0 0; color:var(--text-secondary); }
+  .er-off b{ color:var(--text-success-primary); font-weight:500; }
+  .er-saved-card{ display:flex; align-items:center; gap:var(--space-xs); margin-top:var(--space-sm); }
+  .er-saved-card > .ph{ font-size:var(--icon-md); color:var(--text-secondary); }
+  .er-saved-card > .pai-link{ margin-left:auto; }
+  .er-agree{ display:flex; align-items:flex-start; gap:var(--space-xs); margin-top:var(--space-md); cursor:pointer; }
+  .er-agree > .pai-checkbox{ margin-top:var(--space-3xs); }
+  .er-confirm{ width:100%; margin-top:var(--space-xl); }
+
+  /* ---- the switchers, which are not part of the design ---------------------- */
+  .er-bar{
+    position:fixed; top:var(--space-md); left:var(--space-md); z-index:500;
+    display:flex; flex-wrap:wrap; gap:var(--space-xs);
+  }
+  .er-bar .pai-switcher{ box-shadow:var(--elevation-02); }
+</style>
+</head>
+
+<body class="pai" data-plan="silver" data-credits="zero" data-pay="stripe">
+
+<nav class="er-bar" aria-label="Demo controls">
+  <div class="pai-switcher pai-switcher-small" role="radiogroup" aria-label="Plan scenario" id="segPlan">
+    <label class="pai-switcher-option"><input type="radio" name="er-plan" value="silver" checked /><span>Silver</span></label>
+    <label class="pai-switcher-option"><input type="radio" name="er-plan" value="gold" /><span>Gold</span></label>
+    <label class="pai-switcher-option"><input type="radio" name="er-plan" value="teambuy" /><span>Buy Team</span></label>
+    <label class="pai-switcher-option"><input type="radio" name="er-plan" value="teams" /><span>Teams</span></label>
+  </div>
+  <div class="pai-switcher pai-switcher-small" role="radiogroup" aria-label="Credits left" id="segCredits">
+    <label class="pai-switcher-option"><input type="radio" name="er-credits" value="zero" checked /><span>0 credits</span></label>
+    <label class="pai-switcher-option"><input type="radio" name="er-credits" value="low" /><span>432 left</span></label>
+  </div>
+  <div class="pai-switcher pai-switcher-small" role="radiogroup" aria-label="Payment provider" id="segPay">
+    <label class="pai-switcher-option"><input type="radio" name="er-pay" value="stripe" checked /><span>Stripe</span></label>
+    <label class="pai-switcher-option"><input type="radio" name="er-pay" value="paddle" /><span>Paddle</span></label>
+  </div>
+</nav>
+
+<div class="pai-modal-layer">
+  <div class="pai-scrim"></div>
+
+  <div class="pai-modal er-modal" role="dialog" aria-modal="true" aria-labelledby="erTitle">
+
+    <!-- ══ left: what is left, and what it costs to refill ═══════════════════ -->
+    <div class="er-left">
+
+      <div class="er-meter">
+        <div class="er-meter-row">
+          <i class="ph ph-sparkle" aria-hidden="true"></i>
+          <span class="er-meter-num text-heading-2xl" id="meterNum">0</span>
+          <span class="text-body-base-regular" style="color:var(--text-secondary)">credits left</span>
+          <span class="er-meter-of text-body-sm-regular">of <span id="meterCap">5,000</span></span>
+        </div>
+        <div class="pai-progress" id="meterBar" style="--value:0"
+             role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+             aria-label="Credits remaining">
+          <div class="pai-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="er-head">
+        <h2 class="text-heading-2xl" id="erTitle"><span id="headline">You're out of credits. Renew your plan</span><span
+            class="er-tip" tabindex="0" role="button" aria-label="What early renewal does"><i class="ph ph-info" aria-hidden="true"></i>
+            <span class="pai-tooltip pai-tooltip-bottom-center" role="tooltip">Renewing early starts a fresh plan year today. Your new plan runs 28 Jul 2026 to 28 Jul 2027. Unused credits carry over.</span>
+          </span></h2>
+      </div>
+
+      <!-- ── on Silver: renew, or take Gold at half price ──────────────────── -->
+      <div class="er-zone er-zone-silver is-on" id="zone-silver">
+        <div class="er-card">
+          <label class="er-row is-selected" data-plan="pro">
+            <input type="radio" class="pai-radio" name="er-choice-silver" value="pro" checked />
+            <div class="er-row-body">
+              <div class="er-line">
+                <span class="er-name text-body-base-medium">Renew Silver<span class="pai-badge pai-badge-neutral">Current plan</span></span>
+                <span class="er-price">
+                  <span class="er-amount text-body-base-medium">$240</span>
+                  <span class="er-per text-body-sm-regular">/year</span>
+                </span>
+              </div>
+              <div class="er-credits">
+                <span class="er-credits-num text-heading-2xl">5,000</span>
+                <span class="er-credits-label text-body-base-regular">Credits</span>
+              </div>
+              <div class="er-carry text-body-sm-medium">+432 credits carry forward</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="er-card er-card-gold">
+          <label class="er-row" data-plan="gold">
+            <input type="radio" class="pai-radio" name="er-choice-silver" value="gold" />
+            <div class="er-row-body">
+              <div class="er-line">
+                <span class="er-name text-body-base-medium">Upgrade to Gold<span class="pai-badge pai-badge-info">50% off</span></span>
+                <span class="er-price">
+                  <span class="er-strike text-body-base-medium">$1,200</span>
+                  <span class="er-amount text-body-base-medium">$600</span>
+                  <span class="er-per text-body-sm-regular">/year</span>
+                </span>
+              </div>
+              <div class="er-saved text-body-sm-regular">Save $600</div>
+              <div class="er-credits">
+                <span class="er-credits-num text-heading-2xl">50,000</span>
+                <span class="er-credits-label text-body-base-regular">Credits</span>
+                <span class="pai-badge pai-badge-gold">10x Silver</span>
+              </div>
+              <div class="er-carry text-body-sm-medium">+432 credits carry forward</div>
+              <hr class="pai-divider" />
+              <ul class="er-points text-body-sm-regular">
+                <li><i class="ph ph-sparkle" aria-hidden="true"></i>Ultra AI model, our most powerful</li>
+                <li><i class="ph ph-swatches" aria-hidden="true"></i>Custom brand kit and moods, built for you</li>
+                <li><i class="ph ph-book-open" aria-hidden="true"></i>Projects with a shared knowledge base</li>
+                <li><i class="ph ph-headset" aria-hidden="true"></i>Priority support, with direct access to our Head of Product</li>
+              </ul>
+            </div>
+          </label>
+        </div>
+
+        <button type="button" class="er-switch er-linkbtn pai-link text-body-sm-medium" data-goto="teambuy">Managing a team? Switch to a Team plan</button>
+      </div>
+
+      <!-- ── already on Gold: one plan, so no choice to draw ───────────────── -->
+      <div class="er-zone er-zone-gold" id="zone-gold">
+        <div class="er-card er-card-gold">
+          <label class="er-row" data-plan="goldRenew">
+            <input type="radio" class="pai-radio" name="er-choice-gold" value="goldRenew" checked />
+            <div class="er-row-body">
+              <div class="er-line">
+                <span class="er-name text-body-base-medium">Renew Gold<span class="pai-badge pai-badge-neutral">Current plan</span></span>
+                <span class="er-price">
+                  <span class="er-amount text-body-base-medium">$1,200</span>
+                  <span class="er-per text-body-sm-regular">/year</span>
+                </span>
+              </div>
+              <div class="er-credits">
+                <span class="er-credits-num text-heading-2xl">50,000</span>
+                <span class="er-credits-label text-body-base-regular">Credits</span>
+              </div>
+              <div class="er-carry text-body-sm-medium">+432 credits carry forward</div>
+            </div>
+          </label>
+        </div>
+
+        <button type="button" class="er-switch er-linkbtn pai-link text-body-sm-medium" data-goto="teambuy">Managing a team? Switch to a Team plan</button>
+      </div>
+
+      <!-- ── a Teams admin renewing the pool ───────────────────────────────── -->
+      <div class="er-zone er-zone-teams" id="zone-teams">
+        <div class="er-card">
+          <label class="er-row" data-plan="teamPro">
+            <input type="radio" class="pai-radio" name="er-choice-teams" value="teamPro" checked />
+            <div class="er-row-body">
+              <div class="er-line">
+                <span class="er-name text-body-base-medium">Renew Silver Team<span class="pai-badge pai-badge-neutral" id="tpCurrent">Current plan</span></span>
+                <span class="er-price">
+                  <span class="er-amount text-body-base-medium" id="tpPrice">$720</span>
+                  <span class="er-per text-body-sm-regular">/year</span>
+                </span>
+              </div>
+              <div class="er-dd-label text-body-sm-medium">How many credits?</div>
+              <div class="pai-select er-pool" data-pool="teamPro">
+                <button type="button" class="pai-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Credit pool size">
+                  <span class="pai-select-value">15,000 credits</span>
+                  <i class="ph ph-caret-down" aria-hidden="true"></i>
+                </button>
+                <div class="dropdown-menu-style dropdown-menu-bottom-left is-closed" role="listbox" aria-label="Credit pool size">
+                  <div class="dropdown-items-list"></div>
+                </div>
+              </div>
+              <div class="er-carry text-body-sm-medium">+432 credits carry forward</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="er-card er-card-gold">
+          <label class="er-row" data-plan="teamGold">
+            <input type="radio" class="pai-radio" name="er-choice-teams" value="teamGold" />
+            <div class="er-row-body">
+              <div class="er-line">
+                <span class="er-name text-body-base-medium">Upgrade to Gold Team<span class="pai-badge pai-badge-info">50% off</span></span>
+                <span class="er-price">
+                  <span class="er-strike text-body-base-medium" id="tgStrike">$3,240</span>
+                  <span class="er-amount text-body-base-medium" id="tgPrice">$1,620</span>
+                  <span class="er-per text-body-sm-regular">/year</span>
+                </span>
+              </div>
+              <div class="er-saved text-body-sm-regular" id="tgSave">Save $1,620</div>
+              <div class="er-dd-label text-body-sm-medium">How many credits?</div>
+              <div class="pai-select er-pool" data-pool="teamGold">
+                <button type="button" class="pai-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Credit pool size">
+                  <span class="pai-select-value">150,000 credits</span>
+                  <i class="ph ph-caret-down" aria-hidden="true"></i>
+                </button>
+                <div class="dropdown-menu-style dropdown-menu-bottom-left is-closed" role="listbox" aria-label="Credit pool size">
+                  <div class="dropdown-items-list"></div>
+                </div>
+              </div>
+              <div class="er-carry text-body-sm-medium">+432 credits carry forward</div>
+              <hr class="pai-divider" />
+              <ul class="er-points text-body-sm-regular">
+                <li><i class="ph ph-sparkle" aria-hidden="true"></i>Ultra AI model, our most powerful</li>
+                <li><i class="ph ph-swatches" aria-hidden="true"></i>Custom brand kit and moods, built for you</li>
+                <li><i class="ph ph-book-open" aria-hidden="true"></i>Projects with a shared knowledge base</li>
+                <li><i class="ph ph-headset" aria-hidden="true"></i>Priority support, with direct access to our Head of Product</li>
+              </ul>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- ── on a single plan, buying a Team plan instead ──────────────────── -->
+      <div class="er-zone er-zone-teambuy" id="zone-teambuy">
+        <div class="er-card">
+          <label class="er-row" data-plan="buyPro">
+            <input type="radio" class="pai-radio" name="er-choice-teambuy" value="buyPro" checked />
+            <div class="er-row-body">
+              <div class="er-line">
+                <span class="er-name text-body-base-medium">Silver Team</span>
+                <span class="er-price">
+                  <span class="er-amount text-body-base-medium" id="bpPrice">$648</span>
+                  <span class="er-per text-body-sm-regular">/year</span>
+                </span>
+              </div>
+              <div class="er-seats er-seats-grad text-body-sm-medium">Unlimited seats</div>
+              <div class="er-dd-label text-body-sm-medium">How many credits?</div>
+              <div class="pai-select er-pool" data-pool="buyPro">
+                <button type="button" class="pai-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Credit pool size">
+                  <span class="pai-select-value">15,000 credits</span>
+                  <i class="ph ph-caret-down" aria-hidden="true"></i>
+                </button>
+                <div class="dropdown-menu-style dropdown-menu-bottom-left is-closed" role="listbox" aria-label="Credit pool size">
+                  <div class="dropdown-items-list"></div>
+                </div>
+              </div>
+              <div class="er-carry text-body-sm-medium">+432 credits carry forward</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="er-card er-card-gold">
+          <label class="er-row" data-plan="buyGold">
+            <input type="radio" class="pai-radio" name="er-choice-teambuy" value="buyGold" />
+            <div class="er-row-body">
+              <div class="er-line">
+                <span class="er-name text-body-base-medium">Gold Team</span>
+                <span class="er-price">
+                  <span class="er-amount text-body-base-medium" id="bgPrice">$3,240</span>
+                  <span class="er-per text-body-sm-regular">/year</span>
+                </span>
+              </div>
+              <div class="er-seats er-seats-grad text-body-sm-medium">Unlimited seats</div>
+              <div class="er-dd-label text-body-sm-medium">How many credits?</div>
+              <div class="pai-select er-pool" data-pool="buyGold">
+                <button type="button" class="pai-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Credit pool size">
+                  <span class="pai-select-value">150,000 credits</span>
+                  <i class="ph ph-caret-down" aria-hidden="true"></i>
+                </button>
+                <div class="dropdown-menu-style dropdown-menu-bottom-left is-closed" role="listbox" aria-label="Credit pool size">
+                  <div class="dropdown-items-list"></div>
+                </div>
+              </div>
+              <div class="er-carry text-body-sm-medium">+432 credits carry forward</div>
+              <hr class="pai-divider" />
+              <ul class="er-points text-body-sm-regular">
+                <li><i class="ph ph-sparkle" aria-hidden="true"></i>Ultra AI model, our most powerful</li>
+                <li><i class="ph ph-swatches" aria-hidden="true"></i>Custom brand kit and moods, built for you</li>
+                <li><i class="ph ph-book-open" aria-hidden="true"></i>Projects with a shared knowledge base</li>
+                <li><i class="ph ph-headset" aria-hidden="true"></i>Priority support, with direct access to our Head of Product</li>
+              </ul>
+            </div>
+          </label>
+        </div>
+
+        <button type="button" class="er-switch er-linkbtn pai-link text-body-sm-medium" data-goto="back">Renewing just for yourself? Switch back to your plan</button>
+      </div>
+    </div>
+
+    <!-- ══ right: how it gets paid for ══════════════════════════════════════ -->
+    <div class="er-right">
+
+      <!-- Stripe: no card on file, so the whole form -->
+      <div class="er-pane is-on" id="paneStripe">
+        <h2 class="text-heading-2xl">Payment Method</h2>
+
+        <div class="tabs-strip tabs-strip-medium tabs-track" role="tablist">
+          <button class="tab-item tab-item-medium is-selected" type="button" role="tab" aria-selected="true">
+            <i class="ph ph-credit-card" aria-hidden="true"></i>Credit/Debit card
+          </button>
+        </div>
+
+        <div class="er-field">
+          <label class="text-body-base-medium" for="cardNumber">Card details</label>
+          <span class="er-adorn er-adorn-cards">
+            <input class="pai-input pai-input-large" id="cardNumber" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" />
+            <span class="er-logos" aria-hidden="true">
+              <img src="assets/visa.svg" alt="" /><img src="assets/mastercard.svg" alt="" /><img src="assets/amex.svg" alt="" /><img src="assets/jcb.svg" alt="" />
+            </span>
+          </span>
+        </div>
+
+        <div class="er-pair">
+          <div class="er-field">
+            <label class="text-body-base-medium" for="cardExp">Expiration date</label>
+            <input class="pai-input pai-input-large" id="cardExp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM / YY" />
+          </div>
+          <div class="er-field">
+            <label class="text-body-base-medium" for="cardCvc">CVC</label>
+            <span class="er-adorn er-adorn-cvc">
+              <input class="pai-input pai-input-large" id="cardCvc" inputmode="numeric" autocomplete="cc-csc" placeholder="CVC" />
+              <span class="er-cvc-icon" aria-hidden="true"><img src="assets/cvc1.svg" alt="" /></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="er-field">
+          <span class="text-body-base-medium" style="display:block;margin-bottom:var(--space-2xs);color:var(--text-secondary)" id="countryLabel">Country</span>
+          <div class="pai-select pai-select-large" id="country">
+            <button type="button" class="pai-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="countryLabel">
+              <span class="pai-select-value">India</span>
+              <i class="ph ph-caret-down" aria-hidden="true"></i>
+            </button>
+            <div class="dropdown-menu-style dropdown-menu-top-left is-closed" role="listbox" aria-label="Country">
+              <div class="dropdown-items-list">
+                <button class="dropdown-item-style" type="button" role="option" aria-selected="true"><span class="dropdown-item-label">India</span><i class="ph ph-check dropdown-item-right-icon" aria-hidden="true"></i></button>
+                <button class="dropdown-item-style" type="button" role="option" aria-selected="false"><span class="dropdown-item-label">Singapore</span></button>
+                <button class="dropdown-item-style" type="button" role="option" aria-selected="false"><span class="dropdown-item-label">United Kingdom</span></button>
+                <button class="dropdown-item-style" type="button" role="option" aria-selected="false"><span class="dropdown-item-label">United States</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="er-disclaimer text-body-sm-regular">By providing your card information, you allow PRESENTATIONS AI PTE. LTD to charge your card for future payments in accordance with their terms.</p>
+
+        <button class="button-style button-large button-primary er-pay" type="button" id="payBtn">Pay $240</button>
+
+        <div class="er-foot text-body-sm-regular">
+          <span class="er-foot-by">Powered by <img src="assets/stripe.svg" alt="Stripe" /></span>
+          <hr class="pai-divider-vertical" />
+          <span class="er-foot-links"><a class="pai-link-inline" href="#">Terms</a><a class="pai-link-inline" href="#">Privacy</a></span>
+        </div>
+      </div>
+
+      <!-- Paddle: a card already on file, so a summary and one press -->
+      <div class="er-pane" id="panePaddle">
+        <h2 class="text-heading-2xl" id="ppTitle">Renew Silver</h2>
+
+        <div class="er-summary">
+          <div class="er-summary-line">
+            <span class="text-body-base-medium"><span id="ppPlan">Silver Plan</span><span class="er-off" id="ppOff" hidden> — <b>50% off</b></span></span>
+            <span class="er-price">
+              <span class="er-strike text-body-base-medium" id="ppStrike" hidden>US$1,200</span>
+              <span class="er-amount text-body-base-medium" id="ppAmount">US$240</span>
+            </span>
+          </div>
+          <p class="er-summary-note text-body-sm-regular" id="ppCredits">Full plan credits unlock (5,000)</p>
+          <hr class="pai-divider" />
+          <div class="er-summary-line">
+            <span class="text-body-base-medium">Due today</span>
+            <span class="er-amount text-body-base-medium" id="ppDue">US$240</span>
+          </div>
+        </div>
+
+        <div class="er-saved-card">
+          <i class="ph ph-credit-card" aria-hidden="true"></i>
+          <span class="text-body-base-medium">Visa •••• 4242</span>
+          <button type="button" class="er-linkbtn pai-link text-body-sm-medium">Change</button>
+        </div>
+
+        <label class="er-agree text-body-base-regular">
+          <input type="checkbox" class="pai-checkbox" checked />
+          <span>I agree to the Terms. Renews at <b id="ppRenew">US$240/year</b> on 28 Jul 2027</span>
+        </label>
+
+        <button type="button" class="button-style button-large button-primary er-confirm">Confirm Payment</button>
+
+        <div class="er-foot text-body-sm-regular">
+          <span class="er-foot-by">Powered by <b>Paddle</b></span>
+          <hr class="pai-divider-vertical" />
+          <span class="er-foot-links"><a class="pai-link-inline" href="#">Terms</a><a class="pai-link-inline" href="#">Privacy</a></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="pai-modal-dismiss" type="button" aria-label="Close"><i class="ph ph-x" aria-hidden="true"></i></button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── what each choice costs, and what the right column then says ─────────── */
+  const PLANS = {
+    pro:       { total:"$240",   title:"Renew Silver",         name:"Silver Plan",      off:false,
+                 strike:"",           amount:"US$240",   credits:"Full plan credits unlock (5,000)",  due:"US$240",   renew:"US$240/year" },
+    gold:      { total:"$600",   title:"Upgrade to Gold",      name:"Gold Plan",        off:true,
+                 strike:"US$1,200",   amount:"US$600",   credits:"Full plan credits unlock (50,000)", due:"US$600",   renew:"US$1,200/year" },
+    goldRenew: { total:"$1,200", title:"Renew Gold",           name:"Gold Plan",        off:false,
+                 strike:"",           amount:"US$1,200", credits:"Full plan credits unlock (50,000)", due:"US$1,200", renew:"US$1,200/year" },
+    teamPro:   { total:"$720",   title:"Renew Silver Team",    name:"Silver Team Plan", off:false,
+                 strike:"",           amount:"US$720",   credits:"Full pool credits unlock (15,000)", due:"US$720",   renew:"US$720/year" },
+    teamGold:  { total:"$1,620", title:"Upgrade to Gold Team", name:"Gold Team Plan",   off:true,
+                 strike:"US$3,240",   amount:"US$1,620", credits:"Full pool credits unlock (150,000)", due:"US$1,620", renew:"US$3,240/year" },
+    buyPro:    { total:"$648",   title:"Get Silver Team",      name:"Silver Team Plan", off:false,
+                 strike:"",           amount:"US$648",   credits:"Full pool credits unlock (15,000)", due:"US$648",   renew:"US$648/year" },
+    buyGold:   { total:"$3,240", title:"Get Gold Team",        name:"Gold Team Plan",   off:false,
+                 strike:"",           amount:"US$3,240", credits:"Full pool credits unlock (150,000)", due:"US$3,240", renew:"US$3,240/year" }
+  };
+
+  /* ── the four scenarios ──────────────────────────────────────────────────── */
+  const SCENARIOS = {
+    silver : { cap:5000,  first:"pro" },
+    gold   : { cap:50000, first:"goldRenew" },
+    teams  : { cap:15000, first:"teamPro" },
+    // Buying a Team plan does not change what the person holds today, so the
+    // meter keeps showing their own plan's cap rather than the pool's.
+    teambuy: { cap:null,  first:"buyPro" }
+  };
+
+  /* ── volume pricing: a unit price, minus a discount that grows with the pool ─ */
+  const POOLS = {
+    teamPro : { unit:5000,  list:20,  upsell:1,   priceId:"tpPrice", options:[15000, 25000, 50000, 75000, 100000] },
+    teamGold: { unit:50000, list:100, upsell:0.5, priceId:null,      options:[150000, 250000, 500000, 750000, 1000000] },
+    buyPro  : { unit:5000,  list:20,  upsell:1,   priceId:"bpPrice", options:[15000, 25000, 50000, 75000, 100000] },
+    buyGold : { unit:50000, list:100, upsell:1,   priceId:"bgPrice", options:[150000, 250000, 500000, 750000, 1000000] }
+  };
+  const LADDER = [0.10, 0.20, 0.30, 0.40, 0.50];
+  // The Silver Team floor is the plan somebody already has, so it carries no
+  // volume discount — the ladder starts to bite one rung up.
+  const noDiscount = (key, size) => key === "teamPro" && size === 15000;
+
+  const LOW_CREDITS = 432;
+  const COPY = {
+    zero: "You're out of credits. Renew your plan",
+    low : "Running low on credits. Renew early, credits stack"
+  };
+
+  const $  = id => document.getElementById(id);
+  const money = n => "$" + Math.round(n).toLocaleString("en-US");
+  const count = n => n.toLocaleString("en-US");
+
+  const state = {
+    plan   : "silver",
+    credits: "zero",
+    pay    : "stripe",
+    choice : "pro",
+    // last individual scenario, so "switch back" from Buy Team returns to it
+    lastOwn: "silver",
+    pool   : { teamPro:15000, teamGold:150000, buyPro:15000, buyGold:150000 }
+  };
+
+  /* ── the right column follows whichever plan is chosen ───────────────────── */
+  function applyPlan(key) {
+    const p = PLANS[key];
+    state.choice = key;
+    $("payBtn").textContent = "Pay " + p.total;
+    $("ppTitle").textContent = p.title;
+    $("ppPlan").textContent  = p.name;
+    $("ppOff").hidden = !p.off;
+    $("ppStrike").hidden = !p.strike;
+    $("ppStrike").textContent = p.strike;
+    $("ppAmount").textContent  = p.amount;
+    $("ppCredits").textContent = p.credits;
+    $("ppDue").textContent     = p.due;
+    $("ppRenew").textContent   = p.renew;
+  }
+
+  /* ── the meter ───────────────────────────────────────────────────────────── */
+  function renderMeter() {
+    const sc  = SCENARIOS[state.plan];
+    const cap = sc.cap === null ? SCENARIOS[state.lastOwn].cap : sc.cap;
+    const left = state.credits === "low" ? LOW_CREDITS : 0;
+    const bar = $("meterBar");
+    const pct = left / cap;
+    $("meterNum").textContent = count(left);
+    $("meterCap").textContent = count(cap);
+    bar.style.setProperty("--value", pct.toFixed(4));
+    bar.setAttribute("aria-valuenow", String(Math.round(pct * 100)));
+    $("headline").textContent = COPY[state.credits];
+  }
+
+  /* ── the pool pickers ────────────────────────────────────────────────────── */
+  function poolPrice(key) {
+    const t = POOLS[key];
+    const size = state.pool[key];
+    const off = noDiscount(key, size) ? 0 : (LADDER[t.options.indexOf(size)] || 0);
+    const list = (size / t.unit) * t.list * (1 - off) * 12;
+    return { list, pay: list * t.upsell, size };
+  }
+
+  function renderPool(key) {
+    const { list, pay, size } = poolPrice(key);
+
+    if (key === "teamGold") {
+      $("tgStrike").textContent = money(list);
+      $("tgPrice").textContent  = money(pay);
+      $("tgSave").textContent   = "Save " + money(list - pay);
+    } else {
+      $(POOLS[key].priceId).textContent = money(pay);
+    }
+    // Changing the pool means this is no longer the plan they are on.
+    if (key === "teamPro") $("tpCurrent").hidden = size !== 15000;
+
+    const p = PLANS[key];
+    p.total  = money(pay);
+    p.amount = "US" + money(pay);
+    p.due    = "US" + money(pay);
+    p.strike = key === "teamGold" ? "US" + money(list) : "";
+    p.renew  = "US" + money(key === "teamGold" ? list : pay) + "/year";
+    p.credits = "Full pool credits unlock (" + count(size) + ")";
+
+    if (state.choice === key) applyPlan(key);
+  }
+
+  function buildPool(sel) {
+    const key = sel.dataset.pool;
+    const t   = POOLS[key];
+    const listEl = sel.querySelector(".dropdown-items-list");
+    const valueEl = sel.querySelector(".pai-select-value");
+
+    listEl.innerHTML = t.options.map((size, i) => {
+      const chosen = size === state.pool[key];
+      const pct = noDiscount(key, size) ? 0 : Math.round(LADDER[i] * 100);
+      return '<button class="dropdown-item-style" type="button" role="option" data-size="' + size + '" aria-selected="' + chosen + '">' +
+               '<span class="dropdown-item-label">' + count(size) + ' credits</span>' +
+               (pct ? '<span class="pai-badge pai-badge-success">' + pct + '% off</span>' : '') +
+               '<i class="ph ph-check er-check" aria-hidden="true"></i>' +
+             '</button>';
+    }).join("");
+    valueEl.textContent = count(state.pool[key]) + " credits";
+  }
+
+  function closeAllMenus(except) {
+    document.querySelectorAll(".pai-select.is-open").forEach(sel => {
+      if (sel === except) return;
+      sel.classList.remove("is-open");
+      sel.querySelector(".dropdown-menu-style").classList.add("is-closed");
+      sel.querySelector(".pai-select-trigger").setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function wireSelect(sel, onPick) {
+    const trigger = sel.querySelector(".pai-select-trigger");
+    const menu    = sel.querySelector(".dropdown-menu-style");
+
+    trigger.addEventListener("click", e => {
+      // The card is a <label>, so without this the press would also move the
+      // radio underneath it — opening a picker is not choosing a plan.
+      e.preventDefault();
+      e.stopPropagation();
+      const open = !sel.classList.contains("is-open");
+      closeAllMenus(sel);
+      sel.classList.toggle("is-open", open);
+      menu.classList.toggle("is-closed", !open);
+      trigger.setAttribute("aria-expanded", String(open));
+    });
+
+    menu.addEventListener("click", e => {
+      const opt = e.target.closest(".dropdown-item-style");
+      if (!opt) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onPick(opt);
+      closeAllMenus();
+    });
+  }
+
+  document.querySelectorAll(".er-pool").forEach(sel => {
+    const key = sel.dataset.pool;
+    buildPool(sel);
+    wireSelect(sel, opt => {
+      state.pool[key] = Number(opt.dataset.size);
+      buildPool(sel);
+      renderPool(key);
+    });
+  });
+
+  const country = $("country");
+  wireSelect(country, opt => {
+    country.querySelectorAll(".dropdown-item-style").forEach(o => {
+      const on = o === opt;
+      o.setAttribute("aria-selected", String(on));
+      const tick = o.querySelector(".dropdown-item-right-icon");
+      if (on && !tick) o.insertAdjacentHTML("beforeend", '<i class="ph ph-check dropdown-item-right-icon" aria-hidden="true"></i>');
+      if (!on && tick) tick.remove();
+    });
+    country.querySelector(".pai-select-value").textContent = opt.querySelector(".dropdown-item-label").textContent;
+  });
+
+  document.addEventListener("click", () => closeAllMenus());
+
+  /* ── choosing a plan inside a zone ───────────────────────────────────────── */
+  document.querySelectorAll(".er-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const zone = row.closest(".er-zone");
+      zone.querySelectorAll(".er-row").forEach(r => r.classList.toggle("is-selected", r === row));
+      row.querySelector("input[type=radio]").checked = true;
+      applyPlan(row.dataset.plan);
+    });
+  });
+
+  /* ── the three axes, each of them in the URL ─────────────────────────────── */
+  function showZone() {
+    document.querySelectorAll(".er-zone").forEach(z => z.classList.toggle("is-on", z.id === "zone-" + state.plan));
+    const zone = $("zone-" + state.plan);
+    const first = SCENARIOS[state.plan].first;
+    zone.querySelectorAll(".er-row").forEach(r => {
+      const on = r.dataset.plan === first;
+      r.classList.toggle("is-selected", on);
+      r.querySelector("input[type=radio]").checked = on;
+    });
+    applyPlan(first);
+    // A pool plan's price is computed, not written — re-derive it for this zone.
+    zone.querySelectorAll(".er-pool").forEach(sel => renderPool(sel.dataset.pool));
+  }
+
+  function render() {
+    document.body.dataset.plan    = state.plan;
+    document.body.dataset.credits = state.credits;
+    document.body.dataset.pay     = state.pay;
+    $("paneStripe").classList.toggle("is-on", state.pay === "stripe");
+    $("panePaddle").classList.toggle("is-on", state.pay === "paddle");
+    showZone();
+    renderMeter();
+
+    const url = new URL(location);
+    url.searchParams.set("plan", state.plan);
+    url.searchParams.set("credits", state.credits);
+    url.searchParams.set("pay", state.pay);
+    history.replaceState(null, "", url);
+  }
+
+  function setAxis(axis, value) {
+    if (axis === "plan" && (value === "silver" || value === "gold")) state.lastOwn = value;
+    state[axis] = value;
+    const seg = { plan:"segPlan", credits:"segCredits", pay:"segPay" }[axis];
+    const input = $(seg).querySelector('input[value="' + value + '"]');
+    if (input) input.checked = true;
+    render();
+  }
+
+  [["segPlan","plan"], ["segCredits","credits"], ["segPay","pay"]].forEach(([id, axis]) => {
+    $(id).addEventListener("change", e => setAxis(axis, e.target.value));
+  });
+
+  document.querySelectorAll(".er-switch").forEach(btn => {
+    btn.addEventListener("click", () => {
+      setAxis("plan", btn.dataset.goto === "back" ? state.lastOwn : btn.dataset.goto);
+    });
+  });
+
+  /* ── open on whatever the URL asked for ──────────────────────────────────── */
+  const q = new URLSearchParams(location.search);
+  const pick = (key, allowed, fallback) => allowed.includes(q.get(key)) ? q.get(key) : fallback;
+  state.plan    = pick("plan", Object.keys(SCENARIOS), "silver");
+  state.credits = pick("credits", ["zero", "low"], "zero");
+  state.pay     = pick("pay", ["stripe", "paddle"], "stripe");
+  if (state.plan === "gold") state.lastOwn = "gold";
+
+  $("segPlan").querySelector('input[value="' + state.plan + '"]').checked = true;
+  $("segCredits").querySelector('input[value="' + state.credits + '"]').checked = true;
+  $("segPay").querySelector('input[value="' + state.pay + '"]').checked = true;
+  render();
+})();
+</script>
+</body>
+</html>

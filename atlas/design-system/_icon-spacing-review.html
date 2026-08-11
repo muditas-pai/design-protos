@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Icons against their container — before / after</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="icons/regular.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="pai.tailwind.js"></script>
+<link rel="stylesheet" href="pai.css" />
+
+<style>
+  /* ═══ THE PROPOSAL ═══════════════════════════════════════════════════════════
+     Everything below is scoped to .after. No literal lengths: each value is
+     either an existing token, or a token minus --space-3xs (2px), which is the
+     hairline step doing double duty as the optical-correction unit.
+     The one exception is `1em`, which is not a length at all — it makes the icon
+     box track its own glyph, so the slack cannot drift back in.            */
+
+  /* 1 — icon boxes sized to the glyph rather than padded around it */
+  .after .listitem-medium .listitem-icon { width: 1em; height: 1em; }
+
+  /* 2 — the icon side gives up one hairline. Detected with :has(), so no
+     variant class is needed — a button gets the correction because an icon is
+     sitting at that edge, which is the only reason the correction exists. */
+  .after .button-style:has(> i.ph:first-child)  { padding-left:  calc(var(--space-lg) - var(--space-3xs)); }
+  .after .button-style:has(> i.ph:last-child)   { padding-right: calc(var(--space-lg) - var(--space-3xs)); }
+  .after .chip-style:has(> i.ph:first-child)    { padding-left:  calc(var(--space-md) - var(--space-3xs)); }
+  .after .chip-style:has(.chip-remove)          { padding-right: calc(var(--space-md) - var(--space-3xs)); }
+
+  /* the 8px gap is settled, so every "after" carries it — the padding has to be
+     judged against the button it will actually ship in, not the old 4px one */
+  .after .button-style .button-label:not(:first-child) { margin-left: var(--space-xs); }
+  .after .chip-medium, .after .chip-small { gap: var(--space-xs); }
+
+  /* 3 — the icon↔label gap on buttons and chips: var(--space-2xs) → var(--space-xs).
+     A whole step, not a correction. 6px would have been a rung the scale does not
+     have; 8px is the value rows and menu items already use for the same
+     icon-to-label relationship, so it makes that one number everywhere. */
+  .gap-after .button-style .button-label:not(:first-child) { margin-left: var(--space-xs); }
+  .gap-after .chip-medium        { gap: var(--space-xs); }
+  .gap-after .chip-small         { gap: var(--space-xs); }
+
+  /* ═══ page chrome — tokens only ═════════════════════════════════════════════ */
+  body { margin:0; background:var(--bg-subtle); }
+  .mono { font-family:"JetBrains Mono", ui-monospace, monospace; }
+  .wrap { max-width:1080px; margin:0 auto; padding:var(--space-6xl) var(--space-2xl) var(--space-6xl); }
+  .row { border-top:1px solid var(--border-secondary); padding:var(--space-xl) 0; }
+  .row:last-child { border-bottom:1px solid var(--border-secondary); }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:1px;
+          background:var(--border-tertiary); border:1px solid var(--border-tertiary);
+          border-radius:var(--rounded-base); overflow:hidden; }
+  .cell { background:var(--bg-elevated); padding:var(--space-xl);
+          display:flex; align-items:center; gap:var(--space-sm); flex-wrap:wrap; }
+  .cell.before { background:#FFFDF7; }
+  /* the gap is decided; both halves of the padding rows carry it so the only
+     difference on show is the padding itself */
+  .row.padding-row .cell .button-style .button-label:not(:first-child) { margin-left: var(--space-xs); }
+  .row.padding-row .cell .chip-medium, .row.padding-row .cell .chip-small { gap: var(--space-xs); }
+  .cellhead { font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+              color:var(--text-tertiary); margin-bottom:var(--space-md); width:100%; }
+  .delta { font-family:"JetBrains Mono", ui-monospace, monospace; font-size:11px;
+           color:var(--text-secondary); background:var(--bg-tertiary);
+           padding:var(--space-3xs) var(--space-xs); border-radius:var(--rounded-sm); }
+  .delta s { color:var(--text-tertiary); }
+  .menu { position:static; inset:auto; transform:none; opacity:1; visibility:visible;
+          display:block; width:248px; }
+
+  /* a hairline rule pinned to the container edges, so you can see the gap you are judging */
+  .guides .chip-style, .guides .button-style, .guides .listitem, .guides .dropdown-item-style { position:relative; }
+  .guides.on .chip-style::before, .guides.on .button-style::before,
+  .guides.on .listitem::before, .guides.on .dropdown-item-style::before {
+    content:""; position:absolute; inset:0; pointer-events:none;
+    box-shadow: inset 0 0 0 1px rgba(220,38,38,0.35);
+    border-radius:inherit;
+  }
+</style>
+</head>
+
+<body class="pai">
+<div class="wrap">
+
+  <h1 class="text-heading-3xl text-text-primary" style="margin:0 0 var(--space-2xs)">Icons against their container</h1>
+  <p class="text-body-base-regular text-text-secondary" style="max-width:64ch;margin:0 0 var(--space-2xl)">
+    Padding lands on the icon's <em>box</em>; the eye measures to its <em>ink</em>. Every icon box
+    carries slack the text side does not, so the icon side of every one of these reads looser than
+    the text side even though the padding is identical. Left is today, right is the proposal.
+  </p>
+
+  <label class="text-body-sm-regular text-text-secondary" style="display:inline-flex;align-items:center;gap:var(--space-2xs);margin-bottom:var(--space-xl);cursor:pointer">
+    <input type="checkbox" class="pai-checkbox" id="guideToggle" /> show container edges
+  </label>
+
+  <div id="stage" class="guides">
+
+    <!-- 1 -->
+    <div class="row">
+      <div style="display:flex;align-items:baseline;gap:var(--space-sm);margin-bottom:var(--space-md);flex-wrap:wrap">
+        <span class="text-body-base-medium text-text-primary">List item — the icon box is bigger than the icon</span>
+        <span class="delta">.listitem-icon <s>width:20px</s> → width:1em &nbsp;·&nbsp; edge→ink 11.9 → 9.9</span>
+      </div>
+      <div class="pair">
+        <div class="cell before"><div class="cellhead">before</div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:var(--space-2xs)">
+            <button class="listitem listitem-medium listitem-interactive"><span class="listitem-icon"><i class="ph ph-pencil-simple"></i></span><span class="listitem-body"><span class="listitem-title">Rename</span></span></button>
+            <button class="listitem listitem-medium listitem-interactive listitem-selected"><span class="listitem-icon"><i class="ph ph-copy"></i></span><span class="listitem-body"><span class="listitem-title">Duplicate</span></span><span class="listitem-trailing"><i class="ph ph-check"></i></span></button>
+          </div></div>
+        <div class="cell after"><div class="cellhead">after</div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:var(--space-2xs)">
+            <button class="listitem listitem-medium listitem-interactive"><span class="listitem-icon"><i class="ph ph-pencil-simple"></i></span><span class="listitem-body"><span class="listitem-title">Rename</span></span></button>
+            <button class="listitem listitem-medium listitem-interactive listitem-selected"><span class="listitem-icon"><i class="ph ph-copy"></i></span><span class="listitem-body"><span class="listitem-title">Duplicate</span></span><span class="listitem-trailing"><i class="ph ph-check"></i></span></button>
+          </div></div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="row padding-row">
+      <div style="display:flex;align-items:baseline;gap:var(--space-sm);margin-bottom:var(--space-md);flex-wrap:wrap">
+        <span class="text-body-base-medium text-text-primary">Button — leading icon</span>
+        <span class="delta">icon-side padding <s>var(--space-lg)</s> → calc(var(--space-lg) − var(--space-3xs)) &nbsp;·&nbsp; 20 → 18</span><span class="text-body-sm-regular text-text-tertiary">both halves already carry the 8px gap</span>
+      </div>
+      <div class="pair">
+        <div class="cell before"><div class="cellhead">before</div>
+          <button class="button-style button-medium button-primary"><i class="ph ph-sparkle"></i><span class="button-label">New deck</span></button>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-download-simple"></i><span class="button-label">Export</span></button>
+          <button class="button-style button-medium button-secondary"><span class="button-label" style="margin-left:0">Continue</span><i class="ph ph-caret-right" style="margin-left:var(--space-xs)"></i></button></div>
+        <div class="cell after"><div class="cellhead">after</div>
+          <button class="button-style button-medium button-primary"><i class="ph ph-sparkle"></i><span class="button-label">New deck</span></button>
+          <button class="button-style button-medium button-secondary"><i class="ph ph-download-simple"></i><span class="button-label">Export</span></button>
+          <button class="button-style button-medium button-secondary"><span class="button-label" style="margin-left:0">Continue</span><i class="ph ph-caret-right" style="margin-left:var(--space-xs)"></i></button></div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="row padding-row">
+      <div style="display:flex;align-items:baseline;gap:var(--space-sm);margin-bottom:var(--space-md);flex-wrap:wrap">
+        <span class="text-body-base-medium text-text-primary">Chip — trailing ×</span>
+        <span class="delta">padding-right <s>var(--space-md)</s> → calc(var(--space-md) − var(--space-3xs)) &nbsp;·&nbsp; ink→edge 19.6 → 17.6</span>
+      </div>
+      <div class="pair">
+        <div class="cell before"><div class="cellhead">before</div>
+          <span class="chip-style chip-medium chip-default">Pricing<button class="chip-remove" aria-label="Remove"><i class="ph ph-x"></i></button></span>
+          <span class="chip-style chip-medium chip-default">Onboarding<button class="chip-remove" aria-label="Remove"><i class="ph ph-x"></i></button></span></div>
+        <div class="cell after"><div class="cellhead">after</div>
+          <span class="chip-style chip-medium chip-default">Pricing<button class="chip-remove" aria-label="Remove"><i class="ph ph-x"></i></button></span>
+          <span class="chip-style chip-medium chip-default">Onboarding<button class="chip-remove" aria-label="Remove"><i class="ph ph-x"></i></button></span></div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="row padding-row">
+      <div style="display:flex;align-items:baseline;gap:var(--space-sm);margin-bottom:var(--space-md);flex-wrap:wrap">
+        <span class="text-body-base-medium text-text-primary">Chip input — leading +</span>
+        <span class="delta">padding-left <s>var(--space-md)</s> → calc(var(--space-md) − var(--space-3xs)) &nbsp;·&nbsp; edge→ink 18.7 → 16.7</span>
+      </div>
+      <div class="pair">
+        <div class="cell before"><div class="cellhead">before</div>
+          <label class="chip-style chip-medium chip-input"><i class="ph ph-plus"></i><input class="chip-input-field" placeholder="Add a topic" /></label>
+          <span class="chip-style chip-medium chip-default">Pricing</span></div>
+        <div class="cell after"><div class="cellhead">after</div>
+          <label class="chip-style chip-medium chip-input"><i class="ph ph-plus"></i><input class="chip-input-field" placeholder="Add a topic" /></label>
+          <span class="chip-style chip-medium chip-default">Pricing</span></div>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="row">
+      <div style="display:flex;align-items:baseline;gap:var(--space-sm);margin-bottom:var(--space-md);flex-wrap:wrap">
+        <span class="text-body-base-medium text-text-primary">Dropdown item — leading icon</span>
+        <span class="delta">padding-left <s>var(--space-xs)</s> → calc(var(--space-xs) − var(--space-3xs)) &nbsp;·&nbsp; 8 → 6</span>
+        <span class="text-body-sm-regular text-text-tertiary">the one I am least sure of — 6px may be too tight for a menu row</span>
+      </div>
+      <div class="pair">
+        <div class="cell before"><div class="cellhead">before</div>
+          <div class="dropdown-menu-style menu">
+            <div class="dropdown-items-list">
+              <button class="dropdown-item-style"><span class="dropdown-item-icon"><i class="ph ph-share-network"></i></span><span class="dropdown-item-label">Share</span></button>
+              <button class="dropdown-item-style"><span class="dropdown-item-icon"><i class="ph ph-copy"></i></span><span class="dropdown-item-label">Duplicate</span></button>
+            </div></div></div>
+        <div class="cell after"><div class="cellhead">after</div>
+          <div class="dropdown-menu-style menu">
+            <div class="dropdown-items-list">
+              <button class="dropdown-item-style"><span class="dropdown-item-icon"><i class="ph ph-share-network"></i></span><span class="dropdown-item-label">Share</span></button>
+              <button class="dropdown-item-style"><span class="dropdown-item-icon"><i class="ph ph-copy"></i></span><span class="dropdown-item-label">Duplicate</span></button>
+            </div></div></div>
+      </div>
+    </div>
+
+    <!-- 6 — separate decision -->
+    <div class="row">
+      <div style="display:flex;align-items:baseline;gap:var(--space-sm);margin-bottom:var(--space-md);flex-wrap:wrap">
+        <span class="text-body-base-medium text-text-primary">The icon↔label gap — buttons and chips</span>
+        <span class="delta">gap <s>var(--space-2xs)</s> → var(--space-xs) &nbsp;·&nbsp; 4 → 8</span>
+        <span class="text-body-sm-regular text-text-tertiary">the Rename row and Share item are the control — already 8px, unchanged in both halves</span>
+      </div>
+      <div class="pair">
+        <div class="cell before"><div class="cellhead">before</div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:var(--space-md)">
+            <div style="display:flex;gap:var(--space-sm);align-items:center;flex-wrap:wrap">
+              <button class="button-style button-medium button-primary"><i class="ph ph-sparkle"></i><span class="button-label">New deck</span></button>
+              <button class="chip-style chip-medium chip-default"><i class="ph ph-tag"></i>Pricing</button>
+              <button class="chip-style chip-small chip-default"><i class="ph ph-tag"></i>Small</button>
+            </div>
+            <button class="listitem listitem-medium listitem-interactive" style="max-width:220px"><span class="listitem-icon"><i class="ph ph-pencil-simple"></i></span><span class="listitem-body"><span class="listitem-title">Rename</span></span></button>
+            <div class="dropdown-menu-style menu" style="width:220px"><div class="dropdown-items-list">
+              <button class="dropdown-item-style"><span class="dropdown-item-icon"><i class="ph ph-share-network"></i></span><span class="dropdown-item-label">Share</span></button>
+            </div></div>
+          </div></div>
+        <div class="cell gap-after"><div class="cellhead">after · var(--space-xs) · 8px</div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:var(--space-md)">
+            <div style="display:flex;gap:var(--space-sm);align-items:center;flex-wrap:wrap">
+              <button class="button-style button-medium button-primary"><i class="ph ph-sparkle"></i><span class="button-label">New deck</span></button>
+              <button class="chip-style chip-medium chip-default"><i class="ph ph-tag"></i>Pricing</button>
+              <button class="chip-style chip-small chip-default"><i class="ph ph-tag"></i>Small</button>
+            </div>
+            <button class="listitem listitem-medium listitem-interactive" style="max-width:220px"><span class="listitem-icon"><i class="ph ph-pencil-simple"></i></span><span class="listitem-body"><span class="listitem-title">Rename</span></span></button>
+            <div class="dropdown-menu-style menu" style="width:220px"><div class="dropdown-items-list">
+              <button class="dropdown-item-style"><span class="dropdown-item-icon"><i class="ph ph-share-network"></i></span><span class="dropdown-item-label">Share</span></button>
+            </div></div>
+          </div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // mark the "after" halves without duplicating any markup decisions in CSS
+  document.querySelectorAll(".cell.after").forEach(c => c.classList.add("after"));
+  document.getElementById("guideToggle").addEventListener("change", e => {
+    document.getElementById("stage").classList.toggle("on", e.target.checked);
+  });
+</script>
+</body>
+</html>

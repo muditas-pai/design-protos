@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Contrast fixture — one plant per branch of the check</title>
+
+  <!--
+    Every element that matters carries `data-lint`, and tools/lint/check_fixtures.py
+    reads it.  Four verdicts, and the last two are the point of the file:
+
+      fail        a contrast finding must be reported here
+      pass        the pair must RESOLVE and must not be reported
+      unresolved  the pair must be recorded as undecidable — never a silent pass
+      skip        the element must not be considered at all (WCAG-exempt or hidden)
+
+    `data-ratio` and `data-origin` are checked when present.  Ratios are to two
+    decimals, the same rounding the report prints.
+
+    A "pass" plant is not decoration.  A check that reports nothing passes every
+    fail plant if you delete it; only the pass plants stop a rule that fires on
+    everything, and only the unresolved plants stop the quiet skip that let a
+    2.02:1 buy button through in the first place.
+  -->
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../design-system/pai.css" />
+
+  <style>
+    .surface  { background: var(--bg-primary); }          /* white */
+    .dim      { background: var(--bg-tertiary); }         /* #F5F5F5 */
+
+    /* ---- authored failures ------------------------------------------- */
+    .authored-fail   { color: #ffffff; background: #c39643; }   /* 2.70:1 */
+    .just-under      { color: #767676; background: #eeeeee; }   /* 3.91:1, body */
+
+    /* ---- the large-text branch ---------------------------------------
+       ONE pair, 3.45:1, planted four ways.  It must fail at 14px, pass at
+       24px, pass at 19px only because the weight is 700, and fail again at 18px
+       bold because 18px is under the standard's 18.66px.  Drop the large-text
+       branch and the two passes turn into failures; apply it everywhere and the
+       two failures disappear. */
+    .ratio-345       { color: #8a8a8a; background: #ffffff; }
+    .big             { font-size: 24px; font-weight: 400; }
+    .bold-large      { font-size: 19px; font-weight: 700; }
+    .bold-small      { font-size: 18px; font-weight: 700; }   /* under 18.66px */
+    .small           { font-size: 14px; font-weight: 400; }
+
+    /* ---- compositing --------------------------------------------------- */
+    .faint-text      { color: rgba(0, 0, 0, 0.32); }            /* over white */
+    .veil            { background: rgba(255, 255, 255, 0.85); } /* over .ink */
+    .ink             { background: #171717; }
+
+    /* ---- inheritance: colour from here, background from two levels up --- */
+    .inherit-colour  { color: #a3a3a3; }
+
+    /* ---- gradient: one stop fails, another passes ----------------------- */
+    .part-gradient   { color: #ffffff;
+                       background: linear-gradient(90deg, #8a8a8a 0%, #0b0f14 100%); }
+    /* the failing stop in the middle, so neither "first stop" nor "last stop"
+       is the right answer */
+    .mid-gradient    { color: #ffffff;
+                       background: linear-gradient(90deg, #0b0f14 0%, #8a8a8a 50%,
+                                                   #0b0f14 100%); }
+
+    /* ---- things this reader must admit it cannot resolve ---------------- */
+    .photo           { color: #ffffff; background: url("nope.png") center/cover; }
+    .sheer           { opacity: 0.5; background: #ffffff; }
+    .dangling        { color: var(--text-quaternary); background: #ffffff; }
+    .clamped         { font-size: clamp(14px, 2vw, 30px);
+                       color: #8a8a8a; background: #ffffff; }   /* 3.45:1 */
+    .veiled          { position: relative; background: #ffffff; color: #767676; }
+    .veiled::before  { content: ""; position: absolute; inset: 0;
+                       background: rgba(0, 0, 0, 0.5); }
+    .plate           { position: absolute; inset: 0; background: #171717; }
+    .over-plate      { position: relative; z-index: 1; color: #ffffff; }
+
+    /* `:is()` is not in this reader's selector grammar, so a rule that could
+       set the colour here must be admitted rather than ignored. */
+    .opaque-rule:is(.opaque-rule, .other) { color: #d4d4d4; }
+
+    /* ---- states, which are not the resting appearance ------------------- */
+    .hover-only { color: #171717; background: #ffffff; }
+    .hover-only:hover { color: #f0f0f0; }
+  </style>
+</head>
+
+<body class="pai surface" style="margin:0;">
+
+  <!-- ============ 1. the issue-#2 case, unchanged ============
+       The screen writes a class name and nothing else.  Both ends of the pair
+       are published: white from .button-gold-shimmer's `color`, the fill from
+       its gradient, and 14px/500 from .button-large.  2.02:1 at the lightest
+       gradient stop.
+
+       It is in ACCEPTED_CONTRAST — looked at on 5 Aug 2026 and kept — so it must
+       NOT be reported, and must still be counted.  The authored cases below use
+       the same colours by hand and are still told, because an acceptance is a
+       decision about what the system ships, not about a hex. -->
+  <button class="button-style button-large button-gold-shimmer"
+          data-lint="accepted" data-ratio="2.02">Get Gold</button>
+
+  <!-- ============ 2. authored failures ============ -->
+  <p class="authored-fail" data-lint="fail" data-ratio="2.70" data-origin="authored">
+    white on a gold fill the screen wrote itself
+  </p>
+  <p class="just-under" data-lint="fail" data-ratio="3.91" data-origin="authored">
+    3.91:1 — under 4.5, and nowhere near obviously wrong
+  </p>
+
+  <!-- ============ 3. the large-text branch, one pair three ways ============ -->
+  <p class="ratio-345 small"      data-lint="fail" data-ratio="3.45">3.45 at 14px regular — fails</p>
+  <p class="ratio-345 big"        data-lint="pass">3.45 at 24px regular — large, passes</p>
+  <p class="ratio-345 bold-large" data-lint="pass">3.45 at 19px bold — large, passes</p>
+  <p class="ratio-345 bold-small" data-lint="fail">3.45 at 18px bold — under 18.66px, still body</p>
+
+  <!-- ============ 4. compositing ============ -->
+  <p class="faint-text" data-lint="fail" data-ratio="2.23">
+    32% black over white composites to #adadad, not to black — treating the
+    written colour as opaque would report 12.63:1 and pass it
+  </p>
+  <div class="ink">
+    <div class="veil">
+      <p data-lint="pass">an 85% white veil over near-black composites to #e5e5e5</p>
+    </div>
+  </div>
+
+  <!-- ============ 5. inheritance ============
+       The colour is set here, the background two ancestors up, and neither
+       element writes the other half. -->
+  <div class="dim">
+    <div>
+      <p class="inherit-colour" data-lint="fail" data-ratio="2.31">
+        --text-tertiary on --bg-tertiary
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ 6. a gradient is a range ============
+       White passes against the dark stop and fails against the light one.  The
+       worst stop is the finding; taking the first stop, the last stop or an
+       average all get this wrong. -->
+  <p class="part-gradient" data-lint="fail" data-ratio="3.45">
+    white over a gradient that starts light and ends near-black — 19.22:1
+    against the dark stop, 3.45:1 against the light one
+  </p>
+  <p class="mid-gradient" data-lint="fail" data-ratio="3.45">
+    the same failure with the light stop in the middle: both ends read 19.22:1,
+    so reading only the first or only the last stop passes this
+  </p>
+
+  <!-- ============ 7. must be admitted, never passed ============ -->
+  <p class="photo" data-lint="unresolved">white on a background image</p>
+
+  <div class="sheer">
+    <p data-lint="unresolved">an ancestor at 50% opacity changes what composites</p>
+  </div>
+
+  <p class="dangling" data-lint="unresolved">colour from a token that does not exist</p>
+
+  <p class="clamped" data-lint="unresolved">
+    3.45:1 with a clamp() size — passes as large text, fails as body, and the
+    reader cannot tell which it is
+  </p>
+
+  <p class="veiled" data-lint="unresolved">
+    4.54:1 before the ::before scrim; with the scrim, unknown — and 4.54 passes,
+    so reporting nothing here would be the exact failure that opened issue #2
+  </p>
+
+  <div style="position:relative;">
+    <div class="plate"></div>
+    <p class="over-plate" data-lint="unresolved">
+      white over a full-bleed positioned sibling, not over the ancestor's white
+    </p>
+  </div>
+
+  <p class="opaque-rule dim" data-lint="unresolved">
+    a rule this reader cannot parse could be setting this colour
+  </p>
+
+  <!-- ============ 8. exempt or invisible ============ -->
+  <button class="button-style button-medium button-primary authored-fail"
+          disabled data-lint="skip">disabled controls are WCAG-exempt</button>
+  <p class="authored-fail sr-only" data-lint="skip">visually hidden</p>
+  <p class="authored-fail" hidden data-lint="skip">hidden attribute</p>
+  <p class="authored-fail" aria-hidden="true" data-lint="skip">aria-hidden</p>
+
+  <!-- ============ 9. resting state only ============ -->
+  <p class="hover-only" data-lint="pass">
+    21:1 at rest; the :hover colour is not the resting appearance
+  </p>
+
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scrim — over a real screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="icons/regular.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="pai.tailwind.js"></script>
+<link rel="stylesheet" href="pai.css" />
+
+<style>
+  html,body { margin:0; height:100%; }
+  body { background:var(--bg-subtle); overflow:hidden; }
+  .mono { font-family:var(--font-mono); }
+
+  /* the scrim, scoped to the app frame rather than the viewport so the controls
+     stay reachable. Same declarations as .pai-scrim otherwise. */
+  .demo-scrim{
+    position:absolute; inset:0; background:var(--bg-scrim);
+    -webkit-backdrop-filter:blur(var(--blur)); backdrop-filter:blur(var(--blur));
+    opacity:1; transition:opacity 200ms ease;
+  }
+  .demo-scrim[hidden]{ display:block; opacity:0; pointer-events:none; }
+
+  .thumb{ aspect-ratio:16/10; border-radius:var(--rounded-base); overflow:hidden; position:relative; }
+  .thumb::after{ content:""; position:absolute; inset:0; border-radius:inherit;
+                 box-shadow:inset 0 0 0 1px rgba(0,0,0,0.10); }
+  .card{ background:var(--bg-elevated); border-radius:var(--rounded-lg);
+         padding:var(--space-sm); box-shadow:var(--shadow-elevation-02); }
+
+  /* control bar */
+  .ctl{ position:fixed; left:50%; bottom:var(--space-xl); transform:translateX(-50%);
+        z-index:50; display:flex; align-items:center; gap:var(--space-md);
+        background:var(--bg-elevated); border-radius:var(--rounded-full);
+        padding:var(--space-xs) var(--space-md); box-shadow:var(--elevation-04); }
+</style>
+</head>
+
+<body class="pai">
+
+<!-- ── the app frame ─────────────────────────────────────────────────────── -->
+<div id="app" style="position:relative;height:100vh;overflow:hidden">
+
+  <div style="display:flex;height:100%">
+
+    <!-- side nav -->
+    <aside style="width:240px;flex:none;background:var(--bg-secondary);border-right:1px solid var(--border-secondary);padding:var(--space-sm)">
+      <div style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-xs);margin-bottom:var(--space-lg)">
+        <div style="width:28px;height:28px;border-radius:var(--rounded-base);background:linear-gradient(135deg,var(--app-400),var(--app-700))"></div>
+        <span class="text-body-base-medium text-text-primary">Foursquare</span>
+        <span class="pai-badge pai-badge-pro">PRO</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <button class="listitem listitem-medium listitem-interactive listitem-selected"><span class="listitem-icon"><i class="ph ph-house-simple"></i></span><span class="listitem-body"><span class="listitem-title">Home</span></span></button>
+        <button class="listitem listitem-medium listitem-interactive"><span class="listitem-icon"><i class="ph ph-file"></i></span><span class="listitem-body"><span class="listitem-title">Created by me</span></span></button>
+        <button class="listitem listitem-medium listitem-interactive"><span class="listitem-icon"><i class="ph ph-book-open-text"></i></span><span class="listitem-body"><span class="listitem-title">Brand kit</span></span></button>
+        <button class="listitem listitem-medium listitem-interactive"><span class="listitem-icon"><i class="ph ph-layout"></i></span><span class="listitem-body"><span class="listitem-title">Templates</span></span></button>
+      </div>
+    </aside>
+
+    <!-- main -->
+    <main style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-primary)">
+      <div style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 var(--space-xl);border-bottom:1px solid var(--border-secondary)">
+        <div style="display:flex;align-items:center;gap:var(--space-xs)">
+          <button class="chip-style chip-medium chip-default chip-selected"><i class="ph ph-sparkle"></i>All decks</button>
+          <button class="chip-style chip-medium chip-default">Shared</button>
+          <button class="chip-style chip-medium chip-default">Archived</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-xs)">
+          <button class="button-style button-medium button-secondary"><i class="ph ph-download-simple"></i><span class="button-label">Export</span></button>
+          <button class="button-style button-medium button-primary"><i class="ph ph-plus"></i><span class="button-label">New deck</span></button>
+        </div>
+      </div>
+
+      <div style="flex:1;overflow:auto;padding:var(--space-xl)">
+        <div class="text-overline-medium text-text-tertiary" style="margin-bottom:var(--space-xs)">Recent</div>
+        <h1 class="text-heading-2xl text-text-primary" style="margin:0 0 var(--space-lg)">Q3 board decks</h1>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-lg)" id="grid"></div>
+
+        <div style="margin-top:var(--space-2xl);max-width:52ch">
+          <p class="text-quote-lg text-text-secondary" style="margin:0 0 var(--space-xs)">It used to take me a full day to put a board deck together. Now the first draft is waiting for me.</p>
+          <div class="text-body-sm-regular text-text-tertiary">Priya N · Head of Strategy</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ── scrim + modal ──────────────────────────────────────────────────── -->
+  <div class="demo-scrim" id="scrim" style="--blur:8px"></div>
+
+  <div id="modal" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:380px;
+       background:var(--bg-secondary);border-radius:var(--rounded-lg);padding:var(--space-2xs);
+       box-shadow:var(--elevation-04)">
+    <div style="padding:var(--space-md) var(--space-md) var(--space-xs)">
+      <div class="text-heading-base text-text-primary">Delete “Q3 board deck”?</div>
+    </div>
+    <div style="background:var(--bg-elevated);border-radius:var(--rounded-base);padding:var(--space-md);box-shadow:var(--shadow-elevation-02)">
+      <p class="text-body-base-regular text-text-secondary" style="margin:0 0 var(--space-md)">
+        This removes it for everyone it is shared with. It cannot be undone.
+      </p>
+      <div style="display:flex;justify-content:flex-end;gap:var(--space-xs)">
+        <button class="button-style button-medium button-secondary">Cancel</button>
+        <button class="button-style button-medium button-primary-danger">Delete deck</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── controls ──────────────────────────────────────────────────────────── -->
+<div class="ctl">
+  <span class="pai-field"><input type="checkbox" class="pai-checkbox" id="on" checked><label for="on" class="text-body-sm-regular">Scrim</label></span>
+  <div style="width:1px;height:20px;background:var(--border-secondary)"></div>
+  <label class="text-body-sm-regular text-text-secondary" style="display:flex;align-items:center;gap:var(--space-xs)">
+    Blur
+    <input type="range" id="blur" min="0" max="24" step="1" value="8" style="width:120px" />
+    <span class="mono text-[11px] text-text-secondary" id="blurVal" style="width:34px">8px</span>
+  </label>
+  <div style="width:1px;height:20px;background:var(--border-secondary)"></div>
+  <label class="text-body-sm-regular text-text-secondary" style="display:flex;align-items:center;gap:var(--space-xs)">
+    Black
+    <input type="range" id="alpha" min="0" max="80" step="5" value="50" style="width:120px" />
+    <span class="mono text-[11px] text-text-secondary" id="alphaVal" style="width:34px">50%</span>
+  </label>
+</div>
+
+<script>
+  // a grid with enough detail that the blur has something to act on
+  const TILES = [
+    ["Series B narrative",   "linear-gradient(140deg,#0055ED,#00225C)"],
+    ["Q3 revenue review",    "linear-gradient(140deg,#F0B100,#A16207)"],
+    ["Brand refresh",        "linear-gradient(140deg,#DC2626,#7F1D1D)"],
+    ["Onboarding teardown",  "linear-gradient(140deg,#00A449,#106131)"],
+    ["Pricing v4",           "linear-gradient(140deg,#3C82FF,#043485)"],
+    ["Customer research",    "linear-gradient(140deg,#8D8D8D,#262626)"],
+    ["Roadmap FY27",         "linear-gradient(140deg,#FDE047,#CA8A04)"],
+    ["Partner deck",         "linear-gradient(140deg,#93C5FD,#1D4ED8)"],
+  ];
+  document.getElementById("grid").innerHTML = TILES.map(([t, g], i) => `
+    <div class="card">
+      <div class="thumb" style="background:${g}"></div>
+      <div style="padding:var(--space-xs) 2px 0">
+        <div class="text-body-sm-regular text-text-primary" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</div>
+        <div class="text-body-xs-regular text-text-tertiary">Edited ${i + 2} days ago</div>
+      </div>
+    </div>`).join("");
+
+  const scrim = document.getElementById("scrim");
+  const set = () => {
+    const b = document.getElementById("blur").value;
+    const a = document.getElementById("alpha").value;
+    scrim.style.setProperty("--blur", b + "px");
+    scrim.style.background = `rgba(0,0,0,${a / 100})`;
+    document.getElementById("blurVal").textContent = b + "px";
+    document.getElementById("alphaVal").textContent = a + "%";
+  };
+  document.getElementById("blur").addEventListener("input", set);
+  document.getElementById("alpha").addEventListener("input", set);
+  document.getElementById("on").addEventListener("change", e => {
+    scrim.hidden = !e.target.checked;
+    document.getElementById("modal").style.opacity = e.target.checked ? 1 : 0.25;
+  });
+  set();
+</script>
+</body>
+</html>

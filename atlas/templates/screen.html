@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title><!-- what this screen is --></title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../design-system/icons/regular.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="../../design-system/pai.tailwind.js"></script>
+<link rel="stylesheet" href="../../design-system/pai.css" />
+<style>
+  /* ── machinery: leave alone ─────────────────────────────────────────── */
+
+  /* State switching. One line per state, EXACTLY ONE SPACE between the two
+     selectors — lining them up in a column can delete the space and set
+     display:contents on <body> itself, which renders a clean picture of the
+     wrong thing. A [data-state] element is a bare wrapper, never a button,
+     img or anything that draws itself: display:contents deletes its box. */
+  body [data-state] { display: none; }
+  body[data-state="default"] [data-state~="default"] { display: contents; }
+
+  /* Freeze: ?freeze=1 must produce a deterministic picture. */
+  body[data-freeze="1"], body[data-freeze="1"] *,
+  body[data-freeze="1"] *::before, body[data-freeze="1"] *::after {
+    animation-delay: 0s !important;
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    caret-color: transparent !important;
+  }
+
+  .atlas-unknown-state {
+    position: fixed; top: 8px; left: 8px; z-index: 9999;
+    background: #b91c1c; color: #fff; font: 700 14px/1.4 Inter, sans-serif;
+    padding: 4px 10px; border-radius: 4px;
+  }
+
+  /* ── your rules below. Two selectors' worth of specificity, or a Tailwind
+        utility on the same element silently wins. ───────────────────────── */
+</style>
+</head>
+<body class="pai">
+<script>
+  // The contract with the render. It reads this — never a comment.
+  window.__atlas = {
+    states: ["default"],   // every state the screen builds, happy path first
+    params: {},            // other URL settings that change the picture; usually empty
+  };
+  const ATLAS_T0 = 1780000000000; // the only blessed clock origin. No Date.now(), no Math.random().
+  (function () {
+    const S = window.__atlas.states;
+    const q = new URLSearchParams(location.search);
+    const s = q.get("state");
+    document.body.dataset.state = S.includes(s) ? s : S[0];
+    document.body.dataset.freeze = q.get("freeze") === "1" ? "1" : "0";
+    if (s && !S.includes(s)) {
+      const b = document.createElement("div");
+      b.textContent = "unknown state: " + s;
+      b.className = "atlas-unknown-state";
+      document.body.appendChild(b);
+    }
+  })();
+</script>
+
+<!-- data-atlas-frame goes on the outermost element of the designed thing,
+     exactly once. It includes controls that sit off the surface (a close
+     button outside a modal) and excludes the backdrop. -->
+<div data-atlas-frame>
+  <!-- the screen -->
+</div>
+
+<script>
+  window.__atlasReady = document.fonts.ready
+    .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+</script>
+</body>
+</html>

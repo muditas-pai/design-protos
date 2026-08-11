@@ -1,0 +1,597 @@
+<!-- canon: dashboard · source: Figma JAS '26 Handoff 101:485 "Dashboard - entry" · rebuilt on the design system 6 Aug 2026 -->
+<!--
+  THE FIRST FULL SCREEN IN canonical/
+  ==================================
+  Everything here so far has been a modal — one surface, one job. This is the
+  app: a fixed sidebar at viewport height, a scrolling main column, and three
+  bands inside it. The handoff frame is a 600px crop of a 1440 x 983 page.
+
+  WHAT MOVED, AND WHY
+  ===================
+    prompt card radius  12          → var(--rounded-xl). The scale's own note for
+                                      that rung reads "the prompt card, and hero
+                                      surfaces that carry the page" — this card.
+    inner prompt        8           → var(--rounded-lg). Concentric: 12 outer
+                                      minus the 4px of shell around it.
+    sidebar rows        bespoke     → .pai-list holding .listitem / -medium /
+                                      -interactive / .is-selected. The list owns
+                                      the 2px gap; the row owns everything else.
+    the PRO badges      bespoke     → .pai-badge .pai-badge-pro
+    document tabs       named "chip" in the handoff, drawn as tabs
+                                    → .tabs-strip + .tab-item. No .tabs-track:
+                                      the handoff draws no rule under the row.
+    list/grid toggle    46x28       → .pai-switcher .pai-switcher-small
+                                      .pai-switcher-icons, which lands at 54.
+    toolbar buttons     28 tall     → .button-style .button-small .button-tertiary
+    Create Presentation grey        → .button-primary + .button-disabled
+                                      .button-disabled-40. It is not a grey
+                                      button, it is the primary one DISABLED,
+                                      because nothing has been typed yet. Type
+                                      into the prompt and it comes alive.
+    action chips        40 tall     → .chip-style .chip-medium .chip-default, 36.
+    dividers            bespoke     → .pai-divider
+    avatars             28 / 34     → .pai-avatar-small 28 / .pai-avatar 36
+    the three way-in icons
+                        multicolour → Phosphor FILL, all three carrying
+                                      var(--gradient-brand-03). Which is what
+                                      101:623 draws, and what retired the one
+                                      hex this screen used to hold.
+    every icon          mixed       → Phosphor, vendored — regular and fill
+
+  DESIGN SYSTEM GAPS — flagged at the rule that needs them, in about.md. Two
+  were closed while this screen was being built, both from here:
+    · --gradient-brand-03 is a variable now, not a literal inside one button
+    · the icon-sizing rules see all three Phosphor weights, not only .ph
+
+  STATES — every one reachable from the URL:
+    ?tab=recent|starred|download|deleted   ?view=grid|list   ?typed=0|1
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard · presentations.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../design-system/icons/regular.css" />
+<link rel="stylesheet" href="../../design-system/icons/fill.css" />
+<link rel="stylesheet" href="../../design-system/pai.css" />
+<style>
+  /* DESIGN SYSTEM GAP — pai.css sets box-sizing nowhere. Fourth screen carrying
+     this reset locally; the reason not to fix it centrally is unchanged. */
+  *, *::before, *::after{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; background:var(--bg-subtle); }
+
+  /* ---- the shell ----------------------------------------------------------- */
+  /* The sidebar is viewport height and does not move; the main column scrolls
+     inside it. That is why the handoff's sidebar is 602 tall against a main
+     container of 983 — they are not the same page height and never were. */
+  .db-app{ display:flex; height:100%; }
+
+  /* ---- sidebar ------------------------------------------------------------- */
+  .db-side{
+    flex:none; width:260px; display:flex; flex-direction:column;
+    background:var(--bg-muted); border-right:1px solid var(--border-secondary);
+  }
+  /* Measured off 101:499. Two gaps and one rule owns each, so they cannot stack:
+     2px between rows INSIDE a group, 8px between anything and anything else.
+     The 8 is the flex gap on the containers, which is why the dividers carry
+     margin:0 — a margin here would add to the gap rather than replace it, which
+     is exactly how "Templates → Hire an Expert" came out at 10.
+
+     Those two are separate groups in the handoff, not adjacent rows, and that
+     is the difference between reading as two things and reading as a pair. */
+  .db-side .pai-divider{ margin:0; }
+  .db-side-nav{ padding:0 var(--space-xs); display:flex; flex-direction:column; gap:var(--space-xs); }
+  /* The workspace row owns the space under it — 8, matching the handoff's
+     56-tall header against a first group starting at 64. */
+  .db-workspace{ margin-bottom:var(--space-xs); }
+  /* The rule divides the SIDEBAR, not the list of rows inside it, so it runs to
+     the sidebar's edges rather than stopping at the 8px that insets the rows.
+     Same technique pai.css uses for .dropdown-menu-style .pai-divider, and the
+     same reason the README gives there: a rule stopping short of the edge of
+     the thing it divides reads as a mistake rather than as a separation.
+     width:auto because .pai-divider carries width:100%, which resolves against
+     the content box and would leave the negative margins nothing to stretch. */
+  .db-side-nav .pai-divider{
+    width:auto; margin-left:calc(var(--space-xs) * -1); margin-right:calc(var(--space-xs) * -1);
+  }
+  .db-side-foot{
+    margin-top:auto; padding-bottom:var(--space-xs);
+    display:flex; flex-direction:column; gap:var(--space-xs);
+  }
+
+  /* The workspace row is the only 56px band in the sidebar, matching the top
+     nav's height across the fold so the two rules line up. */
+  .db-workspace{
+    flex:none; height:56px; display:flex; align-items:center;
+    padding:0 var(--space-sm);
+  }
+  .db-workspace-btn{
+    width:100%; display:flex; align-items:center; gap:var(--space-xs);
+    padding:var(--space-2xs); border:0; background:none; cursor:pointer;
+    border-radius:var(--rounded-base); font-family:inherit; text-align:left;
+    transition:background-color 160ms var(--ease-out-strong);
+  }
+  .db-workspace-btn:hover{ background:var(--bg-elevated-hover); }
+  /* DESIGN SYSTEM GAP — a workspace is not a person. .pai-avatar is the only
+     thing published for "a small square identifying someone", and it is round
+     by rule ("Always round"), which is right for a face and wrong for an
+     organisation: squaring it would break every avatar, and rounding this would
+     crop a logo drawn to fill its box. So the shape is local. 28px to match
+     .pai-avatar-small, so it lines up with the profile picture in the top nav.
+     The logo sits INSIDE at 20 with white behind it, because a brand logo is
+     drawn against its own background and not against a grey panel. */
+  .db-workspace-logo{
+    flex:none; width:28px; height:28px; padding:var(--space-2xs);
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg-elevated); border-radius:var(--rounded-base);
+    box-shadow:inset 0 0 0 1px var(--border-secondary);
+  }
+  /* The logo fills what the tile's padding leaves it — 20 inside 28 — rather
+     than being told a size of its own. object-fit:contain so a wordmark and a
+     square glyph both sit correctly in the same box. */
+  .db-workspace-logo img{ width:100%; height:100%; display:block; object-fit:contain; }
+  .db-workspace-name{ flex:1; min-width:0; color:var(--text-primary);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .db-workspace-btn > .ph{ flex:none; font-size:var(--icon-md); color:var(--text-secondary); }
+
+  /* A section heading, not a row you can press — so it is not a .listitem.
+     The handoff draws it at the same indent as the rows above it. */
+  /* A row-shaped heading. The handoff draws "Projects" as a side-nav instance
+     like every other row — 244 x 36, same inset — so it sits on the same rhythm
+     rather than being a caption floating above the group. Its text starts where
+     the icons start, not where the labels do.
+
+     margin:0 is load-bearing: a <p> carries the UA's 1em top and bottom, and in
+     a flex column those do not collapse, so it was adding 32px nobody asked for.
+     Same failure as the <dl> in deck-analytics.
+
+     36 is a literal and the linter offers --space-2xl, 32, because the numbers
+     are close. Taking it would drift the whole group 4px off the handoff's
+     rhythm to satisfy a spacing token that does not govern control heights.
+     THIRD screen to want a control rung that has no token — see about.md. */
+  .db-side-label{
+    margin:0; min-height:36px; display:flex; align-items:center;
+    padding:0 var(--space-xs); color:var(--text-secondary);
+  }
+  /* No width override here. .listitem publishes width:100% for a reason: these
+     rows are <button>s, and a form control sizes to its content even as a flex
+     container, so without it the selected row's fill stopped just after the
+     word. The row is the whole width of the nav — that is what makes it read as
+     a row rather than as a tag sitting on one. */
+  .db-side .listitem .pai-badge{ flex:none; margin-left:auto; }
+
+  /* ---- main column --------------------------------------------------------- */
+  .db-main{ flex:1 1 auto; min-width:0; overflow-y:auto; background:var(--bg-subtle); }
+
+  .db-top{
+    height:56px; display:flex; align-items:center; justify-content:flex-end;
+    gap:var(--space-sm); padding:0 var(--space-xl);
+  }
+  /* The trial notice is a container holding a sentence and its way out, not a
+     badge — a badge is a word, and this is a deadline with an action beside it. */
+  /* No height. The row is as tall as the 28px button inside it plus its padding,
+     which lands on 36 — the same rung .button-medium and .pai-avatar sit at, so
+     it lines up with the icon buttons beside it without asserting a number. */
+  .db-trial{
+    display:flex; align-items:center; gap:var(--space-sm);
+    padding:var(--space-2xs) var(--space-2xs) var(--space-2xs) var(--space-sm);
+    background:var(--bg-elevated); border-radius:var(--rounded-base);
+    box-shadow:var(--elevation-01);
+  }
+  .db-trial-text{ display:flex; align-items:center; gap:var(--space-2xs); color:var(--text-primary); }
+  /* An emoji, not ph-fire. This is the one place on the screen that is not
+     labelling or navigating — it is a countdown trying to feel like one, and a
+     monochrome flame at --icon-sm reads as a category marker rather than as
+     urgency. See the README: an emoji is allowed exactly where expressiveness
+     is the job, and it carries a real cost — the OS draws it, so it is a
+     different picture on every platform.
+     No colour set: a colour emoji ignores `color` anyway, which is part of what
+     makes it a picture rather than an icon. line-height:1 so a taller glyph
+     cannot push the row past the 36 it shares with the buttons beside it. */
+  .db-trial-emoji{ font-size:var(--icon-sm); line-height:1; }
+
+  /* ---- the hero: brand-kit nudge, prompt, three ways in -------------------- */
+  /* 64 below, 32 above. The hero and the documents below it are two bands of the
+     page, not two blocks in a stack, and 663:1687 leaves 63 between the chips
+     and the tab row against 32 above the prompt — the asymmetry is what stops
+     the shelf reading as a fourth thing attached to the prompt. 64 is the rung. */
+  .db-hero{ width:720px; max-width:100%; margin:0 auto; padding:var(--space-2xl) 0 var(--space-5xl); }
+
+  /* The prompt itself is .pai-prompt, published, and this screen writes NO CSS
+     for it. That component was harvested out of this very screen — its comment
+     reads "Ported from the dashboard launcher (Figma 101:592)", which is the
+     node inside the frame this file is built from. The local shell, brand strip
+     and box that used to live here are gone; what is left is the wiring the
+     component leaves to the screen, which is its .is-focused state.
+
+     Three things moved by taking it, all of them the component's decisions:
+       tint        --bg-muted     → --bg-tertiary
+       elevation   --elevation-02 → --elevation-03
+       the box     inset 4px      → flush to three edges, carrying its own
+                                    stroke, so the only tint showing is the
+                                    strip along the top. */
+
+  /* DESIGN SYSTEM GAP — still open after round 2. .button-style publishes its
+     icon-to-label spacing through .button-label, which sets margin-left when it
+     is not the first child: that covers a LEADING icon and nothing else, so a
+     trailing caret sits against the word. The sticker sheet's own prompt has it
+     too. One local rule; the leading side is the published mechanism's. */
+  .pai-prompt-toolbar .ph-caret-down{ margin-left:var(--space-2xs); opacity:.6; }
+
+  .db-ways{
+    display:flex; align-items:center; justify-content:center;
+    gap:var(--space-sm); margin-top:var(--space-2xl);
+  }
+  /* No gap rule here — .chip-medium already publishes gap:var(--space-xs), which
+     is the difference between a chip and a button: the chip spaces its own icon,
+     the button makes you reach for .button-label. */
+
+  /* The gradient itself is .pai-icon-brand, published — this screen only says
+     how big. 20 rather than the chip's own 16: the handoff draws these at 24,
+     and they are the only illustrated things in the row, so they carry it.
+     --icon-md is the nearest published rung. */
+  .db-ways .pai-icon-brand{ font-size:var(--icon-md); }
+
+  /* ---- documents ----------------------------------------------------------- */
+  .db-docs{ padding:0 var(--space-xl) var(--space-4xl); }
+  .db-docs-head{ display:flex; align-items:center; gap:var(--space-md); }
+  .db-docs-head .tabs-strip{ flex:1; }
+  .db-grid{
+    display:grid; grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:var(--space-md); margin-top:var(--space-md);
+  }
+  /* The whole thing is one card, per 663:1769 — cover flush to the top inside a
+     clipped container rather than a floating picture with its caption loose on
+     the page. Its three shadow layers ARE --elevation-01, matched exactly, so
+     the card takes the published resting step rather than a hand-written ring.
+     overflow:hidden is what lets the cover meet the corners: the card owns the
+     radius and the picture is cut to it. */
+  .db-card{
+    display:block; text-align:left; width:100%; padding:0; cursor:pointer;
+    border:0; font-family:inherit; overflow:hidden;
+    background:var(--bg-elevated); border-radius:var(--rounded-md);
+    box-shadow:var(--elevation-01);
+    transition:box-shadow 160ms var(--ease-out-strong);
+  }
+  .db-card:hover{ box-shadow:var(--elevation-02); }
+  /* The focus ring replaces the resting shadow rather than stacking on it —
+     .shadow-focus-surface's own composition, laid over a card that already has
+     an edge. */
+  .db-card:focus-visible{
+    outline:none;
+    box-shadow:0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted);
+  }
+  /* 16/9, not the handoff's 366.5 x 202. Its placeholder was 4px short of the
+     ratio every deck in assets/decks/ is actually rendered at, and a cover
+     letterboxed by 4px is a cover nobody framed.
+     display:block is load-bearing — aspect-ratio does nothing on an inline box,
+     so as a bare <span> this was sized by its content and every cover came out
+     1.32:1 with the deck cropped into it. No radius and no ring of its own now:
+     the card clips it, and a second edge inside the card's would read as two. */
+  .db-card-cover{
+    display:block; aspect-ratio:16/9; overflow:hidden;
+    background:var(--bg-quaternary);
+  }
+  .db-card-cover img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .db-card-body{ display:block; padding:var(--space-sm); }
+  .db-card-title{
+    display:block; color:var(--text-primary);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* Secondary, not tertiary. It carries two facts somebody actually reads —
+     where the deck lives and when it moved — rather than being a timestamp to
+     ignore. 663:1769 sets it at --text-secondary. */
+  .db-card-sub{ display:block; margin-top:var(--space-2xs); color:var(--text-secondary); }
+
+  /* The list view the switcher promises. The handoff draws only the grid, so
+     this is the smallest thing that keeps the control honest: same cards, one
+     per row, cover shrunk to a thumbnail. A switcher whose other half does
+     nothing is a control that lies. */
+  body[data-view="list"] .db-grid{ grid-template-columns:1fr; gap:var(--space-xs); }
+  /* In a row the card owns the padding and the cover becomes a thumbnail inside
+     it, so it takes a radius of its own — in the grid the card clips the cover
+     to its corners, but here the cover is surrounded and needs its own edge. */
+  body[data-view="list"] .db-card{
+    display:flex; align-items:center; gap:var(--space-sm); padding:var(--space-sm);
+  }
+  body[data-view="list"] .db-card-cover{
+    flex:none; width:96px; border-radius:var(--rounded-base);
+  }
+  body[data-view="list"] .db-card-body{ flex:1; min-width:0; padding:0; }
+
+  /* Nothing in this tab yet. Not a spinner and not a blank — a sentence saying
+     which shelf is empty, because three of the four tabs start that way.
+     A sentence and nothing else: the icon that was here needed a display size
+     the system does not publish (--icon-* stops at 20), and a tray drawn above
+     "Nothing starred yet" was repeating the sentence rather than adding to it. */
+  .db-empty{
+    display:none; padding:var(--space-5xl) 0; text-align:center;
+    color:var(--text-secondary);
+  }
+  body:not([data-tab="recent"]) .db-grid{ display:none; }
+  body:not([data-tab="recent"]) .db-empty{ display:block; }
+</style>
+</head>
+
+<body class="pai" data-tab="recent" data-view="grid" data-typed="0">
+
+<div class="db-app">
+
+  <!-- ══ sidebar ═══════════════════════════════════════════════════════════ -->
+  <aside class="db-side" aria-label="Workspace">
+    <div class="db-workspace">
+      <button class="db-workspace-btn" type="button" aria-label="Switch workspace">
+        <span class="db-workspace-logo" aria-hidden="true">
+          <img src="../../assets/brand-kits/ibm/logo.svg" alt="" width="20" height="20" />
+        </span>
+        <span class="db-workspace-name text-body-base-medium">IBM</span>
+        <span class="pai-badge pai-badge-pro">Upgrade</span>
+        <i class="ph ph-caret-down" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <nav class="db-side-nav" aria-label="Main">
+      <div class="pai-list">
+        <button class="listitem listitem-medium listitem-interactive is-selected" type="button" aria-current="page">
+          <i class="ph ph-house listitem-icon" aria-hidden="true"></i>
+          <span class="listitem-title">Home</span>
+        </button>
+        <button class="listitem listitem-medium listitem-interactive" type="button">
+          <i class="ph ph-file listitem-icon" aria-hidden="true"></i>
+          <span class="listitem-title">Created by Me</span>
+        </button>
+      </div>
+
+      <hr class="pai-divider" />
+
+      <div class="pai-list">
+        <p class="db-side-label text-body-sm-medium">Projects</p>
+        <button class="listitem listitem-medium listitem-interactive" type="button">
+          <i class="ph ph-plus listitem-icon" aria-hidden="true"></i>
+          <span class="listitem-title">Create project</span>
+          <span class="pai-badge pai-badge-pro">Pro</span>
+        </button>
+      </div>
+
+      <hr class="pai-divider" />
+
+      <div class="pai-list">
+        <button class="listitem listitem-medium listitem-interactive" type="button">
+          <i class="ph ph-layout listitem-icon" aria-hidden="true"></i>
+          <span class="listitem-title">Templates</span>
+        </button>
+      </div>
+      <div class="pai-list">
+        <button class="listitem listitem-medium listitem-interactive" type="button">
+          <i class="ph ph-pen-nib listitem-icon" aria-hidden="true"></i>
+          <span class="listitem-title">Hire an Expert</span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="db-side-foot">
+      <hr class="pai-divider" />
+      <nav class="db-side-nav" aria-label="Workspace">
+        <div class="pai-list">
+          <button class="listitem listitem-medium listitem-interactive" type="button">
+            <i class="ph ph-gear listitem-icon" aria-hidden="true"></i>
+            <span class="listitem-title">Workspace settings</span>
+          </button>
+          <button class="listitem listitem-medium listitem-interactive" type="button">
+            <i class="ph ph-user-plus listitem-icon" aria-hidden="true"></i>
+            <span class="listitem-title">Invite new member</span>
+            <span class="pai-badge pai-badge-pro">Pro</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- ══ main ══════════════════════════════════════════════════════════════ -->
+  <main class="db-main">
+
+    <div class="db-top">
+      <div class="db-trial">
+        <span class="db-trial-text text-body-base-medium">
+          <span class="db-trial-emoji" role="img" aria-hidden="true">🔥</span>Trial: 4 days left
+        </span>
+        <button class="button-style button-small button-primary-brand" type="button">
+          <i class="ph ph-rocket-launch" aria-hidden="true"></i><span class="button-label">Upgrade</span>
+        </button>
+      </div>
+      <button class="button-style button-medium button-ghost icon-only" type="button" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
+      <button class="button-style button-medium button-ghost icon-only" type="button" aria-label="Help"><i class="ph ph-question"></i></button>
+      <button class="button-style button-medium button-ghost icon-only" type="button" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+      <span class="pai-avatar pai-avatar-small" aria-label="Your account">
+        <img src="../../assets/avatars/mudita.jpg" alt="" />
+      </span>
+    </div>
+
+    <div class="db-hero">
+      <div class="pai-prompt" id="promptCard">
+        <div class="pai-prompt-edge"></div>
+        <div class="pai-prompt-brand">
+          <i class="ph-fill ph-swatches pai-icon-brand" aria-hidden="true"></i>
+          <span>Set up Brand Kit to use your logo, colours, and voice</span>
+          <span class="pai-badge pai-badge-pro">Pro</span>
+          <i class="ph ph-caret-right" aria-hidden="true"></i>
+        </div>
+        <div class="pai-prompt-box">
+          <textarea class="pai-prompt-input" id="prompt" rows="1"
+                    placeholder="To start creating, type here or upload a file…"
+                    aria-label="Describe the presentation you want"></textarea>
+          <!-- The placeholder is drawn twice on purpose: the attribute above is
+               what :placeholder-shown reads and what a screen reader announces,
+               and this overlay is what you see — because only the second can
+               underline "upload a file". They must stay the same words. -->
+          <span class="pai-prompt-placeholder" aria-hidden="true">To start creating, type here or <u>upload a file</u>…</span>
+          <div class="pai-prompt-toolbar">
+            <button class="button-style button-small button-tertiary" type="button">
+              <i class="ph ph-upload-simple" aria-hidden="true"></i><span class="button-label">Upload files, or links</span>
+            </button>
+            <button class="button-style button-small button-tertiary" type="button">
+              <i class="ph ph-cards-three" aria-hidden="true"></i><span class="button-label">5 Slides</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+            </button>
+            <button class="button-style button-small button-tertiary" type="button">
+              <i class="ph ph-sparkle" aria-hidden="true"></i><span class="button-label">Standard Model</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+            </button>
+            <button class="button-style button-small button-tertiary icon-only" type="button" aria-label="Generation settings">
+              <i class="ph ph-sliders-horizontal"></i>
+            </button>
+            <button class="button-style button-small button-primary button-disabled button-disabled-40 pai-prompt-submit"
+                    type="button" id="create" disabled><span class="button-label">Create Presentation</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="db-ways">
+        <button class="chip-style chip-medium chip-default" type="button">
+          <i class="ph-fill ph-microsoft-powerpoint-logo pai-icon-brand" aria-hidden="true"></i>Import PowerPoint
+        </button>
+        <button class="chip-style chip-medium chip-default" type="button">
+          <i class="ph-fill ph-pen-nib pai-icon-brand" aria-hidden="true"></i>Hire an Expert
+        </button>
+        <button class="chip-style chip-medium chip-default" type="button">
+          <i class="ph-fill ph-layout pai-icon-brand" aria-hidden="true"></i>Use a Template
+          <span class="pai-badge pai-badge-pro">Pro</span>
+        </button>
+      </div>
+    </div>
+
+    <section class="db-docs">
+      <div class="db-docs-head">
+        <div class="tabs-strip tabs-strip-small" role="tablist" aria-label="Documents" id="docTabs">
+          <button class="tab-item tab-item-small is-selected" type="button" role="tab" data-tab="recent" aria-selected="true">Recent</button>
+          <button class="tab-item tab-item-small" type="button" role="tab" data-tab="starred" aria-selected="false">Starred</button>
+          <button class="tab-item tab-item-small" type="button" role="tab" data-tab="download" aria-selected="false">Download</button>
+          <button class="tab-item tab-item-small" type="button" role="tab" data-tab="deleted" aria-selected="false">Recently deleted</button>
+          <span class="tabs-indicator tabs-indicator-glide" id="docInk"></span>
+        </div>
+
+        <div class="pai-switcher pai-switcher-small pai-switcher-icons" role="radiogroup" aria-label="View" id="viewSwitch">
+          <label class="pai-switcher-option" aria-label="List view">
+            <input type="radio" name="db-view" value="list" /><i class="ph ph-list-bullets" aria-hidden="true"></i>
+          </label>
+          <label class="pai-switcher-option" aria-label="Grid view">
+            <input type="radio" name="db-view" value="grid" checked /><i class="ph ph-squares-four" aria-hidden="true"></i>
+          </label>
+        </div>
+      </div>
+
+      <div class="db-grid" id="grid"></div>
+
+      <p class="db-empty text-body-base-regular" id="empty"><span id="emptyText"></span></p>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* The four decks the repo carries, with their real titles. The handoff repeats
+     one placeholder three times; three different covers is what the shelf
+     actually looks like, and it is what proves the card copes with a long title
+     and a short one. */
+  const DECKS = [
+    { slug: "palantir-q1-investor",         title: "Palantir — Q1 Investor Presentation",          sub: "In Drafts • Edited 2 hours ago" },
+    { slug: "nayture-brand-like-patagonia", title: "Nayture — Building a Brand Like Patagonia",    sub: "In Drafts • Edited yesterday" },
+    { slug: "ibm-cost-of-a-data-breach",    title: "IBM Security — Cost of a Data Breach Report",  sub: "In Drafts • Edited 3 days ago" }
+  ];
+
+  const EMPTY = {
+    starred:  "Nothing starred yet. Star a deck and it waits for you here.",
+    download: "No downloads yet. Exported decks show up here.",
+    deleted:  "Nothing deleted in the last 30 days."
+  };
+
+  const $ = id => document.getElementById(id);
+  const state = { tab: "recent", view: "grid" };
+
+  $("grid").innerHTML = DECKS.map(d =>
+    `<button class="db-card" type="button">
+       <span class="db-card-cover">
+         <img src="../../assets/decks/${d.slug}/card/01.jpg" alt="" width="800" height="450" loading="lazy" />
+       </span>
+       <span class="db-card-body">
+         <span class="db-card-title text-body-base-medium">${d.title}</span>
+         <span class="db-card-sub text-body-sm-regular">${d.sub}</span>
+       </span>
+     </button>`).join("");
+
+  function moveInk() {
+    const on = $("docTabs").querySelector(".is-selected");
+    $("docInk").style.width = on.offsetWidth + "px";
+    $("docInk").style.transform = `translateX(${on.offsetLeft}px)`;
+  }
+
+  function setTab(tab) {
+    state.tab = tab;
+    $("docTabs").querySelectorAll(".tab-item").forEach(t => {
+      const on = t.dataset.tab === tab;
+      t.classList.toggle("is-selected", on);
+      t.setAttribute("aria-selected", String(on));
+    });
+    document.body.dataset.tab = tab;
+    if (EMPTY[tab]) $("emptyText").textContent = EMPTY[tab];
+    moveInk();
+    writeUrl();
+  }
+
+  function setView(view) {
+    state.view = view;
+    document.body.dataset.view = view;
+    $("viewSwitch").querySelector(`input[value="${view}"]`).checked = true;
+    writeUrl();
+  }
+
+  /* The CTA is the primary button DISABLED, not a grey one — so it has to come
+     alive the moment there is something to submit. */
+  function setTyped(on) {
+    document.body.dataset.typed = on ? "1" : "0";
+    const btn = $("create");
+    btn.disabled = !on;
+    btn.classList.toggle("button-disabled", !on);
+    btn.classList.toggle("button-disabled-40", !on);
+    writeUrl();
+  }
+
+  function writeUrl() {
+    const u = new URL(location);
+    u.searchParams.set("tab", state.tab);
+    u.searchParams.set("view", state.view);
+    u.searchParams.set("typed", document.body.dataset.typed);
+    history.replaceState(null, "", u);
+  }
+
+  $("docTabs").addEventListener("click", e => {
+    const t = e.target.closest(".tab-item");
+    if (t) setTab(t.dataset.tab);
+  });
+  $("viewSwitch").addEventListener("change", e => setView(e.target.value));
+  $("prompt").addEventListener("input", e => setTyped(e.target.value.trim().length > 0));
+  /* .pai-prompt-edge holds the focus stroke and the component leaves the toggle
+     to the screen, the same way every dropdown here opens itself. */
+  $("prompt").addEventListener("focus", () => $("promptCard").classList.add("is-focused"));
+  $("prompt").addEventListener("blur",  () => $("promptCard").classList.remove("is-focused"));
+  addEventListener("resize", moveInk);
+
+  const q = new URLSearchParams(location.search);
+  const pick = (k, allowed, fallback) => allowed.includes(q.get(k)) ? q.get(k) : fallback;
+  setTab(pick("tab", ["recent", "starred", "download", "deleted"], "recent"));
+  setView(pick("view", ["grid", "list"], "grid"));
+  if (q.get("typed") === "1") {
+    $("prompt").value = "A Q3 business review for the leadership team";
+    setTyped(true);
+  } else {
+    setTyped(false);
+  }
+  requestAnimationFrame(moveInk);
+})();
+</script>
+</body>
+</html>

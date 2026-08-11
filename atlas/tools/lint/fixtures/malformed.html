@@ -1,0 +1,55 @@
+<!doctype html>
+<!--
+  malformed.html — stylesheets the browser never fully receives.
+
+  Every other fixture plants defects that a value check can see. These cannot be
+  planted in violations.html, because that is exactly the point of them: an
+  unclosed comment swallows every rule after it, so one defect here would delete
+  the rest of the fixture and the suite would go quiet rather than fail.
+
+  Each defect gets its own <style> block. A closing </style> ends the element
+  whatever state the CSS is in, so the blocks cannot contaminate each other —
+  which is what lets four live in one file.
+
+  Expected: one malformed finding per block, and none from the control.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>malformed stylesheets</title>
+<link rel="stylesheet" href="../../../design-system/pai.css" />
+
+<!-- expect: malformed:unclosed-comment -->
+<style>
+.mf-a { color: var(--text-primary); }
+/* this comment never closes, so both rules below are invisible
+.mf-b { color: var(--text-secondary); }
+.mf-c { color: var(--text-tertiary); }
+</style>
+
+<!-- expect: malformed:stray-close-brace -->
+<style>
+.mf-d { color: var(--text-primary); }
+}
+.mf-e { color: var(--text-secondary); }
+</style>
+
+<!-- expect: malformed:unclosed-block -->
+<style>
+.mf-f { color: var(--text-primary);
+.mf-g { color: var(--text-secondary); }
+</style>
+
+<!-- control: expect nothing. A brace inside a comment or a quoted string is not
+     a block, and a scan that cannot tell them apart reports the healthy file. -->
+<style>
+.mf-ok-1 { content: "}"; color: var(--text-primary); }
+/* .mf-ok-x { a brace in a comment } */
+.mf-ok-2 { content: '{'; color: var(--text-secondary); }
+.mf-ok-3::after { content: "/* not a comment */"; }
+</style>
+</head>
+<body class="pai">
+<p class="mf-a">Each style block above is broken in one way, except the last.</p>
+</body>
+</html>

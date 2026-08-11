@@ -1,0 +1,55 @@
+<!--
+  fixture: a design taller than the screen it is on.  The clip hides the fold, so the
+  render has to say so in render.json or nobody learns the primary action is off-screen.
+  Deliberately loads nothing from the network so the suite runs offline.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>fixture — clean</title>
+<style>
+  body { margin: 0; background: #6b7280; font: 16px/1.4 system-ui, sans-serif; }
+  body [data-state] { display: none; }
+  body[data-state="default"] [data-state~="default"],
+  body[data-state="empty"]   [data-state~="empty"] { display: contents; }
+  .wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { width: 400px; background: #fff; border-radius: 12px; padding: 32px 32px 900px; }
+  /* The trap, planted deliberately. A render that resizes the window to the frame
+     (464 + 96 = 560) drops below this breakpoint and captures the narrow layout while
+     labelling it 1440. Clipping leaves the window at 1440, so white is what we see. */
+  @media (max-width: 767px) { .card { background: #ff0000; } }
+  .atlas-unknown-state { position: fixed; top: 0; left: 0; z-index: 9999;
+    background: #b91c1c; color: #fff; padding: 12px 20px; font-weight: 700; }
+</style>
+</head>
+<body>
+<script>
+  const ATLAS_STATES = ["default", "empty"];
+  (function () {
+    const q = new URLSearchParams(location.search);
+    const s = q.get("state");
+    document.body.dataset.state = ATLAS_STATES.includes(s) ? s : ATLAS_STATES[0];
+    document.body.dataset.freeze = q.get("freeze") === "1" ? "1" : "0";
+    if (s && !ATLAS_STATES.includes(s)) {
+      const b = document.createElement("div");
+      b.textContent = "unknown state: " + s;
+      b.className = "atlas-unknown-state";
+      document.body.appendChild(b);
+    }
+  })();
+</script>
+
+<div class="wrap">
+  <div class="card" data-atlas-frame>
+    <h1 data-state="default">The ordinary state</h1>
+    <h1 data-state="empty">Nothing here yet</h1>
+  </div>
+</div>
+
+<script>
+  window.__atlasReady = document.fonts.ready
+    .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+</script>
+</body>
+</html>
