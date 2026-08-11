@@ -211,7 +211,25 @@
   .t-pin.no-pin .t-pin-sticky{position:static;height:auto;overflow:visible}
 
   /* membership cross-sell banner below the one-off pricing cards */
-  .mem-banner{max-width:1128px;margin:24px auto 0;display:flex;align-items:center;gap:24px;padding:28px 36px;box-sizing:border-box;background:#fff;border:1px solid var(--border-soft);border-radius:10px;box-shadow:var(--shadow-card);cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
+  /* landing chooser: one-time deck vs design membership */
+  .in-ov{position:fixed;inset:0;z-index:80;background:rgba(10,25,37,.55);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s ease}
+  .in-ov.show{opacity:1;pointer-events:auto}
+  .in-card{width:760px;max-width:94vw;max-height:90vh;overflow-y:auto;background:#fff;border-radius:12px;padding:40px 40px 36px;text-align:center;font-family:var(--font);box-shadow:0 24px 64px -12px rgba(10,25,37,.4);transform:translateY(14px);transition:transform .3s cubic-bezier(.22,1,.36,1)}
+  .in-ov.show .in-card{transform:translateY(0)}
+  .in-title{font-size:24px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+  .in-sub{margin-top:8px;font-size:14.5px;color:var(--ink2);line-height:1.5}
+  .in-opts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+  .in-opt{background:#fff;border:1px solid var(--border-soft);border-radius:10px;padding:28px 24px;text-align:center;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+  .in-opt:hover{transform:translateY(-3px);box-shadow:var(--shadow-card);border-color:var(--navy)}
+  .in-ic{width:48px;height:48px;border-radius:10px;background:#eaf1ff;display:grid;place-items:center;margin:0 auto 14px}
+  .in-ic i{font-size:24px;color:var(--blue)}
+  .in-name{font-size:17px;font-weight:700;color:var(--ink)}
+  .in-desc{margin-top:8px;font-size:13.5px;line-height:1.55;color:var(--ink2)}
+  .in-from{margin-top:12px;font-size:13px;font-weight:600;color:var(--ink)}
+  .in-go{margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--blue)}
+  .in-go i{font-size:14px}
+  @media (max-width:640px){.in-opts{grid-template-columns:1fr}.in-card{padding:28px 20px}}
+  .mem-banner{max-width:1080px;margin:24px auto 0;display:flex;align-items:center;gap:24px;padding:28px 36px;box-sizing:border-box;background:#fff;border:1px solid var(--border-soft);border-radius:10px;box-shadow:var(--shadow-card);cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
   .mem-banner:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(10,25,37,.10)}
   .mem-banner-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
   .tm-ic{flex:0 0 auto;width:44px;height:44px;border-radius:10px;background:#eaf1ff;display:grid;place-items:center;font-size:22px;color:var(--blue)}
@@ -500,6 +518,30 @@
 </head>
 <body>
 <button class="close-x" aria-label="Close" onclick="new URLSearchParams(location.search).get('from')==='trial-dashboard' ? location.href='../../7-day-trial/dashboard-trial.html' : window.close()"><i class="ph ph-x"></i></button>
+
+<!-- Landing chooser: pick how to work with us -->
+<div class="in-ov" id="in-ov">
+  <div class="in-card">
+    <div class="in-title">How can our designers help?</div>
+    <div class="in-sub">Two ways to work with us. Pick what fits, you can always switch later.</div>
+    <div class="in-opts">
+      <div class="in-opt" onclick="introPick('oneoff')">
+        <span class="in-ic"><i class="ph-bold ph-presentation-chart"></i></span>
+        <div class="in-name">One-time deck</div>
+        <div class="in-desc">Send your content and get a polished, presentation-ready deck back in as little as 24 hours. Pay per deck, no commitment.</div>
+        <div class="in-from">From $799 per deck</div>
+        <span class="in-go">Get one deck<i class="ph-bold ph-arrow-right"></i></span>
+      </div>
+      <div class="in-opt" onclick="introPick('retainer')">
+        <span class="in-ic"><i class="ph-bold ph-calendar-check"></i></span>
+        <div class="in-name">Design membership</div>
+        <div class="in-desc">A dedicated designer on call every month for all your decks, with unlimited tweaks and a direct Slack or Teams line.</div>
+        <div class="in-from">From $1,000/month</div>
+        <span class="in-go">See memberships<i class="ph-bold ph-arrow-right"></i></span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="wrap">
 
@@ -1101,7 +1143,21 @@
 
   // Deep link: ?mode=retainer opens on the retainer tab
   window.addEventListener('load', () => {
-    if (new URLSearchParams(location.search).get('mode') === 'retainer') setMode('retainer');
+    const q = new URLSearchParams(location.search);
+    if (q.get('mode') === 'retainer') setMode('retainer');
+    else if (!q.get('mode') && !q.get('from')) document.getElementById('in-ov').classList.add('show');
+  });
+
+  // Landing chooser: route to the picked tab
+  function introPick(m) {
+    document.getElementById('in-ov').classList.remove('show');
+    setMode(m);
+  }
+  document.getElementById('in-ov').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') document.getElementById('in-ov').classList.remove('show');
   });
 
   function pay(hours) {

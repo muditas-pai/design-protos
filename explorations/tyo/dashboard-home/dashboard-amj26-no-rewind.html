@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<!-- exploration: dashboard home (AMJ '26 handoff) · tyo
+     variant of dashboard-amj26.html: leaving an action card stops the clip in place
+     instead of rewinding it to the first frame
+     source: figma.com/design/LlPq06ZFNhNSeLojVhYsxS  node 2706:17343 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>" />
+  <title>Dashboard home (AMJ '26), no rewind · tyo</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    /* brand ramp as used by this Figma file — drives the gradient pill glyphs */
+    :root {
+      --f-brand-100:#c2d8ff; --f-brand-300:#5291ff; --f-brand-600:#0055ed; --f-brand-900:#00225c;
+      --f-gradient: radial-gradient(162% 179% at 14% -1%,
+        var(--f-brand-100) 0%, var(--f-brand-300) 32%, var(--f-brand-600) 77%, var(--f-brand-900) 100%);
+      --d1: rgba(11,15,20,0.06);
+      --d2: rgba(11,15,20,0.09);
+      --inner: rgba(255,255,255,0.8);
+      --line: rgba(11,15,20,0.09);
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+      --sh-1: 0 0 0 1px var(--d2), 0 1px 2px 0 var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-prompt: 0 0 0 1px var(--d2), 0 1px 2px 0 var(--d2), 0 4px 6px 0 var(--d2),
+                   0 24px 40px -16px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-pill: 0 0 0 1px var(--d1), 0 2px 6px 0 var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-card-hover: 0 0 0 1px var(--d2), 0 2px 6px 0 var(--d2), 0 12px 28px -10px var(--d2), inset 0 0 0 1px var(--inner);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg-primary); }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── sidebar ───────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 262px; min-width: 262px; height: 100%;
+      background: var(--bg-secondary); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+    }
+    .ws { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+    .ws-avatar {
+      width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+      background: linear-gradient(135deg, #ff5a5f, #e8384f);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+      display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px;
+    }
+    .ws-name { flex: 1; min-width: 0; font-weight: 500; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ws .caret { color: var(--text-secondary); font-size: 18px; }
+
+    .nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-label { padding: 8px 8px 2px; color: var(--text-secondary); font-size: 14px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px; height: 36px; width: 100%;
+      padding: 8px; border: 0; background: transparent; border-radius: 6px;
+      color: var(--text-secondary); cursor: pointer; font: 400 14px/1.43 Inter, sans-serif;
+      text-align: left; transition: background 140ms var(--ease);
+    }
+    .nav-item i { font-size: 20px; flex-shrink: 0; }
+    .nav-item span.lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-item:hover { background: var(--bg-elevated-hover); }
+    .nav-item.is-active { background: var(--bg-elevated-hover); color: var(--text-primary); font-weight: 600; }
+    .divider { height: 1px; background: var(--line); margin: 6px 0; box-shadow: 0 1px 0 0 var(--inner); }
+    .sidebar-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 8px; }
+
+    /* ── main ──────────────────────────────────────────────────────────────── */
+    .main { flex: 1; min-width: 0; height: 100%; background: var(--bg-primary); overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 10px; }
+    .main::-webkit-scrollbar-thumb { background: rgba(11,15,20,0.12); border-radius: 99px; border: 3px solid var(--bg-primary); }
+
+    .topbar {
+      height: 56px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+      padding: 0 24px; position: sticky; top: 0; z-index: 5; background: var(--bg-primary);
+    }
+    .trial {
+      display: flex; align-items: center; gap: 8px; height: 36px;
+      background: var(--bg-primary); border: 1px solid var(--line);
+      border-radius: 6px; padding: 4px 4px 4px 10px;
+    }
+    .trial-text { font-size: 14px; font-weight: 500; color: var(--text-primary); white-space: nowrap; }
+    .icon-btn {
+      width: 36px; height: 36px; display: grid; place-items: center; border: 0;
+      background: transparent; color: var(--text-secondary); border-radius: 4px;
+      cursor: pointer; font-size: 20px; transition: background 140ms var(--ease);
+    }
+    .icon-btn:hover { background: var(--bg-elevated-hover); }
+    .avatar {
+      width: 28px; height: 28px; border-radius: 999px; margin-left: 4px; flex-shrink: 0;
+      background: url("https://i.pravatar.cc/56?img=12") center/cover, var(--bg-tertiary);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+    }
+
+    /* ── prompt ────────────────────────────────────────────────────────────── */
+    .prompt-section { display: flex; flex-direction: column; align-items: center; padding: 64px 24px 72px; }
+    .prompt-group { display: flex; flex-direction: column; align-items: center; gap: 32px; width: 100%; max-width: 768px; }
+    .prompt {
+      width: 100%; background: var(--bg-tertiary); border-radius: 12px;
+      padding: 8px 1px 0; display: flex; flex-direction: column; gap: 8px;
+      box-shadow: var(--sh-prompt); overflow: hidden;
+    }
+    .brandkit {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 4px 12px; border: 0; background: transparent; width: 100%;
+      cursor: pointer; font: 400 14px/1.43 Inter, sans-serif; color: var(--text-secondary);
+      border-radius: 8px; transition: color 140ms var(--ease);
+    }
+    .brandkit:hover { color: var(--text-primary); }
+    .brandkit i { font-size: 18px; }
+
+    .prompt-card {
+      height: 148px; background: var(--bg-primary); border-radius: 8px; padding: 16px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      box-shadow: var(--sh-1);
+    }
+    .prompt-input {
+      border: 0; outline: none; width: 100%; background: transparent; padding: 0;
+      font: 400 18px/1.4 Inter, sans-serif; color: var(--text-primary);
+    }
+    .prompt-input::placeholder { color: var(--text-tertiary); }
+    .actions { display: flex; align-items: center; gap: 8px; height: 28px; }
+    .actions .left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    /* the toolbar buttons use the elevated .bg-button treatment from the Figma frame */
+    .tool { box-shadow: var(--sh-1); background: var(--bg-elevated); color: var(--text-primary); }
+    .tool:hover { background: var(--bg-tertiary); }
+    .tool i { font-size: 16px; }
+    .tool .caret { font-size: 12px; margin-left: 8px; color: var(--text-secondary); }
+
+    /* ── action pills ──────────────────────────────────────────────────────── */
+    .pills { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 12px; padding: 4px 16px 4px 4px;
+      background: var(--bg-primary); border: 0; border-radius: 24px; box-shadow: var(--sh-pill);
+      cursor: pointer; font: 500 14px/1.43 Inter, sans-serif; color: var(--text-primary);
+      transition: transform 120ms var(--ease), box-shadow 160ms var(--ease);
+    }
+    .pill:hover { transform: translateY(-1px); box-shadow: var(--sh-pill), 0 6px 16px -6px var(--d2); }
+    .pill:active { transform: translateY(0) scale(0.98); }
+    .pill .grp { display: inline-flex; align-items: center; }
+    .pill-ic { width: 40px; height: 40px; border-radius: 34px; display: grid; place-items: center; font-size: 24px; }
+    /* glyph carries the brand gradient, matching the handoff frame */
+    .pill-ic i {
+      background: var(--f-gradient); -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+    }
+
+    /* ── documents ─────────────────────────────────────────────────────────── */
+    .docs { padding: 0 24px 32px; display: flex; flex-direction: column; gap: 12px; }
+    .docs-head { display: flex; align-items: center; justify-content: space-between; }
+    .tabs { display: flex; align-items: center; gap: 16px; }
+    .tab {
+      padding: 8px 0; border: 0; background: transparent; cursor: pointer;
+      font: 400 12px/1.33 Inter, sans-serif; color: var(--text-secondary);
+      border-bottom: 1.5px solid transparent; transition: color 140ms var(--ease);
+    }
+    .tab:hover { color: var(--text-primary); }
+    .tab.is-active { color: var(--text-primary); font-weight: 500; border-bottom-color: #000; }
+    .switch { display: flex; align-items: center; gap: 2px; height: 28px; padding: 2px; border-radius: 4px; }
+    .switch button {
+      width: 20px; height: 20px; display: grid; place-items: center; padding: 2px;
+      border: 0; background: transparent; border-radius: 2px; cursor: pointer;
+      color: var(--text-primary); font-size: 16px;
+    }
+    .switch button.is-active { background: var(--bg-elevated-hover); }
+
+    .docs-grid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+    .card {
+      width: 366px; height: 270px; border-radius: 6px; overflow: hidden;
+      background: var(--bg-elevated); box-shadow: var(--sh-1); cursor: pointer;
+      display: flex; flex-direction: column;
+      transition: box-shadow 220ms var(--ease);
+    }
+    .card:hover { box-shadow: var(--sh-card-hover); }
+    .card-cover { width: 100%; height: 202px; display: block; object-fit: cover; }
+    .card-meta { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .card-title { font: 500 14px/1.43 Inter, sans-serif; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-sub { font: 400 12px/1.33 Inter, sans-serif; color: var(--text-secondary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* action cards: the illustration is a full-bleed backdrop that fades into the copy.
+       At rest it is the video's own first frame (poster); hover plays the loop. */
+    .card-action { position: relative; justify-content: flex-end; }
+    .card-video {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; display: block; pointer-events: none;
+      /* the source frames carry a 1px antialiased rounded edge — nudge it out of frame */
+      transform: scale(1.02);
+      transition: transform 480ms var(--ease);
+    }
+    /* settles the illustration into white so the copy always reads, whatever frame is up */
+    .card-action::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(to bottom, transparent 0%, transparent 50%, #fff 66%, #fff 100%);
+      transition: opacity 300ms var(--ease);
+    }
+    .card-action .content {
+      position: relative; z-index: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .card-action .content p { transition: opacity 200ms var(--ease); }
+    /* on hover the clip takes the card: the caption and the white settle step aside,
+       the action button stays put so it is always there to click */
+    /* the clip's own white band is baked into its frames, so hover zooms and pushes it
+       past the bottom edge — what is left of it hides behind the action button */
+    .card-action:hover .card-video { transform: translateY(23px) scale(1.175); }
+    .card-action:hover::after { opacity: 0; }
+    .card-action:hover .content p { opacity: 0; }
+    .card-action p { margin: 0; padding: 0 8px 8px; text-align: center;
+      font: 400 14px/1.43 Inter, sans-serif; color: var(--text-secondary); }
+    .card-action .button-style { width: 100%; }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+      .card-action:hover .card-video { transform: scale(1.02); }
+      .card-action:hover::after { opacity: 1; }
+      .card-action:hover .content p { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="pai">
+  <div class="app">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="ws">
+        <div class="ws-avatar">F</div>
+        <span class="ws-name">Foursquare</span>
+        <span class="pai-badge pai-badge-pro">Upgrade</span>
+        <i class="ph ph-caret-down caret"></i>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item is-active"><i class="ph ph-house-simple"></i><span class="lbl">Home</span></button>
+        <button class="nav-item"><i class="ph ph-file"></i><span class="lbl">Created by Me</span></button>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <div class="nav-label">Projects</div>
+        <button class="nav-item"><i class="ph ph-plus"></i><span class="lbl">Create project</span><span class="pai-badge pai-badge-pro">Pro</span></button>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <button class="nav-item"><i class="ph ph-layout"></i><span class="lbl">Templates</span></button>
+        <button class="nav-item"><i class="ph ph-pen-nib"></i><span class="lbl">Hire an Expert</span></button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <nav class="nav" style="padding:0;">
+          <button class="nav-item"><i class="ph ph-gear"></i><span class="lbl">Workspace settings</span></button>
+          <button class="nav-item"><i class="ph ph-user-plus"></i><span class="lbl">Invite new member</span><span class="pai-badge pai-badge-pro">Pro</span></button>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- ── Main ────────────────────────────────────────────────────────────── -->
+    <main class="main">
+      <header class="topbar">
+        <div class="trial">
+          <span class="trial-text">🔥 Trial: 4 days left</span>
+          <button class="button-style button-small button-primary-brand">
+            <i class="ph ph-rocket-launch" style="font-size:16px;"></i><span class="button-label">Upgrade</span>
+          </button>
+        </div>
+        <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
+        <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
+        <button class="icon-btn" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+        <div class="avatar" role="img" aria-label="Your profile"></div>
+      </header>
+
+      <!-- ── Prompt ─────────────────────────────────────────────────────── -->
+      <section class="prompt-section">
+        <div class="prompt-group">
+
+          <div class="prompt">
+            <button class="brandkit">
+              <i class="ph ph-book-open-text"></i>
+              <span>Set up Brand Kit to use your logo, colours, and voice</span>
+              <span class="pai-badge pai-badge-pro">Pro</span>
+              <i class="ph ph-caret-right"></i>
+            </button>
+
+            <div class="prompt-card">
+              <input class="prompt-input" id="promptInput" type="text" placeholder="Start a new presentation..." aria-label="Presentation prompt" />
+              <div class="actions">
+                <div class="left">
+                  <button class="button-style button-small tool">
+                    <i class="ph ph-upload-simple"></i><span class="button-label">Upload files, or links</span>
+                  </button>
+                  <button class="button-style button-small tool">
+                    <i class="ph ph-cards-three"></i><span class="button-label">5 Slides</span><i class="ph ph-caret-down caret"></i>
+                  </button>
+                  <button class="button-style button-small tool">
+                    <i class="ph ph-sparkle"></i><span class="button-label">Standard Model</span><i class="ph ph-caret-down caret"></i>
+                  </button>
+                  <button class="button-style button-small icon-only tool" aria-label="Settings">
+                    <i class="ph ph-faders-horizontal"></i>
+                  </button>
+                </div>
+                <button class="button-style button-small button-primary button-disabled button-disabled-40" id="createBtn" style="opacity:.4;">
+                  Create Presentation
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pills">
+            <button class="pill">
+              <span class="grp"><span class="pill-ic"><i class="ph-fill ph-microsoft-powerpoint-logo"></i></span>Import PowerPoint</span>
+            </button>
+            <button class="pill">
+              <span class="grp"><span class="pill-ic"><i class="ph-fill ph-pen-nib"></i></span>Hire an Expert</span>
+            </button>
+            <button class="pill">
+              <span class="grp"><span class="pill-ic"><i class="ph-fill ph-layout"></i></span>Use a Template</span>
+            </button>
+            <button class="pill">
+              <span class="grp"><span class="pill-ic"><i class="ph-fill ph-chart-donut"></i></span>Refresh Data</span>
+              <span class="pai-badge pai-badge-gold">Gold</span>
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Documents ──────────────────────────────────────────────────── -->
+      <section class="docs">
+        <div class="docs-head">
+          <div class="tabs">
+            <button class="tab is-active">Recent</button>
+            <button class="tab">Starred</button>
+            <button class="tab">Download</button>
+            <button class="tab">Recently deleted</button>
+          </div>
+          <div class="switch">
+            <button aria-label="List view"><i class="ph ph-list-bullets"></i></button>
+            <button class="is-active" aria-label="Grid view"><i class="ph ph-squares-four"></i></button>
+          </div>
+        </div>
+
+        <div class="docs-grid">
+
+          <article class="card">
+            <img class="card-cover" src="assets/cover-mckinsey.png" alt="Deck cover: McKinsey acquires S4G Consulting" />
+            <div class="card-meta">
+              <div class="card-title">McKinsey acquires S4G Consulting to help businesses ignite growth</div>
+              <div class="card-sub">In Drafts • Created by You</div>
+            </div>
+          </article>
+
+          <article class="card card-action">
+            <video class="card-video" muted loop playsinline preload="metadata"
+                   poster="assets/illus-collaborate-poster.png" aria-hidden="true">
+              <source src="assets/illus-collaborate.mp4" type="video/mp4" />
+            </video>
+            <div class="content">
+              <p>Bring teammates in to edit, comment, and reuse your presentations.</p>
+              <button class="button-style button-medium tool">Invite teammate</button>
+            </div>
+          </article>
+
+          <article class="card card-action">
+            <video class="card-video" muted loop playsinline preload="metadata"
+                   poster="assets/illus-adapt-poster.png" aria-hidden="true">
+              <source src="assets/illus-adapt.mp4" type="video/mp4" />
+            </video>
+            <div class="content">
+              <p>Adapt one presentation for executives, customers, or a new market.</p>
+              <button class="button-style button-medium tool">Adapt presentation for a new audience</button>
+            </div>
+          </article>
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    /* Create Presentation lights up once there is a prompt — the only live state here. */
+    const input = document.getElementById('promptInput');
+    const create = document.getElementById('createBtn');
+    input.addEventListener('input', () => {
+      const on = input.value.trim().length > 0;
+      create.style.opacity = on ? '1' : '.4';
+      create.classList.toggle('button-disabled', !on);
+      create.classList.toggle('button-disabled-40', !on);
+    });
+
+    /* Action cards play their loop on hover. On leave the clip simply stops where it is:
+       no rewind, no cut back to frame 0. Hovering again picks the loop up from that same
+       frame. Skipped under reduced motion. */
+    const stillOnly = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    document.querySelectorAll('.card-action').forEach(card => {
+      const video = card.querySelector('.card-video');
+      if (!video || stillOnly) return;
+      card.addEventListener('mouseenter', () => {
+        const p = video.play();
+        if (p) p.catch(() => {});
+      });
+      card.addEventListener('mouseleave', () => {
+        video.pause();
+      });
+    });
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('is-active'));
+        tab.classList.add('is-active');
+      });
+    });
+
+    document.querySelectorAll('.switch button').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.switch button').forEach(x => x.classList.remove('is-active'));
+        b.classList.add('is-active');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<!-- exploration: dashboard try-for-free · owner: Mani (@manivasakan-arch)
+     forked from dashboard-qc1.html on 10 Aug 2026. Adds TRY tags on Use a Template (Pro)
+     and Refresh Data (Gold): free users get 1 free try of each, explained in a hover tooltip.
+     duplicated from key-screens/dashboard.html (owner Tyo) on 6 Aug 2026, then updated by hand
+     to match the live screen at https://qc1.pitchdeck.io/ (6 Aug 2026).
+     Card art: assets/collaborate.png · assets/organize.png · assets/brand.png (pulled from qc1). -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Dashboard · try for free · mani</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <style>
+    /* ── tokens (carried over from key-screens/dashboard.html) ─────────────── */
+    :root {
+      --bg: #fafafa;            /* page / sidebar canvas        (bg/secondary)   */
+      --surface: #ffffff;       /* main, cards, elevated        (bg/primary)     */
+      --surface-2: #f5f5f5;     /* tertiary fills               (bg/tertiary)    */
+      --fg: #171717;            /* primary text                 (text/primary)   */
+      --fg-2: #525252;          /* secondary text               (text/secondary) */
+      --fg-3: #a3a3a3;          /* tertiary / placeholder       (text/tertiary)  */
+      --brand: #005eff;         /* brand blue                   (text/brand)     */
+      --brand-tint: #e6efff;    /* brand badge fill             (bg/brand-inv)   */
+      --brand-100: #b6daff;     /* brand ramp — drives the gradient-fill glyphs  */
+      --brand-300: #0095ff;
+      --brand-600: #0059ff;
+      --brand-900: #002464;
+      --brand-gradient: radial-gradient(162.36% 178.84% at 13.64% -1.28%,
+        var(--brand-100) 0%, var(--brand-300) 31.73%, var(--brand-600) 76.78%, var(--brand-900) 100%);
+      --ink: #0b0f14;
+      --line: rgba(11,15,20,0.09);
+      --line-strong: rgba(11,15,20,0.20);
+      --sel: rgba(22,30,39,0.08);
+      --d1: rgba(11,15,20,0.06);
+      --d2: rgba(11,15,20,0.09);
+      --inner: rgba(255,255,255,0.8);
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+      --sh-card: 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-card-hover: 0 8px 24px -6px var(--d2), 0 2px 6px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-prompt: 0 24px 40px -16px var(--d2), 0 4px 6px 0 var(--d2), 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-btn: 0 1px 2px 1px var(--d1), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-pill: 0 2px 6px 0 var(--d2), 0 0 0 1px var(--d1), inset 0 0 0 1px var(--inner);
+    }
+    @supports (color: color(display-p3 1 1 1)) {
+      :root {
+        --brand-100: color(display-p3 0.7608 0.8471 1);
+        --brand-300: color(display-p3 0.3216 0.5686 1);
+        --brand-600: color(display-p3 0 0.3333 0.9294);
+        --brand-900: color(display-p3 0 0.1333 0.3608);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: "Inter", system-ui, sans-serif; font-size: 14px;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── sidebar ───────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 260px; min-width: 260px; height: 100%;
+      background: var(--bg); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+    }
+    .ws {
+      display: flex; align-items: center; gap: 8px;
+      padding: 11px 12px; border-bottom: 1px solid var(--line);
+    }
+    .ws-avatar {
+      width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+      background: linear-gradient(135deg, #ff7a3c, #f0521e);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+      display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px;
+    }
+    .ws-name { min-width: 0; font-weight: 500; color: var(--fg);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ws-upgrade { flex: 1; color: var(--brand); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .ws .caret-btn {
+      width: 24px; height: 24px; display: grid; place-items: center; flex-shrink: 0;
+      background: var(--surface); border-radius: 5px; box-shadow: var(--sh-btn);
+      color: var(--fg-2); font-size: 14px; cursor: pointer;
+    }
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--brand-tint); color: var(--brand);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 34px; line-height: 1.33;
+    }
+
+    .nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-label { padding: 8px 8px 2px; color: var(--fg-2); font-size: 14px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px; height: 36px;
+      padding: 8px; border-radius: 6px; color: var(--fg-2); cursor: pointer;
+      text-decoration: none; transition: background 140ms var(--ease);
+    }
+    .nav-item i { font-size: 20px; flex-shrink: 0; }
+    .nav-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-item:hover { background: var(--sel); }
+    .nav-item.is-active { background: var(--sel); color: var(--fg); font-weight: 600; }
+    .divider { height: 1px; background: var(--line); margin: 6px 0; box-shadow: 0 1px 0 0 var(--inner); }
+    .sidebar-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 8px; }
+
+    /* ── main ──────────────────────────────────────────────────────────────── */
+    .main { flex: 1; min-width: 0; height: 100%; background: var(--surface); overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 10px; }
+    .main::-webkit-scrollbar-thumb { background: rgba(11,15,20,0.12); border-radius: 99px; border: 3px solid var(--surface); }
+
+    .topbar {
+      height: 56px; display: flex; align-items: center; justify-content: flex-end;
+      gap: 10px; padding: 0 24px; position: sticky; top: 0; z-index: 5;
+      background: var(--surface);
+    }
+    /* Offer lockup, frozen from offer-lockup.html (blue to coral).
+       Chip bobs left-right with a glow ring and a slow sheen sweep; the
+       arrow tip sits behind the chip so the seam never shows. */
+    :root {
+      --offer-fill: radial-gradient(145.58% 149.6% at 29.59% -25%, #C2D8FF 0%, #5291FF 31.73%, #0055ED 76.78%, #00225C 100%);
+      --offer-fill-hot: radial-gradient(145.58% 149.6% at 29.59% -25%, #D6E5FF 0%, #6C9FFF 31.73%, #1667F5 76.78%, #062F73 100%);
+      --offer-tip: #0055ED;
+      --offer-ring: 82, 145, 255;
+      --offer-shadow: 0, 85, 237;
+    }
+    .offer-wrap {
+      position: relative; display: none;
+      border: 0; padding: 0; background: none; cursor: pointer;
+      font: inherit; color: inherit; border-radius: 999px;
+    }
+    /* Bob and glow live on the wrapper: the pill below is clipped to its
+       pointed silhouette, and clip-path clips box-shadow with it, so any
+       glow drawn on the pill itself would vanish. */
+    .offer-wrap.is-on {
+      display: inline-flex;
+      animation: offer-bob 2.6s ease-in-out infinite,
+                 offer-glow 2.6s ease-in-out infinite;
+    }
+    .offer-wrap:hover .offer { background: var(--offer-fill-hot); }
+    .offer-wrap:active .offer { transform: scale(0.97); }
+    /* Diamond tip behind the pill, on the wrapper so the bob carries pill
+       and tip together and they can never drift apart. Its color is the
+       gradient's own 100% stop, so where they overlap there is no seam:
+       the tip is a continuation of the fill, not a second color guessing
+       at one. */
+    .offer-wrap::after {
+      content: ''; position: absolute; right: -3px; top: 50%; z-index: 0;
+      width: 10px; height: 10px; background: var(--offer-tip);
+      border-radius: 2px;
+      transform: translateY(-50%) rotate(45deg);
+      filter: drop-shadow(1px 0 1px rgba(var(--offer-shadow), 0.35));
+    }
+    .offer {
+      position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 7px;
+      background: var(--offer-fill); color: #fff;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+      padding: 7px 16px; border-radius: 999px;
+      white-space: nowrap; font-variant-numeric: tabular-nums;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+    .offer > * { position: relative; z-index: 1; }
+    .offer i { font-size: 13px; }
+    .offer b { font-weight: 800; letter-spacing: 0.05em; }
+    .offer-soft { color: rgba(255,255,255,0.72); }
+    .offer-time { font-weight: 700; }
+    /* dashboard chip bounces left-right (pricing card chip bounces up-down) */
+    @keyframes offer-bob {
+      0%, 100% { transform: translateX(-3px); }
+      50%      { transform: translateX(3px); }
+    }
+    /* Ripple: a ring that grows out of the pill and fades. The soft halo stays
+       underneath it so the pill keeps its weight between pulses, and the last
+       frame returns the ring to zero at zero opacity, otherwise the 70 to 100
+       stretch animates a visible ring collapsing back inward. */
+    @keyframes offer-glow {
+      0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,0.15),
+                             0 3px 14px -3px rgba(var(--offer-ring), 0.45),
+                             0 0 0 0    rgba(var(--offer-ring), 0.5); }
+      70%      { box-shadow: 0 2px 6px rgba(0,0,0,0.15),
+                             0 3px 14px -3px rgba(var(--offer-ring), 0.45),
+                             0 0 0 10px rgba(var(--offer-ring), 0); }
+      100%     { box-shadow: 0 2px 6px rgba(0,0,0,0.15),
+                             0 3px 14px -3px rgba(var(--offer-ring), 0.45),
+                             0 0 0 0    rgba(var(--offer-ring), 0); }
+    }
+    .trial {
+      display: flex; align-items: center; gap: 10px; height: 36px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 6px; padding: 4px 4px 4px 12px;
+    }
+    .trial-text { font-weight: 500; color: var(--fg); white-space: nowrap; }
+    .btn-upgrade {
+      position: relative; overflow: hidden;
+      display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 14px;
+      background: var(--offer-fill); color: #fff; border: 0; border-radius: 5px;
+      font: 600 14px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
+      box-shadow: 0 2px 8px -2px rgba(var(--offer-shadow), 0.55);
+      transition: transform 120ms var(--ease), box-shadow 160ms var(--ease), background 200ms var(--ease);
+    }
+    .btn-upgrade > * { position: relative; z-index: 1; }
+    .btn-upgrade i { font-size: 16px; position: relative; z-index: 1; }
+    .btn-upgrade:hover {
+      background: var(--offer-fill-hot); transform: translateY(-1px);
+      box-shadow: 0 6px 16px -4px rgba(var(--offer-shadow), 0.6);
+    }
+    .btn-upgrade:active { transform: translateY(0) scale(0.98); }
+    .icon-btn {
+      width: 36px; height: 36px; display: grid; place-items: center;
+      border: 0; background: transparent; color: var(--fg-2); border-radius: 4px;
+      cursor: pointer; font-size: 20px; transition: background 140ms var(--ease);
+    }
+    .icon-btn:hover { background: var(--sel); }
+    .avatar {
+      width: 28px; height: 28px; border-radius: 999px; margin-left: 4px; flex-shrink: 0;
+      background: linear-gradient(135deg, #ff7a3c, #f0521e);
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+      display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px;
+    }
+
+    /* ── hero / prompt ─────────────────────────────────────────────────────── */
+    .hero { padding: 24px 24px 8px; display: flex; flex-direction: column; align-items: center; }
+    .prompt {
+      width: 100%; max-width: 820px; background: var(--surface-2);
+      border: 1px solid var(--line); border-radius: 14px;
+    }
+    .prompt-banner {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px; cursor: pointer; font-size: 14px; color: var(--fg);
+    }
+    .prompt-banner i.bk { font-size: 18px; color: var(--brand); }
+    .prompt-banner i.go { font-size: 14px; color: var(--fg-2); margin-left: 4px; }
+    .prompt-body {
+      background: var(--surface); border-radius: 12px;
+      box-shadow: var(--sh-prompt); padding: 20px 16px 16px;
+    }
+    .prompt-field { min-height: 78px; padding: 6px 10px 0; }
+    .prompt-field .ph-text { color: var(--fg-3); font-size: 22px; line-height: 1.4; }
+    .prompt-field .ph-text u { text-underline-offset: 4px; }
+    .prompt-controls { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+    .ctl {
+      display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px;
+      background: var(--surface); border: 1px solid rgba(11,15,20,0.14);
+      border-radius: 8px; font: 500 13px "Inter", sans-serif; color: var(--fg);
+      cursor: pointer; white-space: nowrap; transition: background 140ms var(--ease);
+    }
+    .ctl:hover { background: var(--surface-2); }
+    .ctl i { font-size: 16px; }
+    .ctl i.caret { font-size: 12px; color: var(--fg-2); }
+    .ctl.sq { padding: 0; width: 34px; justify-content: center; }
+    .btn-create {
+      margin-left: auto; height: 34px; padding: 0 16px;
+      background: #a9aeb6; color: #fff; border: 0; border-radius: 8px;
+      font: 500 14px "Inter", sans-serif; white-space: nowrap; cursor: not-allowed;
+    }
+
+    /* ── action pills ──────────────────────────────────────────────────────── */
+    /* pills per Figma node 635:7829 (JAS-26 working file) */
+    .pills { display: flex; gap: 12px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 0; height: 40px;
+      background: #fff; border: 0; border-radius: 24px;
+      padding: 0 16px 0 4px; cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(11,15,20,0.06), 0 2px 6px rgba(11,15,20,0.09),
+                  inset 0 0 0 1px rgba(255,255,255,0.8);
+      font: 500 14px/1.43 "Inter", sans-serif; color: #171717;
+      transition: transform 120ms var(--ease), box-shadow 160ms var(--ease);
+    }
+    .pill:hover {
+      box-shadow: 0 0 0 1px rgba(11,15,20,0.06), 0 2px 6px rgba(11,15,20,0.09),
+                  0 6px 16px -6px var(--d2), inset 0 0 0 1px rgba(255,255,255,0.8);
+      transform: translateY(-1px);
+    }
+    .pill:active { transform: translateY(0) scale(0.98); }
+    .pill i {
+      width: 40px; height: 40px; display: grid; place-items: center; font-size: 24px;
+      background: var(--brand-gradient); -webkit-background-clip: text;
+      background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+    }
+
+    /* ── try-for-free: TRY tag + hover tooltip ─────────────────────────────── */
+    .pill-try { position: relative; display: inline-flex; }
+    /* TRY badge per Figma node 635:8306 (JAS-26 working file) */
+    .try-tag {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      width: 58px; height: 20px; padding: 0; margin-left: 12px;
+      border: 1.5px solid transparent; border-radius: 100px;
+      background:
+        linear-gradient(90deg, rgba(27,138,74,0.12) 0%, rgba(27,138,74,0.05) 50%,
+                                rgba(255,255,255,0) 82%) padding-box,
+        linear-gradient(#fff, #fff) padding-box,
+        linear-gradient(90deg, #1b8a4a 0%, #1b8a4a 55%, rgba(27,138,74,0) 92%) border-box;
+    }
+    .try-txt {
+      font: 800 10px/1.2 "Inter", sans-serif; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #1b8a4a;
+    }
+    .pill .try-tag i {
+      width: auto; height: auto; display: inline; place-items: unset;
+      font-size: 12px; color: #1b8a4a;
+      background: none; -webkit-background-clip: unset; background-clip: unset;
+      -webkit-text-fill-color: #1b8a4a;
+    }
+    .try-tip {
+      position: absolute; top: calc(100% + 12px); left: 50%; margin-left: -150px;
+      width: 300px; background: #1a1d24; border-radius: 12px; padding: 14px 16px 12px;
+      box-shadow: 0 12px 32px -8px rgba(11,15,20,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+      opacity: 0; visibility: hidden; pointer-events: none; z-index: 30;
+      transform: translateY(4px); text-align: left;
+      transition: opacity 160ms var(--ease), transform 160ms var(--ease), visibility 0s 160ms;
+    }
+    .try-tip::before {
+      content: ''; position: absolute; top: -5px; left: 50%; margin-left: -5px;
+      width: 10px; height: 10px; background: #1a1d24; border-radius: 2px;
+      transform: rotate(45deg);
+      box-shadow: -1px -1px 0 rgba(255,255,255,0.06);
+    }
+    /* rightmost pill: anchor tooltip to its right edge so it never clips the viewport */
+    .try-tip--gold { left: auto; right: 0; margin-left: 0; }
+    .try-tip--gold::before { left: auto; right: 48px; margin-left: 0; }
+    .pill-try:hover .try-tip {
+      opacity: 1; visibility: visible; transform: translateY(0);
+      transition-delay: 120ms;
+    }
+    .tip-head { display: flex; align-items: center; gap: 8px; }
+    .plan-badge {
+      font: 600 10px/1.33 "Inter", sans-serif; letter-spacing: 0.3px;
+      text-transform: uppercase;
+      padding: 2px 6px; border-radius: 34px;
+    }
+    .plan-badge--pro { background: #E6EFFF; color: #0055ED; }
+    .plan-badge--gold { background: #fefce8; color: #ca8a04; }
+    .tip-free {
+      display: inline-flex; align-items: center; gap: 4px;
+      font: 700 11px "Inter", sans-serif; color: #3fd483;
+    }
+    .tip-free i { font-size: 13px; }
+    .tip-title {
+      display: flex; align-items: center; gap: 8px;
+      font: 700 14px "Inter", sans-serif; color: #ffffff; margin: 0 0 4px;
+    }
+    .tip-body { font: 400 13px/1.55 "Inter", sans-serif; color: #b7bdc7; margin: 0; }
+    .tip-foot {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12);
+    }
+    .tip-left {
+      display: inline-flex; align-items: center; gap: 5px;
+      font: 600 12px "Inter", sans-serif; color: #3fd483;
+    }
+    .tip-left i { font-size: 13px; }
+    .tip-then { font: 500 11px "Inter", sans-serif; color: #9299a3; }
+    .try-tip .tip-state--used { display: none; }
+    .pill-try.is-used .tip-state--fresh { display: none; }
+    .pill-try.is-used .tip-state--used { display: block; }
+    .tip-free--done, .tip-left--done { color: #9299a3; }
+
+    /* ── files ─────────────────────────────────────────────────────────────── */
+    .files { padding: 32px 24px 24px; max-width: 1248px; }
+    .files-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .tabs { display: flex; align-items: center; gap: 20px; }
+    .tab {
+      font-size: 13px; color: var(--fg-2); cursor: pointer; padding: 4px 0 6px;
+      border-bottom: 2px solid transparent; white-space: nowrap;
+      transition: color 140ms var(--ease);
+    }
+    .tab:hover { color: var(--fg); }
+    .tab.is-active { color: var(--fg); font-weight: 600; border-bottom-color: var(--fg); }
+    /* ── recommended cards (art from qc1) ──────────────────────────────────── */
+    /* Fixed column counts so cards scale smoothly with the window instead of
+       jumping between huge and tiny at the auto-fill breakpoints. */
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+    @media (max-width: 1180px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 760px)  { .grid { grid-template-columns: minmax(0, 1fr); } }
+    .rec-card {
+      background: var(--surface); border-radius: 6px; overflow: hidden;
+      box-shadow: var(--sh-card); cursor: pointer;
+      transition: box-shadow 220ms var(--ease), transform 160ms var(--ease);
+      display: flex; flex-direction: column;
+    }
+    .rec-card:hover { box-shadow: var(--sh-card-hover); transform: translateY(-2px); }
+    /* Art is cropped to a shorter band (the source PNG carries a long fade
+       to white) so the card stays compact instead of a tall empty middle. */
+    .rec-card img { display: block; width: 100%; height: auto; aspect-ratio: 1100 / 620; object-fit: cover; object-position: top; }
+    .rec-body { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+    .rec-desc { color: var(--fg-2); font-size: 14px; line-height: 1.45; text-align: center;
+      margin: 0 auto; max-width: 34ch; flex: 1; }
+    .rec-btn {
+      height: 36px; width: 100%; background: var(--surface); color: var(--fg);
+      border: 1px solid rgba(11,15,20,0.14); border-radius: 6px;
+      font: 500 14px "Inter", sans-serif; cursor: pointer;
+      transition: background 140ms var(--ease);
+    }
+    .rec-btn:hover { background: var(--surface-2); }
+
+    /* ── feature modal, ported from pricing/feature-modal.html ─────────────
+       Same layout and interaction; recoloured to the blue-to-coral offer
+       gradient. Plan naming in this try-free variant is Pro and Gold. */
+
+  body.mode-plain .dp-offer-chip { display: none; }
+
+  body.mode-plain .dp-cta .save { display: none; }
+
+  body.mode-plain .dp-box-title { top: 30px; }
+
+  body.mode-plain .dp-feat-list { top: 160px; }
+
+  .dp-box-title em {
+    font-style: normal;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    text-decoration-color: currentColor;
+  }
+
+
+  /* =================================================================
+     v5 discount popup (Figma 217:7704) — feature list + export preview
+     ================================================================= */
+  .dp-backdrop {
+    position: fixed; inset: 0;
+    display: flex;
+    align-items: center; justify-content: center;
+    background: rgba(10, 25, 37, 0.72);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+  }
+
+  .dp-backdrop[data-open="true"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.2s ease, visibility 0s linear 0s;
+  }
+
+  .dp-stack {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1), opacity 0.2s ease;
+  }
+
+  .dp-backdrop[data-open="true"] .dp-stack {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+
+  /* Main box (940 x 540, white) — Figma 2132:1984 */
+  .dp-box {
+    position: relative;
+    z-index: 1;
+    width: 940px;
+    min-height: 580px;
+    background: #ffffff;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(10,25,37,0.09),
+      0 1px 2px 0 rgba(10,25,37,0.09),
+      0 4px 6px 0 rgba(10,25,37,0.09),
+      0 24px 40px -16px rgba(10,25,37,0.09);
+  }
+
+
+  /* Left column: offer chip + title + feature list */
+  /* Same chip treatment as the Pro/Gold Buy Now discount chip (bob + glow). */
+  .dp-offer-chip {
+    position: absolute;
+    top: 20px; left: 30px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px 6px 8px;
+    background: var(--offer-fill); color: #ffffff;
+    font-size: 12px; font-weight: 500; letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    border-radius: 999px;
+    z-index: 1;
+    animation: pro-chip-bob 2.6s ease-in-out infinite,
+               pro-chip-glow 2.2s ease-in-out infinite;
+  }
+
+  @keyframes pro-chip-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+
+  /* Ripple, matching the dashboard pill: ring over a steady halo, returned to
+     zero on the last frame so it never animates back inward. */
+  @keyframes pro-chip-glow {
+    0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,0.15),
+                           0 3px 14px -3px rgba(var(--offer-ring), 0.45),
+                           0 0 0 0    rgba(var(--offer-ring), 0.5); }
+    70%      { box-shadow: 0 2px 6px rgba(0,0,0,0.15),
+                           0 3px 14px -3px rgba(var(--offer-ring), 0.45),
+                           0 0 0 10px rgba(var(--offer-ring), 0); }
+    100%     { box-shadow: 0 2px 6px rgba(0,0,0,0.15),
+                           0 3px 14px -3px rgba(var(--offer-ring), 0.45),
+                           0 0 0 0    rgba(var(--offer-ring), 0); }
+  }
+
+  @keyframes gold-shimmer {
+    0%   { left: -75%; }
+    60%  { left: 125%; }
+    100% { left: 125%; }
+  }
+
+  .dp-offer-chip i { font-size: 12px; color: #ffffff; }
+
+  .dp-offer-chip::after {
+    content: '';
+    position: absolute;
+    left: 50%; margin-left: -4px; bottom: -4px;
+    width: 8px; height: 8px;
+    background: var(--offer-tip-flat);
+    border-radius: 1px;
+    transform: rotate(45deg);
+    z-index: -1;
+  }
+
+  .dp-box-title {
+    position: absolute;
+    top: 60px; left: 30px;
+    width: 280px;
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 32px;
+    letter-spacing: -0.02em;
+    color: #171717;
+    margin: 0;
+  }
+
+  /* Offer accent picks up the lockup gradient. Stops are pulled darker than
+     the chip so the type still holds contrast on white; the flat colour is
+     the fallback where background-clip: text is unavailable. */
+  .dp-box-title .accent {
+    font-weight: 700;
+    color: var(--offer-ink-flat);
+    background: var(--offer-ink-fill);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .dp-box-title .accent { -webkit-text-fill-color: currentColor; background: none; }
+  }
+
+
+  .dp-feat-list {
+    position: absolute;
+    top: 208px; left: 30px; bottom: 16px;
+    width: 288px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .dp-feat-list:hover { scrollbar-color: #d4d4d4 transparent; }
+
+  .dp-feat-list::-webkit-scrollbar { width: 4px; }
+
+  .dp-feat-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; }
+
+  .dp-feat-list:hover::-webkit-scrollbar-thumb { background: #d4d4d4; }
+
+  .dp-feat-list::-webkit-scrollbar-track { background: transparent; }
+
+  .dp-feat-fade {
+    position: absolute;
+    left: 30px; bottom: 16px;
+    width: 288px; height: 64px;
+    pointer-events: none;
+    z-index: 2;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 78%, #ffffff 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 70%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 70%);
+  }
+
+  .dp-feat-fade--top {
+    top: 208px; bottom: auto;
+    background: linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 78%, #ffffff 100%);
+    mask-image: linear-gradient(0deg, transparent 0%, #000 70%);
+    -webkit-mask-image: linear-gradient(0deg, transparent 0%, #000 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  body.mode-plain .dp-feat-fade--top { top: 160px; }
+
+  .dp-feat-fade--top.is-visible { opacity: 1; }
+
+  .dp-feat-item {
+    display: flex; align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    color: #171717;
+    line-height: 1.43;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s ease;
+  }
+
+  .dp-feat-item:hover { background: #fafafa; }
+
+  .dp-feat-item.is-active { background: #f5f5f5; cursor: default; }
+
+  .dp-feat-item i { font-size: 20px; color: #171717; flex-shrink: 0; line-height: 1; }
+
+  .dp-feat-item .lbl { font-weight: 400; color: #171717; }
+
+  .dp-badge {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.3px; text-transform: uppercase;
+    line-height: 1.33;
+    padding: 2px 6px;
+    border-radius: 34px;
+    flex-shrink: 0;
+  }
+
+  .dp-badge--pro  { background: #E6EFFF; color: #0055ED; }
+
+  .dp-badge--gold { background: #fefce8; color: #ca8a04; }
+
+
+  /* Right column: preview + description + offer box */
+  .dp-right {
+    position: absolute;
+    top: 0; left: 340px; bottom: 0;
+    width: 600px;
+    border-left: 1px solid rgba(11,15,20,0.09);
+  }
+
+  .dp-preview {
+    position: absolute;
+    top: 0; left: 0;
+    width: 600px; height: 338px;
+    background: #e9eff5;
+    overflow: hidden;
+  }
+
+  /* Two stacked media slots dissolve: incoming fades in on top while the
+     outgoing stays put underneath, so there is never an empty frame. */
+  .dp-slide { position: absolute; inset: 0; }
+
+  .dp-slide[hidden] { display: none; }
+
+  .dp-slide img, .dp-slide video {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+
+  .dp-slide.is-entering {
+    opacity: 0;
+    transition: none;
+    z-index: 2;
+  }
+
+  .dp-slide.is-in {
+    opacity: 1;
+    transition: opacity 0.55s ease;
+    z-index: 2;
+  }
+
+  .dp-slide.is-out { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dp-slide.is-entering, .dp-slide.is-in { transition: none; }
+  }
+
+
+  /* Body under the preview: feature title + description + CTA row */
+  .dp-body {
+    position: absolute;
+    top: 338px; left: 0; right: 0; bottom: 0;
+    padding: 20px 30px 30px;
+    display: flex; flex-direction: column;
+  }
+
+  .dp-feat-title {
+    font-size: 20px; font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: #171717;
+    margin: 0 0 6px;
+  }
+
+  .dp-desc {
+    font-size: 14px; line-height: 1.5;
+    color: #525252;
+    margin: 0;
+  }
+
+  .dp-ctas {
+    margin-top: auto;
+    display: flex; gap: 10px;
+  }
+
+  .dp-cta .save { font-weight: 500; color: rgba(255,255,255,0.6); margin-left: 6px; }
+
+  .dp-cta .save::before { content: '\2022'; margin-right: 6px; }
+
+  .dp-cta {
+    flex: 1; height: 44px;
+    background: #0b0f14;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px; font-weight: 500;
+    border: 0; border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.06), 0 1px 2px rgba(11,15,20,0.09);
+    transition: background 0.2s ease, filter 0.16s ease;
+  }
+
+  .dp-cta:hover:not(:disabled) { background: #23303B; }
+
+  .dp-cta:disabled {
+    background: #c5cad1;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .dp-cta--gold {
+    position: relative; overflow: hidden;
+    background: linear-gradient(90deg, #dcb05e 0%, #ca9e4c 30%, #c39643 65%, #b8893a 100%);
+    box-shadow:
+      0 1px 2px 0 rgba(11,15,20,.09),
+      0 3px 12px rgba(202,158,76,.45);
+  }
+
+  .dp-cta--gold:hover:not(:disabled) {
+    background: linear-gradient(90deg, #dcb05e 0%, #ca9e4c 30%, #c39643 65%, #b8893a 100%);
+    filter: brightness(1.08);
+    box-shadow:
+      0 1px 2px 0 rgba(11,15,20,.09),
+      0 4px 18px rgba(202,158,76,.65);
+  }
+
+  .dp-cta--gold::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,.06) 45%, transparent 55%);
+    pointer-events: none;
+  }
+
+  .dp-cta--gold::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -75%;
+    width: 50%;
+    background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,.65) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    animation: gold-shimmer 2.8s ease-in-out infinite;
+  }
+
+
+  /* Close button (floats right of box) */
+  .dp-close {
+    position: absolute;
+    top: 10px; right: -40px;
+    width: 28px; height: 28px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fafafa;
+    border: 0; border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px rgba(11,15,20,0.09);
+    color: #171717;
+    z-index: 4;
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .dp-close:hover { background: #f4f6fa; transform: scale(1.06); }
+
+  .dp-close i { font-size: 14px; }
+
+
+  @media (max-width: 980px) {
+    .dp-box { width: calc(100vw - 32px); height: auto; }
+    .dp-close { right: 8px; top: 8px; }
+  }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  </style>
+  <!-- Palette is stamped before first paint so the offer never flashes the
+       wrong color on load. -->
+  <script>
+    (function () {
+      document.documentElement.setAttribute('data-offer-theme', 'v3');
+    })();
+  </script>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="ws">
+        <div class="ws-avatar">M</div>
+        <span class="ws-name">Mani_v2</span>
+        <span class="ws-upgrade" onclick="location.href='pricing.html?from=try-free'">Upgrade</span>
+        <span class="caret-btn"><i class="ph ph-caret-down"></i></span>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item is-active"><i class="ph ph-house-simple"></i><span>Home</span></a>
+        <a class="nav-item" data-locked="brandkit"><i class="ph ph-paint-brush-broad"></i><span>Brand kit</span><span class="badge" style="flex:none;">Pro</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <div class="nav-label">Projects</div>
+        <a class="nav-item" data-locked="projects"><i class="ph ph-plus"></i><span>Create project</span><span class="badge" style="flex:none;">Pro</span></a>
+      </nav>
+      <div class="divider"></div>
+      <nav class="nav">
+        <a class="nav-item"><i class="ph ph-pencil-ruler"></i><span>Hire an expert</span></a>
+        <a class="nav-item"><i class="ph ph-layout"></i><span>Templates</span></a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <nav class="nav" style="padding:0;">
+          <a class="nav-item"><i class="ph ph-gear"></i><span>Workspace settings</span></a>
+          <a class="nav-item" data-locked="team"><i class="ph ph-user-plus"></i><span>Invite new members</span><span class="badge" style="flex:none;">Pro</span></a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- ── Main ────────────────────────────────────────────────────────── -->
+    <main class="main">
+      <header class="topbar">
+        <button class="offer-wrap" type="button" id="offer-chip" aria-label="Claim 20% off"><span class="offer"><b>20% OFF</b><i class="ph-fill ph-clock"></i><span class="offer-soft">Ends in</span><span class="offer-time"><span id="offer-timer">59:56</span> min</span></span></button>
+        <div class="trial">
+          <span class="trial-text">🔥 Trial: 7 days left</span>
+          <button class="btn-upgrade" id="btn-upgrade" type="button"><i class="ph-fill ph-rocket-launch"></i><span>Upgrade</span></button>
+        </div>
+        <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
+        <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
+        <button class="icon-btn" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+        <div class="avatar" role="img" aria-label="Your profile">M</div>
+      </header>
+
+      <section class="hero">
+        <div class="prompt">
+          <div class="prompt-banner">
+            <i class="ph ph-paint-brush-broad bk"></i>
+            Set up Brand Kit to use your logo, colours, and voice
+            <span class="badge">Pro</span>
+            <i class="ph ph-caret-right go"></i>
+          </div>
+          <div class="prompt-body">
+            <div class="prompt-field">
+              <span class="ph-text">To start creating, type here or <u>upload a file</u>...</span>
+            </div>
+            <div class="prompt-controls">
+              <button class="ctl"><i class="ph ph-upload-simple"></i>Upload files, or links</button>
+              <button class="ctl">Let AI decide<i class="ph ph-caret-down caret"></i></button>
+              <button class="ctl"><i class="ph ph-sparkle"></i>Standard Model<i class="ph ph-caret-down caret"></i></button>
+              <button class="ctl sq" aria-label="Settings"><i class="ph ph-faders-horizontal"></i></button>
+              <button class="btn-create">Create Presentation</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pills">
+          <button class="pill"><i class="ph-fill ph-microsoft-powerpoint-logo"></i>Import PowerPoint</button>
+          <button class="pill"><i class="ph-fill ph-pen-nib"></i>Hire an Expert</button>
+          <div class="pill-try">
+            <button class="pill" id="pill-template" aria-describedby="tip-template"><i class="ph-fill ph-layout"></i>Use a Template<span class="try-tag"><i class="ph-fill ph-lightning"></i><span class="try-txt">TRY</span></span></button>
+            <div class="try-tip" id="tip-template" role="tooltip">
+              <div class="tip-state tip-state--fresh">
+                <div class="tip-title">Try a Pro feature, on us<span class="plan-badge plan-badge--pro">PRO</span></div>
+                <p class="tip-body">Templates are a Pro feature. You get 1 free try, so pick any template and watch your whole deck transform before you pay for anything.</p>
+                <div class="tip-foot"><span class="tip-left"><i class="ph-fill ph-lightning"></i>1 free try left</span><span class="tip-then">After that it needs Pro</span></div>
+              </div>
+              <div class="tip-state tip-state--used">
+                <div class="tip-title">Your free try is done<span class="plan-badge plan-badge--pro">PRO</span></div>
+                <p class="tip-body">Hope the template felt good. Use a Template is a Pro feature, so it now needs a plan. Click again and we will open checkout where you can pick Pro or Gold.</p>
+                <div class="tip-foot"><span class="tip-left tip-left--done"><i class="ph-fill ph-lightning"></i>0 free tries left</span><span class="tip-then">Click opens checkout</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="pill-try">
+            <button class="pill" id="pill-refresh" aria-describedby="tip-refresh"><i class="ph-fill ph-chart-donut"></i>Refresh Data<span class="try-tag"><i class="ph-fill ph-lightning"></i><span class="try-txt">TRY</span></span></button>
+            <div class="try-tip try-tip--gold" id="tip-refresh" role="tooltip">
+              <div class="tip-state tip-state--fresh">
+                <div class="tip-title">Try a Gold feature, on us<span class="plan-badge plan-badge--gold">GOLD</span></div>
+                <p class="tip-body">Refresh Data is a Gold feature. You get 1 free try, so update every number in your deck in one click, on your own slides.</p>
+                <div class="tip-foot"><span class="tip-left"><i class="ph-fill ph-lightning"></i>1 free try left</span><span class="tip-then">After that it needs Gold</span></div>
+              </div>
+              <div class="tip-state tip-state--used">
+                <div class="tip-title">Your free try is done<span class="plan-badge plan-badge--gold">GOLD</span></div>
+                <p class="tip-body">That one click updated your whole deck. Refresh Data is a Gold feature, so it now needs Gold. Click again and we will open checkout with the Gold plan.</p>
+                <div class="tip-foot"><span class="tip-left tip-left--done"><i class="ph-fill ph-lightning"></i>0 free tries left</span><span class="tip-then">Click opens checkout</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="files">
+        <div class="files-head">
+          <div class="tabs">
+            <span class="tab is-active">Recent</span>
+            <span class="tab">Starred</span>
+            <span class="tab">Downloads</span>
+            <span class="tab">Recently deleted</span>
+          </div>
+        </div>
+
+        <div class="grid">
+
+          <article class="rec-card">
+            <img src="assets/collaborate.png" alt="Collaborate: teammates editing a slide together" />
+            <div class="rec-body">
+              <p class="rec-desc">Bring teammates in to edit, comment, and reuse your presentations.</p>
+              <button class="rec-btn">Invite teammate</button>
+            </div>
+          </article>
+
+          <article class="rec-card">
+            <img src="assets/organize.png" alt="Organize: a project with knowledge files" />
+            <div class="rec-body">
+              <p class="rec-desc">Organize your presentation and add knowledge files to keep everything in one place.</p>
+              <button class="rec-btn">Create a project and add knowledge</button>
+            </div>
+          </article>
+
+          <article class="rec-card">
+            <img src="assets/brand.png" alt="Brand: brand guidelines and typography" />
+            <div class="rec-body">
+              <p class="rec-desc">Incorporate your logo, colors, and voice. Every deck will be on-brand.</p>
+              <button class="rec-btn">Set up your Brand Kit</button>
+            </div>
+          </article>
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+<div class="dp-backdrop" id="dp-backdrop" role="dialog" aria-modal="true" aria-labelledby="dp-box-title" data-open="false">
+    <div class="dp-stack">
+      <div class="dp-box">
+        <span class="dp-offer-chip"><i class="ph-fill ph-clock"></i>Offer ends in <span id="dp-timer">59:56</span></span>
+        <h2 class="dp-box-title" id="dp-box-title">Access premium features of Pro or Gold at <span class="accent">20% off</span></h2>
+
+        <div class="dp-feat-list" id="dp-feat-list">
+          <button type="button" class="dp-feat-item is-active" data-feat="export" data-plan="pro" data-video="trigger_export" data-icon-active="ph-fill ph-export" data-icon-inactive="ph ph-export">
+            <i class="ph-fill ph-export"></i><span class="lbl">Export presentations</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="ultra" data-plan="gold" data-preview="../pricing/assets/feature-modal/triggeraimodels.jpg" data-icon-active="ph-fill ph-sparkle" data-icon-inactive="ph ph-sparkle">
+            <i class="ph ph-sparkle"></i><span class="lbl">Ultra AI model</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="brandkit" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggerbrandkit.jpg" data-icon-active="ph-fill ph-swatches" data-icon-inactive="ph ph-swatches">
+            <i class="ph ph-swatches"></i><span class="lbl">Brand kit</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="knowledge" data-plan="gold" data-preview="../pricing/assets/feature-modal/triggerprojectknowledge.jpg" data-icon-active="ph-fill ph-book-open" data-icon-inactive="ph ph-book-open">
+            <i class="ph ph-book-open"></i><span class="lbl">Shared knowledge base</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="team" data-plan="pro" data-video="trigger_invite_members" data-icon-active="ph-fill ph-users-three" data-icon-inactive="ph ph-users-three">
+            <i class="ph ph-users-three"></i><span class="lbl">Invite team members</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="refresh" data-plan="gold" data-preview="../pricing/assets/feature-modal/triggerrefresh.jpg" data-icon-active="ph-fill ph-arrows-clockwise" data-icon-inactive="ph ph-arrows-clockwise">
+            <i class="ph ph-arrows-clockwise"></i><span class="lbl">Refresh data</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="templates" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggertemplates.jpg" data-icon-active="ph-fill ph-layout" data-icon-inactive="ph ph-layout">
+            <i class="ph ph-layout"></i><span class="lbl">Templates</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="analytics" data-plan="pro" data-video="trigger_analytics" data-icon-active="ph-fill ph-chart-bar" data-icon-inactive="ph ph-chart-bar">
+            <i class="ph ph-chart-bar"></i><span class="lbl">Analytics</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="projects" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggerproject.jpg" data-icon-active="ph-fill ph-folder" data-icon-inactive="ph ph-folder">
+            <i class="ph ph-folder"></i><span class="lbl">Projects</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="fonts" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggerfonts.jpg" data-icon-active="ph-fill ph-text-aa" data-icon-inactive="ph ph-text-aa">
+            <i class="ph ph-text-aa"></i><span class="lbl">Font pair</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="colors" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggercolors.jpg" data-icon-active="ph-fill ph-palette" data-icon-inactive="ph ph-palette">
+            <i class="ph ph-palette"></i><span class="lbl">Color palette</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="assign" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggerassignslide.jpg" data-icon-active="ph-fill ph-cursor" data-icon-inactive="ph ph-cursor">
+            <i class="ph ph-cursor"></i><span class="lbl">Assign slide</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="promodel" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggerpromodelupgrade.jpg" data-icon-active="ph-fill ph-star-four" data-icon-inactive="ph ph-star-four">
+            <i class="ph ph-star-four"></i><span class="lbl">Pro AI model</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="slidecount" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggerverylongslides.jpg" data-icon-active="ph-fill ph-cards" data-icon-inactive="ph ph-cards">
+            <i class="ph ph-cards"></i><span class="lbl">Slide count</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="comments" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggercomments.jpg" data-icon-active="ph-fill ph-chat-centered-dots" data-icon-inactive="ph ph-chat-centered-dots">
+            <i class="ph ph-chat-centered-dots"></i><span class="lbl">Comments</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="present" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggercolorsmeetandpresent.jpg" data-icon-active="ph-fill ph-projector-screen" data-icon-inactive="ph ph-projector-screen">
+            <i class="ph ph-projector-screen"></i><span class="lbl">Meet and present</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="meetedit" data-plan="pro" data-preview="../pricing/assets/feature-modal/triggermeetandedit.jpg" data-icon-active="ph-fill ph-pencil-simple" data-icon-inactive="ph ph-pencil-simple">
+            <i class="ph ph-pencil-simple"></i><span class="lbl">Meet and edit</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+        </div>
+        <div class="dp-feat-fade" aria-hidden="true"></div>
+        <div class="dp-feat-fade dp-feat-fade--top" id="dp-fade-top" aria-hidden="true"></div>
+
+        <div class="dp-right">
+          <div class="dp-preview" aria-hidden="true">
+            <div class="dp-slide" id="dp-slide-a" data-key="trigger_export">
+              <video autoplay muted loop playsinline>
+                <source src="../pricing/assets/feature-modal/trigger_export.webm" type="video/webm" />
+                <source src="../pricing/assets/feature-modal/trigger_export.mp4" type="video/mp4" />
+              </video>
+            </div>
+            <div class="dp-slide" id="dp-slide-b" hidden></div>
+          </div>
+          <div class="dp-body">
+            <h3 class="dp-feat-title" id="dp-feat-title">Export presentations</h3>
+            <p class="dp-desc" id="dp-desc">Download your presentations as PowerPoint, PDF, or image files for offline use and sharing.</p>
+            <div class="dp-ctas">
+              <button class="dp-cta" id="dp-cta" type="button">Buy Pro<span class="save">Save $48</span></button>
+              <button class="dp-cta dp-cta--gold" id="dp-cta-gold" type="button">Buy Gold<span class="save">Save $300</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Close (sibling of .dp-box so it's not clipped by overflow:hidden) -->
+      <button class="dp-close" id="dp-close" type="button" aria-label="Close">
+        <i class="ph ph-x"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const backdrop = document.getElementById('dp-backdrop');
+      const closeBtn = document.getElementById('dp-close');
+      const proBtn   = document.getElementById('dp-cta');
+      const goldBtn  = document.getElementById('dp-cta-gold');
+      const timerEl  = document.getElementById('dp-timer');
+      const descEl   = document.getElementById('dp-desc');
+      const featList = document.getElementById('dp-feat-list');
+      const titleEl  = document.getElementById('dp-feat-title');
+      const slideA   = document.getElementById('dp-slide-a');
+      const slideB   = document.getElementById('dp-slide-b');
+      const boxTitle = document.getElementById('dp-box-title');
+
+      function updateTitle() {
+        const active = featList.querySelector('.dp-feat-item.is-active');
+        const name = active ? active.querySelector('.lbl').textContent : 'premium features';
+        if (document.body.classList.contains('mode-trial')) {
+          boxTitle.textContent = 'Your 7-day free trial has ended. Continue with Pro or Gold at ';
+          const trialAccent = document.createElement('span');
+          trialAccent.className = 'accent';
+          trialAccent.textContent = '20% off';
+          boxTitle.appendChild(trialAccent);
+        } else {
+          const plain = document.body.classList.contains('mode-plain');
+          boxTitle.textContent = 'Access ';
+          const em = document.createElement('em');
+          em.textContent = name;
+          boxTitle.appendChild(em);
+          if (plain) {
+            boxTitle.appendChild(document.createTextNode(' and lots more with Pro or Gold'));
+          } else {
+            boxTitle.appendChild(document.createTextNode(' and lots more with Pro or Gold at '));
+            const accent = document.createElement('span');
+            accent.className = 'accent';
+            accent.textContent = '20% off';
+            boxTitle.appendChild(accent);
+          }
+        }
+      }
+
+      const DURATION_MS = 60 * 60 * 1000;
+      let startMs = null;
+      let interval = null;
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function tick() {
+        if (!startMs) { timerEl.textContent = '60:00'; return; }
+        const left = Math.max(0, DURATION_MS - (Date.now() - startMs));
+        const m = Math.floor(left / 60000);
+        const s = Math.floor((left % 60000) / 1000);
+        timerEl.textContent = pad(m) + ':' + pad(s);
+        if (left <= 0 && interval) { clearInterval(interval); interval = null; }
+      }
+
+      // Per-feature description shown under the preview
+      const DESCS = {
+        export:     'Download your presentations as PowerPoint, PDF, or image files for offline use and sharing.',
+        ultra:      'Our most powerful model, for the highest quality content and design output.',
+        brandkit:   'Add your logo, fonts, and colors once, and every deck comes out on-brand.',
+        knowledge:  'Upload your files once. The AI references them on every slide, so your decks stay accurate and on-message.',
+        team:       'Bring your team into one workspace to co-edit decks in real time, with comments.',
+        refresh:    'Update every chart and number across the deck in one click, so nothing goes stale.',
+        templates:  'Start from professionally designed, on-brand templates.',
+        analytics:  'Track views, engagement, and viewer location. See exactly how your deck performs after you share it.',
+        projects:   'Group related decks into shared spaces, so everyone knows where the latest version lives.',
+        fonts:      'Set your brand fonts once, and they apply across every deck you create.',
+        colors:     'Lock in your brand colors, and every slide stays on palette automatically.',
+        assign:     'Hand specific slides to the right teammate, so everyone knows exactly what they own.',
+        promodel:   'Enhanced quality on every generation: smarter content, sharper design.',
+        slidecount: 'Generate longer decks, up to 21+ slides in one go, without splitting your story.',
+        comments:   'Leave feedback right on the slide, and resolve it without leaving the deck.',
+        present:    'Present live to remote audiences in real time, straight from the editor.',
+        meetedit:   'Work on the same deck together during a live call, with edits visible instantly.',
+      };
+
+      function syncForItem(item) {
+        if (!item) return;
+        const lbl = item.querySelector('.lbl');
+        if (titleEl && lbl) titleEl.textContent = lbl.textContent;
+        if (descEl && DESCS[item.dataset.feat]) descEl.textContent = DESCS[item.dataset.feat];
+        if (proBtn) proBtn.disabled = item.dataset.plan === 'gold';
+        updateTitle();
+      }
+
+      let activeSlot = slideA;
+      let settleTimer = null;
+      function fillSlot(slot, item) {
+        const key = item.dataset.video;
+        if (key) {
+          slot.innerHTML =
+            '<video autoplay muted loop playsinline>' +
+            '<source src="../pricing/assets/feature-modal/' + key + '.webm" type="video/webm" />' +
+            '<source src="../pricing/assets/feature-modal/' + key + '.mp4" type="video/mp4" />' +
+            '</video>';
+          const v = slot.querySelector('video');
+          if (v) v.play().catch(function () {});
+        } else {
+          slot.innerHTML = '<img src="' + item.dataset.preview + '" alt="" />';
+        }
+      }
+      function settleSlots(incoming, outgoing) {
+        outgoing.hidden = true;
+        outgoing.classList.remove('is-out');
+        const v = outgoing.querySelector('video');
+        if (v) v.pause();
+        outgoing.innerHTML = '';
+        incoming.classList.remove('is-in');
+      }
+      function swapMedia(item) {
+        if (!slideA || !slideB) return;
+        const key = item.dataset.video || item.dataset.preview;
+        if (activeSlot.dataset.key === key) return;
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+          settleTimer = null;
+          settleSlots(activeSlot, activeSlot === slideA ? slideB : slideA);
+        }
+        const outgoing = activeSlot;
+        const incoming = outgoing === slideA ? slideB : slideA;
+        incoming.dataset.key = key;
+        fillSlot(incoming, item);
+        incoming.hidden = false;
+        incoming.classList.add('is-entering');
+        void incoming.offsetWidth;
+        incoming.classList.remove('is-entering');
+        incoming.classList.add('is-in');
+        outgoing.classList.add('is-out');
+        activeSlot = incoming;
+        settleTimer = setTimeout(() => {
+          settleTimer = null;
+          settleSlots(incoming, outgoing);
+        }, 680);
+      }
+
+      function activateFeat(item) {
+        if (!item || !featList) return;
+        if (item.classList.contains('is-active')) return;
+        featList.querySelectorAll('.dp-feat-item').forEach((el) => {
+          el.classList.remove('is-active');
+          const icon = el.querySelector('i');
+          const inactiveCls = el.dataset.iconInactive;
+          if (icon && inactiveCls) icon.className = inactiveCls;
+        });
+        item.classList.add('is-active');
+        const activeIcon = item.querySelector('i');
+        const activeCls = item.dataset.iconActive;
+        if (activeIcon && activeCls) activeIcon.className = activeCls;
+        if (!reordering) item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        syncForItem(item);
+        swapMedia(item);
+      }
+
+      const fadeTop = document.getElementById('dp-fade-top');
+      featList.addEventListener('scroll', () => {
+        fadeTop.classList.toggle('is-visible', featList.scrollTop > 4);
+      });
+
+      featList.addEventListener('click', (e) => {
+        const item = e.target.closest('.dp-feat-item');
+        if (item) activateFeat(item);
+      });
+
+      function open() {
+        startMs = Date.now();
+        backdrop.dataset.open = 'true';
+        document.body.style.overflow = 'hidden';
+        tick();
+        if (interval) clearInterval(interval);
+        interval = setInterval(tick, 1000);
+        syncForItem(featList.querySelector('.dp-feat-item.is-active'));
+      }
+      function close() {
+        backdrop.dataset.open = 'false';
+        document.body.style.overflow = '';
+        if (interval) { clearInterval(interval); interval = null; }
+      }
+
+      closeBtn.addEventListener('click', close);
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+      proBtn.addEventListener('click', () => { window.location.href = 'pricing.html?from=try-free'; });
+      goldBtn.addEventListener('click', () => { window.location.href = 'pricing.html?from=try-free'; });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && backdrop.dataset.open === 'true') close();
+      });
+
+      // Locked entries in the sidebar open this modal on the feature they
+      // belong to. Offer mode follows the dashboard's own offer state, so the
+      // countdown chip only shows once the pricing nudge has been seen.
+      var baseOrder = null;
+      var reordering = false;
+      window.openFeatureModal = function (feat) {
+        // Offer mode tracks the same live bump the topbar chip does, so the
+        // modal never advertises a discount the dashboard is not showing.
+        var seen = false;
+        try {
+          var st = Number(localStorage.getItem('proBumpStart')) || 0;
+          seen = st > 0 && (Date.now() - st) < 60 * 60 * 1000;
+        } catch (e) {}
+        document.body.classList.toggle('mode-offer', seen);
+        document.body.classList.toggle('mode-plain', !seen);
+        // The feature the user clicked leads the list, with the rest following
+        // in their normal order, so the reason the modal opened is the first
+        // thing read rather than something to hunt for mid-scroll.
+        if (!baseOrder) baseOrder = Array.prototype.slice.call(
+          featList.querySelectorAll('.dp-feat-item'));
+        var item = featList.querySelector('.dp-feat-item[data-feat="' + feat + '"]');
+        baseOrder.forEach(function (el) {
+          if (el !== item) featList.appendChild(el);
+        });
+        if (item) featList.insertBefore(item, featList.firstChild);
+        featList.scrollTop = 0;
+
+        reordering = true;
+        if (item && !item.classList.contains('is-active')) {
+          activateFeat(item);
+        } else {
+          syncForItem(item || featList.querySelector('.dp-feat-item.is-active'));
+        }
+        reordering = false;
+        featList.scrollTop = 0;
+        open();
+      };
+    })();
+  </script>
+
+  <script>
+    // Locked sidebar entries open the feature modal on their own feature
+    document.querySelectorAll('[data-locked]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.openFeatureModal(el.dataset.locked);
+      });
+    });
+  </script>
+
+  <script>
+    // 20% offer chip. The dashboard starts clean: nothing shows until the
+    // user has actually been through the pricing close-nudge, which stamps
+    // proBumpStart and sends them back with ?offer=1. The chip then lives
+    // exactly as long as that one-hour offer does, so a later visit with an
+    // expired offer is clean again. ?offer=0 resets the flow for a rerun.
+    (function () {
+      var chip = document.querySelector('.offer-wrap');
+      var el = document.getElementById('offer-timer');
+      var HOUR = 60 * 60 * 1000;
+      var param = new URLSearchParams(location.search).get('offer');
+
+      if (param === '0') {
+        try {
+          localStorage.removeItem('proBumpStart');
+          sessionStorage.removeItem('dashOffer20');
+        } catch (e) {}
+        return;
+      }
+
+      var start = null;
+      try { start = Number(localStorage.getItem('proBumpStart')) || null; } catch (e) {}
+      // ?offer=1 without a stamped bump means the chip was asked for directly,
+      // so start the hour here rather than showing a dead countdown.
+      if (!start && param === '1') {
+        start = Date.now();
+        try { localStorage.setItem('proBumpStart', String(start)); } catch (e) {}
+      }
+      if (!start) return;
+
+      var left = HOUR - (Date.now() - start);
+      if (left <= 0) return;
+      chip.classList.add('is-on');
+
+      function tick() {
+        var ms = Math.max(0, HOUR - (Date.now() - start));
+        var t = Math.floor(ms / 1000);
+        el.textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' +
+                         String(t % 60).padStart(2, '0');
+        if (ms <= 0) chip.classList.remove('is-on');
+      }
+      tick();
+      setInterval(tick, 1000);
+
+      // With the clock already running the user has seen the offer, so the
+      // chip is the shortcut straight to payment: both plans, no detour
+      // back through pricing.
+      chip.addEventListener('click', function () {
+        if (typeof window.openCheckout === 'function') window.openCheckout('silver');
+      });
+    })();
+
+    // Upgrade splits on whether the offer is live. Once the user has been
+    // shown the discount, sending them back to pricing only re-pitches
+    // something they already accepted, so it opens checkout in place. With
+    // no offer running it still opens the pricing page as before. The state
+    // is read at click time, so an offer expiring mid-session routes right.
+    (function () {
+      var up = document.getElementById('btn-upgrade');
+      if (!up) return;
+      up.addEventListener('click', function () {
+        var start = 0;
+        try { start = Number(localStorage.getItem('proBumpStart')) || 0; } catch (e) {}
+        var live = start && (Date.now() - start) < 60 * 60 * 1000;
+        if (live && typeof window.openCheckout === 'function') window.openCheckout('silver');
+        else location.href = 'pricing.html?from=try-free';
+      });
+    })();
+  </script>
+
+  <!-- Agentation: visual feedback toolbar (bottom-right). React is loaded via esm.sh CDN. -->
+  <div id="agentation-root"></div>
+  <script type="module">
+    import React from 'https://esm.sh/react@18';
+    import { createRoot } from 'https://esm.sh/react-dom@18/client';
+    import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+    createRoot(document.getElementById('agentation-root'))
+      .render(React.createElement(Agentation));
+  </script>
+<!-- ── Checkout modal ──────────────────────────────────────────────────────
+     Built from Figma AMJ 26 Handoff, node 2558:3184. Opens from any Get
+     Silver / Get Gold action. The timer chip, struck prices, and savings
+     only render while the one-hour bump is live, so checkout never
+     advertises a discount the rest of the flow has ended.
+     Payment brand marks are the exported Figma SVGs in assets/checkout;
+     interface icons use the page's Phosphor set. -->
+<style>
+  :root {
+    --offer-fill: radial-gradient(145.58% 149.6% at 29.59% -25%, #C2D8FF 0%, #5291FF 31.73%, #0055ED 76.78%, #00225C 100%);
+    --offer-tip-flat: #0055ED;
+  }
+  .co-backdrop {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+  }
+  .co-backdrop[data-open="true"] {
+    opacity: 1; visibility: visible; pointer-events: auto;
+    transition: opacity 0.22s ease, visibility 0s linear 0s;
+  }
+  .co-stack {
+    position: relative;
+    transform: translateY(18px) scale(0.97); opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.22, 1.4, 0.36, 1), opacity 0.24s ease;
+  }
+  .co-backdrop[data-open="true"] .co-stack { transform: none; opacity: 1; }
+
+  .co-card {
+    display: grid; grid-template-columns: 540px 1fr;
+    width: 1080px; max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 48px);
+    background: #ffffff; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 24px 60px -18px rgba(10,25,37,0.45);
+  }
+  /* close floats outside the card, top right */
+  .co-close {
+    position: absolute; top: -14px; right: -14px; z-index: 3;
+    width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+    background: #fafafa; border: 0; border-radius: 24px; cursor: pointer; color: #171717;
+    box-shadow: 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .co-close:hover { background: #f1f3f6; transform: scale(1.06); }
+  .co-close i { font-size: 20px; }
+
+  /* ── left: plan ─────────────────────────────────────────────────────── */
+  .co-left {
+    background: #f5f5f5; border-right: 1px solid rgba(11,15,20,0.06);
+    padding: 31px 24px; overflow-y: auto;
+  }
+  .co-head { position: relative; display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .co-title {
+    font-size: 24px; font-weight: 400; line-height: 1.3; letter-spacing: -0.24px;
+    color: #171717; margin: 0;
+  }
+
+  /* timer chip with the pointer beneath it */
+  /* centred on the panel, not wedged between the title and the link */
+  .co-offer {
+    position: absolute; left: 50%; top: calc(100% + 26px); z-index: 1;
+    transform: translateX(-50%);
+    display: none; flex-direction: column; align-items: center;
+  }
+  /* chip parks just above the plans box while the offer is live */
+  .co-head:has(.co-offer.is-on) { margin-bottom: 68px; }
+  .co-offer.is-on { display: flex; }
+  .co-offer-pill {
+    position: relative; display: inline-flex; align-items: center; gap: 4px;
+    height: 28px; padding: 6px 12px 6px 8px; border-radius: 999px;
+    background: var(--offer-fill); color: #ffffff;
+    font: 600 12px 'Inter', sans-serif; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    animation: pro-chip-glow 2.2s ease-in-out infinite;
+  }
+  .co-offer-pill i { font-size: 14px; }
+  .co-offer-pill > * { position: relative; z-index: 1; }
+  .co-offer-tip {
+    width: 12px; height: 8.5px; margin-top: -1px;
+    background: var(--offer-tip-flat); clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+  .co-offer.is-on { animation: co-bob 2.6s ease-in-out infinite; }
+  /* the chip is centred by transform, so the bob has to carry that offset */
+  @keyframes co-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-3px); }
+  }
+
+  .co-plans {
+    background: #ffffff; border-radius: 4px; padding: 4px 16px;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    transition: background-image 0.24s ease, box-shadow 0.24s ease;
+  }
+  .co-plan {
+    display: flex; align-items: flex-start; gap: 16px; width: 100%;
+    padding: 16px 0; background: none; border: 0; cursor: pointer; text-align: left;
+  }
+  .co-plan + .co-plan { border-top: 1px solid rgba(11,15,20,0.09); }
+  .co-radio {
+    width: 16px; height: 16px; margin-top: 2px; flex: none; border-radius: 999px;
+    border: 1px solid #c2c7ce; background: #fff; display: grid; place-items: center;
+    transition: border-color 0.14s ease;
+  }
+  .co-plan.is-on .co-radio { border-color: #0b0f14; border-width: 1.5px; }
+  .co-plan.is-on .co-radio::after {
+    content: ''; width: 8px; height: 8px; border-radius: 999px; background: #0b0f14;
+  }
+  .co-plan-main { flex: 1; min-width: 0; }
+  .co-plan-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .co-plan-name { font: 500 14px/1.2 'Inter', sans-serif; color: #171717; }
+  .co-plan-sub { display: block; font: 400 12px/1.33 'Inter', sans-serif; color: #a3a3a3; margin-top: 6px; }
+  .co-price { display: inline-flex; align-items: baseline; gap: 6px; font: 500 14px/1.2 'Inter', sans-serif; }
+  .co-strike { color: #a3a3a3; text-decoration: line-through; }
+  .co-now { color: #171717; }
+  .co-save { display: block; font: 400 12px/1.33 'Inter', sans-serif; color: #005eff; text-align: right; margin-top: 6px; }
+  .co-plan-right { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+
+  /* Gold card treatment removed by request: selecting Gold keeps the same
+     neutral card styling as the other plan. */
+  .co-plans { overflow: hidden; }
+  /* Arriving from Get Gold shows the Gold card on its own, the way the early
+     renewal screen presents a single gold plan. */
+  .co-left[data-only="gold"] .co-plan[data-plan="silver"] { display: none; }
+  .co-left[data-only="gold"] .co-plan[data-plan="gold"] { border-top: 0; }
+
+  .co-feats { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .co-feats li { display: flex; align-items: center; gap: 10px; font: 400 14px/1.43 'Inter', sans-serif; color: #525252; }
+  .co-feats i { font-size: 16px; color: #16a34a; flex: none; }
+
+  /* ── right: payment ─────────────────────────────────────────────────── */
+  .co-right { padding: 32px 30px; overflow-y: auto; }
+  .co-pay-title {
+    font: 400 24px/1.3 'Inter', sans-serif; letter-spacing: -0.24px; color: #171717;
+    margin: 0 0 24px;
+  }
+  .co-tabs { display: flex; align-items: center; border-bottom: 1px solid rgba(11,15,20,0.09); }
+  .co-tab {
+    display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 2px 8px;
+    background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
+    font: 500 14px/1.43 'Inter', sans-serif; color: #171717;
+    margin-bottom: -1px;
+  }
+  .co-tab.is-on { border-bottom-color: #0b0f14; }
+  .co-tab:not(.is-on) { color: #525252; }
+  .co-tab > i { font-size: 20px; }
+  /* Each mark keeps the outer box Figma drew and the leaf size it exported,
+     so nothing is stretched to fill. */
+  .co-mark { display: grid; place-items: center; flex: none; overflow: hidden; }
+  .co-mark img { display: block; }
+  .co-mark.upi { width: 20px; height: 20px; }
+  .co-mark.upi img { width: 14.13px; height: 20px; }
+  .co-wallets { display: inline-flex; align-items: center; gap: 6px; }
+  .co-mark.wallet { width: 20px; height: 20px; border-radius: 999px; }
+  .co-mark.wallet img { width: 20px; height: 20px; }
+  .co-mark.gpay { background: #e5e5e5; }
+  .co-mark.gpay img { width: 13.29px; height: 11.33px; }
+  .co-mark.cred { background: #000000; }
+  .co-mark.cred img { width: 8.75px; height: 10.44px; }
+
+  .co-fields { margin-top: 24px; }
+  .co-label { display: block; font: 500 14px/1.43 'Inter', sans-serif; color: #525252; margin: 0 0 6px; }
+  .co-input {
+    position: relative; display: flex; align-items: center; gap: 8px;
+    padding: 12px; border-radius: 4px; background: #ffffff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+    transition: box-shadow 0.14s ease;
+  }
+  .co-input:focus-within { box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1.5px #005eff; }
+  .co-input input {
+    flex: 1; min-width: 0; border: 0; outline: none; background: none; padding: 0;
+    font: 400 14px/1.43 'Inter', sans-serif; color: #171717;
+  }
+  .co-input input::placeholder { color: #a3a3a3; }
+  .co-brands { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+  .co-brands img { width: 24px; height: 16px; display: block; }
+  .co-brands .co-mark.jcb { width: 23px; height: 16px; }
+  .co-brands .co-mark.jcb img { width: 22.59px; height: 16px; }
+  .co-cvc-mark { width: 24px; height: 16px; display: block; flex: none; }
+  .co-group { margin-bottom: 20px; }
+  .co-two { display: grid; grid-template-columns: 47.82% 47.82%; justify-content: space-between; }
+
+  .co-select {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    height: 44px; padding: 0 12px; border-radius: 4px; background: #ffffff; cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 1px rgba(11,15,20,0.06),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    position: relative;
+  }
+  .co-select select {
+    position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+  }
+  .co-select span { font: 400 14px/1.43 'Inter', sans-serif; color: #525252; }
+  .co-select i { font-size: 16px; color: #525252; }
+
+  .co-legal-note { font: 400 12px/1.33 'Inter', sans-serif; color: #525252; margin: 0 0 24px; }
+  .co-pay {
+    width: 100%; height: 44px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #000000; color: #ffffff; font: 500 14px/1.43 'Inter', sans-serif;
+    box-shadow: 0 0 0 1px rgba(26,26,26,0.06), 0 1px 2px 0 rgba(26,26,26,0.09);
+    transition: background 0.16s ease, transform 0.12s ease;
+  }
+  .co-pay:hover { background: #1a1a1a; }
+  .co-pay:active { transform: scale(0.995); }
+  .co-foot {
+    display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px;
+    font: 400 12px 'Inter', sans-serif; color: #525252;
+  }
+  .co-foot .powered { display: inline-flex; align-items: center; gap: 8px; }
+  .co-foot .powered img { width: 39.33px; height: 16px; display: block; }
+  .co-foot .rule { width: 1px; height: 18px; background: rgba(26,26,26,0.09); }
+  .co-foot .links { display: inline-flex; align-items: center; gap: 12px; }
+  .co-foot .links span { cursor: pointer; }
+  .co-foot .links span:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+  @media (max-width: 1140px) {
+    .co-card { grid-template-columns: 1fr; overflow-y: auto; }
+    .co-left { border-right: 0; border-bottom: 1px solid rgba(11,15,20,0.06); }
+    .co-close { top: 8px; right: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .co-stack { transition: none; }
+    .co-offer { animation: none; }
+  }
+</style>
+
+<div class="co-backdrop" id="co-backdrop" role="dialog" aria-modal="true" aria-labelledby="co-title" data-open="false">
+  <div class="co-stack">
+    <button class="co-close" id="co-close" type="button" aria-label="Close"><i class="ph ph-x"></i></button>
+    <div class="co-card">
+
+      <!-- plan -->
+      <div class="co-left" id="co-left" data-plan="silver">
+        <div class="co-head">
+          <h2 class="co-title" id="co-title">Upgrade</h2>
+          <span class="co-offer" id="co-offer">
+            <span class="co-offer-pill">
+              <i class="ph-fill ph-clock"></i><span>Offer ends in <span id="co-timer">59:56</span></span>
+            </span>
+            <span class="co-offer-tip" aria-hidden="true"></span>
+          </span>
+        </div>
+
+        <div class="co-plans" role="radiogroup" aria-label="Plan">
+          <button class="co-plan is-on" type="button" data-plan="silver" role="radio" aria-checked="true">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span class="co-plan-main">
+              <span class="co-plan-top">
+                <span class="co-plan-name">Pro Plan</span>
+                <span class="co-plan-right">
+                  <span class="co-price">
+                    <span class="co-strike" data-strike>$240</span>
+                    <span class="co-now" data-now>$192</span>
+                  </span>
+                  <span class="co-save" data-save>Save $48</span>
+                </span>
+              </span>
+              <span class="co-plan-sub">Our most popular plan</span>
+            </span>
+          </button>
+          <button class="co-plan" type="button" data-plan="gold" role="radio" aria-checked="false">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span class="co-plan-main">
+              <span class="co-plan-top">
+                <span class="co-plan-name">Gold Plan</span>
+                <span class="co-plan-right">
+                  <span class="co-price">
+                    <span class="co-strike" data-strike>$1,200</span>
+                    <span class="co-now" data-now>$960</span>
+                  </span>
+                  <span class="co-save" data-save>Save $240</span>
+                </span>
+              </span>
+              <span class="co-plan-sub">Our most powerful plan</span>
+            </span>
+          </button>
+        </div>
+
+
+        <ul class="co-feats" id="co-feats"></ul>
+      </div>
+
+      <!-- payment -->
+      <div class="co-right">
+        <h3 class="co-pay-title">Payment Method</h3>
+
+        <div class="co-tabs" role="tablist" aria-label="Payment method">
+          <button class="co-tab is-on" type="button" role="tab" aria-selected="true" data-pay="card">
+            <i class="ph ph-credit-card"></i>Credit/Debit card
+          </button>
+          <button class="co-tab" type="button" role="tab" aria-selected="false" data-pay="upi">
+            <span class="co-mark upi"><img src="assets/checkout/upi.svg" alt="" /></span>UPI/QR Code
+            <span class="co-wallets" aria-hidden="true">
+              <span class="co-mark wallet gpay"><img src="assets/checkout/googlepay.svg" alt="" /></span>
+              <span class="co-mark wallet"><img src="assets/checkout/phonepe.svg" alt="" /></span>
+              <span class="co-mark wallet cred"><img src="assets/checkout/cred.svg" alt="" /></span>
+              <span class="co-mark wallet"><img src="assets/checkout/amazonpay.svg" alt="" /></span>
+            </span>
+          </button>
+        </div>
+
+        <div class="co-fields" id="co-pay-card">
+          <div class="co-group">
+            <label class="co-label" for="co-cardnum">Card details</label>
+            <div class="co-input">
+              <input id="co-cardnum" type="text" inputmode="numeric" autocomplete="off" placeholder="1234 1234 1234 1234" />
+              <span class="co-brands" aria-hidden="true">
+                <img src="assets/checkout/visa.svg" alt="" />
+                <img src="assets/checkout/mastercard.svg" alt="" />
+                <img src="assets/checkout/amex.svg" alt="" />
+                <span class="co-mark jcb"><img src="assets/checkout/jcb.svg" alt="" /></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="co-two co-group">
+            <div>
+              <label class="co-label" for="co-exp">Expiration date</label>
+              <div class="co-input">
+                <input id="co-exp" type="text" inputmode="numeric" autocomplete="off" placeholder="MM / YY" />
+              </div>
+            </div>
+            <div>
+              <label class="co-label" for="co-cvc">CVC</label>
+              <div class="co-input">
+                <input id="co-cvc" type="text" inputmode="numeric" autocomplete="off" placeholder="CVC" />
+                <img class="co-cvc-mark" src="assets/checkout/cvc.svg" alt="" aria-hidden="true" />
+              </div>
+            </div>
+          </div>
+
+          <div class="co-group">
+            <span class="co-label">Country</span>
+            <div class="co-select">
+              <span id="co-country-label">India</span>
+              <i class="ph ph-caret-down" aria-hidden="true"></i>
+              <select id="co-country" aria-label="Country">
+                <option selected>India</option>
+                <option>United States</option>
+                <option>United Kingdom</option>
+                <option>Germany</option>
+                <option>Singapore</option>
+              </select>
+            </div>
+          </div>
+
+          <p class="co-legal-note">By providing your card information, you allow PRESENTATIONS AI PTE. LTD to charge your card for future payments in accordance with their terms.</p>
+        </div>
+
+        <div class="co-fields" id="co-pay-upi" hidden>
+          <p class="co-legal-note" style="margin-bottom:20px;">Scan the QR code with any UPI app to complete the payment. The code refreshes every 5 minutes.</p>
+        </div>
+
+        <button class="co-pay" id="co-submit" type="button">Pay now</button>
+
+        <div class="co-foot">
+          <span class="powered">Powered by <img src="assets/checkout/stripe.svg" alt="Stripe" /></span>
+          <span class="rule" aria-hidden="true"></span>
+          <span class="links"><span>Terms</span><span>Privacy</span></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var backdrop = document.getElementById('co-backdrop');
+    if (!backdrop) return;
+    var offer   = document.getElementById('co-offer');
+    var timerEl = document.getElementById('co-timer');
+    var featsEl = document.getElementById('co-feats');
+    var plans   = backdrop.querySelectorAll('.co-plan');
+    var HOUR    = 60 * 60 * 1000;
+    var interval = null;
+
+    // List prices are annual totals; the bump takes the same 20% the cards
+    // and the close nudge are already showing. Basic is the free tier's
+    // paid-equivalent line, so it never discounts.
+    // Each line carries its own icon: a column of identical ticks tells the
+    // reader nothing, where the glyph says what kind of thing the line is.
+    var PLANS = {
+      silver: { list: 240, discountable: true,
+        feats: [['coins', '5,000 Credits'],
+                ['export', 'Export to PowerPoint and Google Slides'],
+                ['sparkle', 'Advanced AI models and agents'],
+                ['chart-line-up', 'View tracking and analytics'],
+                ['palette', 'Basic brand customization']] },
+      gold:   { list: 1200, discountable: true,
+        feats: [['coins', '50,000 Credits'],
+                ['check-circle', 'Everything in Pro'],
+                ['lightning', 'Ultra AI model'],
+                ['books', 'Shared knowledge base and projects'],
+                ['arrows-clockwise', 'Refresh data across a deck'],
+                ['paint-brush-broad', 'Full brand kit control']] },
+    };
+
+    function money(n) { return '$' + n.toLocaleString('en-US'); }
+    function bumpStart() {
+      var st = 0;
+      try { st = parseInt(localStorage.getItem('proBumpStart') || '0', 10); } catch (e) {}
+      return st && (Date.now() - st) < HOUR ? st : 0;
+    }
+    function selected() {
+      var on = backdrop.querySelector('.co-plan.is-on');
+      return on ? on.dataset.plan : 'silver';
+    }
+
+    function renderPrices() {
+      var bumped = !!bumpStart();
+      plans.forEach(function (el) {
+        var p = PLANS[el.dataset.plan];
+        var off = bumped && p.discountable;
+        var now = off ? Math.round(p.list * 0.8) : p.list;
+        el.querySelector('[data-now]').textContent = money(now);
+        var strike = el.querySelector('[data-strike]');
+        var save = el.querySelector('[data-save]');
+        if (strike) { strike.textContent = money(p.list); strike.style.display = off ? '' : 'none'; }
+        if (save) { save.textContent = 'Save ' + money(p.list - now); save.style.display = off ? '' : 'none'; }
+      });
+      offer.classList.toggle('is-on', bumped);
+    }
+
+    function renderFeats() {
+      featsEl.innerHTML = PLANS[selected()].feats.map(function (f) {
+        return '<li><i class="ph ph-check-circle"></i>' + f[1] + '</li>';
+      }).join('');
+    }
+
+    var leftPanel = document.getElementById('co-left');
+
+    function selectPlan(name) {
+      plans.forEach(function (el) {
+        var on = el.dataset.plan === name;
+        el.classList.toggle('is-on', on);
+        el.setAttribute('aria-checked', String(on));
+      });
+      leftPanel.dataset.plan = name;
+      renderFeats();
+    }
+
+    function tick() {
+      var st = bumpStart();
+      if (!st) { renderPrices(); return; }
+      var t = Math.floor(Math.max(0, HOUR - (Date.now() - st)) / 1000);
+      timerEl.textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' +
+                            String(t % 60).padStart(2, '0');
+    }
+
+    function open(plan, title) {
+      document.getElementById('co-title').textContent = title || 'Upgrade';
+      // Coming from Get Gold, Gold stands alone; anywhere else shows both.
+      if (plan === 'gold') leftPanel.dataset.only = 'gold';
+      else leftPanel.removeAttribute('data-only');
+      selectPlan(plan || 'silver');
+      renderPrices();
+      backdrop.dataset.open = 'true';
+      document.body.style.overflow = 'hidden';
+      tick();
+      if (interval) clearInterval(interval);
+      interval = setInterval(tick, 1000);
+    }
+    function close() {
+      backdrop.dataset.open = 'false';
+      document.body.style.overflow = '';
+      if (interval) { clearInterval(interval); interval = null; }
+    }
+
+    plans.forEach(function (el) {
+      el.addEventListener('click', function () { selectPlan(el.dataset.plan); });
+    });
+    backdrop.querySelectorAll('.co-tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        backdrop.querySelectorAll('.co-tab').forEach(function (t) {
+          var on = t === tab;
+          t.classList.toggle('is-on', on);
+          t.setAttribute('aria-selected', String(on));
+        });
+        document.getElementById('co-pay-card').hidden = tab.dataset.pay !== 'card';
+        document.getElementById('co-pay-upi').hidden = tab.dataset.pay !== 'upi';
+      });
+    });
+
+    var countrySel = document.getElementById('co-country');
+    countrySel.addEventListener('change', function () {
+      document.getElementById('co-country-label').textContent = countrySel.value;
+    });
+
+    document.getElementById('co-close').addEventListener('click', close);
+    backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && backdrop.dataset.open === 'true') close();
+    });
+    document.getElementById('co-submit').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      setTimeout(function () {
+        btn.disabled = false;
+        btn.textContent = 'Pay now';
+        close();
+      }, 1400);
+    });
+
+    window.openCheckout = open;
+
+  })();
+</script>
+
+
+  <!-- ── Offer palette explorer ─────────────────────────────────────────────
+       Three candidate paints for every offer surface: pill, Upgrade button,
+       pricing chips, close nudge, feature modal and checkout. Declared on the
+       html element so one switch repaints the whole screen, and stored so the
+       choice survives the dashboard to pricing to checkout journey. -->
+  <style>
+    /* v1 · blue to coral: bridges product blue into the offer accent */
+    html[data-offer-theme="v1"] {
+      --offer-fill: linear-gradient(96deg, #0067FF 0%, #7B52D0 46%, #FF5A45 100%);
+      --offer-fill-hot: linear-gradient(96deg, #1E78FF 0%, #8C63DC 46%, #FF6E5B 100%);
+      --offer-tip: #FF5A45; --offer-tip-flat: #7B52D0;
+      --offer-ink-fill: linear-gradient(96deg, #2B6BFF 0%, #8A3FD0 48%, #E8442B 100%);
+      --offer-ink-flat: #D93B27;
+      --offer-ring: 138, 82, 200; --offer-shadow: 96, 70, 190;
+    }
+    /* v2 · brand ramp, exact: the design system's gradient-brand-03 verbatim */
+    html[data-offer-theme="v2"] {
+      --offer-fill: radial-gradient(145.58% 149.6% at 29.59% -25%, #C2D8FF 0%, #5291FF 31.73%, #0055ED 76.78%, #00225C 100%);
+      --offer-fill-hot: radial-gradient(145.58% 149.6% at 29.59% -25%, #D6E5FF 0%, #6C9FFF 31.73%, #1667F5 76.78%, #062F73 100%);
+      /* bottom-centre sits further from the radial's focal point than the
+         right edge does, so the two pointers take different colours */
+      --offer-tip: #0055ED; --offer-tip-flat: #0A3B8F;
+      --offer-ink-fill: linear-gradient(96deg, #0055ED 0%, #0043B8 55%, #00225C 100%);
+      --offer-ink-flat: #0043B8;
+      --offer-ring: 82, 145, 255; --offer-shadow: 0, 85, 237;
+    }
+    /* v3 · brand ramp, flipped: same stops dark to light */
+    html[data-offer-theme="v3"] {
+      /* The ramp's lightest stop is pulled into the trailing padding: read
+         literally it sat under the timer digits and white type dropped to
+         1.4:1. A single 12% jump into the lightest stop is what made the end
+         read as a hard edge, so the tail now eases through four stops and tops
+         out at #8FB6FF. Lightness climbs at a near constant rate to 92% before
+         the tail opens up, and everything under the label holds 4.2:1 or
+         better on white. An even ramp across the whole pill would be smoother
+         still, but it puts mid blue under the digits by the halfway mark. */
+      --offer-fill: linear-gradient(96deg, #00225C 0%, #003C9E 24%, #0055ED 50%, #0F60EF 66%,
+                                          #1C6BF3 78%, #2A75F6 86%, #3F82FA 92%, #5990FC 96%, #74A6FF 100%);
+      --offer-fill-hot: linear-gradient(96deg, #063070 0%, #0A48B4 24%, #1667F5 50%, #2170F7 66%,
+                                              #2E7AF9 78%, #3C84FC 86%, #5292FE 92%, #6FA2FF 96%, #8CB6FF 100%);
+      /* --offer-tip is the right-edge anchor, --offer-tip-flat the bottom
+         centre one, so each pointer matches the paint it grows out of. */
+      --offer-tip: #74A6FF; --offer-tip-flat: #0659EE;
+      --offer-ink-fill: linear-gradient(96deg, #00225C 0%, #0055ED 55%, #2C74F7 100%);
+      --offer-ink-flat: #0055ED;
+      --offer-ring: 0, 85, 237; --offer-shadow: 0, 60, 180;
+    }
+
+    .pal {
+      position: fixed; left: 16px; bottom: 16px; z-index: 900;
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px; border-radius: 999px;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px -6px rgba(11,15,20,0.28), 0 0 0 1px rgba(11,15,20,0.08);
+      font: 600 11px "Inter", system-ui, sans-serif;
+    }
+    .pal-label { padding-left: 8px; color: #737373; letter-spacing: 0.04em; }
+    .pal-btn {
+      width: auto; height: 26px; padding: 0 14px; white-space: nowrap;
+      display: grid; place-items: center;
+      border: 0; border-radius: 999px; cursor: pointer; color: #525252;
+      background: transparent; font: inherit;
+    }
+    .pal-btn:hover { background: rgba(11,15,20,0.06); }
+    .pal-btn[aria-pressed="true"] { background: #0A1925; color: #fff; }
+    .pal-swatch {
+      width: 26px; height: 26px; border-radius: 999px; border: 0; cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(11,15,20,0.12);
+    }
+    @media print { .pal { display: none; } }
+  </style>
+
+  <div class="pal" role="group" aria-label="Free try state">
+    <span class="pal-label">TRY</span>
+    <button class="pal-btn" type="button" data-try="fresh" aria-pressed="false" title="Both free tries available">1 free try</button>
+    <button class="pal-btn" type="button" data-try="used" aria-pressed="false" title="No free try available">No free try</button>
+  </div>
+
+  <script>
+    (function () {
+      function used(k) {
+        try { return localStorage.getItem(k) === '1'; } catch (e) { return false; }
+      }
+      function refresh() {
+        var v = (used('tryUsedTemplate') && used('tryUsedRefresh')) ? 'used' : 'fresh';
+        document.querySelectorAll('[data-try]').forEach(function (b) {
+          b.setAttribute('aria-pressed', String(b.dataset.try === v));
+        });
+      }
+      document.querySelectorAll('[data-try]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var toUsed = b.dataset.try === 'used';
+          try {
+            ['tryUsedTemplate', 'tryUsedRefresh'].forEach(function (k) {
+              if (toUsed) localStorage.setItem(k, '1'); else localStorage.removeItem(k);
+            });
+          } catch (e) {}
+          document.querySelectorAll('.pill-try').forEach(function (w) {
+            w.classList.toggle('is-used', toUsed);
+          });
+          refresh();
+        });
+      });
+      document.addEventListener('try-state-change', refresh);
+      refresh();
+    })();
+  </script>
+
+<script>
+  /* Free-try state. First click on a TRY pill spends the free try and lands
+     in the normal flow. Second click opens checkout: Use a Template shows
+     Pro and Gold, Refresh Data shows Gold only. Add ?fresh to the URL to
+     reset both tries for a new demo run. */
+  (function () {
+    if (/[?&]fresh\b/.test(location.search)) {
+      try {
+        localStorage.removeItem('tryUsedTemplate');
+        localStorage.removeItem('tryUsedRefresh');
+      } catch (e) {}
+    }
+    [
+      { id: 'pill-template', key: 'tryUsedTemplate', plan: 'silver', title: 'Keep using Templates' },
+      { id: 'pill-refresh',  key: 'tryUsedRefresh',  plan: 'gold',   title: 'Keep using Refresh Data' }
+    ].forEach(function (d) {
+      var btn = document.getElementById(d.id);
+      if (!btn) return;
+      var wrap = btn.closest('.pill-try');
+      function used() {
+        try { return localStorage.getItem(d.key) === '1'; } catch (e) { return false; }
+      }
+      function sync() { wrap.classList.toggle('is-used', used()); }
+      sync();
+      btn.addEventListener('click', function () {
+        if (used()) {
+          if (typeof window.openCheckout === 'function') window.openCheckout(d.plan, d.title);
+          return;
+        }
+        try { localStorage.setItem(d.key, '1'); } catch (e) {}
+        sync();
+        document.dispatchEvent(new Event('try-state-change'));
+      });
+    });
+  })();
+</script>
+</body>
+</html>
