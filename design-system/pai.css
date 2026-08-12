@@ -1,3 +1,25 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   pai.css — the presentations.ai design system, as used by every proto here.
+
+   Migrated to the atlas system on 12 Aug 2026. What was a 513-line stylesheet
+   is now atlas's 2,646-line one, so a proto can use the spacing, radius, icon,
+   elevation and z scales — which this file previously did not publish at all —
+   and every component atlas has grown since the fork.
+
+   NOTHING THAT ALREADY EXISTED CHANGED. The two systems shared 173 rule blocks
+   and 105 tokens; once var() was resolved, 145 rules and 101 tokens were already
+   identical and simply spelled differently. The remainder is pinned to its old
+   value in the compatibility layer at the foot of this file, which is also where
+   the old-only tokens and the old selected/disabled/hover selectors live.
+
+   Verified by screenshotting all 103 protos before and after and diffing every
+   pair, not by reasoning about the cascade.
+
+   The compatibility layer is a migration shim, not a second design system. As a
+   proto moves to the new class names its pins become removable — but check that
+   nothing else uses them first, because these are shared components.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 /* ============================================================================
    presentations.ai — component CSS for HTML prototypes
    ----------------------------------------------------------------------------
@@ -8,6 +30,39 @@
 
    Optional: also load the Tailwind CDN + pai.tailwind.js to use brand utility
    classes (bg-bg-primary-inverted, text-body-base-medium, …) alongside these.
+   ========================================================================== */
+
+/* ============================================================================
+   WHICH NAME TO WRITE
+
+   This file is the truth for what a component looks like. It is also the truth
+   for what a component is called, and the two are not the same question,
+   because some rules answer to two names.
+
+   THE RULE: a legacy spelling is marked, on the rule it belongs to, as
+
+         @legacy <legacy-selector> -> <canonical-selector>
+
+   written as a CSS comment on the rule it belongs to.
+
+   Anything not carrying that marker is canonical. Grep @legacy for the whole
+   list; there are twelve.
+
+   The marker is explicit rather than positional on purpose. "The first selector
+   is canonical" would have been cheaper to write and wrong: of the 41 rules here
+   with more than one selector, only 15 are aliases. The other 26 are components
+   sharing a rule — .pai-input with .pai-textarea, .pai-checkbox with .pai-radio
+   — and a positional reading calls a textarea a legacy input.
+
+   Never rewrite a legacy name inside a screen that has already been built. It
+   renders correctly as it stands, its annotations anchor to those selectors, and
+   changing them points twenty-four notes at elements that no longer match.
+
+   Four departures are NOT aliased and have no canonical alternative to write
+   instead — the missing pai- prefix on button/chip/tab/listitem/dropdown, the
+   -style base classes, xs/sm/md icon sizes, and size being required rather than
+   implied on six families. Use them as they are. sticker-sheet.html shows every
+   component in its canonical spelling if you would rather read markup than CSS.
    ========================================================================== */
 
 /* ---- Tokens as CSS variables --------------------------------------------- */
@@ -23,6 +78,20 @@
   --app-700:#0043B8;  /* held, hover */
   --app-800:#043485;
   --app-900:#00225C;  /* held */
+  /* The brand gradient, as a value rather than as one component's background.
+     It was written inline in .button-gradient-primary and nowhere else, so the
+     second thing that wanted it had to copy the stops — which is the drift the
+     "a value is written once" rule exists to stop.
+
+     Its four stops are NOT ramp steps: #C2D8FF and #5291FF sit beside --app-100
+     (#BFD5FC) and --app-300 (#69A0FF) without being them. That is why it is one
+     composed value and not four references.
+
+     The README lists backgroundImage among the Tailwind-only exceptions because
+     gradients are "composed, not single values" — but --elevation-04 is seven
+     composed shadows and is a variable, so composition was never the reason a
+     thing could not be one. */
+  --gradient-brand-03:radial-gradient(145.58% 149.6% at 29.59% -25%, #C2D8FF 0%, #5291FF 31.73%, #0055ED 76.78%, #00225C 100%);
   /* green / success ramp, perceived lightness pinned to the red/blue/purple
      mean so it stops reading fluorescent next to the other hues */
   --green-50:#EFF9F2;  --green-100:#DAF1E2; --green-200:#BDE7CB; --green-300:#8DD6A6;
@@ -34,60 +103,206 @@
   --gray-600:#525252; --gray-700:#393939; --gray-800:#262626; --gray-850:#1B1B1B;
   --gray-900:#161616;
   /* shadow primitives; every elevation below composes from these */
-  --drop-1:rgba(9,15,21,0.06); --drop-2:rgba(9,15,21,0.09); --drop-3:rgba(9,15,21,0.20);
+  --drop-1:rgba(11,15,20,0.06); --drop-2:rgba(11,15,20,0.09); --drop-3:rgba(11,15,20,0.20);
   --inner-1:rgba(255,255,255,0.80); --inner-2:rgba(255,255,255,0);
+  /* For dark surfaces. The light ladder's inner-1 is a near-white 1px inset —
+     on a near-black object it draws a pale ring the object does not have, and
+     the drop is too faint to separate dark from light at all. So: a barely-there
+     white inset that reads as an edge rather than a halo, and a real black drop. */
+  --drop-dark-1:rgba(0,0,0,0.24); --drop-dark-2:rgba(0,0,0,0.40);
+  --inner-dark:rgba(255,255,255,0.10);
+  /* status ramps. Promoted out of pai.tailwind.js so the semantic tokens
+     below can reference a step instead of repeating its hex. red is the
+     danger family, amber the warning family (Tailwind's yellow, kept under
+     the name the app aliases it by), blue the info family. */
+  --red-50:#FEF2F2; --red-100:#FEE2E2; --red-200:#FECACA; --red-300:#FCA5A5; --red-400:#F87171; --red-500:#EF4444; --red-600:#DC2626; --red-700:#B91C1C; --red-800:#991B1B; --red-900:#7F1D1D; --red-950:#450A0A;
+  --amber-50:#FEFCE8; --amber-100:#FEF9C3; --amber-200:#FEF08A; --amber-300:#FDE047; --amber-400:#FACC15; --amber-500:#EAB308; --amber-600:#CA8A04; --amber-700:#A16207; --amber-800:#854D0E; --amber-900:#713F12; --amber-950:#422006;
+  --blue-50:#EFF6FF; --blue-100:#DBEAFE; --blue-200:#BFDBFE; --blue-300:#93C5FD; --blue-400:#60A5FA; --blue-500:#3B82F6; --blue-600:#2563EB; --blue-700:#1D4ED8; --blue-800:#1E40AF; --blue-900:#1E3A8A; --blue-950:#172554;
+  --gray-950:#0A0A0A;   /* Tailwind's neutral, a different ramp under the same name */
+  --white:#FFFFFF;
+  /* type families. --font-mono lands the decision proposals.json approved on
+     31 Jul 2026 and never applied: 47 uses already asked for JetBrains Mono, and
+     41 more led with Roboto Condensed, which is proportional — so those rendered
+     as normal text and the mono fallback never fired.
+     --font-serif is the face the export modal sets its testimonial in. */
+  --font-sans:"Inter", system-ui, sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif:"Hedvig Letters Serif", Georgia, serif;
+  /* Icon sizes. 16 is the working size; 20 is for an icon carrying a control on
+     its own; 12 is for the 28px chip. These size the box, not the icon inside it —
+     Phosphor fills 0.63em to 0.91em of that box depending on which icon, so the
+     icon always looks smaller than the number. */
+  --icon-xs:12px;
+  --icon-sm:16px;
+  --icon-md:20px;
   /* backgrounds */
-  --bg-primary:#ffffff; --bg-primary-inverted:#0A1925; --bg-primary-inverted-hover:#23303B;
+  --bg-primary:var(--white); --bg-primary-inverted:#0A1925; --bg-primary-inverted-hover:#23303B;
   --bg-secondary:#FAFAFA; --bg-secondary-inverted:#1C3550; --bg-tertiary:#F5F5F5;
-  /* two near-white steps between primary and tertiary: subtle = main column
-     and top nav, muted = side panel (one step darker so it reads as its own
-     surface). Exact Figma JAS'26 raw fills. */
-  --bg-subtle:#FCFCFC; --bg-muted:#F9F9F9;
-  --bg-tertiary-inverted:#284B71; --bg-quaternary:#E5E5E5; --bg-elevated:#FFFFFF;
-  --bg-elevated-hover:rgba(11,15,20,0.08); --bg-brand:#0055ED; --bg-brand-hover:#0043B8;
-  --bg-brand-pressed:#043485; --bg-brand-selected:rgba(0,85,237,0.12);
-  --bg-danger:#DC2626; --bg-danger-hover:#B91C1C; --bg-warning:#F0B100;
-  --bg-success:#018C3C; --bg-blackout:#171717;
-  --bg-brand-inverted:#E6EFFF; --bg-danger-pressed:#991B1B; --bg-danger-inverted:#FEF2F2;
-  --bg-warning-inverted:#FEFCE8; --bg-success-inverted:#EFF9F2;
+  /* --bg-subtle is the lightest step below white: the main column and top nav.
+     --bg-muted (#F9F9F9) sat between it and --bg-secondary and was removed on
+     10 Aug 2026 — four points of lightness held five steps, and it was 0.4 from
+     its neighbour, which is a difference nobody can see and everybody has to
+     choose between. Its one consumer, canonical/dashboard's sidebar, moved to
+     --bg-secondary. Exact Figma JAS'26 raw fills. */
+  --bg-subtle:#FCFCFC;
+  --bg-tertiary-inverted:#284B71; --bg-quaternary:#E5E5E5; --bg-elevated:var(--white);
+  --bg-elevated-hover:rgba(11,15,20,0.08); --bg-brand:var(--app-600); --bg-brand-hover:var(--app-700);
+  --bg-brand-pressed:var(--app-800); --bg-brand-selected:rgba(0,85,237,0.12);
+  --bg-danger:var(--red-600); --bg-danger-hover:var(--red-700); --bg-warning:#F0B100;
+  --bg-success:var(--green-600); --bg-blackout:#171717;
+  /* The scrim behind a modal, and the blur it puts on what is behind it.
+     Plain black at 50%, not the shadow colour: the blur does the separating, and
+     a tinted scrim pushes its colour through blurred content underneath. This
+     supersedes the 31 Jul roll-up decision, which chose the shadow colour on 22
+     screens — that was decided for a flat scrim with no blur behind it.
+     Its own value, not a ramp step: no ramp publishes a translucent. */
+  --bg-scrim:rgba(0,0,0,0.5);
+  --bg-scrim-blur:8px;
+  --bg-brand-inverted:var(--app-50); --bg-danger-pressed:var(--red-800); --bg-danger-inverted:var(--red-50);
+  --bg-warning-inverted:var(--amber-50); --bg-success-inverted:var(--green-50);
   --bg-info:#0C4BFF; --bg-info-inverted:#E8F7FF; --bg-elevation-hover:rgba(26,26,26,0.12);
   /* text */
   --text-primary:#171717; --text-secondary:#525252; --text-tertiary:#a3a3a3;
-  --text-brand:#0055ED; --text-inverted-primary:#ffffff; --text-neutral:#0A0A0A;
-  --text-danger-primary:#b91c1c; --text-warning-secondary:#ca8a04; --text-success-primary:#017735;
-  --text-danger-hover:#991b1b; --text-danger-secondary:#dc2626; --text-warning-primary:#a16207;
-  --text-success-secondary:#018C3C; --text-brand-hover:#043485; --text-brand-secondary:#005EFF;
-  --text-inverted-secondary:rgba(255,255,255,0.6); --text-white:#ffffff;
+  --text-brand:var(--app-600); --text-inverted-primary:var(--white); --text-neutral:var(--gray-950);
+  --text-danger-primary:var(--red-700); --text-warning-secondary:var(--amber-800); --text-success-primary:var(--green-700);
+  --text-danger-hover:var(--red-800); --text-danger-secondary:var(--red-600); --text-warning-primary:var(--amber-700);
+  --text-success-secondary:var(--green-600); --text-brand-hover:var(--app-800); --text-brand-secondary:var(--app-500);
+  --text-inverted-secondary:rgba(255,255,255,0.6); --text-white:var(--white);
   /* borders */
   --border-primary:rgba(11,15,20,0.20); --border-secondary:rgba(11,15,20,0.09);
-  --border-tertiary:rgba(11,15,20,0.06); --border-brand:#0055ED; --border-brand-secondary:#94BBFF;
-  --border-neutral:#0A0A0A; --border-danger-secondary:#FECACA;
+  --border-tertiary:rgba(11,15,20,0.06); --border-brand:var(--app-600); --border-brand-secondary:var(--app-200);
+  --border-neutral:var(--gray-950); --border-danger-secondary:var(--red-200);
   --border-quaternary:#D4D4D4; --border-primary-inverted:#0A1925;
-  --border-secondary-inverted:rgba(10,25,37,0.48); --border-danger:#DC2626;
-  --border-warning-secondary:#FEF08A; --border-success-secondary:#BDE7CB;
-  --border-info-secondary:#BFDBFE;
+  --border-secondary-inverted:rgba(10,25,37,0.48); --border-danger:var(--red-600);
+  --border-warning-secondary:var(--amber-200); --border-success-secondary:var(--green-200);
+  --border-info-secondary:var(--blue-200);
   --alpha-light-50:rgba(26,26,26,0.06); --alpha-light-100:rgba(26,26,26,0.09);
-  /* shadows */
-  --shadow-elevation-01:0 0 0 0.5px rgba(26,26,26,0.01), 0 1px 2px 0 rgba(38,38,38,0.05);
-  --shadow-elevation-02:0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09);
-  --shadow-elevation-03:0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09), 0 4px 6px 0 rgba(26,26,26,0.09), 0 24px 40px -16px rgba(26,26,26,0.09);
-  --shadow-elevation-button:0 0 0 0.5px rgba(26,26,26,0.09), 0 1px 2px 1px rgba(0,0,0,0.04);
-  --shadow-elevation-focused:0 0 0 1px rgba(26,26,26,0.06), 0 0 0 2px #56A0FF;
-  --shadow-elevation-input:0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(16,24,40,0.05);
-  --shadow-elevation-input-focused:0 0 0 2px rgba(10,25,37,0.48), 0 0 0 1px #0A1925 inset, 0 1px 2px 0 rgba(11,15,20,0.09);
-  --shadow-elevation-input-error:0 0 0 2px rgba(248,113,113,0.40), 0 0 0 1px #FECACA, 0 1px 2px 0 rgba(26,26,26,0.06);
-  --shadow-elevation-new-03:0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09), 0 4px 6px 0 rgba(26,26,26,0.09), 0 24px 40px -16px rgba(26,26,26,0.09);
-  --shadow-elevation-05:0 0 0 0.5px rgba(0,0,0,0.30) inset, 0 0 10px 4px rgba(255,255,255,0.40) inset;
-  --shadow-elevation-06:0 1px 2px 0 rgba(16,24,40,0.05);
-  --shadow-elevation-pill:0 2px 6px 0 rgba(11,15,20,0.09), 0 0 0 1px rgba(11,15,20,0.06), 0 0 0 1px rgba(255,255,255,0.80) inset;
-  --shadow-elevation-prompt-card:0 24px 40px -16px rgba(9,15,21,0.09), 0 4px 6px 0 rgba(9,15,21,0.09), 0 1px 2px 0 rgba(9,15,21,0.09);
-  --shadow-elevation-input-hover:0 0 0 1px #a3a3a3, 0 1px 2px 0 rgba(16,24,40,0.05);
-  --shadow-elevation-input-dark:0 0 0 2.5px rgba(38,38,38,0.55), 0 0 0 0.75px rgba(26,26,26,0.50), 0 1px 2px 0 rgba(16,24,40,0.05);
-  --shadow-elevation-white-border-bottom:0 1px 0 0 #FFFFFF;
-  --shadow-elevation-04:0 0 0 1.5px rgba(255,255,255,0.30) inset, 0 0 0 0.5px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(26,26,26,0.06), 0 4px 6px 0 rgba(26,26,26,0.06), 0 40px 40px -24px rgba(26,26,26,0.06), 0 56px 56px -32px rgba(26,26,26,0.09), 0 24px 40px 0 rgba(26,26,26,0.06);
-  /* Figma effect style 471:2410, stronger than elevation-04. This is the one
-     the cancel-flow protos transcribe locally under the name elevation-04. */
-  --shadow-elevation-new-04:0 0 0 1.5px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09), 0 4px 6px 0 rgba(11,15,20,0.09), 0 40px 40px -24px rgba(11,15,20,0.09), 0 56px 56px -32px rgba(11,15,20,0.20), 0 24px 40px 0 rgba(11,15,20,0.09);
+  /* ---- Identity palette --------------------------------------------------
+     Twelve hues for telling one person from another, and nothing else. They
+     carry no meaning: an indigo avatar is not an indigo kind of person, it is
+     the person whose name hashed to indigo.
+
+     Their own tokens rather than the stock ramps. The stock palettes are pinned
+     in pai.tailwind.js as a guard against a CDN release moving them, and the
+     README's exception for them holds only while nobody writes them in CSS —
+     the moment a component needs one, it needs a token. Twelve is enough that a
+     team of that size gets twelve different circles, and few enough that they
+     stay distinguishable at 28px.
+
+     Every ink clears 4.5:1 on its own tint, because an avatar holds initials and
+     initials are text. Measured, lightest first: orange 4.52, amber 4.51, lime
+     4.60, cyan 4.79, emerald 4.84, teal 4.86, rose 5.24, fuchsia 5.43, blue
+     5.49, purple 5.92, violet 5.98, indigo 6.41. */
+  --identity-indigo-tint:#E0E7FF;  --identity-indigo-ink:#4338CA;
+  --identity-violet-tint:#EDE9FE;  --identity-violet-ink:#6D28D9;
+  --identity-purple-tint:#F3E8FF;  --identity-purple-ink:#7E22CE;
+  --identity-fuchsia-tint:#FAE8FF; --identity-fuchsia-ink:#A21CAF;
+  --identity-rose-tint:#FFE4E6;    --identity-rose-ink:#BE123C;
+  --identity-orange-tint:#FFEDD5;  --identity-orange-ink:#C2410C;
+  --identity-amber-tint:#FEF3C7;   --identity-amber-ink:#B45309;
+  --identity-lime-tint:#ECFCCB;    --identity-lime-ink:#4D7C0F;
+  --identity-emerald-tint:#D1FAE5; --identity-emerald-ink:#047857;
+  --identity-teal-tint:#CCFBF1;    --identity-teal-ink:#0F766E;
+  --identity-cyan-tint:#CFFAFE;    --identity-cyan-ink:#0E7490;
+  --identity-blue-tint:#DBEAFE;    --identity-blue-ink:#1D4ED8;
+
+  /* ---- Elevation ---------------------------------------------------------
+     How far off the page a surface sits. Four steps, one colour, each one adding
+     a layer to the step below it — so a stack reads as a stack rather than as
+     four unrelated shadows.
+
+     Every step carries the same 1px inner white highlight, so a surface catches
+     light at its top edge whatever depth it sits at. Before this, 01 had none
+     and 04 had 1.5px, which made a raised card read as a different material to
+     a floating one rather than the same material further away. */
+  /* Stacking. A surface is three things travelling together — a background, an
+     elevation and a layer — and the layer is the one this system was missing:
+     the corpus has z-index 0, 1, 2, 20, 30, 60, 99, 500, 999, 9999 and
+     2147483000 in it, which is what happens when every screen picks its own.
+
+     The gaps are deliberate. Something new can slot between two layers without
+     renumbering the ones above it.
+
+     --z-modal sits ABOVE --z-scrim rather than relying on DOM order, so a modal
+     rendered before its own scrim still lands on top. --z-tooltip is highest
+     because a tooltip can be triggered from inside a toast, and a toast can
+     appear over a modal. */
+  --z-base:0;
+  --z-raised:10;
+  --z-overlay:100;
+  --z-scrim:1000;
+  --z-modal:1010;
+  --z-toast:2000;
+  --z-tooltip:3000;
+
+  --elevation-01:0 0 0 1px var(--inner-1) inset, 0 0 0 1px var(--drop-2), 0 1px 2px 0 var(--drop-2);
+  --elevation-02:0 0 0 1px var(--inner-1) inset, 0 0 0 1px var(--drop-2), 0 1px 2px 0 var(--drop-2), 0 2px 6px 0 var(--drop-2);
+  --elevation-03:0 0 0 1px var(--inner-1) inset, 0 0 0 1px var(--drop-2), 0 1px 2px 0 var(--drop-2), 0 4px 6px 0 var(--drop-2), 0 24px 40px -16px var(--drop-2);
+  --elevation-dark-03:0 0 0 1px var(--inner-dark) inset, 0 4px 6px 0 var(--drop-dark-1), 0 12px 24px -8px var(--drop-dark-2);
+  --elevation-dark-04:0 0 0 1px var(--inner-dark) inset, 0 4px 6px 0 var(--drop-dark-1), 0 24px 40px -12px var(--drop-dark-2), 0 40px 56px -24px var(--drop-dark-2);
+  --elevation-04:0 0 0 1px var(--inner-1) inset, 0 0 0 1px var(--drop-2), 0 1px 2px 0 var(--drop-2), 0 4px 6px 0 var(--drop-2), 0 40px 40px -24px var(--drop-2), 0 56px 56px -32px var(--drop-3), 0 24px 40px 0 var(--drop-2);
+
+  /* ---- Focus -------------------------------------------------------------
+     Not a depth. Focus says a thing is selected, and it has to survive whatever
+     is underneath it — which is why one ring cannot serve a white card and a
+     photograph. Near-black, never brand: blue reads as a state the component
+     owns, black reads as the thing you have got hold of.
+
+       field    a single stroke, exactly where the resting ring sits, so the
+                border darkens rather than the control growing a halo
+       surface  a hairline of the page colour, then the stroke, so the ring
+                never merges with the card's own edge
+       image    the same at 2px, because underneath is arbitrary photography and
+                a dark stroke on a dark slide is no stroke at all
+
+     There is deliberately no token holding these three. A custom property
+     substitutes its var() references where it is DECLARED, so a composite
+     written at :root bakes in the light page's own colours and a dark region
+     can never move it — measured, not assumed. Composing in the rule instead
+     means the two semantics resolve on the element, and a dark region that
+     re-declares --bg-elevated and --border-primary-inverted gets a focus ring
+     that follows it for free. The utilities below and the matching Tailwind
+     boxShadow keys are the API, and both compose the same way.
+
+     Checkboxes and radios take none of this. A ring on a 16px control is all
+     halo and no signal; they keep the browser's own focus outline. */
+
+  /* Not elevation — an inner rim that gives a filled button its curvature.
+     Was elevation-05, which put it in a ladder it was never a rung of. */
+  --shadow-inner-glow:0 0 0 0.5px rgba(0,0,0,0.30) inset, 0 0 10px 4px rgba(255,255,255,0.40) inset;
+  /* rounding. Same scale as the borderRadius key in pai.tailwind.js, named to
+     match the Figma variables (rounded/sm, rounded/base, …) so a value can be
+     traced from the design to either medium. `2xl` is the ceiling; anything
+     rounder than that is a pill, and a pill is --rounded-full, never a guess
+     like 34px. */
+  --rounded-sm:2px;    /* tiny — swatches, thumbnails, under ~40px */
+  --rounded-base:4px;  /* the default — buttons, inputs, cards, panels */
+  --rounded-md:6px;    /* floating chrome — toolbars, filmstrip. NOT menus: a
+                          floating menu takes --rounded-base, settled 9 Aug 2026 */
+  --rounded-lg:8px;    /* large floating containers — the modal shell */
+  --rounded-xl:12px;   /* the prompt card, and hero surfaces */
+  --rounded-2xl:16px;  /* the largest content cards — billing, pricing, plan */
+  --rounded-full:9999px;
+  /* spacing — padding, margin and gap, which are one decision on three different
+     edges. Read off 12,400 uses in the product, Aug 2026. Everything except the
+     2px hairline is a multiple of 4, and the step widens as the values grow:
+     4 up to 24, then 8, then 16. 6px, 10px, 14px and 28px were deliberately left
+     out — they are the odd rungs, and the scale is what stops them coming back.
+
+     These are additive. Nothing in the protos references them yet, and the
+     Tailwind p-/m-/gap- classes are untouched, so no existing screen moves. */
+  --space-3xs:2px;   /* hairline — the only step that is not a multiple of 4 */
+  --space-2xs:4px;
+  --space-xs:8px;    /* the workhorse — 2,106 uses, more than any other value */
+  --space-sm:12px;
+  --space-md:16px;
+  --space-lg:20px;
+  --space-xl:24px;
+  --space-2xl:32px;
+  --space-3xl:40px;
+  --space-4xl:48px;
+  --space-5xl:64px;
+  --space-6xl:80px;
   /* motion (proto conveniences — not from the config) */
   --ease-out-strong:cubic-bezier(0.23,1,0.32,1);
   --ease-in-out-strong:cubic-bezier(0.77,0,0.175,1);
@@ -122,13 +337,157 @@
 .text-body-xs-regular{font-size:0.625rem;line-height:normal;font-weight:400;}
 .text-body-xs-medium{font-size:0.625rem;line-height:normal;font-weight:500;}
 .text-overline-small{font-size:0.625rem;line-height:1.33;letter-spacing:0.03em;font-weight:600;text-transform:uppercase;}
+/* ── Modal ──────────────────────────────────────────────────────────────────
+   Markup:  <div class="pai-modal-layer">
+              <div class="pai-scrim"></div>
+              <div class="pai-modal pai-modal-medium">
+                <div class="pai-modal-header"><h2 class="pai-modal-title">…</h2></div>
+                <div class="pai-modal-body">…</div>
+                <div class="pai-modal-actions">…</div>
+                <button class="pai-modal-dismiss"><i class="ph ph-x"></i></button>
+              </div>
+            </div>
+
+   Two types. The plain one is a single white surface. The layered one adds
+   .pai-modal-panel around the body and actions, which puts them on their own
+   white card inside a grey shell — the header then sits on the shell rather
+   than on the card. Use it when the body scrolls independently of the header
+   and the actions, and the plain one when it does not.
+
+   The radii are concentric: an 8px shell with 4px of padding leaves 4px for the
+   panel, so the two curves stay parallel. Changing one without the other is the
+   thing that makes a modal look subtly wrong.
+
+   Widths come from the Figma component set. Height is content-driven up to
+   calc(100vh - 96px), after which the body scrolls and the header and actions
+   stay put. */
+.pai-modal-layer{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:var(--space-4xl) var(--space-xl);}
+.pai-modal-layer > .pai-scrim{position:absolute;}
+
+.pai-modal{
+  position:relative; display:flex; flex-direction:column;
+  max-height:calc(100vh - 96px); width:100%;
+  background:var(--bg-elevated); border-radius:var(--rounded-lg);
+  box-shadow:var(--elevation-04);
+}
+/* Three axes, not one list. Size sets how much of the screen it takes;
+   orientation sets the aspect the content sits in; type (above) decides whether
+   the body sits on its own card. Landscape is not "grows sideways", it is a
+   shape a grid reads well in, and portrait is the shape a single column of rows
+   reads well in. Small has no orientation: it is as tall as its sentence. The
+   portrait width is the analytics modal's, measured off JAS '26. */
+.pai-modal-small { max-width:380px; }
+.pai-modal-medium{ max-width:600px; max-height:60vh; }
+.pai-modal-large { height:80vh; max-height:none; }
+
+.pai-modal-landscape{ width:80vw; max-width:none; }
+.pai-modal-portrait { width:min(808px, 92vw); max-width:none; }
+.pai-modal-medium.pai-modal-portrait{ height:80vh; max-height:none; width:min(600px,92vw); }
+
+.pai-modal-header{ flex:none; display:flex; align-items:flex-start; gap:var(--space-sm); padding:var(--space-md); }
+.pai-modal-title{ margin:0; font-size:1rem; font-weight:500; line-height:1.25; color:var(--text-primary); }
+.pai-modal-subtitle{ margin:var(--space-2xs) 0 0; font-size:0.875rem; line-height:1.43; color:var(--text-secondary); }
+.pai-modal-header + .pai-modal-body{ padding-top:0; }
+
+.pai-modal-body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:var(--space-md); color:var(--text-secondary); font-size:0.875rem; line-height:1.43; }
+.pai-modal-actions{ flex:none; display:flex; align-items:center; justify-content:flex-end; gap:var(--space-xs); padding:var(--space-md); }
+.pai-modal-body + .pai-modal-actions{ padding-top:0; }
+
+.pai-next .pai-modal:has(.pai-modal-panel){ background:var(--bg-secondary); padding:0 var(--space-2xs) var(--space-2xs); }
+.pai-modal-panel{
+  flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+  background:var(--bg-elevated); border-radius:var(--rounded-base);
+  box-shadow:var(--elevation-02); overflow:hidden;
+}
+
+/* Sits outside the shell, 8px clear of its right edge, top-aligned. Outside
+   because the modal's own corner is only 8px and a dismiss tucked inside it
+   fights the radius; and because the shell can be a scrolling card. */
+.pai-modal-dismiss{
+  position:absolute; top:0; left:100%; margin-left:var(--space-xs);
+  width:28px; height:28px; flex:none;
+  display:flex; align-items:center; justify-content:center;
+  border:0; cursor:pointer; padding:0;
+  background:var(--bg-secondary); color:var(--text-secondary);
+  border-radius:var(--rounded-full); box-shadow:var(--elevation-01);
+  transition:background .12s, color .12s;
+}
+.pai-next .pai-modal-dismiss :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){ font-size:var(--icon-sm); }
+.pai-modal-dismiss:hover{ background:var(--bg-elevated); color:var(--text-primary); }
+
+/* Icon — a square that is exactly the size Phosphor drew the icon in.
+
+   Phosphor is a font, so an <i> carrying it is a text box: it inherits whatever
+   font-size its parent has, and the icon is drawn across 0.63em to 0.91em
+   of that box depending on which icon it is. Two things follow, and both bit us:
+   the size is an accident of the parent, and the invisible slack differs per
+   icon, so a gap set in CSS renders differently next to an x than a sparkle.
+
+   width/height:1em pins the box to the icon rather than to a length, so it can
+   never drift out of step with the font-size. flex:none stops a flex row
+   squeezing it. The variance is still there — it is in the typeface — but it
+   is now contained inside a box the layout can rely on. */
+.pai-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1em;height:1em;line-height:1;font-size:var(--icon-md);}
+.pai-icon-xs{font-size:var(--icon-xs);}
+.pai-icon-sm{font-size:var(--icon-sm);}
+.pai-icon-md{font-size:var(--icon-md);}
+
+/* The brand gradient, clipped to the glyph. For the icon that IS the offer —
+   the way into a feature — rather than for icons that label or decorate: a row
+   of these stops meaning anything, and the point is that one object in a group
+   is the one carrying the invitation.
+
+   A glyph is text, so the gradient is clipped to it rather than sitting behind
+   it. The -webkit- prefixes are not legacy; Safari still needs both.
+
+   Use the FILL weight with it. A gradient clipped to a 16px outline shows a
+   stroke or two of ramp and reads as a flat mid-blue — there is not enough
+   glyph for a gradient to happen on. Filled, the ramp is visible at --icon-sm.
+
+   Composes with .pai-icon or without it; this rule sets no size, so whatever
+   already sizes the icon keeps doing it. */
+.pai-icon-brand{
+  background-image:var(--gradient-brand-03);
+  background-size:100% 100%; background-position:center;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+}
+
+/* Scrim — the layer between a modal and the page under it. Covers the viewport
+   and nothing else: it takes NO z-index, so stacking is the consumer's job and
+   source order decides. That is not because the system lacks a layer scale —
+   --z-scrim and --z-modal exist above, and .pai-surface-scrim takes its step.
+   It is because this class predates the scale and screens are built on it that
+   put a bespoke modal after it with no z-index of their own; giving the scrim
+   --z-scrim lifts it over every one of them. Verified 9 Aug 2026: it blanks
+   single-export-vs-pro. Migrating needs the pinning protocol in README.md,
+   one screen at a time — see coverage-gaps.md. */
+.pai-scrim{position:fixed;inset:0;background:var(--bg-scrim);-webkit-backdrop-filter:blur(var(--bg-scrim-blur));backdrop-filter:blur(var(--bg-scrim-blur));}
+
+/* Mono overlines. The same eyebrow the export modal sets in JetBrains Mono, at
+   two sizes a label can actually be read at. Wider tracking than the Inter
+   overline above because mono is already open — 0.08em is the export modal's. */
+.text-overline-medium{font-family:var(--font-mono);font-size:0.75rem;line-height:1.33;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;}
+.text-overline-large{font-family:var(--font-mono);font-size:0.875rem;line-height:1.4;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;}
+/* Quotations. Upright, not italic — the face ships no italic, so the export
+   modal's italic was being synthesised by the browser, and a slanted roman is
+   not the same thing as a drawn one. Two sizes of their own: 28 for a quotation
+   the screen is built around, 20 for one that sits inside something else. 28 is
+   deliberately not on the heading ramp — this is a display style, and borrowing
+   a heading step would tie it to decisions it has nothing to do with. */
+.text-quote-lg{font-family:var(--font-serif);font-weight:200;font-size:1.75rem;line-height:1.25;letter-spacing:-0.01em;}
+.text-quote-base{font-family:var(--font-serif);font-weight:200;font-size:1.25rem;line-height:1.35;letter-spacing:-0.01em;}
 
 /* ---- Shadow helpers ------------------------------------------------------- */
-.shadow-elevation-01{box-shadow:var(--shadow-elevation-01);}
-.shadow-elevation-02{box-shadow:var(--shadow-elevation-02);}
-.shadow-elevation-03{box-shadow:var(--shadow-elevation-03);}
-.shadow-elevation-button{box-shadow:var(--shadow-elevation-button);}
-.shadow-elevation-input{box-shadow:var(--shadow-elevation-input);}
+.shadow-elevation-01{box-shadow:var(--elevation-01);}
+.shadow-elevation-02{box-shadow:var(--elevation-02);}
+.shadow-elevation-03{box-shadow:var(--elevation-03);}
+.shadow-elevation-dark-03{box-shadow:var(--elevation-dark-03);}
+.shadow-elevation-dark-04{box-shadow:var(--elevation-dark-04);}
+.shadow-elevation-04{box-shadow:var(--elevation-04);}
+.shadow-focus-field{box-shadow:0 0 0 1px var(--border-primary-inverted);}
+.shadow-focus-surface{box-shadow:0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted);}
+.shadow-focus-image{box-shadow:0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--border-primary-inverted);}
 
 /* ============================================================================
    BUTTON  — translated from button/button.css (.button-style + size + color)
@@ -142,27 +501,54 @@
   transition: background-color 300ms, box-shadow 300ms, color 300ms, opacity 300ms, background-position 300ms;
 }
 /* sizes */
-.button-large{height:44px;padding:0 20px;font-size:14px;font-weight:500;line-height:20px;border-radius:4px;}
-.button-medium{height:36px;padding:0 20px;font-size:14px;font-weight:500;line-height:20px;border-radius:4px;}
-.button-small{height:28px;padding:0 10px;font-size:12px;font-weight:500;line-height:16px;border-radius:4px;}
+.button-large{height:44px;--btn-pad:var(--space-lg);padding:0 var(--btn-pad);font-size:14px;font-weight:500;line-height:20px;border-radius:var(--rounded-base);}
+.button-medium{height:36px;--btn-pad:var(--space-lg);padding:0 var(--btn-pad);font-size:14px;font-weight:500;line-height:20px;border-radius:var(--rounded-base);}
+.button-small{height:28px;--btn-pad:var(--space-xs);padding:0 var(--btn-pad);font-size:12px;font-weight:500;line-height:16px;border-radius:var(--rounded-base);}
 .button-large.icon-only{width:44px;min-width:44px;padding:0;}
 .button-medium.icon-only{width:36px;min-width:36px;padding:0;}
 .button-small.icon-only{width:28px;min-width:28px;padding:0;}
+/* 20px, and icon-only by definition — there is no room for a word. It exists for
+   a dismiss riding the corner of something small, where .button-small at 28px
+   sits proud of the thing it belongs to. Its hit area is extended below rather
+   than by growing the box, which would defeat the point. */
+.button-xsmall{height:20px;--btn-pad:var(--space-3xs);padding:0;font-size:12px;font-weight:500;line-height:16px;border-radius:var(--rounded-base);}
+.button-xsmall.icon-only{width:20px;min-width:20px;}
+.button-xsmall.button-circle{width:20px;min-width:20px;}
+/* A 20px control is under the 40px a pointer wants. The box stays 20px so the
+   layout is not disturbed; the target grows around it. */
+.button-xsmall.icon-only::after,
+.button-xsmall.button-circle::after{
+  content:""; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:40px; height:40px;
+}
+
+/* Round icon-only. Self-sufficient — it squares the box itself, so .icon-only is
+   not needed alongside and a half-applied circle is not a shape anybody can reach.
+   A circle can only ever be icon-only: a label inside one is an ellipse. */
+.button-circle{border-radius:var(--rounded-full);padding:0;}
+.button-large.button-circle{width:44px;min-width:44px;}
+.button-medium.button-circle{width:36px;min-width:36px;}
+.button-small.button-circle{width:28px;min-width:28px;}
 /* colors */
 .button-primary{color:#fff;background:var(--bg-primary-inverted);}
 .button-primary:hover{background:var(--bg-primary-inverted-hover);}
 .button-primary-brand{color:#fff;background:var(--bg-brand);}
 .button-primary-brand:hover{background:var(--bg-brand-hover);}
 .button-primary-dark{color:var(--text-inverted-primary);border:1px solid rgba(255,255,255,0.20);}
-.button-secondary{color:var(--text-neutral);background:var(--bg-primary);border:1px solid var(--border-neutral);box-shadow:var(--shadow-elevation-01);}
+/* The secondary family is outlined in its own colour — neutral black, brand
+   blue, danger red — so each takes the lift on its own rather than elevation-01.
+   A variant that owns its edge does not want the ladder's ring on top of it:
+   that is a 2px edge no other resting control has. Borderless variants (tertiary,
+   the modal dismiss) take elevation-01 and let its ring be the edge. */
+.button-secondary{color:var(--text-neutral);background:var(--bg-primary);border:1px solid var(--border-neutral);box-shadow:0 1px 2px 0 var(--drop-2);}
 .button-secondary:hover{background:var(--bg-elevated-hover);}
 .button-secondary-brand{color:var(--text-brand);background:var(--bg-primary);border:1px solid var(--border-brand);}
 .button-secondary-brand:hover{background:var(--bg-brand-selected);}
-.button-secondary-danger{color:var(--text-danger-primary);background:var(--bg-primary);border:1px solid var(--border-danger-secondary);box-shadow:var(--shadow-elevation-01);}
+.button-secondary-danger{color:var(--text-danger-primary);background:var(--bg-primary);border:1px solid var(--border-danger-secondary);box-shadow:0 1px 2px 0 var(--drop-2);}
 .button-secondary-danger:hover{background:var(--bg-elevated-hover);}
-.button-tertiary{color:var(--text-primary);background:var(--bg-primary);box-shadow:var(--shadow-elevation-button);}
+.button-tertiary{color:var(--text-primary);background:var(--bg-primary);box-shadow:var(--elevation-01);}
 .button-tertiary:hover{background:var(--bg-elevated-hover);}
-.button-tertiary-danger{color:var(--text-danger-primary);background:var(--bg-primary);box-shadow:var(--shadow-elevation-button);}
+.button-tertiary-danger{color:var(--text-danger-primary);background:var(--bg-primary);box-shadow:var(--elevation-01);}
 .button-tertiary-danger:hover{background:var(--bg-elevated-hover);}
 .button-ghost{color:var(--text-primary);background:transparent;}
 .button-ghost:hover{background:var(--bg-elevated-hover);}
@@ -178,15 +564,28 @@
 .button-disabled-60{opacity:0.60;}
 /* label + icon spacing inside a button */
 .button-style .button-label{ }
-.button-style .button-label:not(:first-child){margin-left:6px;}
+.button-style .button-label:not(:first-child){margin-left:var(--space-xs);}
+
+.pai-next .button-style:not(.icon-only):not(.button-circle):has(> i.ph:first-child){padding-left:calc(var(--btn-pad) - var(--space-3xs));}
+.pai-next .button-style:not(.icon-only):not(.button-circle):has(> i.ph:last-child){padding-right:calc(var(--btn-pad) - var(--space-3xs));}
+.pai-next .chip-style:has(> i.ph:first-child){padding-left:calc(var(--chip-pad) - var(--space-3xs));}
+.pai-next .chip-style:has(.chip-remove){padding-right:calc(var(--chip-pad) - var(--space-3xs));}
+
+.pai-next .button-style:not(.icon-only):not(.button-circle) :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold), .pai-next .chip-style :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold), .pai-next .dropdown-item-style :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){font-size:var(--icon-sm);}
+.pai-next .button-style.icon-only :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold), .pai-next .button-style.button-circle :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){font-size:var(--icon-md);}
+.pai-next .listitem :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){font-size:var(--icon-md);}
+.pai-next .chip-small :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){font-size:var(--icon-xs);}
+.pai-next .button-xsmall.icon-only :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold), .pai-next .button-xsmall.button-circle :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){font-size:var(--icon-xs);}
+.pai-next .button-small.icon-only :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold), .pai-next .button-small.button-circle :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){font-size:var(--icon-sm);}
 
 /* ============================================================================
    BADGE / plan chip — translated from batch/Batch.jsx
    Markup:  <span class="pai-badge pai-badge-pro">PRO</span>
    ========================================================================== */
 .pai-badge{
-  height:18px; display:inline-flex; align-items:center; justify-content:center;
-  font-size:10px; font-weight:600; line-height:14px; padding:0 6px; border-radius:34px;
+  box-sizing:border-box;
+  height:18px; display:inline-flex; align-items:center; justify-content:center; gap:var(--space-3xs);
+  font-size:10px; font-weight:600; line-height:14px; padding:0 var(--space-xs); border-radius:var(--rounded-full);
   text-transform:uppercase; letter-spacing:0.3px;
 }
 .pai-badge-pro{background:rgba(0,85,237,0.15);color:var(--text-brand);}
@@ -195,20 +594,77 @@
 .pai-badge-neutral{background:var(--bg-secondary);color:var(--text-secondary);}
 .pai-badge-free{background:var(--bg-tertiary);color:var(--text-primary);}
 
+/* ---- Sizes ---------------------------------------------------------------
+   The bare .pai-badge is the 10px plan badge and does not move — screens are
+   built on it. These two are for everything else a badge says.
+
+   Both drop the uppercase. At 10px you recognise the badge without reading it;
+   at 14px caps is shouting, and a status is a word you read. Title Case
+   in the markup, one word where possible.  18 · 22 · 26, in 4px steps. */
+.pai-badge-medium{ height:22px; font-size:12px; line-height:16px; letter-spacing:0; text-transform:none; }
+.pai-badge-large { height:26px; font-size:14px; line-height:20px; letter-spacing:0; text-transform:none; padding:0 var(--space-sm); }
+
+/* ---- Status tones --------------------------------------------------------
+   A badge is not only the plan ladder. Anything short and scannable that the
+   thing *is* — a state, an environment, a role — is a badge, and those need
+   meanings the tier names cannot carry.
+
+   Subtle by default: the tint carries the meaning and the row stays quiet. */
+.pai-badge-success{ background:var(--bg-success-inverted); color:var(--text-success-primary); }
+.pai-badge-warning{ background:var(--bg-warning-inverted); color:var(--text-warning-primary); }
+.pai-badge-danger { background:var(--bg-danger-inverted);  color:var(--text-danger-primary); }
+.pai-badge-info   { background:var(--bg-info-inverted);    color:var(--text-brand); }
+
+/* ---- Solid ---------------------------------------------------------------
+   Saturated fill, light text. The tint variants read as background where a
+   solid reads as a claim, so this is for the one status on a row that has to
+   be seen before the row is read — live, failed, expiring.
+
+   One solid badge per row. Two, and the row is a set of coloured pills with
+   no order, which is the thing a badge exists to avoid.
+
+   Two of the six do not take white, and both were measured rather than assumed.
+   Badge text tops out at 14px bold, which is under WCAG's large-text threshold
+   of 18.66px bold, so every one of these needs 4.5:1 as normal text:
+
+     danger  #DC2626  white 4.83  ✓      warning #F0B100  white 1.91  ✗ → near-black 9.39
+     info    #0C4BFF  white 6.06  ✓      success --bg-success  white 4.36  ✗
+     brand   #0055ED  white 5.96  ✓              --green-700   white 5.69  ✓
+     neutral #0A1925  white 17.8  ✓
+
+   So warning takes near-black text, and success drops one ramp step for its fill
+   only — the subtle variant above still uses --bg-success. Dark-on-gold is the
+   house precedent: the Get Gold label made the same move at 8.4:1. */
+.pai-badge-solid{ color:var(--text-white); }
+.pai-badge-success.pai-badge-solid{ background:var(--green-700); }
+.pai-badge-warning.pai-badge-solid{ background:var(--bg-warning); color:var(--text-primary); }
+.pai-badge-danger.pai-badge-solid { background:var(--bg-danger); }
+.pai-badge-info.pai-badge-solid   { background:var(--bg-info); }
+.pai-badge-pro.pai-badge-solid    { background:var(--bg-brand); }
+.pai-badge-neutral.pai-badge-solid{ background:var(--bg-primary-inverted); }
+
 /* ============================================================================
-   INPUT / TEXTAREA — pattern from input/Input.jsx (elevation-input + focus)
+   INPUT / TEXTAREA — pattern from input/Input.jsx (elevation-01 + focus-field)
    ========================================================================== */
 .pai-input,.pai-textarea{
   width:100%; font-family:inherit; font-size:14px; line-height:1.43; color:var(--text-primary);
-  background:var(--bg-primary); border:0; border-radius:4px; outline:none;
-  box-shadow:var(--shadow-elevation-input);
+  background:var(--bg-primary); border:0; border-radius:var(--rounded-base); outline:none;
+  box-shadow:var(--elevation-01);
   transition:box-shadow 160ms var(--ease-out-strong);
 }
-.pai-input{height:36px;padding:0 12px;}
+.pai-input{height:36px;padding:0 var(--space-sm);}
+/* The default, named. Same reason as .pai-search-medium — a size you can only
+   get by writing nothing is a size nobody can read back off the markup. Renders
+   identically to a bare .pai-input; it is here so the pair is complete, and so
+   that someone who learns -medium on the search does not write it on the field
+   and get 44 by accident. */
+.pai-input.pai-input-medium{height:36px;}
+/* @legacy .pai-input--lg -> .pai-input-large */
+.pai-input.pai-input-large,
 .pai-input.pai-input--lg{height:44px;}
-.pai-textarea{padding:8px 12px;min-height:80px;resize:vertical;}
+.pai-textarea{padding:var(--space-xs) var(--space-sm);min-height:80px;resize:vertical;}
 .pai-input::placeholder,.pai-textarea::placeholder{color:var(--text-tertiary);}
-.pai-input:focus,.pai-textarea:focus{box-shadow:var(--shadow-elevation-input-focused);}
+.pai-input:focus,.pai-textarea:focus{box-shadow:0 0 0 1px var(--border-primary-inverted);}
 .pai-input:disabled,.pai-textarea:disabled{background:var(--bg-tertiary);color:var(--text-tertiary);cursor:not-allowed;}
 .pai-input.is-error{box-shadow:0 0 0 2px rgba(248,113,113,0.40), 0 0 0 1px var(--border-danger-secondary), 0 1px 2px 0 rgba(26,26,26,0.06);}
 
@@ -222,7 +678,7 @@
   transition:background-color 140ms var(--ease-out-strong),border-color 140ms var(--ease-out-strong),box-shadow 140ms;
   background-repeat:no-repeat; background-position:center;
 }
-.pai-checkbox{border-radius:4px;}
+.pai-checkbox{border-radius:var(--rounded-base);}
 .pai-radio{border-radius:50%;}
 .pai-checkbox:checked{
   background-color:var(--bg-primary-inverted); border-color:var(--bg-primary-inverted); background-size:11px;
@@ -236,7 +692,8 @@
   background-color:var(--bg-primary-inverted); border-color:var(--bg-primary-inverted);
   background-image:radial-gradient(circle at center, #fff 0, #fff 3px, transparent 3.5px);
 }
-.pai-checkbox:focus-visible,.pai-radio:focus-visible{box-shadow:var(--shadow-elevation-focused);outline:none;}
+/* Checkbox and radio take no designed focus ring — on a 16px control it is
+   all halo and no signal. The browser's own outline is the affordance. */
 .pai-checkbox:disabled,.pai-radio:disabled{background-color:var(--alpha-light-100);border-color:transparent;pointer-events:none;}
 
 /* ============================================================================
@@ -248,7 +705,7 @@
    ========================================================================== */
 .pai-toggle{position:relative;display:inline-block;width:32px;height:20px;cursor:pointer;}
 .pai-toggle input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:2;}
-.pai-toggle .track{position:absolute;inset:0;border-radius:50px;border:1px solid var(--alpha-light-50);
+.pai-toggle .track{position:absolute;inset:0;border-radius:var(--rounded-full);border:1px solid var(--alpha-light-50);
   background:var(--alpha-light-100); transition:background-color 200ms ease,border-color 200ms ease;}
 .pai-toggle .knob{position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;
   background:var(--bg-primary); transition:transform 200ms ease; pointer-events:none;}
@@ -257,39 +714,468 @@
 .pai-toggle input:disabled ~ .track{opacity:0.4;}
 
 /* control + label row */
-.pai-field{display:inline-flex;align-items:center;gap:8px;}
+.pai-field{display:inline-flex;align-items:center;gap:var(--space-xs);}
 .pai-field label{font-size:14px;line-height:20px;color:var(--text-primary);cursor:pointer;}
 
 /* ============================================================================
-   TOOLTIP — dark bubble (from button-tooltip / tooltip styles)
-   Markup:  <span class="pai-tooltip">Tooltip text</span>
+   TOOLTIP — a bubble that points at something.
+
+   The countdown used to live below as its own component. It was the same object:
+   a small bubble, one line, sitting against the thing it belongs to. The only
+   differences were a fill and a radius, and keeping them apart meant the pill in
+   checkout-with-offer had a tail nothing published could draw. It is a tone and
+   a shape here now.
+
+   --tip-bg is local, like --btn-pad and --chip-pad. One value drives the bubble
+   AND the pointer, so a tone swaps a single line and the tail follows.
+
+   Markup:  <span class="pai-tooltip pai-tooltip-top-center">Tooltip text</span>
    ========================================================================== */
 .pai-tooltip{
-  display:inline-block; max-width:192px; background:var(--bg-blackout); color:var(--text-inverted-primary);
-  font-size:12px; line-height:16px; border-radius:6px; padding:10px 12px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.24);
+  --tip-bg:var(--bg-blackout);
+  --tip-size:8px;
+  position:relative;
+  display:inline-block; max-width:192px; background:var(--tip-bg); color:var(--text-inverted-primary);
+  font-size:12px; line-height:16px; border-radius:var(--rounded-md); padding:var(--space-xs) var(--space-sm);
+  box-shadow:var(--elevation-dark-03);
 }
-.pai-tooltip-header{display:block;font-weight:600;font-size:13px;line-height:16px;margin-bottom:4px;}
+.pai-tooltip-header{display:block;font-weight:600;font-size:13px;line-height:16px;margin-bottom:var(--space-2xs);}
+
+/* ---- Tones -------------------------------------------------------------- */
+.pai-tooltip-brand{ --tip-bg:var(--bg-brand); color:var(--text-white); }
+
+/* ---- Shapes and sizes ----------------------------------------------------
+   Pill is the countdown's shape: a row, not a paragraph, so it takes flex and
+   the tighter padding that lands it at 24px rather than the bubble's 32px.
+   A <time> inside any tooltip is tabular — proportional digits re-measure every
+   second and the bubble twitches for as long as it is on screen. */
+.pai-tooltip-pill{
+  box-sizing:border-box; display:inline-flex; align-items:center; gap:var(--space-2xs);
+  max-width:none; border-radius:var(--rounded-full);
+  padding:var(--space-2xs) var(--space-xs); font-weight:500;
+}
+.pai-tooltip-large{ font-size:14px; line-height:20px; padding:var(--space-xs) var(--space-sm); }
+.pai-tooltip time,
+.pai-tooltip .pai-tooltip-time{ font-variant-numeric:tabular-nums; }
+
+/* ---- The pointer ---------------------------------------------------------
+   A square rotated 45°, not a border triangle. It takes --tip-bg, so it can
+   never drift from the bubble it belongs to, and one element serves all twelve
+   placements instead of four sets of border rules.
+
+   The placement names where the BUBBLE sits, the way Popper and Floating UI
+   name it — pai-tooltip-top-left is a bubble above its target, aligned left,
+   with the tail pointing down. It is worth saying because the opposite reading
+   is just as natural and would put every tail on the wrong edge. */
+.pai-tooltip::after{
+  content:""; position:absolute; display:none;
+  width:var(--tip-size); height:var(--tip-size);
+  background:var(--tip-bg); transform:rotate(45deg);
+}
+.pai-tooltip-top-left::after,    .pai-tooltip-top-center::after,    .pai-tooltip-top-right::after,
+.pai-tooltip-bottom-left::after, .pai-tooltip-bottom-center::after, .pai-tooltip-bottom-right::after,
+.pai-tooltip-left-top::after,    .pai-tooltip-left-center::after,   .pai-tooltip-left-bottom::after,
+.pai-tooltip-right-top::after,   .pai-tooltip-right-center::after,  .pai-tooltip-right-bottom::after{ display:block; }
+
+/* which edge the tail leaves from */
+.pai-tooltip-top-left::after,    .pai-tooltip-top-center::after,    .pai-tooltip-top-right::after   { bottom:calc(var(--tip-size) / -2); }
+.pai-tooltip-bottom-left::after, .pai-tooltip-bottom-center::after, .pai-tooltip-bottom-right::after{ top:calc(var(--tip-size) / -2); }
+.pai-tooltip-left-top::after,    .pai-tooltip-left-center::after,   .pai-tooltip-left-bottom::after { right:calc(var(--tip-size) / -2); }
+.pai-tooltip-right-top::after,   .pai-tooltip-right-center::after,  .pai-tooltip-right-bottom::after{ left:calc(var(--tip-size) / -2); }
+
+/* where along that edge */
+.pai-tooltip-top-left::after,   .pai-tooltip-bottom-left::after  { left:var(--space-sm); }
+.pai-tooltip-top-right::after,  .pai-tooltip-bottom-right::after { right:var(--space-sm); }
+.pai-tooltip-top-center::after, .pai-tooltip-bottom-center::after{ left:50%; margin-left:calc(var(--tip-size) / -2); }
+.pai-tooltip-left-top::after,    .pai-tooltip-right-top::after   { top:var(--space-xs); }
+.pai-tooltip-left-bottom::after, .pai-tooltip-right-bottom::after{ bottom:var(--space-xs); }
+.pai-tooltip-left-center::after, .pai-tooltip-right-center::after{ top:50%; margin-top:calc(var(--tip-size) / -2); }
+
 
 /* ============================================================================
-   SKELETON shimmer (common loading affordance)
+   SHIMMER — the sweep, on its own. And the three ways content can be busy.
+
+   .pai-skeleton is a placeholder: the content is not here, and this is the
+   shape it will take. .pai-shimmer is a state: the content IS here and is
+   being worked on — refreshing, saving. .pai-rewriting is a third: the content
+   is here and is being REPLACED. Wrong one and the screen lies about whether
+   there is anything to read.
+
+                   content   legible   what it says
+     skeleton      absent     —        nothing here yet, this is the shape
+     shimmer       present   yes       being worked on; it will look much the same
+     rewriting     present   no        being replaced; it will not
+
+   The middle one keeps its content readable on purpose — a screen that hides
+   what it has while refreshing it reads as a screen that lost it. The third
+   deliberately does not, and that is the distinction: reading a deck's copy
+   while it is being rewritten means reading something about to be wrong. What
+   survives is identity — the shape, the colour, the count, the position — so
+   it still says "this is your deck" while saying "not these words".
+
+   The sweep is shared, so the first two can never drift apart.
    ========================================================================== */
-.pai-skeleton{
-  background:linear-gradient(110deg,#ececec 8%,#f4f4f4 18%,#ececec 33%);
-  background-size:200% 100%; animation:pai-skeleton 1.4s ease-in-out infinite; border-radius:4px;
+:root{
+  --shimmer-base:#ececec;
+  --shimmer-crest:#f4f4f4;
+  --shimmer-sweep:110deg, var(--shimmer-base) 8%, var(--shimmer-crest) 18%, var(--shimmer-base) 33%;
 }
-@keyframes pai-skeleton{from{background-position:200% 0;}to{background-position:-200% 0;}}
+.pai-skeleton{
+  background:linear-gradient(var(--shimmer-sweep));
+  background-size:200% 100%; animation:pai-shimmer-sweep 1.4s ease-in-out infinite;
+  border-radius:var(--rounded-base);
+}
+/* A state, so it goes on the element that already has content. The sweep is
+   drawn over the top and the content stays legible underneath — a screen that
+   hides what it has while refreshing it reads as a screen that lost it. */
+.pai-shimmer{ position:relative; overflow:hidden; }
+.pai-shimmer::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(110deg, transparent 8%, rgba(255,255,255,0.65) 18%, transparent 33%);
+  background-size:200% 100%; animation:pai-shimmer-sweep 1.4s ease-in-out infinite;
+}
+@keyframes pai-shimmer-sweep{ from{background-position:200% 0;} to{background-position:-200% 0;} }
+
+/* Being replaced. Goes on the content itself, and the content goes soft.
+
+   No sweep: a sweep says "working on this" and would fight the thing that is
+   already saying so — this belongs beside a .pai-timeline or a spinner that
+   carries the message, not instead of one. On its own it is not a loading
+   indicator and should not be used as one.
+
+   `filter` rather than opacity, because fading toward the background makes the
+   whole region look switched off, while a blur keeps every edge where it was.
+
+   6px is the number, and it is a threshold rather than a taste: below about 4
+   the text is still almost readable, which is worse than either extreme — you
+   try. It rises with the content's own scale, so a full-bleed preview wants
+   more; override --pai-rewriting-blur rather than the filter, or the transition
+   goes with it.
+
+   The transition runs both ways: focus returning when the class is dropped is
+   most of what makes the finish feel like a finish rather than a swap. */
+.pai-rewriting{
+  --pai-rewriting-blur:6px;
+  filter:blur(var(--pai-rewriting-blur));
+  pointer-events:none;
+  transition:filter 400ms var(--ease-out-strong);
+}
 
 @media (prefers-reduced-motion: reduce){
-  .pai-skeleton{animation:none;}
+  .pai-skeleton{ animation:none; }
+  .pai-shimmer::after{ animation:none; opacity:0.4; }
+  /* The blur stays — it is the message, not decoration. Only the ease goes. */
+  .pai-rewriting{ transition:none; }
+}
+
+/* ============================================================================
+   AVATAR — always round. Three of them: a picture, an icon, and a stack.
+   Sized to the control heights rather than a scale of its own, so one in a row
+   lines up with the button or field beside it.
+   ========================================================================== */
+.pai-avatar{
+  position:relative; display:inline-flex; align-items:center; justify-content:center; flex:none;
+  width:36px; height:36px; border-radius:var(--rounded-full); overflow:hidden;
+  background:var(--bg-tertiary); color:var(--text-secondary);
+  font-size:14px; line-height:1; font-weight:500;
+}
+.pai-avatar > img{ width:100%; height:100%; object-fit:cover; display:block; }
+/* The ring is drawn over whatever is inside, not under it. A picture fills the
+   circle edge to edge, so an inset shadow on the box itself would be covered —
+   and a pale photograph against a white row would have no edge at all. */
+.pai-avatar::after{
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  box-shadow:inset 0 0 0 1px var(--border-secondary);
+}
+.pai-avatar-small { width:28px; height:28px; font-size:12px; }
+.pai-avatar-large { width:44px; height:44px; font-size:16px; }
+
+/* Identity colours, for an icon or initials. Never for a picture, which brings
+   its own.
+
+   These are NOT the semantic tones the rest of the system uses, and that is the
+   point: an avatar is never in a state. There is no dangerous person and no
+   brand person, so success/warning/danger/brand say nothing here and a red
+   circle beside a name reads as an accusation.
+
+   Pick deterministically from something stable about the person — a hash of the
+   user id, not of the display name, or the circle changes colour when they
+   correct their surname. Same person, same colour, every screen.
+
+   Tinted, not solid: a row of solid circles competes with everything around it. */
+.pai-avatar-indigo { background:var(--identity-indigo-tint);  color:var(--identity-indigo-ink); }
+.pai-avatar-violet { background:var(--identity-violet-tint);  color:var(--identity-violet-ink); }
+.pai-avatar-purple { background:var(--identity-purple-tint);  color:var(--identity-purple-ink); }
+.pai-avatar-fuchsia{ background:var(--identity-fuchsia-tint); color:var(--identity-fuchsia-ink); }
+.pai-avatar-rose   { background:var(--identity-rose-tint);    color:var(--identity-rose-ink); }
+.pai-avatar-orange { background:var(--identity-orange-tint);  color:var(--identity-orange-ink); }
+.pai-avatar-amber  { background:var(--identity-amber-tint);   color:var(--identity-amber-ink); }
+.pai-avatar-lime   { background:var(--identity-lime-tint);    color:var(--identity-lime-ink); }
+.pai-avatar-emerald{ background:var(--identity-emerald-tint); color:var(--identity-emerald-ink); }
+.pai-avatar-teal   { background:var(--identity-teal-tint);    color:var(--identity-teal-ink); }
+.pai-avatar-cyan   { background:var(--identity-cyan-tint);    color:var(--identity-cyan-ink); }
+.pai-avatar-blue   { background:var(--identity-blue-tint);    color:var(--identity-blue-ink); }
+
+/* Stack — each one laps the one before it and carries a ring of the surface it
+   sits on, or the overlap reads as a printing error rather than as depth. */
+.pai-avatar-stack{ display:inline-flex; align-items:center; }
+.pai-avatar-stack > *{ position:relative; }
+/* Each carries a ring of the surface it sits on, or the overlap reads as a
+   printing error rather than as depth.
+
+   The ring goes on the avatar, NOT on its ::after. The avatar is overflow:hidden
+   so a picture stays inside the circle, and that clips an outset shadow drawn by
+   anything inside it — which is why the counter had a ring and the photographs
+   did not. An element's own shadow is not clipped by its own overflow. */
+.pai-avatar-stack > .pai-avatar{ box-shadow:0 0 0 2px var(--bg-elevated); }
+.pai-avatar-stack > .pai-avatar + .pai-avatar,
+.pai-avatar-stack > .pai-avatar + .pai-avatar-more{ margin-left:calc(var(--space-xs) * -1); }
+/* The count of the ones not shown. Not an avatar — nobody is called +3, and
+   giving it a person's shape claims there is a person there to press.
+
+   It laps the last face rather than sitting under it: it is the end of the
+   stack, and a number half-hidden behind a photograph is a number nobody can
+   read. z-index rather than DOM order, so it stays on top wherever it is put. */
+.pai-avatar-more{
+  position:relative; z-index:1;
+  display:inline-flex; align-items:center; justify-content:center; flex:none;
+  width:36px; height:36px; border-radius:var(--rounded-full);
+  background:var(--bg-secondary); color:var(--text-secondary);
+  font-size:12px; line-height:1; font-weight:500;
+  box-shadow:inset 0 0 0 1px var(--border-secondary), 0 0 0 2px var(--bg-elevated);
+}
+/* Sized on the item, never on the stack. Every other size class in the system
+   goes on the thing being sized, and a stack is a container — it holds avatars
+   of whatever size they are, rather than deciding it for them. */
+.pai-avatar-more-small{ width:28px; height:28px; font-size:12px; }
+.pai-avatar-more-large{ width:44px; height:44px; font-size:14px; }
+
+/* ============================================================================
+   PROGRESS — determinate, linear.
+
+   The gradient is in the indicator, never the track, and it is pinned to the
+   TRACK's width rather than the indicator's: background-size is 100% / --value,
+   which resolves to exactly one track. So a given point on the bar is the same
+   colour at 20% as at 90%, and the fill reveals a ramp instead of squeezing one.
+
+   Navy at the start, brand by 80%, brand the rest of the way — the bar warms
+   toward the brand as it completes rather than arriving there at the last pixel.
+
+   Markup:  <div class="pai-progress" style="--value:.35" role="progressbar"
+                 aria-valuenow="35" aria-valuemin="0" aria-valuemax="100">
+             <div class="pai-progress-bar"></div>
+           </div>
+   ========================================================================== */
+.pai-progress{
+  --value:0;
+  display:block; width:100%; height:6px; overflow:hidden;
+  background:var(--bg-quaternary); border-radius:var(--rounded-sm);
+}
+.pai-progress-bar{
+  display:block; height:100%; border-radius:inherit;
+  width:calc(var(--value) * 100%);
+  background-image:linear-gradient(90deg, var(--bg-primary-inverted) 0%, var(--bg-brand) 80%);
+  background-repeat:no-repeat;
+  background-size:calc(100% / max(var(--value), 0.0001)) 100%;
+  transition:width 300ms var(--ease-out-strong);
+}
+/* 2px, for a file upload or anything pinned to the edge of the thing it is
+   reporting on. At this height the ramp still reads because it is pinned to
+   the track — a gradient squeezed into the fill would not. */
+.pai-progress-thin{ height:2px; }
+/* Nothing is known about how long this will take. The bar sweeps rather than
+   fills, and no aria-valuenow should be published with it. */
+.pai-progress-indeterminate .pai-progress-bar{
+  width:35%; background-size:285% 100%;
+  animation:pai-progress-slide 1.4s ease-in-out infinite; transition:none;
+}
+@keyframes pai-progress-slide{
+  from{ transform:translateX(-100%); } to{ transform:translateX(286%); }
+}
+@media (prefers-reduced-motion: reduce){
+  .pai-progress-bar{ transition:none; }
+  .pai-progress-indeterminate .pai-progress-bar{ animation:none; width:100%; opacity:0.4; }
+}
+
+/* ============================================================================
+   SPINNER — an action is running, and nobody knows for how long.
+
+   Sized in em off the icon scale, so it drops into a button or a row and takes
+   the size the icon beside it would have taken. Colour is currentColor, so it
+   is legible on whatever it lands on without a variant per button.
+   ========================================================================== */
+.pai-spinner{
+  display:inline-block; flex:none; width:1em; height:1em; font-size:var(--icon-sm);
+  border-radius:var(--rounded-full);
+}
+.pai-spinner-xs{ font-size:var(--icon-xs); }
+/* The base size, named — same reason as .pai-search-medium. The scale ran
+   xs · (nothing) · md, so the middle rung was the one you got by writing no
+   modifier at all, and a row that wanted 16 had to omit rather than ask. */
+.pai-spinner-sm{ font-size:var(--icon-sm); }
+.pai-spinner-md{ font-size:var(--icon-md); }
+@keyframes pai-spin{ to{ transform:rotate(360deg); } }
+
+/* Sweep: a tail fading out behind the head. Reads as motion rather than as a
+   rotating object, which is why it sits in a dense row without pulling.
+
+   conic-gradient for the tail, and a radial mask to punch the middle out — a
+   border cannot fade along its own length. 2px of stroke at every size, because
+   the mask is measured from the edge rather than as a proportion. */
+.pai-spinner{
+  background:conic-gradient(from 0deg, transparent 0deg, currentColor 300deg, transparent 360deg);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask:radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation:pai-spin 800ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce){
+  /* Still says "working", without the sweep. */
+  .pai-spinner{ animation-duration:2s; animation-timing-function:steps(8); }
+}
+
+/* ============================================================================
+   TIMELINE — a long-running job, written down as it goes.
+
+   A log, not a progress bar. Every row is something that HAS happened; the row
+   being worked on shimmers and the head carries what is live. That distinction
+   is the whole component: a progress bar claims to know how many steps there
+   are and how far along it is, and a generation run knows neither. Nothing here
+   counts, and nothing is greyed out ahead of time.
+
+   Ported from pitchdeckdoclist's chat flow loader — src/chat/components/
+   ClipEBlock.jsx (the rail) and ResearchProgress.jsx (the head), 7 Aug 2026.
+
+   Markup:  <div class="pai-timeline-head">
+              <span class="pai-timeline-head-icon"><span class="pai-spinner pai-spinner-sm"></span></span>
+              <span class="pai-timeline-head-label">Letting it simmer…</span>
+              <span class="pai-timeline-elapsed">33s</span>
+            </div>
+            <ol class="pai-timeline">
+              <li class="pai-timeline-item is-active is-open">
+                <span class="pai-timeline-rail"><span class="pai-timeline-dot"></span></span>
+                <div class="pai-timeline-body">
+                  <button class="pai-timeline-label" aria-expanded="true">
+                    <span>Refining Pricing Section</span><i class="ph ph-caret-down"></i>
+                  </button>
+                  <div class="pai-timeline-detail"><div><p>…</p></div></div>
+                </div>
+              </li>
+            </ol>
+
+   The head's icon column is the same 24 the rail is, so the spinner and the
+   dots share a centre line and the head's text lands on the same 36 as every
+   label. Three different gaps (24 · 12 · 4), so they are margins rather than
+   one flex `gap` — the head reads as one unit rather than a row with things
+   spread across it.
+   ========================================================================== */
+.pai-timeline-head{
+  display:flex; align-items:center; min-height:var(--space-2xl);
+  font-size:0.875rem; line-height:1.43; color:var(--text-secondary);
+}
+.pai-timeline-head-icon{ flex:none; width:var(--space-xl); display:flex; }
+.pai-timeline-head-icon > *{ margin:0 auto; }
+.pai-timeline-head-label{ margin-left:var(--space-sm); }
+.pai-timeline-elapsed{
+  margin-left:var(--space-2xs); color:var(--text-tertiary); font-variant-numeric:tabular-nums;
+}
+
+.pai-timeline{ list-style:none; margin:0; padding:0; }
+/* The head and the list are one unit, so the component owns the gap between
+   them rather than leaving each screen to guess it. 4, which is what the
+   product uses (`mt-1`): the head's 32 row and the first label's 28 already
+   put ~10 of air between the two lines of text, and anything more reads as two
+   separate blocks that happen to be near each other rather than a heading over
+   its own list. */
+.pai-timeline-head + .pai-timeline{ margin-top:var(--space-2xs); }
+.pai-timeline-item{ display:flex; align-items:flex-start; }
+/* The rail is BROKEN around the dot — a stub above, a growing segment below —
+   rather than run behind it. The growing half is what keeps a row joined to the
+   next one when it opens and gets taller; the stub is absent on the first row,
+   which has nothing to connect upwards to. */
+.pai-timeline-rail{
+  flex:none; width:var(--space-xl); align-self:stretch;
+  display:flex; flex-direction:column; align-items:center;
+}
+.pai-timeline-rail::before, .pai-timeline-rail::after{
+  content:""; width:1px; background:var(--text-tertiary);
+}
+.pai-timeline-rail::before{ flex:none; height:var(--rounded-md); }
+.pai-timeline-rail::after{ flex:1 1 auto; }
+.pai-timeline-item:first-child .pai-timeline-rail::before,
+.pai-timeline-item:last-child  .pai-timeline-rail::after{ background:none; }
+/* 6px, which the spacing scale cannot give — it steps 4 to 8. The component
+   owns the number so no screen has to write it. */
+.pai-timeline-dot{
+  flex:none; width:6px; height:6px; margin:5px 0;
+  border-radius:var(--rounded-full); background:var(--text-tertiary);
+}
+/* 28 for the label row plus 4 under it is the 32 pitch the rows sit on. */
+.pai-timeline-body{
+  flex:1 1 auto; min-width:0;
+  padding-left:var(--space-sm); padding-bottom:var(--space-2xs);
+}
+.pai-timeline-label{
+  display:flex; align-items:center; gap:var(--space-2xs); min-height:28px;
+  width:100%; padding:0; background:none; border:0; text-align:left;
+  font:inherit; font-size:0.875rem; line-height:1.43; color:var(--text-secondary);
+}
+button.pai-timeline-label{ cursor:pointer; }
+.pai-next .pai-timeline-label .ph, .pai-next .pai-timeline-label .ph-fill, .pai-next .pai-timeline-label .ph-bold{
+  flex:none; font-size:var(--icon-xs); color:var(--text-tertiary);
+}
+.pai-next .pai-timeline-item.is-open .pai-timeline-label{ font-weight:500; }
+
+.pai-next .pai-timeline-item.is-active .pai-timeline-label{
+  background:linear-gradient(90deg,
+    var(--text-secondary) 0%, var(--text-secondary) 18%,
+    #c6c6c6 50%,
+    var(--text-secondary) 82%, var(--text-secondary) 100%);
+  background-size:200% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent;
+  animation:pai-timeline-shimmer 1.2s linear infinite;
+}
+.pai-next .pai-timeline-item.is-active .pai-timeline-label .ph, .pai-next .pai-timeline-item.is-active .pai-timeline-label .ph-fill, .pai-next .pai-timeline-item.is-active .pai-timeline-label .ph-bold{
+  -webkit-text-fill-color:var(--text-tertiary);
+}
+@keyframes pai-timeline-shimmer{
+  from{ background-position:100% 0; } to{ background-position:-100% 0; }
+}
+
+/* 0fr to 1fr, so a row opens to its own height without one being measured. */
+.pai-timeline-detail{
+  display:grid; grid-template-rows:0fr; opacity:0;
+  transition:grid-template-rows 280ms var(--ease-out-strong), opacity 280ms var(--ease-out-strong);
+}
+.pai-next .pai-timeline-item.is-open .pai-timeline-detail{ grid-template-rows:1fr; opacity:1; }
+.pai-timeline-detail > *{ overflow:hidden; }
+/* No panel, no inset. The body sits in the column its heading sits in, flush
+   with it — the rail already draws the one boundary this thing has, and a grey
+   box inside it is a second container saying the same thing less well. Its
+   horizontal padding also pushed the prose off the heading's left edge, which
+   is the alignment the rail exists to establish.
+
+   The product's own version boxes it (FadedScrollBox: rounded-lg, bg-secondary,
+   px-3). Not carried over: that component is a chat bubble's child, where a
+   panel separates reasoning from the message around it. Here there is nothing
+   to separate it from. */
+.pai-timeline-detail p{
+  margin:0; padding:0 0 var(--space-xs);
+  font-size:0.875rem; line-height:1.43; color:var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .pai-next .pai-timeline-item.is-active .pai-timeline-label{ animation:none; }
+  .pai-timeline-detail{ transition:none; }
 }
 
 /* ---- Button: gradient + gold-shimmer + pro-dark ---------------------------
    Brand gradients with no semantic token. Ported from button.css. */
 .button-gradient-primary{
   position:relative; overflow:hidden; color:var(--text-inverted-primary);
-  background:radial-gradient(145.58% 149.6% at 29.59% -25%, #C2D8FF 0%, #5291FF 31.73%, #0055ED 76.78%, #00225C 100%);
-  box-shadow:var(--shadow-elevation-05);
+  background:var(--gradient-brand-03);
+  box-shadow:var(--shadow-inner-glow);
 }
 .button-gradient-primary::before{
   content:""; position:absolute; inset:0; opacity:0;
@@ -300,6 +1186,12 @@
 .button-gradient-primary:hover::before{ opacity:1; animation:pai-shimmer 3s ease-in-out infinite; }
 @keyframes pai-shimmer{ 0%{background-position:-200% 0;} 100%{background-position:200% 0;} }
 
+/* Left as it was. White on this ramp measures 2.02:1, and 1.61:1 under the
+   gloss, where 14px text needs 4.5 — so the label is not legible against it by
+   any measure, and that is a known, deliberate exception rather than an
+   oversight. Two ways out were tried and both were refused: taking the gold
+   dark enough for white (#815E03) read as bronze, and a near-black label
+   (6.95:1) was not wanted. The gold is the point of the button. */
 .button-gold-shimmer{
   position:relative; overflow:hidden; color:var(--text-white);
   background:linear-gradient(90deg,#dcb05e 0%,#ca9e4c 30%,#c39643 65%,#b8893a 100%);
@@ -320,6 +1212,7 @@
   background:linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.65) 50%, transparent 100%);
   transform:skewX(-20deg); animation:pai-gold-sweep 2.8s ease-in-out infinite;
 }
+
 @keyframes pai-gold-sweep{ 0%{left:-75%;} 60%{left:125%;} 100%{left:125%;} }
 @media (prefers-reduced-motion: reduce){
   .button-gold-shimmer::after{ animation:none; }
@@ -337,23 +1230,28 @@
    a whisper of tint so it stays legible. Ported from chip.css. */
 .chip-style{
   position:relative; display:inline-flex; align-items:center; justify-content:center;
-  cursor:pointer; user-select:none; border-radius:9999px; border:1px solid transparent;
+  cursor:pointer; user-select:none; border-radius:var(--rounded-full); border:1px solid transparent;
   transition:all 300ms var(--ease-out-strong); font-family:inherit;
 }
-.chip-medium{ height:36px; padding:0 16px; font-size:14px; font-weight:400; line-height:20px; gap:6px; }
-.chip-small { height:28px; padding:0 12px; font-size:12px; font-weight:400; line-height:16px; gap:4px; }
+.chip-medium{ height:36px; padding:0 var(--chip-pad); font-size:14px; font-weight:400; line-height:20px; gap:var(--space-xs); --chip-pad:var(--space-md); }
+.chip-small { height:28px; padding:0 var(--chip-pad); font-size:12px; font-weight:400; line-height:16px; gap:var(--space-xs); --chip-pad:var(--space-sm); }
 .chip-default{
   color:var(--text-primary); background:var(--bg-elevated);
   border-color:var(--border-secondary); box-shadow:0 1px 2px 0 rgba(16,24,40,0.05);
 }
 .chip-default:hover{ background:var(--bg-elevated-hover); }
+/* @legacy .chip-tone-success -> .chip-success */
+.chip-success,
 .chip-tone-success{ color:var(--text-success-primary); border-color:var(--border-success-secondary); }
+.chip-success:hover,
 .chip-tone-success:hover{ background:var(--bg-success-inverted); }
+/* @legacy .chip-tone-danger -> .chip-danger */
+.chip-danger,
 .chip-tone-danger{ color:var(--text-danger-primary); border-color:var(--border-danger-secondary); }
+.chip-danger:hover,
 .chip-tone-danger:hover{ background:var(--bg-danger-inverted); }
-.chip-selected{ border-color:currentColor; background:var(--alpha-light-50); }
-/* a toned chip keeps a white face; hue in the label and stroke is signal enough */
-.chip-tone-success.chip-selected, .chip-tone-danger.chip-selected{ background:var(--bg-elevated); }
+.pai-next .chip-style.is-selected, .pai-next .chip-selected{ border-color:currentColor; background:var(--alpha-light-50); }
+.pai-next .chip-success.is-selected, .pai-next .chip-danger.is-selected, .pai-next .chip-tone-success.chip-selected, .pai-next .chip-tone-danger.chip-selected{ background:var(--bg-elevated); }
 .chip-remove{
   display:flex; align-items:center; justify-content:center; cursor:pointer;
   opacity:0.6; background:none; border:0; padding:0; color:inherit;
@@ -377,8 +1275,8 @@
    Items reserve a transparent 2px bottom border; the active underline is a
    single bar that slides between them. Ported from tabs.css. */
 .tabs-strip{ position:relative; display:flex; align-items:center; }
-.tabs-strip-small { gap:16px; }
-.tabs-strip-medium{ gap:24px; }
+.tabs-strip-small { gap:var(--space-md); }
+.tabs-strip-medium{ gap:var(--space-xl); }
 .tabs-stretch{ gap:0; }
 .tabs-stretch .tab-item{ flex:1; }
 .tabs-track{ border-bottom:1px solid var(--border-secondary); }
@@ -392,8 +1290,8 @@
 }
 .tab-item:hover{ color:var(--text-primary); }
 .tab-item-small { height:32px; font-size:12px; line-height:16px; }
-.tab-item-medium{ height:40px; padding:0 4px; font-size:14px; line-height:20px; }
-.tab-item-selected{ color:var(--text-primary); font-weight:500; }
+.tab-item-medium{ height:40px; padding:0 var(--space-2xs); font-size:14px; line-height:20px; }
+.pai-next .tab-item.is-selected, .pai-next .tab-item-selected{ color:var(--text-primary); font-weight:500; }
 .tabs-indicator{
   position:absolute; left:0; bottom:0; height:2px; background:var(--text-primary);
   pointer-events:none; will-change:transform,width;
@@ -415,50 +1313,77 @@
 /* ---- ListItem --------------------------------------------------------------
    A flat row: optional icon or image, title over optional subtitle, optional
    trailing. Mirrors the editor context menu. Ported from listitem.css. */
+/* A list is a container, and the gap belongs to it. Published because every
+   consumer was inventing it: the sidebar had rows flush against each other so a
+   selected one merged into its neighbour, and the fix cannot be
+   `.listitem + .listitem { margin-top }` — that ADDS to a container that already
+   uses gap rather than replacing it, which is how the sidebar's groups first
+   came out 2px too far apart.
+
+   2px, not more. These rows are one list, and the gap is there to keep a
+   selected fill from touching the row above it, not to break the list into
+   separate objects. A consumer that wants them further apart says so itself —
+   feature-modal's list uses 8, deliberately. */
+.pai-list{ display:flex; flex-direction:column; gap:var(--space-3xs); }
+
+/* rounded-base, not -sm. The scale's note for 4px reads "the default — buttons,
+   inputs, cards, panels, nav rows", and this is the nav row. 2px was reading as
+   a square fill with the corners filed off. Measured off 101:501. */
 .listitem{
   display:flex; align-items:center; width:100%; text-align:left;
-  border-radius:2px; background:transparent; border:0; user-select:none;
+  border-radius:var(--rounded-base); background:transparent; border:0; user-select:none;
   font-family:inherit; color:var(--text-primary);
 }
 /* with a subtitle the row top-aligns, so the icon sits against the TITLE line
    rather than the centre of the title and subtitle together */
 .listitem-stacked{ align-items:flex-start; }
 .listitem-interactive{ cursor:pointer; transition:background-color 300ms var(--ease-out-strong); }
-.listitem-interactive:not(.listitem-selected):hover{ background:var(--bg-elevated-hover); }
-.listitem-selected{ background:var(--bg-elevated-hover); }
+.pai-next .listitem-interactive:not(.is-selected):not(.listitem-selected):hover{ background:var(--bg-elevated-hover); }
+.pai-next .listitem.is-selected, .pai-next .listitem-selected{ background:var(--bg-elevated-hover); }
+.pai-next .listitem.is-selected .listitem-title, .pai-next .listitem-selected .listitem-title{ font-weight:500; color:var(--text-primary); }
+.pai-next .listitem.is-selected .listitem-icon, .pai-next .listitem-selected .listitem-icon{ color:var(--text-primary); }
+/* @legacy .listitem-disabled -> .is-disabled */
+.listitem.is-disabled,
 .listitem-disabled{ opacity:0.5; pointer-events:none; cursor:not-allowed; }
 .listitem-danger .listitem-title, .listitem-danger .listitem-icon{ color:var(--text-danger-primary); }
-.listitem-interactive.listitem-danger:not(.listitem-selected):hover{ background:var(--bg-danger-inverted); }
-.listitem-medium{ gap:10px; padding:8px; }
-.listitem-small { gap:8px;  padding:6px 8px; }
+.pai-next .listitem-interactive.listitem-danger:not(.is-selected):not(.listitem-selected):hover{ background:var(--bg-danger-inverted); }
+.listitem-medium{ gap:var(--space-xs); padding:var(--space-xs); }
+.listitem-small { gap:var(--space-xs);  padding:var(--space-xs) var(--space-xs); }
 .listitem-icon{
-  display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text-primary);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text-secondary);
 }
-.listitem-medium .listitem-icon{ width:20px; height:20px; }
-.listitem-small  .listitem-icon{ width:16px; height:16px; }
+/* The slot is the icon, not a box around it: 1em tracks whatever size the icon
+   is set to, so the two can never drift apart. The 20px here used to wrap a 16px
+   icon, which put 2px of invisible slack on the leading edge of every row. */
+.listitem-medium .listitem-icon{ width:1em; height:1em; }
+.listitem-small  .listitem-icon{ width:1em; height:1em; }
 .listitem-image{
   position:relative; display:flex; align-items:center; justify-content:center;
-  flex-shrink:0; overflow:hidden; border-radius:4px; background:var(--bg-secondary);
+  flex-shrink:0; overflow:hidden; border-radius:var(--rounded-base); background:var(--bg-secondary);
 }
 .listitem-image img{ width:100%; height:100%; object-fit:contain; }
 /* the border is an inset ring on a pseudo-element so it overlays the image edge
    rather than sitting outside the content */
 .listitem-image::after{
-  content:""; position:absolute; inset:0; border-radius:4px; pointer-events:none;
+  content:""; position:absolute; inset:0; border-radius:var(--rounded-base); pointer-events:none;
   box-shadow:inset 0 0 0 1px rgba(11,15,20,0.2);
 }
 .listitem-medium .listitem-image{ width:20px; height:20px; }
 .listitem-small  .listitem-image{ width:16px; height:16px; }
 .listitem-body{ display:flex; flex-direction:column; min-width:0; flex:1; }
+/* Secondary and regular at rest. A list is mostly rows you are not on, and
+   holding all of them at primary means the one you ARE on has only a pale fill
+   left to distinguish it. Quiet by default is what gives the selected row
+   somewhere to step up to. */
 .listitem-title{
-  font-size:0.875rem; line-height:1.43; font-weight:400; color:var(--text-primary);
+  font-size:0.875rem; line-height:1.43; font-weight:400; color:var(--text-secondary);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.listitem-subtitle{ font-size:0.75rem; line-height:1.33; color:var(--text-tertiary); margin-top:2px; }
+.listitem-subtitle{ font-size:0.75rem; line-height:1.33; color:var(--text-tertiary); margin-top:var(--space-3xs); }
 .listitem-small .listitem-title{ font-size:0.75rem; line-height:1.33; font-weight:500; }
 .listitem-trailing{
   display:flex; align-items:center; flex-shrink:0; margin-left:auto;
-  padding-left:8px; color:var(--text-primary);
+  padding-left:var(--space-xs); color:var(--text-primary);
 }
 
 /* ---- Dropdown --------------------------------------------------------------
@@ -467,36 +1392,45 @@
    behaviour-heavy and not ported. Ported from dropdown.css. */
 .dropdown-container{ position:relative; display:inline-block; }
 .dropdown-menu-style{
-  position:absolute; z-index:50; width:248px; padding:4px 8px 4px 4px;
-  border-radius:4px; background:var(--bg-elevated); box-shadow:var(--shadow-elevation-02);
+  position:absolute; z-index:50; width:248px; padding:var(--space-2xs);
+  border-radius:var(--rounded-base); background:var(--bg-elevated); box-shadow:var(--elevation-03);
   overflow-x:hidden; transform-origin:top right;
   transition:opacity 100ms ease-out, transform 100ms ease-out;
 }
 .dropdown-menu-style[hidden]{ display:none; }
+/* @legacy .dropdown-menu-closed -> .is-closed */
+.dropdown-menu-style.is-closed,
 .dropdown-menu-closed{ transform:scale(0.95); opacity:0; pointer-events:none; }
-.dropdown-menu-bottom-right{ margin-top:4px; right:0; transform-origin:top right; }
-.dropdown-menu-bottom-left { margin-top:4px; left:0;  transform-origin:top left; }
-.dropdown-menu-top-right   { margin-bottom:4px; right:0; bottom:100%; transform-origin:bottom right; }
-.dropdown-menu-top-left    { margin-bottom:4px; left:0;  bottom:100%; transform-origin:bottom left; }
-.dropdown-header{ width:100%; margin:8px 0; }
-.dropdown-heading{ padding:0 8px; font-size:14px; line-height:20px; font-weight:400; color:var(--text-primary); }
-.dropdown-subheading{ padding:0 8px; margin-top:4px; font-size:12px; line-height:16px; color:var(--text-secondary); }
-.dropdown-header-divider{ margin-top:16px; border-top:1px solid var(--border-secondary); }
-.dropdown-item-header{ width:100%; margin-top:16px; }
+.dropdown-menu-bottom-right{ margin-top:var(--space-2xs); right:0; transform-origin:top right; }
+.dropdown-menu-bottom-left { margin-top:var(--space-2xs); left:0;  transform-origin:top left; }
+.dropdown-menu-top-right   { margin-bottom:var(--space-2xs); right:0; bottom:100%; transform-origin:bottom right; }
+.dropdown-menu-top-left    { margin-bottom:var(--space-2xs); left:0;  bottom:100%; transform-origin:bottom left; }
+.dropdown-header{ width:100%; margin:var(--space-xs) 0; }
+.dropdown-heading{ padding:0 var(--space-xs); font-size:14px; line-height:20px; font-weight:400; color:var(--text-primary); }
+.dropdown-subheading{ padding:0 var(--space-xs); margin-top:var(--space-2xs); font-size:12px; line-height:16px; color:var(--text-secondary); }
+.dropdown-header-divider{ margin-top:var(--space-md); border-top:1px solid var(--border-secondary); }
+.dropdown-item-header{ width:100%; margin-top:var(--space-md); }
 .dropdown-item-heading{
-  margin:8px 0; padding:0 8px; font-size:12px; line-height:16px; font-weight:500;
+  margin:var(--space-xs) 0; padding:0 var(--space-xs); font-size:12px; line-height:16px; font-weight:500;
   color:var(--text-tertiary); text-transform:capitalize;
 }
-.dropdown-search-container{ width:100%; margin-bottom:8px; }
-.dropdown-no-results{ width:100%; padding:32px 8px; display:flex; align-items:center; justify-content:center; color:var(--text-tertiary); font-size:14px; }
+.dropdown-search-container{ width:100%; margin-bottom:var(--space-xs); }
+/* A menu long enough to need searching. The field is .pai-search unchanged —
+   nothing here restyles it — and it is inset with the rows rather than run to
+   the edge, because it is a control in the menu and not a division of it. */
+.dropdown-search-container .pai-search > .pai-input{ height:32px; }
+.dropdown-no-results{ width:100%; padding:var(--space-2xl) var(--space-xs); display:flex; align-items:center; justify-content:center; color:var(--text-tertiary); font-size:14px; }
 .dropdown-item-style{
-  width:100%; padding:8px; display:flex; align-items:center; gap:10px;
+  width:100%; padding:var(--space-xs); display:flex; align-items:center; gap:var(--space-xs);
   font-family:inherit; font-size:14px; line-height:20px; font-weight:400;
   color:var(--text-primary); background:none; border:0; text-align:left;
-  border-radius:2px; cursor:pointer;
+  border-radius:var(--rounded-sm); cursor:pointer;
   transition:background-color 300ms var(--ease-out-strong);
 }
-.dropdown-item-style:hover, .dropdown-item-focus{ background:var(--bg-elevated-hover); }
+/* @legacy .dropdown-item-focus -> .is-focused */
+.dropdown-item-style:hover, .dropdown-item-style.is-focused, .dropdown-item-focus{ background:var(--bg-elevated-hover); }
+/* @legacy .dropdown-item-disabled -> .is-disabled */
+.dropdown-item-style.is-disabled,
 .dropdown-item-disabled{ opacity:0.5; cursor:not-allowed; pointer-events:none; }
 .dropdown-item-danger{ color:var(--text-danger-primary); }
 .dropdown-item-brand { color:var(--text-brand); }
@@ -505,9 +1439,1283 @@
 .dropdown-item-shortcut{ margin-left:auto; font-size:12px; color:var(--text-tertiary); }
 .dropdown-item-right-icon{ flex-shrink:0; margin-left:auto; }
 .dropdown-items-list{ overflow-y:auto; }
-.dropdown-divider{ width:100%; margin:8px 0; border-top:1px solid var(--border-secondary); }
-.dropdown-item-offer-container{ width:100%; display:flex; border-top:1px solid var(--border-secondary); margin-top:8px; padding-top:8px; }
+.dropdown-divider{ width:100%; margin:var(--space-xs) 0; border-top:1px solid var(--border-secondary); }
+/* .pai-divider works in here too. 4px above and below, so it separates without
+   opening a gap in a list of rows — and it runs edge to edge. The menu pads its
+   rows (4px left, 8px right); the divider cancels that padding with negative
+   margins, because a rule that stops short of the menu's own edge reads as a
+   mistake rather than as a separation. */
+.dropdown-menu-style .pai-divider{
+  /* width:auto, not the 100% .pai-divider carries. 100% resolves against the
+     content box, so the element would stay inside the padding and the negative
+     margins would have nothing to stretch. auto lets the margins set both edges. */
+  width:auto;
+  margin:var(--space-2xs) calc(var(--space-2xs) * -1);
+}
+.pai-next .dropdown-header:has(+ .pai-divider){ margin-bottom:0; }
+.dropdown-item-offer-container{ width:100%; display:flex; border-top:1px solid var(--border-secondary); margin-top:var(--space-xs); padding-top:var(--space-xs); }
 .dropdown-item-offer{
-  padding:0 10px; height:20px; display:flex; align-items:center; justify-content:center;
-  border-radius:6px; background:var(--bg-success); color:#fff; font-size:12px; text-transform:capitalize;
+  padding:0 var(--space-xs); height:20px; display:flex; align-items:center; justify-content:center;
+  border-radius:var(--rounded-md); background:var(--bg-success); color:#fff; font-size:12px; text-transform:capitalize;
+}
+
+/* ============================================================================
+   TABLE — rows of facts, aligned so they can be compared down a column.
+
+   No zebra striping and no vertical rules. A row is separated by one hairline;
+   two devices saying the same thing is one too many, and stripes make a table
+   look like a spreadsheet rather than like part of a screen.
+
+   Numbers go right and take tabular figures, because a column of numbers is
+   read by its digits lining up.
+   ========================================================================== */
+.pai-table{ width:100%; border-collapse:collapse; font-size:14px; line-height:20px; }
+/* The header is set in the overline, so it reads as a label for the column
+   rather than as the first row of data. */
+.pai-table th{
+  padding:var(--space-xs) var(--space-sm);
+  text-align:left; font-size:0.625rem; line-height:1.33; letter-spacing:0.03em;
+  font-weight:600; text-transform:uppercase;
+  color:var(--text-tertiary); white-space:nowrap;
+  border-bottom:1px solid var(--border-secondary);
+}
+.pai-table td{
+  padding:var(--space-sm); color:var(--text-primary);
+  border-bottom:1px solid var(--border-secondary);
+}
+/* The last hairline would be drawing the bottom of something the table does
+   not own. Whatever contains it owns that edge. */
+.pai-table tbody tr:last-child td{ border-bottom:0; }
+/* A numeric column is right-aligned all the way up, header included — a header
+   sitting left of the numbers it names points at the wrong edge. th needs the
+   extra specificity because .pai-table th already set the alignment. */
+.pai-table-numeric{ text-align:right; font-variant-numeric:tabular-nums; }
+.pai-table th.pai-table-numeric{ text-align:right; }
+.pai-table-interactive tbody tr{ cursor:pointer; transition:background-color 160ms var(--ease-out-strong); }
+.pai-table-interactive tbody tr:hover{ background:var(--bg-secondary); }
+
+/* ============================================================================
+   TOAST — something happened, and the screen is telling you after the fact.
+
+   Not a banner: a banner is a condition that persists and belongs in the
+   layout. A toast is an event, it leaves on its own, and nothing important may
+   live only inside one.
+
+   Two tones, like the tooltip. The default says a thing happened; danger says
+   it did not. A success toast is the default one — telling somebody their save
+   worked in green says it louder than it deserves.
+
+   Positioning belongs to the screen, the same as the dropdown.
+   ========================================================================== */
+.pai-toast{
+  display:inline-flex; align-items:center; gap:var(--space-sm);
+  max-width:420px; padding:var(--space-sm) var(--space-md);
+  border-radius:var(--rounded-md);
+  background:var(--bg-blackout); color:var(--text-inverted-primary);
+  font-size:14px; line-height:20px;
+  box-shadow:var(--elevation-dark-04);
+}
+.pai-toast-danger{ background:var(--bg-danger); color:var(--text-white); }
+.pai-toast-label{ flex:1; }
+/* One action at most, and it is the undo. A toast with two things to press is
+   a decision, and a decision does not disappear by itself. */
+.pai-toast-action{
+  flex:none; padding:0; background:none; border:0; cursor:pointer;
+  font-family:inherit; font-size:14px; line-height:20px; font-weight:500;
+  color:inherit; text-decoration:underline; text-underline-offset:2px;
+}
+.pai-toast-dismiss{
+  flex:none; display:inline-flex; align-items:center; justify-content:center;
+  padding:0; background:none; border:0; cursor:pointer; color:inherit; opacity:0.7;
+  transition:opacity 160ms var(--ease-out-strong);
+}
+.pai-toast-dismiss:hover{ opacity:1; }
+
+/* ============================================================================
+   SEARCH — a field that filters, and optionally the menu of what it found.
+
+   It does not restyle anything: the field IS .pai-input, so the surface, the
+   lift, the focus stroke and the error state are the input's and can never
+   drift from it. This wrapper only makes room for the two icons and positions
+   them.
+
+   With a menu it is the published dropdown at the field's width, the same
+   arrangement the select uses.
+   ========================================================================== */
+.pai-search{ position:relative; display:inline-block; width:100%; }
+.pai-search > .pai-input{ padding-left:var(--space-2xl); padding-right:var(--space-2xl); }
+.pai-search > i{
+  position:absolute; left:var(--space-sm); top:50%; transform:translateY(-50%);
+  color:var(--text-tertiary); pointer-events:none;
+}
+/* The platform draws its own x and it is not ours. */
+.pai-search input[type="search"]::-webkit-search-cancel-button,
+.pai-search input[type="search"]::-webkit-search-decoration{ -webkit-appearance:none; appearance:none; }
+.pai-search-clear{
+  position:absolute; right:var(--space-xs); top:50%; transform:translateY(-50%);
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:var(--space-3xs); background:none; border:0; cursor:pointer;
+  color:var(--text-tertiary); border-radius:var(--rounded-sm);
+  transition:color 160ms var(--ease-out-strong);
+}
+.pai-search-clear:hover{ color:var(--text-primary); }
+/* Nothing typed, nothing to clear. */
+.pai-search:not(.is-filled) .pai-search-clear{ display:none; }
+.pai-search .dropdown-menu-style{ box-sizing:border-box; width:100%; }
+/* Two sizes, and BOTH have a name. 36 was already what an unmodified search
+   was; it just had no way to say so, which is the departure the README calls
+   "size required, not implied". A screen that means medium had to write nothing
+   and hope, and a screen that meant large reached past this wrapper to
+   .pai-input-large — same 44px by a route that skips the component.
+
+   .pai-search-medium changes nothing that renders. It exists so a size can be
+   stated. */
+.pai-search-medium > .pai-input{ height:36px; }
+/* @legacy .pai-search--lg -> .pai-search-large */
+.pai-search-large > .pai-input,
+.pai-search--lg > .pai-input{ height:44px; }
+
+/* ============================================================================
+   FILE — an uploaded file, from picked to landed.
+
+   Ported from the prompt box. Four states, and the component is the same object
+   in all four: a thumbnail, a name, and whatever the state adds beneath it.
+
+     .is-queued      waiting its turn — the bar sweeps, no percentage is known
+     .is-uploading   in flight — the bar fills, --value on the .pai-progress
+     .is-complete    landed — the bar collapses and the name recentres
+     .is-failed      broken — the reason and the way out appear on the chip
+
+   Failure belongs ON the file that broke, not in a banner somewhere else on the
+   page. A person with four uploads and one failure needs to know which one.
+
+   Markup:
+     <div class="pai-file-upload is-uploading">
+       <span class="pai-file-upload-thumb" data-ext="pdf">
+         <i class="ph-fill ph-check-circle pai-file-upload-status"></i>
+       </span>
+       <span class="pai-file-upload-body">
+         <span class="pai-file-upload-name">Q3 review deck.pdf</span>
+         <span class="pai-progress" style="--value:.6"><span class="pai-progress-bar"></span></span>
+       </span>
+       <button class="pai-file-upload-remove" aria-label="Remove Q3 review deck.pdf">…</button>
+     </div>
+   ========================================================================== */
+.pai-file-upload{
+  position:relative; display:flex; align-items:center; gap:var(--space-xs);
+  width:100%; padding:var(--space-sm); height:auto;
+  background:var(--bg-tertiary); border:1px solid var(--border-secondary);
+  border-radius:var(--rounded-base);
+}
+/* A failed chip grows to hold the reason and the way out, and a thumbnail
+   centred against that floats in the middle of a paragraph. It goes to the top,
+   where the name it belongs to is. */
+.pai-file-upload.is-failed{ align-items:flex-start; }
+
+/* The sheet is a picture rather than an icon because it is a picture: a drawn
+   document with a folded corner and its own shadow, which no icon set publishes.
+   The extension sits ON it and rotates with it — the sheet is drawn at a slight
+   angle, so upright text would look pasted on rather than printed. */
+.pai-file-upload-thumb{
+  position:relative; flex:none; width:48px; height:48px;
+  background:url("assets/file-sheet.png") center / contain no-repeat;
+}
+.pai-file-upload-thumb::after{
+  content:"." attr(data-ext);
+  position:absolute; left:calc(50% - 2px); top:56%;
+  transform:translate(-50%,-50%) rotate(2.73deg);
+  font-size:10px; line-height:1; font-weight:500;
+  color:var(--text-secondary); opacity:0.7; white-space:nowrap;
+}
+/* No extension, no label — an empty ".": would read as a defect. */
+.pai-file-upload-thumb:not([data-ext])::after,
+.pai-file-upload-thumb[data-ext=""]::after{ content:none; }
+
+/* The status icon rides the sheet's top-left corner, so it reads as belonging to
+   the file rather than to the row. Only the settled states carry one: while a
+   file is moving, the bar is already saying so.
+
+   One filled Phosphor glyph rather than a drawn circle with a tick laid over it.
+   ph-check-circle and ph-warning-circle already are the badge, so there is
+   nothing to align and nothing to keep in register at two sizes. */
+.pai-file-upload-status{
+  position:absolute; left:0; top:var(--space-3xs); z-index:1;
+  display:none; font-size:16px; line-height:1;
+  border-radius:var(--rounded-full); background:var(--bg-elevated);
+}
+.is-complete .pai-file-upload-status,
+.is-failed   .pai-file-upload-status{ display:block; }
+.is-complete .pai-file-upload-status{ color:var(--text-success-primary); }
+.is-failed   .pai-file-upload-status{ color:var(--text-danger-primary); }
+
+.pai-file-upload-body{
+  flex:1; min-width:0; align-self:stretch;
+  display:flex; flex-direction:column; justify-content:center; gap:var(--space-2xs);
+  padding-left:var(--space-3xs);
+}
+/* One line while it is moving, two once it has settled. A long name mid-upload
+   would push the bar around; a settled one has the room. */
+.pai-file-upload-name{
+  font-size:12px; line-height:16px; color:var(--text-primary);
+  overflow:hidden; text-overflow:ellipsis;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1;
+  overflow-wrap:anywhere;
+}
+.is-complete .pai-file-upload-name,
+.is-failed   .pai-file-upload-name{ -webkit-line-clamp:2; }
+
+/* The bar is .pai-progress unchanged, at 2px. It collapses rather than
+   disappears, so the name settles into place instead of jumping. */
+.pai-file-upload .pai-progress{
+  height:2px; overflow:hidden;
+  max-height:2px; opacity:1;
+  transition:max-height 150ms var(--ease-out-strong),
+             opacity 130ms var(--ease-out-strong),
+             margin 150ms var(--ease-out-strong);
+}
+.is-complete .pai-progress,
+.is-failed   .pai-progress{ max-height:0; opacity:0; margin:0; }
+
+.pai-file-upload-error{
+  margin:0; font-size:12px; line-height:16px;
+  color:var(--text-danger-primary); overflow-wrap:anywhere;
+}
+/* Stacked, not inline. These messages are instructions — "Open it in PowerPoint,
+   choose File then Save As" — and a row squeezes them into a column too narrow
+   to read. */
+.pai-file-upload-actions{ display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-xs); }
+.pai-file-upload:not(.is-failed) .pai-file-upload-error,
+.pai-file-upload:not(.is-failed) .pai-file-upload-actions{ display:none; }
+
+/* Position only. The control itself is a published button —
+   .button-style .button-xsmall .button-secondary .button-circle — so it is not a
+   fourth hand-rolled dismiss beside the chip's and the modal's. */
+.pai-file-upload-remove{
+  position:absolute; top:calc(var(--space-2xs) * -1); right:calc(var(--space-2xs) * -1); z-index:1;
+}
+
+/* ============================================================================
+   THUMBNAIL — a slide, at the size it is being looked at.
+
+   Harvested from canonical/dashboard. Two shapes, and the second contains the
+   first rather than repeating it:
+
+     .pai-thumbnail        the picture alone
+     .pai-thumbnail-card   the picture with a name under it
+
+   ALWAYS 16/9, and not as a default somebody can talk themselves out of. A
+   presentation slide is 16/9, every deck in assets/decks/ renders at 16/9, and
+   a thumbnail at any other ratio is either letterboxing a slide or cropping
+   one. The dashboard's handoff drew 366.5 x 202, which is 1.81:1 — four pixels
+   short, enough to letterbox every cover on the shelf.
+
+   display:block is load-bearing. aspect-ratio does nothing to an inline box, so
+   as a bare <span> this is sized by its content and the ratio is silently
+   ignored — which is how the dashboard's first covers came out at 1.32:1 with
+   the deck cropped into them.
+
+   The placeholder is the sunken grey rather than white, so a slide that has not
+   loaded reads as a well waiting for one rather than as a blank slide.
+
+   THE RATIO IS FIXED AND THERE IS NO VARIANT THAT CHANGES IT. No -square, no
+   -portrait, no --ratio to override. Give a thumbnail a width and it works out
+   its height; setting a height is how the ratio gets broken, so a row that wants
+   shorter thumbnails wants narrower ones. What goes wrong is quiet, which is why
+   the rule is absolute rather than a default: a ratio that is close but not exact
+   does not look broken, it looks like a slightly odd crop, and every cover on the
+   shelf has it at once so there is nothing to compare against.
+   ========================================================================== */
+.pai-thumbnail{
+  position:relative;
+  display:block; aspect-ratio:16 / 9; overflow:hidden;
+  background:var(--bg-quaternary); border-radius:var(--rounded-base);
+}
+/* The edge, drawn OVER the picture rather than under it — same technique and the
+   same reason as .pai-avatar: the image fills the box, so an inset shadow on the
+   box itself would be covered by it, and a slide with a white background would
+   have no edge at all against a white card. Which is most decks — a title card,
+   a text page, a chart on white.
+
+   --border-secondary is a 9% near-black, so it reads as a hairline over a pale
+   slide and disappears over a dark one, where the slide's own darkness is
+   already the edge. Added 10 Aug 2026, off a screen showing four real decks
+   where the light ones dissolved into the card behind them.
+
+   border-radius:inherit, so it squares itself inside .pai-thumbnail-card, which
+   sets the picture's own radius to 0. */
+.pai-thumbnail::after{
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  box-shadow:inset 0 0 0 1px var(--border-secondary);
+}
+/* object-fit:cover, so a source that is not quite 16/9 is cropped rather than
+   squashed. A distorted slide is worse than a cropped one: a crop loses an
+   edge, a squash makes everything on the slide wrong. */
+.pai-thumbnail img{
+  display:block; width:100%; height:100%; object-fit:cover;
+}
+
+/* The card. One object — picture flush to the top inside a clipped container,
+   not a floating picture with its caption loose beneath it. */
+.pai-thumbnail-card{
+  display:block; width:100%; padding:0; text-align:left; cursor:pointer;
+  border:0; font-family:inherit; overflow:hidden;
+  background:var(--bg-elevated); border-radius:var(--rounded-md);
+  box-shadow:var(--elevation-01);
+  transition:box-shadow 160ms var(--ease-out-strong);
+}
+.pai-thumbnail-card:hover{ box-shadow:var(--elevation-02); }
+/* The ring replaces the resting shadow rather than stacking on it — two edges
+   on one card reads as a border that changed its mind. */
+.pai-thumbnail-card:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted);
+}
+/* Inside a card the picture gives up its own radius: the card clips it to the
+   corners, and a second curve inside the card's reads as two edges. */
+.pai-thumbnail-card > .pai-thumbnail{ border-radius:0; }
+
+.pai-thumbnail-body{ display:block; padding:var(--space-sm); }
+/* One line, ellipsed. A deck name that wraps to three lines makes one card in a
+   row taller than the rest and the whole shelf ragged. */
+.pai-thumbnail-title{
+  display:block; color:var(--text-primary);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+/* Secondary, not tertiary. It carries two things somebody reads — where the
+   deck lives and when it moved — rather than being a timestamp to ignore. */
+.pai-thumbnail-sub{
+  display:block; margin-top:var(--space-3xs); color:var(--text-secondary);
+}
+
+/* Laid on its side: the picture becomes a fixed-width thumbnail beside the
+   name, and takes its radius back because it is surrounded by card rather than
+   clipped by it. */
+.pai-thumbnail-card-row{
+  display:flex; align-items:center; gap:var(--space-sm); padding:var(--space-sm);
+}
+.pai-thumbnail-card-row > .pai-thumbnail{
+  flex:none; width:96px; border-radius:var(--rounded-base);
+}
+.pai-thumbnail-card-row > .pai-thumbnail-body{ flex:1; min-width:0; padding:0; }
+
+/* ============================================================================
+   PROMPT — the box somebody types into to start something.
+
+   Ported from the dashboard launcher (Figma 101:592). Three parts stacked in a
+   grey card: a brand strip, a white box holding the input, and a toolbar along
+   the bottom of that box.
+
+   The strip is part of the component, not decoration. It is where the deck's
+   identity is chosen, and it sits above the text because it applies to whatever
+   gets typed. Two states: nothing set yet, which is an offer; and a kit applied,
+   which takes the kit's own colour so the card reads as belonging to that brand.
+
+   The card is --rounded-xl, which the rounding scale already reserves for "the
+   prompt card".
+
+   Markup:
+     <div class="pai-prompt">
+       <div class="pai-prompt-edge"></div>
+       <div class="pai-prompt-brand">…</div>
+       <div class="pai-prompt-box">
+         <div class="pai-prompt-input" contenteditable>…</div>
+         <div class="pai-prompt-files">…</div>
+         <div class="pai-prompt-toolbar">…</div>
+       </div>
+     </div>
+   ========================================================================== */
+/* No padding. The box is flush to three of the card's edges, so the only tint
+   showing is the strip along the top — which is the point: the card is not a
+   frame around the box, it is the strip the box hangs from. */
+.pai-prompt{
+  --prompt-tint:var(--bg-tertiary);
+  position:relative; display:flex; flex-direction:column;
+  width:100%; padding:0;
+  background:var(--prompt-tint); border-radius:var(--rounded-xl);
+  box-shadow:var(--elevation-03);
+  transition:background-color 250ms var(--ease-out-strong);
+}
+/* Transparent at rest. --elevation-03 opens with a 1px ring of its own, so a
+   second border here would sit directly on top of it and read as one thick
+   stroke rather than two thin ones. The elevation owns the resting edge.
+
+   The overlay still exists, and for its original reason: children paint over a
+   parent's border, and the white box sits flush enough to cut through one. It
+   holds the focus stroke, which needs to be drawn above the box — and being a
+   border that is already there, focus changes only its colour, so nothing
+   reflows. */
+.pai-prompt-edge{
+  position:absolute; inset:0; z-index:5; pointer-events:none;
+  border:1px solid transparent; border-radius:inherit;
+  transition:border-color 250ms var(--ease-out-strong);
+}
+.pai-prompt.is-focused .pai-prompt-edge{ border-color:var(--border-primary-inverted); }
+
+/* ---- The brand strip ---------------------------------------------------- */
+/* The strip carries the card's only padding, since the card has none of its own. */
+/* 14/20, the body reading size — not 12. The strip is a sentence somebody is
+   meant to read and act on ("Set up Brand Kit to use your logo, colours, and
+   voice"), and when it is set it carries the brand's own name. 12px is the size
+   for metadata beside something else, and this is neither beside nor secondary
+   to anything: it is the first line in the card. The strip's min-height of 36
+   already had room for a 20px line, so nothing moves. */
+.pai-prompt-brand{
+  display:flex; align-items:center; gap:var(--space-xs);
+  min-height:36px; padding:var(--space-2xs) var(--space-sm);
+  font-size:14px; line-height:20px; color:var(--text-secondary);
+}
+/* Unset, it is an offer and centres — there is nothing on the right to balance
+   against. Set, it is a statement about this deck and goes to the edges. */
+.pai-prompt-brand:not(.is-set){ justify-content:center; }
+/* 16px, matching the swatches it sits opposite. At 20 it filled almost the whole
+   strip and read as the loudest thing in the card, which the brand's own logo
+   should not be — the deck is the subject, the kit is a setting on it. */
+.pai-prompt-brand-logo{ width:16px; height:16px; flex:none; object-fit:contain; }
+.pai-next .pai-prompt-brand :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){ font-size:var(--icon-sm); }
+.pai-prompt-brand-name{ display:flex; align-items:center; gap:var(--space-2xs); font-weight:500; color:var(--text-primary); }
+.pai-prompt-brand-swatches{ display:flex; align-items:center; margin-left:auto; }
+.pai-prompt-brand-swatch{
+  width:16px; height:16px; border-radius:var(--rounded-full); flex:none;
+  box-shadow:0 0 0 2px var(--bg-elevated);
+}
+.pai-prompt-brand-swatch + .pai-prompt-brand-swatch{ margin-left:calc(var(--space-2xs) * -1); }
+
+/* ---- The white box ------------------------------------------------------ */
+/* Its own stroke, because a white box on a pale tint has no edge otherwise — and
+   under a brand kit the tint is whatever that brand is, so it cannot be relied
+   on to provide contrast. The radius matches the card's: the box meets three of
+   its edges, and a smaller curve would leave a sliver of tint in each bottom
+   corner. */
+.pai-prompt-box{
+  display:flex; flex-direction:column; gap:var(--space-sm);
+  padding:var(--space-sm); background:var(--bg-elevated);
+  border:1px solid var(--border-secondary);
+  border-radius:var(--rounded-xl);
+}
+/* Not .pai-input. A prompt has no field chrome — it is a sheet of paper inside a
+   box that already has an edge. It is set at the body's reading size rather than
+   a control's, because this is writing, not filling in a field, and it keeps a
+   minimum so an empty box still looks like somewhere to write. */
+/* 76, which is what 101:600 leaves between the box's top padding and its
+   toolbar. At 48 the box was two lines of room and read as a field you fill in;
+   at 76 it is three lines and a little air, which is the difference between
+   somewhere to answer and somewhere to draft. The card is the largest object on
+   the dashboard and this minimum is most of why. */
+/* 8px of its own, inside the box's 12, so the writing starts 20 from the card's
+   edge — which is what 101:601 draws, and what stops the text sitting against
+   the stroke. Top and sides only: below it the box's own gap already separates
+   the writing from the toolbar, and padding there would add to it.
+   min-height counts the padding (border-box), so the card's height does not
+   move — the writing area absorbs it. */
+.pai-prompt-input{
+  width:100%; min-height:76px; padding:var(--space-xs) var(--space-xs) 0;
+  border:0; outline:none; resize:none; background:none;
+  font-family:inherit; font-size:16px; line-height:24px; color:var(--text-primary);
+}
+.pai-prompt-input::placeholder{ color:var(--text-tertiary); }
+
+/* ---- A placeholder that can carry emphasis ------------------------------
+   ::placeholder takes a string and nothing else, so a prompt whose invitation
+   names something you can DO — "or upload a file" — has no way to mark that
+   phrase through it. This is an overlay instead: the box places it, and the
+   input's own :placeholder-shown hides it. No script.
+
+   Optional. A prompt with nothing to emphasise keeps using ::placeholder and
+   this rule never fires — the real placeholder only goes transparent where an
+   overlay exists to replace it.
+
+   pointer-events:none, so a press anywhere in the box still lands on the input.
+   The underline says the phrase is reachable; it does not make the overlay the
+   thing you reach it through.
+
+   20/500 is .text-heading-xl, which is what 101:602 sets. Larger than the 16px
+   it will become once you type — the invitation is the biggest thing on the
+   card, and what you write is ordinary text. */
+.pai-prompt-box{ position:relative; }
+/* Positioned on the box's padding and carrying the INPUT's padding, so the two
+   boxes coincide. That is the whole trick: the overlay has to sit exactly where
+   the real text will appear, or the invitation jumps sideways on the first
+   keystroke. If the input's padding changes, this changes with it — which is
+   why the two rules are kept next to each other. */
+.pai-prompt-placeholder{
+  position:absolute; top:var(--space-sm); left:var(--space-sm); right:var(--space-sm);
+  padding:var(--space-xs) var(--space-xs) 0;
+  pointer-events:none; color:var(--text-tertiary);
+  font-size:1.25rem; line-height:normal; font-weight:500;
+}
+.pai-prompt-placeholder u{ text-decoration:underline; text-underline-offset:2px; }
+.pai-next .pai-prompt-box:has(.pai-prompt-placeholder) .pai-prompt-input::placeholder{ color:transparent; }
+.pai-prompt-input:not(:placeholder-shown) ~ .pai-prompt-placeholder{ display:none; }
+
+.pai-prompt-files{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:var(--space-xs); }
+
+/* ---- The toolbar -------------------------------------------------------- */
+/* 8px between buttons, not 4. Each of these is outlined, so at 4px the strokes
+   of neighbouring buttons sit close enough to read as one segmented control
+   rather than four separate things to press.
+
+   The 8px above sits on the toolbar rather than widening the box's gap, so it
+   separates the controls from whatever is above them without also pushing
+   attachments away from the text they belong to. It adds to the box's 12px, so
+   20px between the writing and the controls. */
+.pai-prompt-toolbar{
+  display:flex; align-items:center; gap:var(--space-xs); flex-wrap:wrap;
+  margin-top:var(--space-xs);
+}
+/* The submit sits alone at the far end. Everything before it configures; it is
+   the only control that starts something — and it stays disabled until there is
+   something to start. */
+.pai-prompt-submit{ margin-left:auto; }
+
+/* ============================================================================
+   SWITCHER — one of N mutually exclusive values.
+   Not tabs (those switch a region, not a value) and not chips (those are
+   filters you applied). checkout-with-offer built 1Y/2Y/3Y out of .chip +
+   .chip-off because this did not exist.
+
+   Radios underneath, so one is always chosen, arrow keys work, and a form
+   reads it without help.
+
+   Markup: <div class="pai-switcher pai-switcher-medium" role="radiogroup">
+             <label class="pai-switcher-option">
+               <input type="radio" name="term" checked><span>1 year</span>
+             </label> …
+           </div>
+   ========================================================================== */
+.pai-switcher{
+  display:inline-flex; align-items:center; gap:var(--space-3xs);
+  /* --bg-quaternary, the next step down. The track was --bg-tertiary, which sat
+     1.7 of perceptual lightness from the page and read as nothing once the page
+     moved to --bg-secondary on 10 Aug 2026 — a trough you cannot see is not a
+     trough, and the selected segment is white, so the track is the only thing
+     saying there are others. Nothing lighter is available: the four light steps
+     are all within a point and a half of each other. */
+  padding:var(--space-3xs); background:var(--bg-quaternary);
+  border-radius:var(--rounded-md);   /* concentric: 4px segment + 2px pad = 6 */
+}
+.pai-switcher-option{
+  position:relative; display:inline-flex; align-items:center; justify-content:center;
+  gap:var(--space-2xs); padding:0 var(--space-sm);
+  border-radius:var(--rounded-base); cursor:pointer; white-space:nowrap;
+  color:var(--text-secondary); font-weight:500;
+  transition-property:background-color, color, box-shadow;
+  transition-duration:160ms; transition-timing-function:var(--ease-out-strong);
+}
+.pai-switcher-option > input{ position:absolute; opacity:0; width:0; height:0; margin:0; }
+.pai-switcher-option:hover{ color:var(--text-primary); }
+.pai-next .pai-switcher-option:has(> input:checked){
+  background:var(--bg-elevated); color:var(--text-primary); box-shadow:var(--elevation-01);
+}
+.pai-next .pai-switcher-option:has(> input:focus-visible){
+  box-shadow:0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--border-primary-inverted);
+}
+.pai-next .pai-switcher-option:has(> input:disabled){ opacity:0.60; cursor:not-allowed; }
+
+.pai-switcher-medium{ height:36px; }
+.pai-switcher-medium .pai-switcher-option{ height:32px; font-size:14px; line-height:20px; }
+.pai-switcher-small { height:28px; }
+.pai-switcher-small  .pai-switcher-option{ height:24px; font-size:12px; line-height:16px; padding:0 var(--space-xs); }
+
+/* Splits the row equally instead of hugging labels — the full-width form case. */
+/* Icons only — square segments, so the row reads as a set of controls rather
+   than as labels that lost their words. Each still needs an aria-label. */
+.pai-switcher-icons .pai-switcher-option{ padding:0; width:32px; }
+.pai-switcher-small.pai-switcher-icons .pai-switcher-option{ width:24px; }
+.pai-next .pai-switcher-icons .pai-switcher-option :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){ font-size:var(--icon-md); }
+.pai-next .pai-switcher-small.pai-switcher-icons .pai-switcher-option :is(.ph, .pai-next .ph-fill, .pai-next .ph-bold){ font-size:var(--icon-sm); }
+
+.pai-switcher-stretch{ display:flex; width:100%; }
+.pai-switcher-stretch .pai-switcher-option{ flex:1; }
+
+/* ============================================================================
+   LINK — the system published no anchor style, so every screen invented one.
+   Two of them ended up as "Compare Plans →" / "Explore other plans →", which
+   is why the trailing icon nudges rather than sitting still.
+   ========================================================================== */
+/* inline, not inline-flex, and that is the whole reason the underline stops at
+   the words. Text decoration propagates from an ancestor to its in-flow
+   descendants and a descendant CANNOT turn it off — text-decoration:none on the
+   icon does nothing. It is only skipped for atomic inline-level boxes, and
+   .pai-icon is inline-flex, which is atomic. As a flex item it stops being
+   atomic and takes the line; as an inline child it does not.
+   So the gap is a margin rather than flex gap. */
+.pai-link{
+  display:inline; color:var(--text-brand); text-decoration:none; cursor:pointer;
+  border-radius:var(--rounded-sm);
+  transition-property:color; transition-duration:160ms; transition-timing-function:var(--ease-out-strong);
+}
+.pai-link:hover{ color:var(--text-brand-hover); text-decoration:underline; text-underline-offset:2px; }
+.pai-link:focus-visible{
+  outline:none; text-decoration:none;
+  box-shadow:0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--border-primary-inverted);
+}
+/* The icon sits on the text baseline and keeps its own margin. */
+.pai-link > i{
+  vertical-align:-0.125em; margin-left:var(--space-2xs);
+  transition-property:transform; transition-duration:160ms; transition-timing-function:var(--ease-out-strong);
+}
+.pai-link > i:first-child{ margin-left:0; margin-right:var(--space-2xs); }
+.pai-link:hover > i:last-child{ transform:translateX(2px); }
+@media (prefers-reduced-motion: reduce){ .pai-link > i{ transition-property:none; } }
+
+/* Inside a sentence: takes the sentence's colour, underlined so it is still
+   findable without one. */
+.pai-link-inline{ color:inherit; text-decoration:underline; text-underline-offset:2px; text-decoration-color:var(--border-primary); }
+.pai-link-inline:hover{ color:var(--text-brand); text-decoration-color:currentColor; }
+
+.pai-link-danger{ color:var(--text-danger-primary); }
+.pai-link-danger:hover{ color:var(--text-danger-hover); }
+
+/* ============================================================================
+   DIVIDER — .dropdown-divider existed and nothing else did, so panels drew
+   their own .rule. Horizontal, vertical, and one carrying a word.
+   ========================================================================== */
+/* Two lines, not one: the rule, and a 1px highlight of --inner-1 on the far side
+   of it. That is the same material logic every elevation here already follows —
+   each step carries the same white inset so a surface catches light at its edge
+   — and a divider is an edge like any other. Cut INTO a surface rather than
+   drawn on top of it.
+
+   It costs nothing where it does nothing: white on white is invisible, so a
+   divider on an elevated card looks exactly as it did. It only appears on a
+   tinted surface, which is where a single dark line reads flattest — the
+   dashboard's sidebar is the case that prompted it.
+
+   Vertical takes the same treatment on its right, because it is the same
+   decision turned ninety degrees. */
+.pai-divider{
+  border:0; border-top:1px solid var(--border-secondary); width:100%; margin:0;
+  box-shadow:0 1px 0 0 var(--inner-1);
+}
+.pai-divider-vertical{
+  border:0; border-left:1px solid var(--border-secondary); width:0; align-self:stretch; margin:0;
+  box-shadow:1px 0 0 0 var(--inner-1);
+}
+/* BLEED — a divider inside a padded container, running to the container's own
+   edges instead of stopping at its content box.
+
+   The plain .pai-divider is width:100%, which resolves against the CONTENT box —
+   so inside a card with padding it stops short by exactly that padding on each
+   side, every time. The house rule is "dividers in cards should always be
+   end-to-end", and until now nothing published could satisfy it: the one working
+   version was written inline for .dropdown-menu-style, scoped to a menu and to
+   that menu's 4px. This is that technique, generalised.
+
+   width:auto for the same reason the menu needed it — 100% would keep the element
+   inside the padding and leave the negative margins nothing to stretch.
+
+   The container tells the divider how far to reach, because only the container
+   knows its own padding:
+
+     .my-card        { padding:var(--space-xl); --divider-bleed:var(--space-xl); }
+     .my-card hr     { class="pai-divider pai-divider-bleed" }
+
+   The fallback is --space-xl, the commonest card padding in the house. A card
+   padded differently that does not set the property gets a divider that overshoots
+   or stops short — visible immediately, which is the failure mode worth having. */
+.pai-divider-bleed{
+  width:auto;
+  margin-left:calc(var(--divider-bleed, var(--space-xl)) * -1);
+  margin-right:calc(var(--divider-bleed, var(--space-xl)) * -1);
+}
+
+.pai-divider-labelled{
+  display:flex; align-items:center; gap:var(--space-sm);
+  color:var(--text-tertiary); font-size:12px; line-height:16px;
+}
+/* The two arms carry the highlight too, or the labelled one is the only divider
+   in the set drawn a different way. */
+.pai-divider-labelled::before,
+.pai-divider-labelled::after{
+  content:""; flex:1; border-top:1px solid var(--border-secondary);
+  box-shadow:0 1px 0 0 var(--inner-1);
+}
+
+/* ============================================================================
+   SURFACE — every plane a screen can put something on.
+
+   A surface is not a colour. It is a BACKGROUND, an ELEVATION and a LAYER
+   travelling together, and they have to travel together or the illusion breaks:
+   a white box with no shadow at modal height reads as a hole in the page, and a
+   shadow on the page background reads as a smudge.
+
+   Eight, and each one is already somewhere in the system — this names what the
+   components were doing separately rather than adding a ninth way:
+
+     page      the floor everything sits on          (every screen body)
+     sunken    a well cut INTO the floor             (.pai-progress track)
+     card      content resting on the floor          (a panel on a page)
+     raised    one step up, still in the flow        (.pai-modal-panel)
+     overlay   attached to a trigger, floating       (.dropdown-menu-style)
+     scrim     the page dimmed, so a modal reads      (.pai-scrim)
+     modal     the thing the scrim is dimming for    (.pai-modal)
+     notice    speaks over everything, near-black    (.pai-toast)
+
+   WHY EIGHT AND NOT THE OBVIOUS SEVEN. A side panel is not its own surface —
+   it is the modal surface anchored to an edge, and giving it a name would mean
+   two things to keep in step for no difference a reader can see. What IS
+   missing from the obvious list is sunken, which is the only surface that goes
+   the other way, and scrim, which is a surface even though nothing sits on it:
+   it is what makes the one above it legible as above.
+
+   Card and raised are both white with a shadow, and the difference is what
+   they sit on. A card sits on the page and needs only enough lift to separate
+   from grey. Raised sits on another white surface — a panel inside a modal —
+   and needs more, because white on white has nothing but the shadow to say
+   there are two planes.
+   ========================================================================== */
+/* --bg-secondary, not --bg-tertiary. Settled 10 Aug 2026: the page moved one
+   step lighter so the elevation ladder does more of the separating and the
+   colour step does less. --bg-tertiary keeps its value and its other jobs —
+   disabled fields, the free badge, the prompt tint — it is simply no longer
+   what a page is painted with. Screens already built paint their own body with
+   var(--bg-tertiary) directly and were deliberately not swept: a built screen
+   is the record of what was built, and migrating one is a decision per screen. */
+.pai-surface-page{ background:var(--bg-secondary); }
+/* The only surface that goes down. It is not "a darker card": nothing is meant
+   to look like it is sitting on this, it is meant to look cut into. So no
+   shadow — an inset one is the shape it wants, and the components that need it
+   (a progress track, a field trough) draw their own. */
+.pai-surface-sunken{ background:var(--bg-quaternary); }
+.pai-surface-card{
+  background:var(--bg-elevated); border-radius:var(--rounded-base);
+  box-shadow:var(--elevation-01);
+}
+.pai-surface-raised{
+  background:var(--bg-elevated); border-radius:var(--rounded-base);
+  box-shadow:var(--elevation-02);
+}
+.pai-next .pai-surface-card.is-selected, .pai-next .pai-surface-raised.is-selected{
+  box-shadow:0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted);
+}
+/* INTERACTIVE — what makes a card a card is the affordance, not the box.
+
+   A bounded region with elevation is a SURFACE and asserts nothing: grouping
+   content is what it is for, and it needs no permission. Add .is-interactive and
+   it becomes a card — a thing you can act on — which is the claim the house rule
+   "don't use cards for elements that are not clickable" is about. The rule bites
+   the claim, never the container, so a panel that groups is not the thing it
+   forbids.
+
+   Put it on a real button, link or label. This adds the affordance; it does not
+   make a div focusable, and a div you can click is not reachable by keyboard.
+
+   Hover raises one step of the ladder rather than inventing a treatment: a card
+   at rest sits at 01, a card under the pointer at 02, and raised goes 02 → 03.
+   :not(.is-selected) so a chosen card keeps its ring — selected outranks hover,
+   because the ring says which one you picked and the lift only says where the
+   pointer is.
+
+   160ms and --ease-out-strong: the house's dominant hover timing, twelve uses.
+   Duration is the one value the system does not publish (coverage-gaps.md), so
+   this picks the commonest rather than inventing a thirteenth. */
+.pai-surface-card.is-interactive,
+.pai-surface-raised.is-interactive{
+  cursor:pointer;
+  transition:box-shadow 160ms var(--ease-out-strong);
+}
+/* STACKED LABEL — a radio or checkbox leading a label that runs to more than one
+   line aligns to that label's FIRST LINE, not to the top of its block.
+
+   align-items:flex-start lines the boxes up, and the boxes are not what the eye
+   reads: the first glyph sits lower inside its line box by the leading, so a
+   top-aligned control comes out visibly high. Measured on a 14px/20px first line
+   against the 16px control: -4.5px. Baseline alignment gets to -3px and is still
+   wrong; centre alignment lands +7.5px because it centres on the whole two-line
+   block, which is the thing the house annotation forbids.
+
+   4px closes it to -0.5px. Named for .listitem-stacked, which is the same shape
+   of label: a title with a second line under it.
+
+   The value is right for the body steps a stacked label actually uses. A first
+   line on a heading step needs more, and that is a local override with a comment,
+   not a reason to leave this unpublished — canonical/early-renewal wrote this
+   exact 4px inline, and copying it a third time is how a value stops having one
+   home. */
+.pai-radio-stacked,
+.pai-checkbox-stacked{ margin-top:var(--space-2xs); }
+.pai-next .pai-surface-card.is-interactive:not(.is-selected):hover{ box-shadow:var(--elevation-02); }
+.pai-next .pai-surface-raised.is-interactive:not(.is-selected):hover{ box-shadow:var(--elevation-03); }
+/* The ring replaces the resting shadow rather than stacking, same as .is-selected
+   and .pai-thumbnail-card above — two edges on one card reads as a border that
+   changed its mind. */
+.pai-surface-card.is-interactive:focus-visible,
+.pai-surface-raised.is-interactive:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted);
+}
+/* --rounded-base, not -lg: this surface is what .dropdown-menu-style is built
+   on, and a floating menu is 4px. Settled 9 Aug 2026, when the token comment,
+   the README and this rule each named a different radius for one object. */
+.pai-surface-overlay{
+  position:absolute; z-index:var(--z-overlay);
+  background:var(--bg-elevated); border-radius:var(--rounded-base);
+  box-shadow:var(--elevation-03);
+}
+.pai-surface-scrim{
+  position:fixed; inset:0; z-index:var(--z-scrim);
+  background:var(--bg-scrim);
+  -webkit-backdrop-filter:blur(var(--bg-scrim-blur));
+          backdrop-filter:blur(var(--bg-scrim-blur));
+}
+.pai-surface-modal{
+  position:relative; z-index:var(--z-modal);
+  background:var(--bg-elevated); border-radius:var(--rounded-lg);
+  box-shadow:var(--elevation-04);
+}
+/* Near-black, because it has to be legible over any of the seven above it and
+   there is no light surface that is. It takes the dark elevation ladder for the
+   same reason: a shadow tuned for a white object disappears under one. */
+.pai-surface-notice{
+  position:fixed; z-index:var(--z-toast);
+  background:var(--bg-blackout); color:var(--text-inverted-primary);
+  border-radius:var(--rounded-lg);
+  box-shadow:var(--elevation-dark-04);
+}
+
+/* ============================================================================
+   GRID — equal columns with a gutter, and the one that fills itself.
+
+   Derived from what the three canonical screens and every design actually draw,
+   not from a convention:
+
+     repeat(3,1fr)   8 uses     1fr 1fr         5 uses
+     repeat(4,1fr)   4 uses     repeat(2,1fr)   1 use
+     auto-fill minmax(210px,1fr)               3 uses
+
+   So the counts in use are ONE to FOUR, and there is no twelve-column grid
+   anywhere in the corpus. Publishing twelve would be importing a convention
+   nobody here has reached for, and every screen would then divide by three to
+   get back to the four it wanted.
+
+   The gutter defaults to --space-md, the most common on a grid and the same 16px
+   a modal already pads with, so a grid inside one lines up with its edges.
+
+   minmax(0,1fr) rather than 1fr, which is the fix for a bug the corpus has: a
+   plain 1fr column will not shrink below its content, so one long unbroken
+   string — a file name, a URL — pushes the whole grid wider than its container
+   instead of ellipsing. Every column here can shrink.
+   ========================================================================== */
+.pai-grid{
+  --cols:4;
+  --gutter:var(--space-md);
+  display:grid;
+  grid-template-columns:repeat(var(--cols), minmax(0, 1fr));
+  gap:var(--gutter);
+}
+.pai-grid-1{ --cols:1; }
+.pai-grid-2{ --cols:2; }
+.pai-grid-3{ --cols:3; }
+.pai-grid-4{ --cols:4; }
+
+/* As many columns as fit, each at least --min wide. For a set whose length is
+   not known when the screen is drawn — a deck of thumbnails, a list of kits —
+   where a fixed count either leaves a hole or squeezes. */
+.pai-grid-fill{
+  --min:210px;
+  grid-template-columns:repeat(auto-fill, minmax(var(--min), 1fr));
+}
+
+/* An item may span, and never further than the grid is wide. */
+.pai-grid-span-2{ grid-column:span 2; }
+.pai-grid-span-3{ grid-column:span 3; }
+.pai-grid-span-full{ grid-column:1 / -1; }
+
+/* The only two widths the corpus has ever branched on. They are not invented
+   device sizes: 900 is where the analytics modal drops its two columns to one,
+   and 600 is where the create flow does. A grid that collapses at the same
+   places as the screens around it disappears; one with its own breakpoints
+   fights them.
+
+   Halving before collapsing, so a four-up becomes two-up rather than jumping
+   straight to a single column and doubling the page height. */
+@media (max-width: 900px){
+  .pai-grid-3,
+  .pai-grid-4{ --cols:2; }
+  .pai-grid-span-3{ grid-column:span 2; }
+}
+@media (max-width: 600px){
+  .pai-grid-2,
+  .pai-grid-3,
+  .pai-grid-4{ --cols:1; }
+  .pai-grid-span-2,
+  .pai-grid-span-3{ grid-column:auto; }
+}
+/* A grid that must not collapse sets --cols itself rather than taking a class:
+   `style="--cols:4"` beats every rule above it and needs no opt-out mechanism.
+   Nothing in the corpus needs one yet, so none is published. */
+
+/* ============================================================================
+   TICKER — a row that scrolls forever, for logos a screen is showing off.
+
+   Harvested from designs/deck-ready-modal-expanded.
+
+   HOW THE LOOP IS SEAMLESS: the track holds its contents TWICE and travels
+   exactly -50%. At the end of the run the second copy sits precisely where the
+   first began, so the jump back to 0 lands on an identical frame and cannot be
+   seen. Duplicate the items or the loop visibly snaps — it is the one thing
+   here that is not optional.
+
+   The edges are a mask rather than a gradient laid over the top, so the strip
+   works on whatever surface it is dropped onto. A white overlay would only
+   disappear against white.
+
+   Grey and half-lit on purpose. These are somebody else's logos used as
+   evidence, and nine of them at full strength out-shout the screen they are
+   evidence for. Hover restores one: reading a logo is the only reason to stop
+   on it.
+   ========================================================================== */
+@keyframes pai-ticker-scroll{
+  from{ transform:translateX(0); }
+  to  { transform:translateX(-50%); }
+}
+.pai-ticker{
+  --ticker-duration:40s;
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+          mask-image:linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+.pai-ticker-track{
+  display:inline-flex; align-items:center;
+  animation:pai-ticker-scroll var(--ticker-duration) linear infinite;
+  will-change:transform;
+}
+/* Pausing on hover is what makes the row readable rather than only decorative. */
+.pai-ticker:hover .pai-ticker-track{ animation-play-state:paused; }
+.pai-ticker-item{
+  flex-shrink:0; padding:0 var(--space-lg);
+  opacity:0.6; filter:grayscale(100%);
+  transition:opacity 160ms var(--ease-out-strong), filter 160ms var(--ease-out-strong);
+}
+.pai-ticker-item:hover{ opacity:1; filter:none; }
+.pai-ticker-item img{ display:block; height:40px; width:auto; object-fit:contain; }
+.pai-ticker-small .pai-ticker-item{ padding:0 var(--space-md); }
+.pai-ticker-small .pai-ticker-item img{ height:28px; }
+
+/* An endless sideways crawl is the exact thing this setting is for, and the
+   screen this came from had no answer to it. The row still reads — it stops
+   moving, and scrolls by hand instead. */
+@media (prefers-reduced-motion: reduce){
+  .pai-ticker{ overflow-x:auto; }
+  .pai-ticker-track{ animation:none; }
+  /* The second copy is scaffolding for the loop; with no loop it is a list
+     printed twice. */
+  .pai-ticker-track [data-ticker-clone]{ display:none; }
+}
+
+/* ============================================================================
+   CHART — a column chart, a donut, and the key that reads either.
+
+   Harvested from canonical/deck-analytics, which built all of this locally and
+   said so: "the system publishes no chart primitives at all: no plot frame, no
+   axis, no gridline, no vertical bar." This is that gap closed.
+
+   ONE POSITIONING RULE, used by every part. --at is a fraction of the axis,
+   0 at the baseline and 1 at the top, and a tick, its gridline and the bar it
+   measures are all placed from it. Nothing is positioned in pixels, so the
+   plot can change height without anything drifting out of register.
+
+   --value on a bar is 0..1, the same API .pai-progress already publishes. A
+   screen that knows how to fill one knows how to raise the other.
+
+   The chart draws what it is given and computes nothing. Scale, ticks and
+   rounding are the caller's, because choosing them is a judgement about the
+   data — whether zero belongs on the axis, whether to round to a nice number —
+   and a component that guessed would be guessing about numbers it cannot see.
+   ========================================================================== */
+.pai-chart{
+  --chart-height:260px;
+  display:grid; grid-template-columns:var(--space-4xl) 1fr;
+}
+.pai-chart-ticks{
+  grid-column:1; position:relative; height:var(--chart-height);
+  color:var(--text-tertiary); text-align:right; padding-right:var(--space-sm);
+}
+.pai-chart-ticks > *{
+  position:absolute; right:var(--space-sm);
+  top:calc((1 - var(--at, 0)) * 100%); transform:translateY(-50%);
+}
+.pai-chart-plot{
+  position:relative; grid-column:2; height:var(--chart-height);
+  display:flex; align-items:flex-end; justify-content:space-between;
+  gap:var(--space-2xs);
+}
+.pai-chart-grid{ position:absolute; inset:0; pointer-events:none; }
+.pai-chart-grid > *{
+  position:absolute; left:0; right:0; height:0;
+  top:calc((1 - var(--at, 0)) * 100%);
+  border-top:1px solid var(--border-tertiary);
+}
+.pai-chart-bar{
+  position:relative; flex:1 1 0; min-width:0; max-width:18px;
+  height:calc(var(--value, 0) * 100%);
+  border-radius:var(--rounded-sm) var(--rounded-sm) 0 0;
+  background-image:linear-gradient(180deg, var(--bg-brand) 0%, var(--app-200) 100%);
+}
+/* Zero is not the same as no answer. A bar at 0 has no height and reads as a gap
+   in the data, so it keeps a hairline: measured, and it was nothing. */
+.pai-chart-bar.is-empty{
+  min-height:var(--space-3xs);
+  background-image:none; background:var(--border-quaternary);
+}
+/* The label column matches the bar column exactly — same basis, same cap — so a
+   label sits under its own bar. One wider than its column overflows centred
+   rather than growing it; growing it is what bunches every other label toward
+   the end of the row. */
+.pai-chart-axis{
+  grid-column:2; display:flex; justify-content:space-between; gap:var(--space-2xs);
+  margin-top:var(--space-xs); color:var(--text-tertiary);
+}
+.pai-chart-axis > *{
+  flex:1 1 0; max-width:18px; text-align:center; white-space:nowrap; overflow:visible;
+}
+
+/* Rotated so the first arc starts at twelve o'clock, which is where a reader
+   starts. pathLength="1" on each arc is what makes --value a fraction: it tells
+   the browser to treat the circumference as 1 unit, so the same markup works at
+   any radius and nothing has to compute 2*pi*r. --at is where the arc begins,
+   which is the sum of every arc before it. */
+.pai-donut{ flex:none; width:80px; height:80px; transform:rotate(-90deg); }
+.pai-donut circle{ fill:none; stroke-width:14; }
+.pai-donut-arc{
+  stroke-dasharray:var(--value, 0) 1;
+  stroke-dashoffset:calc(var(--at, 0) * -1);
+}
+
+/* Shared. A donut cannot be read without one, and a chart of more than one
+   series needs the same thing. */
+.pai-legend{
+  margin:0; min-width:0; display:flex; flex-direction:column; gap:var(--space-sm);
+}
+.pai-legend > div{ display:flex; align-items:center; gap:var(--space-sm); }
+.pai-legend-swatch{
+  flex:none; width:10px; height:10px; border-radius:var(--rounded-sm);
+}
+.pai-legend dt{ flex:1; min-width:0; color:var(--text-primary); }
+/* Tabular figures, so a column of percentages lines up on the decimal rather
+   than shifting with each digit. */
+.pai-legend dd{
+  margin:0; flex:none; color:var(--text-primary); font-variant-numeric:tabular-nums;
+}
+
+/* ============================================================================
+   SELECT — a trigger that looks like a field, and the published dropdown.
+
+   Not a native <select>. The OS picker cannot be styled, so a screen using one
+   shows the operating system's menu in the middle of a design review, and the
+   picture the judge sees is a different picture on every machine.
+
+   The menu is .dropdown-menu-style unchanged. A select is a dropdown that keeps
+   its answer, not a second kind of menu, so nothing here re-draws one.
+
+   Markup:
+     <div class="pai-select">
+       <button class="pai-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+         <span class="pai-select-value">India</span>
+         <i class="ph ph-caret-down pai-icon pai-icon-sm"></i>
+       </button>
+       <div class="dropdown-menu-style dropdown-menu-bottom-left dropdown-menu-closed" role="listbox">
+         <div class="dropdown-items-list">
+           <button class="dropdown-item-style" role="option" aria-selected="true">
+             <span class="dropdown-item-label">India</span>
+             <i class="ph ph-check dropdown-item-right-icon"></i>
+           </button>
+         </div>
+       </div>
+     </div>
+
+   Opening it belongs to the screen, the same as every other dropdown in this
+   file: toggle .dropdown-menu-closed on the menu and .is-open on the wrapper.
+
+   The trigger matches .pai-input line for line — a select should be
+   indistinguishable from a field until you press it. */
+.pai-select{ position:relative; display:inline-block; width:100%; }
+.pai-select-trigger{
+  width:100%; height:36px; padding:0 var(--space-sm);
+  display:inline-flex; align-items:center; gap:var(--space-xs);
+  font-family:inherit; font-size:14px; line-height:1.43; text-align:left;
+  color:var(--text-primary); background:var(--bg-primary);
+  border:0; border-radius:var(--rounded-base); outline:none;
+  box-shadow:var(--elevation-01); cursor:pointer;
+  transition:box-shadow 160ms var(--ease-out-strong);
+}
+.pai-select-value{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pai-select-trigger > i{
+  flex:none; color:var(--text-secondary);
+  transition:transform 160ms var(--ease-out-strong);
+}
+.pai-select-trigger:focus-visible{ box-shadow:0 0 0 1px var(--border-primary-inverted); }
+.pai-next .pai-select.is-open .pai-select-trigger > i{ transform:rotate(180deg); }
+/* Nothing chosen yet — the same colour the input gives a placeholder. */
+.pai-select.is-empty .pai-select-value{ color:var(--text-tertiary); }
+.pai-select.is-error .pai-select-trigger{ box-shadow:0 0 0 2px rgba(248,113,113,0.40), 0 0 0 1px var(--border-danger-secondary), 0 1px 2px 0 rgba(26,26,26,0.06); }
+.pai-select-trigger:disabled{ background:var(--bg-tertiary); color:var(--text-tertiary); cursor:not-allowed; }
+.pai-select-trigger:disabled > i{ color:var(--text-tertiary); }
+/* @legacy .pai-select--lg -> .pai-select-large */
+.pai-select-large .pai-select-trigger,
+.pai-select--lg .pai-select-trigger{ height:44px; }
+/* The menu belongs to the field, so it takes the field's width rather than the
+   dropdown's own 248px. box-sizing is local because pai.css sets it nowhere —
+   without it the menu's own padding lands outside the 100% and the menu comes
+   out wider than the field it drops from. */
+.pai-select .dropdown-menu-style{ box-sizing:border-box; width:100%; }
+@media (prefers-reduced-motion: reduce){
+  .pai-select-trigger > i{ transition:none; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPATIBILITY LAYER — everything below exists so the protos built before
+   12 Aug 2026 render byte-identically. Nothing here is a design decision.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Tokens the old system published and atlas does not. Protos reference
+      these directly, so without them those declarations become invalid and the
+      property falls back to unset — a shadow silently disappearing rather than
+      changing, which is the failure mode hardest to spot in review. ────────── */
+:root{
+  --bg-muted:#F9F9F9;
+  --shadow-elevation-01:0 0 0 0.5px rgba(26,26,26,0.01), 0 1px 2px 0 rgba(38,38,38,0.05);
+  --shadow-elevation-02:0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09);
+  --shadow-elevation-03:0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09), 0 4px 6px 0 rgba(26,26,26,0.09), 0 24px 40px -16px rgba(26,26,26,0.09);
+  --shadow-elevation-04:0 0 0 1.5px rgba(255,255,255,0.30) inset, 0 0 0 0.5px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(26,26,26,0.06), 0 4px 6px 0 rgba(26,26,26,0.06), 0 40px 40px -24px rgba(26,26,26,0.06), 0 56px 56px -32px rgba(26,26,26,0.09), 0 24px 40px 0 rgba(26,26,26,0.06);
+  --shadow-elevation-05:0 0 0 0.5px rgba(0,0,0,0.30) inset, 0 0 10px 4px rgba(255,255,255,0.40) inset;
+  --shadow-elevation-06:0 1px 2px 0 rgba(16,24,40,0.05);
+  --shadow-elevation-button:0 0 0 0.5px rgba(26,26,26,0.09), 0 1px 2px 1px rgba(0,0,0,0.04);
+  --shadow-elevation-focused:0 0 0 1px rgba(26,26,26,0.06), 0 0 0 2px #56A0FF;
+  --shadow-elevation-input:0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(16,24,40,0.05);
+  --shadow-elevation-input-dark:0 0 0 2.5px rgba(38,38,38,0.55), 0 0 0 0.75px rgba(26,26,26,0.50), 0 1px 2px 0 rgba(16,24,40,0.05);
+  --shadow-elevation-input-error:0 0 0 2px rgba(248,113,113,0.40), 0 0 0 1px #FECACA, 0 1px 2px 0 rgba(26,26,26,0.06);
+  --shadow-elevation-input-focused:0 0 0 2px rgba(10,25,37,0.48), 0 0 0 1px #0A1925 inset, 0 1px 2px 0 rgba(11,15,20,0.09);
+  --shadow-elevation-input-hover:0 0 0 1px #a3a3a3, 0 1px 2px 0 rgba(16,24,40,0.05);
+  --shadow-elevation-new-03:0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09), 0 4px 6px 0 rgba(26,26,26,0.09), 0 24px 40px -16px rgba(26,26,26,0.09);
+  --shadow-elevation-new-04:0 0 0 1.5px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09), 0 4px 6px 0 rgba(11,15,20,0.09), 0 40px 40px -24px rgba(11,15,20,0.09), 0 56px 56px -32px rgba(11,15,20,0.20), 0 24px 40px 0 rgba(11,15,20,0.09);
+  --shadow-elevation-pill:0 2px 6px 0 rgba(11,15,20,0.09), 0 0 0 1px rgba(11,15,20,0.06), 0 0 0 1px rgba(255,255,255,0.80) inset;
+  --shadow-elevation-prompt-card:0 24px 40px -16px rgba(9,15,21,0.09), 0 4px 6px 0 rgba(9,15,21,0.09), 0 1px 2px 0 rgba(9,15,21,0.09);
+  --shadow-elevation-white-border-bottom:0 1px 0 0 #FFFFFF;
+}
+
+/* ── 2. Tokens both systems publish with different values. Pinned to the old
+      one. Three are shadow inks 2/255 apart and invisible; the fourth is real
+      (the gold badge was #CA8A04 here and is #854D0E in atlas). ────────────── */
+:root{
+  --drop-1:rgba(9,15,21,0.06);
+  --drop-2:rgba(9,15,21,0.09);
+  --drop-3:rgba(9,15,21,0.20);
+  --text-warning-secondary:#ca8a04;
+}
+
+/* ── 3. Selectors only the old system had. atlas renamed these states — 
+      .listitem-selected became .is-selected, and so on — so without these the
+      selected, disabled and hover states of every existing list, chip, tab and
+      menu would stop painting entirely. ─────────────────────────────────────── */
+.shadow-elevation-button{ box-shadow:var(--shadow-elevation-button); }
+.shadow-elevation-input{ box-shadow:var(--shadow-elevation-input); }
+.pai-input.pai-input--lg{ height:44px; }
+.pai-checkbox:focus-visible,.pai-radio:focus-visible{ box-shadow:var(--shadow-elevation-focused); outline:none; }
+.chip-tone-success{ color:var(--text-success-primary); border-color:var(--border-success-secondary); }
+.chip-tone-success:hover{ background:var(--bg-success-inverted); }
+.chip-tone-danger{ color:var(--text-danger-primary); border-color:var(--border-danger-secondary); }
+.chip-tone-danger:hover{ background:var(--bg-danger-inverted); }
+.chip-selected{ border-color:currentColor; background:var(--alpha-light-50); }
+.chip-tone-success.chip-selected, .chip-tone-danger.chip-selected{ background:var(--bg-elevated); }
+.tab-item-selected{ color:var(--text-primary); font-weight:500; }
+.listitem-interactive:not(.listitem-selected):hover{ background:var(--bg-elevated-hover); }
+.listitem-selected{ background:var(--bg-elevated-hover); }
+.listitem-disabled{ opacity:0.5; pointer-events:none; cursor:not-allowed; }
+.listitem-interactive.listitem-danger:not(.listitem-selected):hover{ background:var(--bg-danger-inverted); }
+.dropdown-menu-closed{ transform:scale(0.95); opacity:0; pointer-events:none; }
+.dropdown-item-style:hover, .dropdown-item-focus{ background:var(--bg-elevated-hover); }
+.dropdown-item-disabled{ opacity:0.5; cursor:not-allowed; pointer-events:none; }
+
+/* ── 4. Rules both systems have, where they genuinely disagree. Pinned to the
+      old declaration. The value each one resolves to is noted beside it. ───── */
+.button-secondary{
+  box-shadow:var(--shadow-elevation-01);   /* 0 0 0 0.5px rgba(26,26,26,0.01),0 1px 2px 0 rgba(38,38,38,0.05) */
+}
+.button-secondary-danger{
+  box-shadow:var(--shadow-elevation-01);   /* 0 0 0 0.5px rgba(26,26,26,0.01),0 1px 2px 0 rgba(38,38,38,0.05) */
+}
+.button-small{
+  padding:0 10px;
+}
+.button-style .button-label:not(:first-child){
+  margin-left:6px;
+}
+.button-tertiary{
+  box-shadow:var(--shadow-elevation-button);   /* 0 0 0 0.5px rgba(26,26,26,0.09),0 1px 2px 1px rgba(0,0,0,0.04) */
+}
+.button-tertiary-danger{
+  box-shadow:var(--shadow-elevation-button);   /* 0 0 0 0.5px rgba(26,26,26,0.09),0 1px 2px 1px rgba(0,0,0,0.04) */
+}
+.chip-medium{
+  gap:6px;
+}
+.chip-small{
+  gap:4px;
+}
+.dropdown-item-offer{
+  padding:0 10px;
+}
+.dropdown-item-style{
+  gap:10px;
+}
+.dropdown-menu-style{
+  box-shadow:var(--shadow-elevation-02);   /* 0 0 0 1px rgba(255,255,255,0.80) inset,0 0 0 1px rgba(11,15,20,0.09),0 1px 2px 0 rgba(11,15,20,0.09) */
+  padding:4px 8px 4px 4px;
+}
+.listitem{
+  border-radius:2px;
+}
+.listitem-icon{
+  color:var(--text-primary);   /* #171717 */
+}
+.listitem-medium{
+  gap:10px;
+}
+.listitem-medium .listitem-icon{
+  height:20px;
+  width:20px;
+}
+.listitem-small{
+  padding:6px 8px;
+}
+.listitem-small .listitem-icon{
+  height:16px;
+  width:16px;
+}
+.listitem-title{
+  color:var(--text-primary);   /* #171717 */
+}
+.pai-badge{
+  border-radius:34px;
+  padding:0 6px;
+}
+.pai-badge-gold{
+  color:var(--text-warning-secondary);   /* #ca8a04 */
+}
+.pai-input,.pai-textarea{
+  box-shadow:var(--shadow-elevation-input);   /* 0 0 0 1px rgba(11,15,20,0.09),0 1px 2px 0 rgba(16,24,40,0.05) */
+}
+.pai-input:focus,.pai-textarea:focus{
+  box-shadow:var(--shadow-elevation-input-focused);   /* 0 0 0 2px rgba(10,25,37,0.48),0 0 0 1px #0a1925 inset,0 1px 2px 0 rgba(11,15,20,0.09) */
+}
+.pai-skeleton{
+  animation:pai-skeleton 1.4s ease-in-out infinite;
+}
+.pai-toggle .track{
+  border-radius:50px;
+}
+.pai-tooltip{
+  box-shadow:0 8px 24px rgba(0,0,0,0.24);
+  padding:10px 12px;
+}
+.shadow-elevation-01{
+  box-shadow:var(--shadow-elevation-01);   /* 0 0 0 0.5px rgba(26,26,26,0.01),0 1px 2px 0 rgba(38,38,38,0.05) */
+}
+.shadow-elevation-02{
+  box-shadow:var(--shadow-elevation-02);   /* 0 0 0 1px rgba(255,255,255,0.80) inset,0 0 0 1px rgba(11,15,20,0.09),0 1px 2px 0 rgba(11,15,20,0.09) */
+}
+.shadow-elevation-03{
+  box-shadow:var(--shadow-elevation-03);   /* 0 0 0 1px rgba(255,255,255,0.80) inset,0 0 0 1px rgba(26,26,26,0.09),0 1px 2px 0 rgba(26,26,26,0.09),0 4px 6px 0 rgba(26,26,26,0.09),0 24px 40px -16px rgba(26,26,26,0.09) */
 }

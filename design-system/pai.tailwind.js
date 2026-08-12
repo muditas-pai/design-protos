@@ -1,6 +1,17 @@
 /* ============================================================================
    presentations.ai — Tailwind tokens for HTML prototypes
    ----------------------------------------------------------------------------
+   Replaced with the atlas config on 12 Aug 2026, and then pinned: 93 theme
+   values that BOTH configs defined were put back to what this file said before,
+   because a utility is a contract with the markup that already uses it. The
+   atlas config points shadow-elevation-02 at --elevation-02, whose ladder has
+   four layers where the old literal had three, so 91 uses of that one utility
+   across the protos would have gained a shadow. Caught by the screenshot pass,
+   not by reading.
+
+   New keys atlas adds — the spacing, radius, icon and layer scales — arrive
+   unpinned, because nothing here used them.
+   ----------------------------------------------------------------------------
    Translated from config/tailwind/pai.tailwind.config.js (the production app).
    Include AFTER the Tailwind Play CDN so utility classes resolve to brand
    tokens, e.g.  bg-bg-primary-inverted · text-text-secondary ·
@@ -36,18 +47,32 @@ tailwind.config = {
         // saturated than the other hues at the same step (the fluorescent
         // look), so each step's perceived lightness is pinned to the
         // red/blue/purple mean. Hue unchanged; 950 is Tailwind's original.
-        "green-50": "#EFF9F2",  "green-100": "#DAF1E2", "green-200": "#BDE7CB",
-        "green-300": "#8DD6A6", "green-400": "#47BE70", "green-500": "#00A449",
-        "green-600": "#018C3C", "green-700": "#017735", "green-800": "#106131",
-        "green-900": "#11512B", "green-950": "#052E16",
+        "green-50": "var(--green-50)",  "green-100": "var(--green-100)", "green-200": "var(--green-200)",
+        "green-300": "var(--green-300)", "green-400": "var(--green-400)", "green-500": "var(--green-500)",
+        "green-600": "var(--green-600)", "green-700": "var(--green-700)", "green-800": "var(--green-800)",
+        "green-900": "var(--green-900)", "green-950": "var(--green-950)",
         // success-* is an alias of the same ramp, as in the app
-        "success-50": "#EFF9F2",  "success-100": "#DAF1E2", "success-200": "#BDE7CB",
-        "success-300": "#8DD6A6", "success-400": "#47BE70", "success-500": "#00A449",
-        "success-600": "#018C3C", "success-700": "#017735", "success-800": "#106131",
-        "success-900": "#11512B", "success-950": "#052E16",
+        "success-50": "var(--green-50)",  "success-100": "var(--green-100)", "success-200": "var(--green-200)",
+        "success-300": "var(--green-300)", "success-400": "var(--green-400)", "success-500": "var(--green-500)",
+        "success-600": "var(--green-600)", "success-700": "var(--green-700)", "success-800": "var(--green-800)",
+        "success-900": "var(--green-900)", "success-950": "var(--green-950)",
 
         // shadow primitives. Every elevation composes from these, which is why
         // they live with the colours rather than in boxShadow.
+        // identity palette — for telling one person from another, never a state
+        "identity-indigo-tint": "var(--identity-indigo-tint)",   "identity-indigo-ink": "var(--identity-indigo-ink)",
+        "identity-violet-tint": "var(--identity-violet-tint)",   "identity-violet-ink": "var(--identity-violet-ink)",
+        "identity-purple-tint": "var(--identity-purple-tint)",   "identity-purple-ink": "var(--identity-purple-ink)",
+        "identity-fuchsia-tint": "var(--identity-fuchsia-tint)", "identity-fuchsia-ink": "var(--identity-fuchsia-ink)",
+        "identity-rose-tint": "var(--identity-rose-tint)",       "identity-rose-ink": "var(--identity-rose-ink)",
+        "identity-orange-tint": "var(--identity-orange-tint)",   "identity-orange-ink": "var(--identity-orange-ink)",
+        "identity-amber-tint": "var(--identity-amber-tint)",     "identity-amber-ink": "var(--identity-amber-ink)",
+        "identity-lime-tint": "var(--identity-lime-tint)",       "identity-lime-ink": "var(--identity-lime-ink)",
+        "identity-emerald-tint": "var(--identity-emerald-tint)", "identity-emerald-ink": "var(--identity-emerald-ink)",
+        "identity-teal-tint": "var(--identity-teal-tint)",       "identity-teal-ink": "var(--identity-teal-ink)",
+        "identity-cyan-tint": "var(--identity-cyan-tint)",       "identity-cyan-ink": "var(--identity-cyan-ink)",
+        "identity-blue-tint": "var(--identity-blue-tint)",       "identity-blue-ink": "var(--identity-blue-ink)",
+
         "drop-1": "rgba(9, 15, 21, 0.06)",
         "drop-2": "rgba(9, 15, 21, 0.09)",
         "drop-3": "rgba(9, 15, 21, 0.20)",
@@ -55,10 +80,10 @@ tailwind.config = {
         "inner-2": "rgba(255, 255, 255, 0)",
 
         // neutrals (gray = production scale)
-        "gray-25": "#F6F6F6", "gray-50": "#F4F4F4", "gray-75": "#ECECEC",
-        "gray-100": "#E0E0E0", "gray-200": "#C6C6C6", "gray-300": "#A8A8A8",
-        "gray-400": "#8D8D8D", "gray-500": "#6F6F6F", "gray-600": "#525252",
-        "gray-700": "#393939", "gray-800": "#262626", "gray-850": "#1B1B1B",
+        "gray-25": "var(--gray-25)", "gray-50": "var(--gray-50)", "gray-75": "var(--gray-75)",
+        "gray-100": "var(--gray-100)", "gray-200": "var(--gray-200)", "gray-300": "var(--gray-300)",
+        "gray-400": "var(--gray-400)", "gray-500": "var(--gray-500)", "gray-600": "var(--gray-600)",
+        "gray-700": "var(--gray-700)", "gray-800": "var(--gray-800)", "gray-850": "var(--gray-850)",
         "gray-900": "#161616",
 
         // backgrounds
@@ -71,12 +96,10 @@ tailwind.config = {
         "bg-secondary-inverted": "#1C3550",
         "bg-tertiary": "#F5F5F5",
         "bg-default-tertiary": "#F5F5F5",
-        // Two near-white surface steps between primary (#FFF) and tertiary
-        // (#F5F5F5). Exact Figma JAS'26 raw fills: subtle is the dashboard main
-        // column and top nav; muted is the side panel, deliberately one step
-        // darker so the panel reads as its own surface.
+        // One near-white step between primary (#FFF) and secondary (#FAFAFA):
+        // subtle is the dashboard main column and top nav. Exact Figma JAS'26
+        // raw fill. bg-muted was removed 10 Aug 2026 — see pai.css.
         "bg-subtle": "#FCFCFC",
-        "bg-muted": "#F9F9F9",
         "bg-tertiary-inverted": "#284B71",
         "bg-quaternary": "#E5E5E5",
         "bg-elevated": "#FFFFFF",
@@ -98,6 +121,7 @@ tailwind.config = {
         "bg-info": "#0C4BFF",
         "bg-info-inverted": "#E8F7FF",
         "bg-blackout": "#171717",
+        "bg-scrim": "var(--bg-scrim)",
         "bg-default-alpha-800": "rgba(255, 255, 255, 0.8)",
 
         // text
@@ -147,10 +171,10 @@ tailwind.config = {
         // gray   // = tailwind neutral
         "gray-950": "#0a0a0a",
         // amber   // = tailwind yellow
-        "amber-50": "#fefce8", "amber-100": "#fef9c3", "amber-200": "#fef08a",
-        "amber-300": "#fde047", "amber-400": "#facc15", "amber-500": "#eab308",
-        "amber-600": "#ca8a04", "amber-700": "#a16207", "amber-800": "#854d0e",
-        "amber-900": "#713f12", "amber-950": "#422006",
+        "amber-50": "var(--amber-50)", "amber-100": "var(--amber-100)", "amber-200": "var(--amber-200)",
+        "amber-300": "var(--amber-300)", "amber-400": "var(--amber-400)", "amber-500": "var(--amber-500)",
+        "amber-600": "var(--amber-600)", "amber-700": "var(--amber-700)", "amber-800": "var(--amber-800)",
+        "amber-900": "var(--amber-900)", "amber-950": "var(--amber-950)",
         // violet
         "violet-50": "#f5f3ff", "violet-100": "#ede9fe", "violet-200": "#ddd6fe",
         "violet-300": "#c4b5fd", "violet-400": "#a78bfa", "violet-500": "#8b5cf6",
@@ -162,20 +186,20 @@ tailwind.config = {
         "purple-600": "#9333ea", "purple-700": "#7e22ce", "purple-800": "#6b21a8",
         "purple-900": "#581c87", "purple-950": "#3b0764",
         // red
-        "red-50": "#fef2f2", "red-100": "#fee2e2", "red-200": "#fecaca",
-        "red-300": "#fca5a5", "red-400": "#f87171", "red-500": "#ef4444",
-        "red-600": "#dc2626", "red-700": "#b91c1c", "red-800": "#991b1b",
-        "red-900": "#7f1d1d", "red-950": "#450a0a",
+        "red-50": "var(--red-50)", "red-100": "var(--red-100)", "red-200": "var(--red-200)",
+        "red-300": "var(--red-300)", "red-400": "var(--red-400)", "red-500": "var(--red-500)",
+        "red-600": "var(--red-600)", "red-700": "var(--red-700)", "red-800": "var(--red-800)",
+        "red-900": "var(--red-900)", "red-950": "var(--red-950)",
         // indigo
         "indigo-50": "#eef2ff", "indigo-100": "#e0e7ff", "indigo-200": "#c7d2fe",
         "indigo-300": "#a5b4fc", "indigo-400": "#818cf8", "indigo-500": "#6366f1",
         "indigo-600": "#4f46e5", "indigo-700": "#4338ca", "indigo-800": "#3730a3",
         "indigo-900": "#312e81", "indigo-950": "#1e1b4b",
         // blue
-        "blue-50": "#eff6ff", "blue-100": "#dbeafe", "blue-200": "#bfdbfe",
-        "blue-300": "#93c5fd", "blue-400": "#60a5fa", "blue-500": "#3b82f6",
-        "blue-600": "#2563eb", "blue-700": "#1d4ed8", "blue-800": "#1e40af",
-        "blue-900": "#1e3a8a", "blue-950": "#172554",
+        "blue-50": "var(--blue-50)", "blue-100": "var(--blue-100)", "blue-200": "var(--blue-200)",
+        "blue-300": "var(--blue-300)", "blue-400": "var(--blue-400)", "blue-500": "var(--blue-500)",
+        "blue-600": "var(--blue-600)", "blue-700": "var(--blue-700)", "blue-800": "var(--blue-800)",
+        "blue-900": "var(--blue-900)", "blue-950": "var(--blue-950)",
         // orange
         "orange-50": "#fff7ed", "orange-100": "#ffedd5", "orange-200": "#fed7aa",
         "orange-300": "#fdba74", "orange-400": "#fb923c", "orange-500": "#f97316",
@@ -191,7 +215,9 @@ tailwind.config = {
         "profile-app-500": "#0284C7",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)"],
+        mono: ["var(--font-mono)"],
+        serif: ["var(--font-serif)"],
         poppins: ["Poppins", "serif"],
         robotoCondensed: ['"Roboto Condensed"', "sans-serif"],
       },
@@ -218,41 +244,35 @@ tailwind.config = {
         "body-xs-medium": ["0.625rem", { lineHeight: "normal", fontWeight: "500" }],
       },
       boxShadow: {
+        // Four depths and three focus rings. `shadow-` is Tailwind's own
+        // namespace, so a token named --elevation-01 is reached as
+        // shadow-elevation-01 — the prefix is the utility's, not the token's.
         "elevation-01": "0 0 0 0.5px rgba(26, 26, 26, 0.01), 0 1px 2px 0 rgba(38, 38, 38, 0.05)",
         "elevation-02": "0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09)",
         "elevation-03": "0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09), 0 4px 6px 0 rgba(26,26,26,0.09), 0 24px 40px -16px rgba(26,26,26,0.09)",
-        "elevation-button": "0 0 0 0.5px rgba(26, 26, 26, 0.09), 0 1px 2px 1px rgba(0, 0, 0, 0.04)",
-        "elevation-focused": "0 0 0 1px rgba(26,26,26,0.06), 0 0 0 2px #56A0FF",
-        "elevation-input": "0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(16, 24, 40, 0.05)",
-        "elevation-input-focused": "0 0 0 2px rgba(10,25,37,0.48), 0 0 0 1px #0A1925 inset, 0 1px 2px 0 rgba(11,15,20,0.09)",
-        "elevation-input-error": "0 0 0 2px rgba(248, 113, 113, 0.40), 0 0 0 1px #FECACA, 0 1px 2px 0 rgba(26, 26, 26, 0.06)",
         "elevation-04": "0 0 0 1.5px rgba(255,255,255,0.30) inset, 0 0 0 0.5px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(26,26,26,0.06), 0 4px 6px 0 rgba(26,26,26,0.06), 0 40px 40px -24px rgba(26,26,26,0.06), 0 56px 56px -32px rgba(26,26,26,0.09), 0 24px 40px 0 rgba(26,26,26,0.06)",
-        // Figma effect style 471:2410 ("elevation 4"), stronger than elevation-04
-        // and used by the newer dashboard modals. This is the one the cancel-flow
-        // protos were transcribing by hand under the name elevation-04.
-        // legacy numeric aliases; distinct from elevation-03 / elevation-04
+        // composed here rather than read from a --focus-* token: Tailwind writes
+        // this string into --tw-shadow ON THE ELEMENT, so the two semantics
+        // resolve in the element's own scope and a dark region that re-declares
+        // them gets a ring that follows. A composite declared at :root would
+        // have baked in the light page's colours.
+        "focus-field": "0 0 0 1px var(--border-primary-inverted)",
+        "focus-surface": "0 0 0 1px var(--bg-elevated), 0 0 0 3px var(--border-primary-inverted)",
+        "focus-image": "0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--border-primary-inverted)",
+        "inner-glow": "var(--shadow-inner-glow)",
+        // numeric aliases the app also exposes
+        "01": "0 0 0 0.5px rgba(26,26,26,0.01), 0 1px 2px 0 rgba(38,38,38,0.05)",
+        "02": "0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09)",
+        // legacy numeric aliases; stock values, distinct from the ladder above
         "03": "0 1px 0 0 rgba(0,0,0,0.05)",
         "04": "0 1px 2px 0 rgba(0,0,0,0.08), 0 4px 10px 0 rgba(0,0,0,0.06)",
+        "pd-bottom": "0 1px 0 rgba(0,0,0,0.05)",
         // colour primitives re-exposed as shadow utilities, as the app does
         "drop-1": "rgba(9,15,21,0.06)",
         "drop-2": "rgba(9,15,21,0.09)",
         "drop-3": "rgba(9,15,21,0.20)",
         "inner-1": "rgba(255,255,255,0.80)",
         "inner-2": "rgba(255,255,255,0)",
-        "elevation-new-03": "0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(26,26,26,0.09), 0 1px 2px 0 rgba(26,26,26,0.09), 0 4px 6px 0 rgba(26,26,26,0.09), 0 24px 40px -16px rgba(26,26,26,0.09)",
-        "elevation-05": "0 0 0 0.5px rgba(0,0,0,0.30) inset, 0 0 10px 4px rgba(255,255,255,0.40) inset",
-        "elevation-06": "0 1px 2px 0 rgba(16,24,40,0.05)",
-        "elevation-pill": "0 2px 6px 0 rgba(11,15,20,0.09), 0 0 0 1px rgba(11,15,20,0.06), 0 0 0 1px rgba(255,255,255,0.80) inset",
-        // Figma JAS'26 prompt-card (101:592): elevation-03's drop layers without its inset rim
-        "elevation-prompt-card": "0 24px 40px -16px rgba(9,15,21,0.09), 0 4px 6px 0 rgba(9,15,21,0.09), 0 1px 2px 0 rgba(9,15,21,0.09)",
-        "elevation-input-hover": "0 0 0 1px #a3a3a3, 0 1px 2px 0 rgba(16,24,40,0.05)",
-        "elevation-input-dark": "0 0 0 2.5px rgba(38,38,38,0.55), 0 0 0 0.75px rgba(26,26,26,0.50), 0 1px 2px 0 rgba(16,24,40,0.05)",
-        "elevation-white-border-bottom": "0 1px 0 0 #FFFFFF",
-        "pd-bottom": "0 1px 0 rgba(0,0,0,0.05)",
-        // numeric aliases the app also exposes
-        "01": "0 0 0 0.5px rgba(26,26,26,0.01), 0 1px 2px 0 rgba(38,38,38,0.05)",
-        "02": "0 0 0 1px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09)",
-        "elevation-new-04": "0 0 0 1.5px rgba(255,255,255,0.80) inset, 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09), 0 4px 6px 0 rgba(11,15,20,0.09), 0 40px 40px -24px rgba(11,15,20,0.09), 0 56px 56px -32px rgba(11,15,20,0.20), 0 24px 40px 0 rgba(11,15,20,0.09)",
       },
       keyframes: {
         // Fast-editor loader (FastEditorLoader.jsx): brand-dot pulse and panel entrance.
@@ -291,6 +311,36 @@ tailwind.config = {
         "gradient-primary-danger-button": "linear-gradient(180deg, #DC2626 0%, #B91C1C 100%)",
         "skeleton-gradient": "linear-gradient(110deg, #ececec 8%, #f4f4f4 18%, #ececec 33%)",
       },
+    },
+    // Rounding. Read off the Figma design system and the AMJ '26 handoff, Aug 2026.
+    // Deliberately NOT under `extend`: a scale that leaves the steps above it in
+    // place is not a scale. Replacing the key is what makes `rounded-3xl` and up
+    // stop resolving, which is the point — the corners are sharper than most
+    // product UI and that is the most recognisable thing about the surface.
+    //
+    // Every value here is identical to the stock Tailwind step of the same name, so
+    // nothing already on the scale moves by a pixel. What changes is what is gone.
+    //
+    //   none   0     structural edges — card rows, table cells, full-bleed sections
+    //   sm     2     tiny — swatches, thumbnails, anything under ~40px
+    //   DEFAULT 4    the default — buttons, inputs, cards, panels, nav rows
+    //   md     6     floating chrome — inline menus, toolbars, filmstrip, segmented control
+    //   lg     8     large floating containers — the modal shell
+    //   xl    12     the prompt card, and hero surfaces that carry the page
+    //   2xl   16     the largest content cards — billing, pricing, plan
+    //   full         pills — badges, chips, avatars, toggles
+    //
+    // `2xl` is the ceiling. Above it there is only `full`: 24px and up showed up
+    // only on progress bars, skeletons and other things meant to read as pills.
+    borderRadius: {
+      none: "0px",
+      sm: "var(--rounded-sm)",
+      DEFAULT: "var(--rounded-base)",
+      md: "var(--rounded-md)",
+      lg: "var(--rounded-lg)",
+      xl: "var(--rounded-xl)",
+      "2xl": "var(--rounded-2xl)",
+      full: "var(--rounded-full)",
     },
   },
 };

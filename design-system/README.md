@@ -12,6 +12,35 @@ no React, no build step.
 | `pai.css` | Plain **component CSS** (no build): the button system, badges, inputs, checkbox / radio / toggle, tooltip, plus typography + shadow helper classes and tokens as CSS variables. |
 | `template.html` | Copy this to start a new proto — wires fonts, icons, the CDN + config, and `pai.css`. |
 | `components.html` | Live gallery of every component. **View source to copy snippets.** |
+| `sticker-sheet.html` | **The exhaustive reference.** Every component the system ships, rendered live, 35 searchable sections, markup to copy. Prefer this over reconstructing a component from class names. |
+| `DESIGN.md` · `design.html` | What each token and component *means*, and which to reach for. Colour roles, registers, radius, elevation, page anatomy. |
+| `VOICE.md` · `voice.html` | What the words say — the twelve rules and the five nevers. |
+| `icons/` | Phosphor, vendored (regular · fill · bold). Prefer these over the unpkg CDN: a CDN blip renders a proto with no icons. |
+
+## The atlas migration — 12 Aug 2026
+
+`pai.css` is now the atlas stylesheet: **337 component classes and 226 tokens**, up from 133 and
+124. The old file published no spacing, radius, icon, elevation or layer scale at all; those are
+the biggest thing that arrived.
+
+**Nothing that already existed changed.** The two systems shared 173 rule blocks and 105 tokens,
+and once `var()` was resolved, 145 rules and 101 tokens were already identical and merely spelled
+differently. The rest is pinned to its old value in the compatibility layer at the foot of
+`pai.css`, together with the tokens and the `.listitem-selected` / `.chip-selected` /
+`.tab-item-selected` style selectors that atlas had renamed. Verified by screenshotting all 103
+protos before and after and diffing every pair — 99 pixel-identical, and the 4 that moved are
+self-animating pages that were confirmed unchanged at the computed-style level.
+
+### New work opts in with `pai-next`
+
+```html
+<body class="pai pai-next">
+```
+
+A few atlas rules size icons by their context — an icon in a button is 16, in a list row 20 —
+which the old system never did. Applied globally they would have resized every icon in every
+existing proto, so they sit behind `.pai-next`. `template.html` already carries it. Add it to an
+old proto when you are ready to check that proto, one file at a time.
 
 ## Use it
 
