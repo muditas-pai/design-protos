@@ -9,6 +9,12 @@ other's frames. **The conventions below are defaults, not handcuffs** — if a d
 own rhythm, follow it. Only two things are firm: don't edit a frame you didn't make without
 asking, and don't quietly change the key screens.
 
+## Copy voice
+
+All user-facing copy follows **`VOICE_TONE.md`** at the repo root (humble expert,
+"we" language, short specific sentences, benefits over features, no hype or
+false urgency). Check it before writing or rewriting any product string.
+
 ## How the repo is organised
 
 ```
