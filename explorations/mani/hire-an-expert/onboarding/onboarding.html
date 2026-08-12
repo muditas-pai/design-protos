@@ -91,6 +91,8 @@
   .dropzone .dz-ttl{font-size:14.5px;font-weight:600;color:var(--ink)}
   .dropzone .dz-sub{font-size:12.5px;color:var(--ink2);margin-top:4px}
   .dropzone .dz-fmt{margin-top:10px;font-family:var(--cond);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)}
+  .dropzone .dz-btn{margin:10px auto 0;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px;border-radius:8px;background:var(--navy-grad);color:#fff;font-size:13.5px;font-weight:700;border:none;cursor:pointer;position:relative;z-index:1;font-family:inherit}
+  .dropzone .dz-btn:hover{background:var(--navy-grad-hover)}
   .dropzone input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 
   .file-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:8px;background:#fff;margin-top:10px}
@@ -253,13 +255,16 @@
 
   /* fixed 600px modal: header, tabs, message and CTA pinned; sources scroll */
   body.ob-modal .panel{height:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
-  body.ob-modal .src-panes{flex:1;min-height:0;overflow:auto;padding-right:4px;
-    scrollbar-width:thin;scrollbar-color:rgba(11,15,20,.18) transparent}
-  body.ob-modal .src-panes::-webkit-scrollbar{width:8px}
-  body.ob-modal .src-panes::-webkit-scrollbar-track{background:transparent}
-  body.ob-modal .src-panes::-webkit-scrollbar-thumb{background:rgba(11,15,20,.15);border-radius:99px;border:2px solid transparent;background-clip:padding-box}
-  body.ob-modal .lib-grid{max-height:none;overflow:visible;padding-bottom:8px}
+  body.ob-modal .src-panes{flex:1;min-height:0;overflow:visible}
+  body.ob-modal .panel-head{margin-bottom:16px}
+  body.ob-modal .lib-search{margin-bottom:10px}
+  body.ob-modal .lib-grid{max-height:none;overflow:visible;grid-template-columns:repeat(3,1fr);gap:10px;padding:2px 2px 4px}
   body.ob-modal .lib-scroll::after{display:none}
+  body.ob-modal .cover{aspect-ratio:366/180;padding:12px}
+  body.ob-modal .cover .head{font-size:11.5px!important}
+  body.ob-modal .pcard-body{padding:6px 10px 9px}
+  body.ob-modal .pcard-title{font-size:12.5px}
+  body.ob-modal .pcard-sub{font-size:11px}
   body.ob-modal #designer-msg{min-height:56px}
   body.ob-modal .dropzone{padding:16px}
   body.ob-modal .dropzone .dz-icon{width:40px;height:40px;margin-bottom:8px}
@@ -544,8 +549,9 @@
           <div class="field" style="margin-top:0">
             <div class="dropzone" id="deckdrop">
               <div class="dz-icon"><i class="ph-bold ph-upload-simple"></i></div>
-              <div class="dz-ttl">Drag &amp; drop your deck here</div>
-              <div class="dz-sub">or click to browse</div>
+              <div class="dz-ttl">Drag &amp; drop your deck</div>
+              <div class="dz-sub">or</div>
+              <button class="dz-btn" type="button" onclick="document.getElementById('deckinput').click()"><i class="ph-bold ph-folder-open"></i>Choose a file</button>
               <div class="dz-fmt">.PPTX · .PDF · .KEY · .ZIP · one file only</div>
               <input type="file" id="deckinput" accept=".pptx,.pdf,.key,.zip,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,application/zip,application/x-zip-compressed">
             </div>
@@ -1379,8 +1385,11 @@
   function syncLibChip(){
     const chip = document.getElementById('lib-selected');
     if (!chip) return;
-    chip.classList.toggle('on', !!window.selectedLibDeck);
-    if (window.selectedLibDeck) document.getElementById('lib-selected-name').textContent = window.selectedLibDeck;
+    const on = !!window.selectedLibDeck;
+    chip.classList.toggle('on', on);
+    const sr = document.querySelector('.lib-search');
+    if (sr) sr.style.display = on ? 'none' : '';   // chip replaces the search row, height stays fixed
+    if (on) document.getElementById('lib-selected-name').textContent = window.selectedLibDeck;
   }
   document.querySelectorAll('#lib-grid .pcard').forEach(c => c.addEventListener('click', () => {
     const was = c.classList.contains('sel');
@@ -1398,12 +1407,13 @@
     refreshUploadState();
   });
   const libSearch = document.getElementById('lib-search');
-  if (libSearch) libSearch.addEventListener('input', () => {
-    const q = libSearch.value.trim().toLowerCase();
+  const LIB_MAX_VISIBLE = 3;   // one row, no scroll; search reveals the rest
+  function libFilter(){
+    const q = libSearch ? libSearch.value.trim().toLowerCase() : '';
     let shown = 0;
     document.querySelectorAll('#lib-grid .pcard').forEach(c => {
       const hay = (c.dataset.name + ' ' + (c.querySelector('.pcard-sub')?.textContent || '')).toLowerCase();
-      const hit = hay.includes(q);
+      const hit = hay.includes(q) && shown < LIB_MAX_VISIBLE;
       c.style.display = hit ? '' : 'none';
       if (hit) shown++;
     });
@@ -1411,7 +1421,9 @@
     document.getElementById('lib-grid').parentElement.style.display = shown ? '' : 'none';
     empty.hidden = shown > 0;
     if (!shown) document.getElementById('lib-empty-q').textContent = libSearch.value.trim();
-  });
+  }
+  if (libSearch) libSearch.addEventListener('input', libFilter);
+  libFilter();
   updateSummary();
   refreshUploadState();
   // Claim: document/brief already captured on the claim page — start at Brand & Style.
