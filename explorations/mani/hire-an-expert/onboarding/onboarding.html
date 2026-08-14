@@ -258,7 +258,7 @@
   body.ob-modal .src-panes{flex:1;min-height:0;overflow:visible}
   body.ob-modal .panel-head{margin-bottom:16px}
   body.ob-modal .lib-search{margin-bottom:8px}
-  body.ob-modal .src-panes>div:nth-child(3).active{display:flex;flex-direction:column;height:calc(100% - 16px)}
+  body.ob-modal .src-panes>div:nth-child(4).active{display:flex;flex-direction:column;height:calc(100% - 16px)}
   body.ob-modal .lib-scroll{flex:1;min-height:0;overflow:hidden}
   body.ob-modal .lib-grid{max-height:100%;grid-auto-rows:max-content;overflow:auto;grid-template-columns:repeat(2,1fr);gap:10px;padding:2px 4px 14px 2px}
   body.ob-modal .lib-scroll::after{right:12px}
@@ -268,6 +268,8 @@
   body.ob-modal .pcard-title{font-size:12.5px}
   body.ob-modal .pcard-sub{font-size:11px}
   body.ob-modal #designer-msg{min-height:56px}
+  #outline-txt{min-height:200px;line-height:1.7}
+  body.ob-modal #outline-txt{min-height:170px}
   body.ob-modal .dropzone{padding:18px 20px}
   body.ob-modal .dropzone .dz-icon{margin-bottom:10px}
   body.ob-modal .dropzone .dz-fmt{margin-top:10px}
@@ -545,6 +547,7 @@
         <div class="tabs-strip tabs-strip-medium tabs-track" id="src-strip">
           <button class="tab-item tab-item-medium tab-item-selected" type="button"><span class="tab-item-label" data-label="Upload a file">Upload a file</span></button>
           <button class="tab-item tab-item-medium" type="button"><span class="tab-item-label" data-label="Paste a link">Paste a link</span></button>
+          <button class="tab-item tab-item-medium" type="button"><span class="tab-item-label" data-label="Paste outline">Paste outline</span></button>
           <button class="tab-item tab-item-medium" type="button"><span class="tab-item-label" data-label="Your presentations">Your presentations</span><span class="tab-count">6</span></button>
           <span class="tabs-indicator tabs-indicator-glide"></span>
         </div>
@@ -570,6 +573,12 @@
             <p class="src-hint">Set access to anyone with the link, so your designer can open it.</p>
           </div>
           <div id="linkcard"></div>
+        </div>
+        <div>
+          <div class="field" style="margin-top:0">
+            <textarea class="pai-textarea" id="outline-txt" placeholder="Intro to the topic&#10; • Key point 1&#10; • Key point 2&#10;&#10;----&#10;&#10;Current landscape and challenges&#10; • Key point 1&#10; • Key point 2&#10;&#10;----&#10;&#10;and so on..."></textarea>
+            <p class="src-hint">One section per slide. Separate sections with ---- lines.</p>
+          </div>
         </div>
         <div>
           <div class="lib-search"><input class="pai-input" type="search" id="lib-search" placeholder="Search your presentations..."></div>
@@ -886,7 +895,8 @@
   function hasUpload(){
     const fi = document.getElementById('deckinput');
     const ln = document.getElementById('decklink');
-    return (fi && fi.files.length > 0) || (ln && ln.value.trim() !== '') || !!window.selectedLibDeck;
+    const ot = document.getElementById('outline-txt');
+    return (fi && fi.files.length > 0) || (ln && ln.value.trim() !== '') || (ot && ot.value.trim() !== '') || !!window.selectedLibDeck;
   }
   function renderLinkCard(url){
     const slot = document.getElementById('linkcard');
@@ -911,7 +921,9 @@
     const hasFile = fi && fi.files.length > 0;
     const hasLink = ln && ln.value.trim() !== '';
     const hasPick = !!window.selectedLibDeck;
-    const ok = hasFile || hasLink || hasPick;
+    const ot = document.getElementById('outline-txt');
+    const hasOutline = ot && ot.value.trim() !== '';
+    const ok = hasFile || hasLink || hasPick || hasOutline;
     const panel = document.querySelector('.screen[data-screen="1"] .panel');
     if (panel){
       panel.classList.toggle('uploaded', hasFile || hasLink);   // collapse upload inputs; a library pick keeps its grid visible
@@ -929,9 +941,11 @@
     if (claim && !payingUpgrade){ step = 2; paint(); return; }   // free deck: no payment, go straight to Brand
     // order summary: which deck + brief excerpt
     const fi = document.getElementById('deckinput');
+    const ot = document.getElementById('outline-txt');
     const src = window.selectedLibDeck
       || (fi && fi.files.length > 0 ? fi.files[0].name : '')
-      || (document.getElementById('decklink') ? document.getElementById('decklink').value.trim() : '');
+      || (document.getElementById('decklink') ? document.getElementById('decklink').value.trim() : '')
+      || (ot && ot.value.trim() !== '' ? 'Pasted outline' : '');
     const deckRow = document.getElementById('pay-meta-deck');
     if (deckRow){ deckRow.hidden = !src; if (src) document.getElementById('pay-meta-deck-name').textContent = src; }
     const msgEl = document.getElementById('designer-msg');
@@ -1363,6 +1377,7 @@
   }
 
   document.getElementById('decklink').addEventListener('input', refreshUploadState);
+  document.getElementById('outline-txt').addEventListener('input', refreshUploadState);
 
   // ── Source tabs (DS strip): one bar glides under the selected item ────────
   (function(){
