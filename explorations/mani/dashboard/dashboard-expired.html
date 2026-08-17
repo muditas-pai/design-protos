@@ -906,20 +906,26 @@
 
     /* deletion warning inside the feature modal, between title and list */
     .dp-warn {
-      position: absolute; top: 162px; left: 30px; width: 288px;
-      display: flex; align-items: flex-start; gap: 8px;
-      padding: 10px 12px; border-radius: 8px;
-      background: #fff7ed; color: #9a3412;
-      font: 500 12px/1.5 "Inter", sans-serif; margin: 0;
+      position: absolute; top: 168px; left: 30px; width: 288px;
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px; border-radius: 10px; margin: 0;
+      background: #fff7ed;
+      box-shadow: inset 0 0 0 1px #fed7aa;
     }
-    .dp-warn i { font-size: 16px; color: #ea580c; flex: none; margin-top: 1px; }
-    .dp-warn b { font-weight: 700; font-variant-numeric: tabular-nums; }
-    body.mode-plain .dp-warn { top: 132px; }
+    .dp-warn-icon {
+      width: 30px; height: 30px; flex: none; border-radius: 999px;
+      background: #ffedd5; color: #ea580c;
+      display: grid; place-items: center; font-size: 16px;
+    }
+    .dp-warn-txt { display: flex; flex-direction: column; gap: 2px; }
+    .dp-warn-title { font: 600 13px/1.4 "Inter", sans-serif; color: #7c2d12; font-variant-numeric: tabular-nums; }
+    .dp-warn-sub { font: 400 12px/1.5 "Inter", sans-serif; color: #9a3412; }
+    body.mode-plain .dp-warn { top: 138px; }
     /* the warning pushes the feature list down from its stock positions */
-    .dp-feat-list { top: 246px; }
-    body.mode-plain .dp-feat-list { top: 216px; }
-    .dp-feat-fade--top { top: 246px; }
-    body.mode-plain .dp-feat-fade--top { top: 216px; }
+    .dp-feat-list { top: 264px; }
+    body.mode-plain .dp-feat-list { top: 234px; }
+    .dp-feat-fade--top { top: 264px; }
+    body.mode-plain .dp-feat-fade--top { top: 234px; }
   </style>
 
   <div class="ed-overlay" id="ed-overlay" aria-hidden="true">
@@ -948,7 +954,13 @@
       <div class="dp-box">
         <span class="dp-offer-chip"><i class="ph-fill ph-clock"></i>Offer ends in <span id="dp-timer">59:56</span></span>
         <h2 class="dp-box-title" id="dp-box-title">You're on the Free plan now</h2>
-        <p class="dp-warn"><i class="ph-fill ph-warning-circle"></i><span>We'll delete your files and folders in <b id="dp-days">30 days</b>. Renew to keep them.</span></p>
+        <div class="dp-warn" role="status">
+          <span class="dp-warn-icon"><i class="ph-fill ph-clock-countdown"></i></span>
+          <span class="dp-warn-txt">
+            <b class="dp-warn-title"><span id="dp-days">30 days</span> until your files are deleted</b>
+            <span class="dp-warn-sub">We'll keep every file and folder until then. Renew to keep them for good.</span>
+          </span>
+        </div>
 
         <div class="dp-feat-list" id="dp-feat-list">
           <button type="button" class="dp-feat-item is-active" data-feat="export" data-plan="pro" data-video="trigger_export" data-icon-active="ph-fill ph-export" data-icon-inactive="ph ph-export">
@@ -1282,13 +1294,13 @@
 
       var start = null;
       try { start = Number(localStorage.getItem('proBumpStart')) || null; } catch (e) {}
-      // ?offer=1 without a stamped bump means the chip was asked for directly,
-      // so start the hour here rather than showing a dead countdown.
-      if (!start && param === '1') {
+      // Comeback offer: the expired dashboard always runs a live one-hour
+      // 20% off, restarted whenever the previous hour has lapsed, so the
+      // welcome modal and checkout always show the discount.
+      if (!start || (Date.now() - start) >= HOUR) {
         start = Date.now();
         try { localStorage.setItem('proBumpStart', String(start)); } catch (e) {}
       }
-      if (!start) return;
 
       var left = HOUR - (Date.now() - start);
       if (left <= 0) return;
