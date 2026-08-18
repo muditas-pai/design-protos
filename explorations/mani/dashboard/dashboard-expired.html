@@ -1482,13 +1482,29 @@
      neutral card styling as the other plan. */
   .co-plans { overflow: hidden; }
 
-  /* team-plan escape hatch, same treatment as pricing/early-renewal.html */
+  /* team-plan escape hatch, same treatment as pricing/early-renewal.html.
+     The link swaps the individual rows for Team rows in place; the same
+     button switches back. */
   .co-switch-team {
     margin-top: 12px; padding: 0; border: 0; background: none;
     width: fit-content; cursor: pointer;
     font: 500 13px 'Inter', sans-serif; color: #1a6eff;
   }
   .co-switch-team:hover { text-decoration: underline; }
+
+  .co-team-seats {
+    display: inline-block; margin-left: 6px; padding: 2px 8px;
+    border-radius: 999px; vertical-align: 1px;
+    font: 600 11px/1.4 'Inter', sans-serif;
+    color: #7c2d12; background: #fff3e9;
+    box-shadow: inset 0 0 0 1px #ffd9bd;
+  }
+
+  .co-left:not([data-mode="team"]) .co-plan[data-plan="teamsilver"],
+  .co-left:not([data-mode="team"]) .co-plan[data-plan="teamgold"] { display: none; }
+  .co-left[data-mode="team"] .co-plan[data-plan="silver"],
+  .co-left[data-mode="team"] .co-plan[data-plan="gold"] { display: none; }
+  .co-left[data-mode="team"] .co-plan[data-plan="teamsilver"] { border-top: 0; }
   /* Arriving from Get Gold shows the Gold card on its own, the way the early
      renewal screen presents a single gold plan. */
   .co-left[data-only="gold"] .co-plan[data-plan="silver"] { display: none; }
@@ -1646,9 +1662,41 @@
               </span>
             </span>
           </button>
+          <button class="co-plan" type="button" data-plan="teamsilver" role="radio" aria-checked="false">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span class="co-plan-main">
+              <span class="co-plan-top">
+                <span class="co-plan-name">Pro Team <span class="co-team-seats">Unlimited seats</span></span>
+                <span class="co-price">
+                  <span class="co-strike" data-strike>$648</span>
+                  <span class="co-now" data-now>$518</span>
+                </span>
+              </span>
+              <span class="co-plan-bottom">
+                <span class="co-plan-sub">15,000 pooled credits, shared by everyone</span>
+                <span class="co-save" data-save>Save $130</span>
+              </span>
+            </span>
+          </button>
+          <button class="co-plan" type="button" data-plan="teamgold" role="radio" aria-checked="false">
+            <span class="co-radio" aria-hidden="true"></span>
+            <span class="co-plan-main">
+              <span class="co-plan-top">
+                <span class="co-plan-name">Gold Team <span class="co-team-seats">Unlimited seats</span></span>
+                <span class="co-price">
+                  <span class="co-strike" data-strike>$3,240</span>
+                  <span class="co-now" data-now>$2,592</span>
+                </span>
+              </span>
+              <span class="co-plan-bottom">
+                <span class="co-plan-sub">150,000 pooled credits, shared by everyone</span>
+                <span class="co-save" data-save>Save $648</span>
+              </span>
+            </span>
+          </button>
         </div>
 
-        <button type="button" class="co-switch-team">Managing a team? Switch to a Team plan</button>
+        <button type="button" class="co-switch-team" id="co-switch-team">Managing a team? Switch to a Team plan</button>
 
         <ul class="co-feats" id="co-feats"></ul>
       </div>
@@ -1767,6 +1815,19 @@
                 ['books', 'Shared knowledge base and projects'],
                 ['arrows-clockwise', 'Refresh data across a deck'],
                 ['paint-brush-broad', 'Full brand kit control']] },
+      teamsilver: { list: 648, discountable: true,
+        feats: [['coins', '15,000 pooled credits'],
+                ['users-three', 'Unlimited seats'],
+                ['export', 'Export to PowerPoint and Google Slides'],
+                ['sparkle', 'Advanced AI models and agents'],
+                ['chart-line-up', 'View tracking and analytics']] },
+      teamgold: { list: 3240, discountable: true,
+        feats: [['coins', '150,000 pooled credits'],
+                ['users-three', 'Unlimited seats'],
+                ['check-circle', 'Everything in Pro Team'],
+                ['lightning', 'Ultra AI model'],
+                ['books', 'Shared knowledge base and projects'],
+                ['headset', 'Priority support from our Head of Product']] },
     };
 
     function money(n) { return '$' + n.toLocaleString('en-US'); }
@@ -1802,6 +1863,8 @@
     }
 
     var leftPanel = document.getElementById('co-left');
+    var teamBtn = document.getElementById('co-switch-team');
+    var lastIndividual = 'silver';
 
     function selectPlan(name) {
       plans.forEach(function (el) {
@@ -1810,8 +1873,26 @@
         el.setAttribute('aria-checked', String(on));
       });
       leftPanel.dataset.plan = name;
+      if (name === 'silver' || name === 'gold') lastIndividual = name;
       renderFeats();
     }
+
+    function setTeamMode(team) {
+      if (team) {
+        leftPanel.dataset.mode = 'team';
+        leftPanel.removeAttribute('data-only');
+        teamBtn.textContent = 'Renewing just for yourself? Switch back to your plan';
+        selectPlan('teamsilver');
+      } else {
+        leftPanel.removeAttribute('data-mode');
+        teamBtn.textContent = 'Managing a team? Switch to a Team plan';
+        selectPlan(lastIndividual);
+      }
+    }
+
+    teamBtn.addEventListener('click', function () {
+      setTeamMode(leftPanel.dataset.mode !== 'team');
+    });
 
     function tick() {
       var st = bumpStart();
@@ -1823,6 +1904,7 @@
 
     function open(plan, title) {
       document.getElementById('co-title').textContent = title || 'Upgrade';
+      setTeamMode(false);
       // Coming from Get Gold, Gold stands alone; anywhere else shows both.
       if (plan === 'gold') leftPanel.dataset.only = 'gold';
       else leftPanel.removeAttribute('data-only');
