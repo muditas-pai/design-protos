@@ -379,9 +379,22 @@
   .pm-select { justify-content: space-between; cursor: pointer; }
   .pm-select i { font-size: 15px; color: #525252; }
   .pm-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .pm-cardrow i { font-size: 17px; color: #525252; flex: none; }
-  .pm-cardrow .mmyy { flex: none; margin-right: 14px; }
-  .pm-cardrow .cvv { flex: none; }
+  .pm-cardgroup { border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; overflow: hidden; }
+  .pm-cardtop { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; border-bottom: 1px solid #d4d4d4; }
+  .pm-cardbottom { display: grid; grid-template-columns: 1fr 1fr; }
+  .pm-cardbottom > * + * { border-left: 1px solid #d4d4d4; }
+  .pm-cardinput {
+    border: 0; outline: none; background: transparent; height: 42px; width: 100%; min-width: 0;
+    font: 400 13.5px 'Inter', sans-serif; color: #171717;
+  }
+  .pm-cardinput::placeholder { color: #a3a3a3; }
+  .pm-cardtop .pm-cardinput { flex: 1; }
+  .pm-cardbottom .pm-cardinput { padding: 0 12px; }
+  .pm-cvcwrap { display: flex; align-items: center; padding-right: 12px; }
+  .pm-cvcwrap .pm-cardinput { flex: 1; }
+  .pm-cardgroup .brand-icons { gap: 5px; }
+  .pm-cardgroup .brand-icons img { width: 30px; height: 20px; }
+  .pm-cardgroup .cvc-icon { width: 28px; height: 19px; }
   .pm-btns { display: flex; justify-content: flex-end; gap: 10px; }
   .pm-cancel {
     height: 38px; padding: 0 16px; border: 1px solid #d4d4d4; border-radius: 8px;
@@ -754,12 +767,24 @@
       </div>
 
       <div class="pm-field">
-        <label>Card details</label>
-        <div class="pm-input pm-cardrow placeholder">
-          <i class="ph ph-credit-card"></i>
-          <span class="grow">Card Number</span>
-          <span class="mmyy">MM / YY</span>
-          <span class="cvv">CVV</span>
+        <label>Card information</label>
+        <div class="pm-cardgroup">
+          <div class="pm-cardtop">
+            <input class="pm-cardinput" id="pm-num" inputmode="numeric" autocomplete="cc-number" placeholder="Card number" maxlength="19" />
+            <span class="brand-icons">
+              <img src="assets/er/visa.svg" alt="Visa" />
+              <img src="assets/er/mastercard.svg" alt="Mastercard" />
+              <img src="assets/er/amex.svg" alt="Amex" />
+              <img src="assets/er/discover.svg" alt="Discover" />
+            </span>
+          </div>
+          <div class="pm-cardbottom">
+            <input class="pm-cardinput" id="pm-exp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM / YY" maxlength="7" />
+            <div class="pm-cvcwrap">
+              <input class="pm-cardinput" id="pm-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="Security code" maxlength="4" />
+              <img class="cvc-icon" src="assets/er/cvc1.svg" alt="" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -993,10 +1018,31 @@
     function openPayMethod() { pmOv.classList.add('active'); }
     function closePayMethod() { pmOv.classList.remove('active'); }
 
+    const pmNum = document.getElementById('pm-num');
+    const pmExp = document.getElementById('pm-exp');
+    const pmCvc = document.getElementById('pm-cvc');
+
+    pmNum.addEventListener('input', () => {
+      const d = pmNum.value.replace(/\D/g, '').slice(0, 16);
+      pmNum.value = d.replace(/(.{4})/g, '$1 ').trim();
+    });
+    pmExp.addEventListener('input', () => {
+      const d = pmExp.value.replace(/\D/g, '').slice(0, 4);
+      pmExp.value = d.length > 2 ? d.slice(0, 2) + ' / ' + d.slice(2) : d;
+    });
+    pmCvc.addEventListener('input', () => {
+      pmCvc.value = pmCvc.value.replace(/\D/g, '').slice(0, 4);
+    });
+
     document.getElementById('pp-change').addEventListener('click', openPayMethod);
     document.getElementById('pm-cancel').addEventListener('click', closePayMethod);
     document.getElementById('pm-update').addEventListener('click', () => {
-      ppCardLabel.innerHTML = 'Visa &bull;&bull;&bull;&bull; 4242';
+      const d = pmNum.value.replace(/\D/g, '');
+      if (d.length >= 15) {
+        const brand = d[0] === '5' ? 'Mastercard' : d[0] === '3' ? 'Amex' : d[0] === '6' ? 'Discover' : 'Visa';
+        ppCardLabel.textContent = brand + ' •••• ' + d.slice(-4);
+      }
+      pmNum.value = pmExp.value = pmCvc.value = '';
       closePayMethod();
     });
     document.addEventListener('keydown', e => {
