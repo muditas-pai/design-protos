@@ -352,6 +352,32 @@
     font: 500 12.5px 'Inter', sans-serif; color: #1a6eff;
   }
   .pp-change:hover { text-decoration: underline; }
+  .pp-newcard { display: none; margin-top: 14px; }
+  .paddle-panel.is-editing .pp-card-row { display: none; }
+  .paddle-panel.is-editing .pp-newcard { display: block; }
+  .pp-newcard .field { margin-bottom: 12px; }
+  .pp-input {
+    width: 100%; padding: 12px; border: 0; border-radius: 4px; background: #fff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+    font: 400 14px/1.43 'Inter', sans-serif; color: #171717; outline: none;
+  }
+  .pp-input::placeholder { color: #a3a3a3; }
+  .pp-input:focus { box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1.5px #1a6eff; }
+  .pp-newcard-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .pp-save {
+    flex: 1; height: 38px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #0b0f14; color: #fff; font: 500 13px 'Inter', sans-serif;
+    transition: background .15s ease;
+  }
+  .pp-save:hover { background: #23272c; }
+  .pp-save:disabled { opacity: .45; cursor: not-allowed; }
+  .pp-save:disabled:hover { background: #0b0f14; }
+  .pp-cancel {
+    height: 38px; padding: 0 16px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #fff; color: #171717; font: 500 13px 'Inter', sans-serif;
+    box-shadow: inset 0 0 0 1px rgba(11,15,20,0.12);
+  }
+  .pp-cancel:hover { background: #f5f5f5; }
   .pp-agree {
     display: flex; align-items: flex-start; gap: 9px;
     margin-top: 16px; font-size: 13px; color: #171717; line-height: 1.45; cursor: pointer;
@@ -671,8 +697,29 @@
 
           <div class="pp-card-row">
             <i class="ph ph-credit-card"></i>
-            <span>Visa &bull;&bull;&bull;&bull; 4242</span>
-            <button type="button" class="pp-change">Change</button>
+            <span id="pp-card-label">Visa &bull;&bull;&bull;&bull; 4242</span>
+            <button type="button" class="pp-change" id="pp-change">Change</button>
+          </div>
+
+          <div class="pp-newcard">
+            <div class="field">
+              <label>Card number</label>
+              <input class="pp-input" id="pp-num" inputmode="numeric" autocomplete="off" placeholder="1234 1234 1234 1234" maxlength="19" />
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label>Expiration date</label>
+                <input class="pp-input" id="pp-exp" inputmode="numeric" autocomplete="off" placeholder="MM / YY" maxlength="7" />
+              </div>
+              <div class="field">
+                <label>CVC</label>
+                <input class="pp-input" id="pp-cvc" inputmode="numeric" autocomplete="off" placeholder="CVC" maxlength="4" />
+              </div>
+            </div>
+            <div class="pp-newcard-actions">
+              <button type="button" class="pp-save" id="pp-save" disabled>Use this card</button>
+              <button type="button" class="pp-cancel" id="pp-cancel">Cancel</button>
+            </div>
           </div>
 
           <label class="pp-agree">
@@ -878,6 +925,56 @@
         provSeg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
         document.body.classList.toggle('pay-paddle', btn.dataset.provider === 'paddle');
       });
+    });
+
+    // Change card flow (Paddle panel): Change -> inline card form -> save/cancel
+    const paddlePanel = document.querySelector('.paddle-panel');
+    const ppNum = document.getElementById('pp-num');
+    const ppExp = document.getElementById('pp-exp');
+    const ppCvc = document.getElementById('pp-cvc');
+    const ppSave = document.getElementById('pp-save');
+
+    function ppValid() {
+      const num = ppNum.value.replace(/\D/g, '');
+      const exp = ppExp.value.replace(/\D/g, '');
+      const mm = +exp.slice(0, 2);
+      return num.length >= 15 && exp.length === 4 && mm >= 1 && mm <= 12 && ppCvc.value.length >= 3;
+    }
+    function ppRefresh() { ppSave.disabled = !ppValid(); }
+    function ppReset() {
+      paddlePanel.classList.remove('is-editing');
+      ppNum.value = ppExp.value = ppCvc.value = '';
+      ppRefresh();
+    }
+
+    document.getElementById('pp-change').addEventListener('click', () => {
+      paddlePanel.classList.add('is-editing');
+      ppNum.focus();
+    });
+    document.getElementById('pp-cancel').addEventListener('click', ppReset);
+
+    ppNum.addEventListener('input', () => {
+      const d = ppNum.value.replace(/\D/g, '').slice(0, 16);
+      ppNum.value = d.replace(/(.{4})/g, '$1 ').trim();
+      ppRefresh();
+    });
+    ppExp.addEventListener('input', () => {
+      const d = ppExp.value.replace(/\D/g, '').slice(0, 4);
+      ppExp.value = d.length > 2 ? d.slice(0, 2) + ' / ' + d.slice(2) : d;
+      ppRefresh();
+    });
+    ppCvc.addEventListener('input', () => {
+      ppCvc.value = ppCvc.value.replace(/\D/g, '').slice(0, 4);
+      ppRefresh();
+    });
+
+    document.getElementById('pp-save').addEventListener('click', () => {
+      if (!ppValid()) return;
+      const d = ppNum.value.replace(/\D/g, '');
+      const brand = d[0] === '5' ? 'Mastercard' : d[0] === '3' ? 'Amex' : 'Visa';
+      document.getElementById('pp-card-label').textContent =
+        brand + ' •••• ' + d.slice(-4);
+      ppReset();
     });
 
     // Demo toggles: credit state (zero/low) and copy version (v1/v2)
