@@ -157,8 +157,7 @@
     </div>
     <div class="grp"><span>Colour from</span>
       <div class="seg" id="segColour">
-        <button data-v="linear" aria-pressed="true">Tone</button>
-        <button data-v="split">Tone split</button>
+        <button data-v="linear" aria-pressed="true">Cell size</button>
         <button data-v="patches">Patches</button>
       </div>
     </div>
@@ -210,10 +209,12 @@
       <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" /></div>
     <div class="lev"><label for="lvAlpha">Ink<b id="vAlpha"></b></label>
       <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
-    <div class="lev"><label for="lvDuo">Duotone<b id="vDuo"></b></label>
-      <input type="range" id="lvDuo" min="0" max="1" step="0.02" value="0.14" /></div>
-    <div class="lev"><label for="lvSplit">Split point<b id="vSplit"></b></label>
-      <input type="range" id="lvSplit" min="0.1" max="0.9" step="0.01" value="0.55" /></div>
+    <div class="lev"><label for="lvAt">Accent share<b id="vAt"></b></label>
+      <input type="range" id="lvAt" min="0.02" max="0.6" step="0.01" value="0.08" /></div>
+    <div class="lev"><label for="lvFall">Accent falloff<b id="vFall"></b></label>
+      <input type="range" id="lvFall" min="0" max="0.4" step="0.01" value="0.06" /></div>
+    <div class="lev"><label for="lvStr">Accent strength<b id="vStr"></b></label>
+      <input type="range" id="lvStr" min="0" max="1" step="0.02" value="1" /></div>
     <div class="lev"><label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
       <input type="range" id="lvSwing" min="0" max="1" step="0.02" value="0.88" /></div>
     <div class="lev"><label for="lvField">Patch size<b id="vField"></b></label>
@@ -331,19 +332,16 @@
  *               perfectly: the accent ends up only on the smallest cells and
  *               the base only on the largest, and two inks that never appear
  *               at the same weight do not read as two inks.
- *                 'split'   size saturates at `split`, colour takes the range
- *                           above it. Both inks appear at full size.
- *                 'patches' colour from its own noise field, independent of
- *                           tone. Regions of accent, regions of base.
- *                 'linear'  colour straight from tone — correlated, kept to
- *                           show the problem.
- *    split      where size stops growing and colour starts moving, 0..1
- *    duotone    0 = every cell in the accent. 1 = a full two-colour ramp, the
- *               accent in the low tones and a white or black base in the high
- *               ones. Which of white or black is picked follows the slide
- *               background, so on navy the highlights blow out to white and on
- *               a pale slide the shadows sink to black — in both cases the
- *               second tone is the one the background has room for.
+ *                 'linear'  colour from tone, so the accent lands on the
+ *                           largest cells (default)
+ *                 'patches' colour from its own noise field, so the accent
+ *                           falls in regions instead of by cell size
+ *    accentShare    the fraction of cells that take the accent, as a share
+ *                   rather than an absolute tone. 0.16 means the largest 16%.
+ *                   Expressed this way because tone clamps on a bright picture,
+ *                   so an absolute threshold does not control scarcity at all.
+ *    accentFalloff  how soft that threshold is. Small keeps the delta crisp.
+ *    accentStrength how fully the accent replaces the base once past it.
  *    base       'auto' | any CSS hex, to override that choice
  *    superSample  render the canvas at this multiple of device resolution and
  *                 let the browser downscale it. A 3px cell has too few pixels
@@ -375,8 +373,8 @@ function ditherLoader(canvas, options) {
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.74, swell: 1.36, cycle: 1800,
     wave: 'clump', fieldScale: 4.5, coherence: 0.86, ink: 0.86, alphaSwing: 0.88,
-    tone: null, crisp: false, superSample: 2, duotone: 0.14, base: 'auto',
-    colourMode: 'linear', split: 0.55
+    tone: null, crisp: false, superSample: 2, base: 'auto',
+    colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 1
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -424,18 +422,15 @@ function ditherLoader(canvas, options) {
   /* Cells are batched by (colour step, alpha step) so a frame is a few dozen
      fills rather than thousands. Colour comes from tone, alpha from tone and
      the pulse, so the two axes have to be separate. */
-  var TONES = 10, BUCKETS = 10, palette = [];
+  /* The BASE is the field the picture is drawn in; the accent is a detail only
+     the largest cells earn. Indexed by how far past the threshold a cell is,
+     not by raw tone, because the threshold itself moves (see cutoffFor). */
+  var TONES = 14, BUCKETS = 10, palette = [];
   function buildPalette() {
     palette = [];
     for (var t = 0; t < TONES; t++) {
-      /* Two curves, both there to make the second ink actually visible.
-         The slider is read as a square root, so a small setting still shifts
-         a real amount of colour rather than a token few percent; and tone is
-         raised to 0.65 so MID tones move decisively toward the base instead of
-         only the very brightest cells, which are the rarest ones on screen. */
-      var tk = (TONES === 1) ? 0 : t / (TONES - 1);
-      var mixAmt = Math.pow(tk, 0.65) * Math.sqrt(Math.max(0, Math.min(1, o.duotone)));
-      var c = mix(INK, BASE, mixAmt);
+      var k = (TONES === 1) ? 0 : t / (TONES - 1);
+      var c = mix(BASE, INK, k * o.accentStrength);
       var row = [];
       for (var b = 0; b < BUCKETS; b++) {
         var a = (b + 1) / BUCKETS * o.ink;
@@ -525,6 +520,26 @@ function ditherLoader(canvas, options) {
     return field * o.coherence + white * (1 - o.coherence);
   }
 
+  /* Where the accent starts, as a SHARE of cells rather than an absolute tone.
+     imageTone clamps, so a large part of a bright picture sits at tone 1.0 and
+     any fixed threshold catches all of it at once — measured, moving an
+     absolute threshold from 0.78 to 0.96 only took the accent from 75% of the
+     ink to 63%. A percentile says what was actually meant: the top N% of cells. */
+  var cutLo = 1, cutHi = 1;
+  function cutoffFor(pick) {
+    if (!cells.length) return 1;
+    var arr = new Array(cells.length);
+    for (var i = 0; i < cells.length; i++) arr[i] = pick(cells[i]);
+    arr.sort(function (a, b) { return a - b; });
+    var idx = Math.floor((1 - Math.max(0, Math.min(1, o.accentShare))) * (arr.length - 1));
+    return arr[idx];
+  }
+  function recomputeCutoffs() {
+    var src = o.colourMode === 'patches';
+    cutLo = cutoffFor(function (c) { return src ? c.cf : c.t0; });
+    cutHi = cutoffFor(function (c) { return src ? c.cf : c.t1; });
+  }
+
   /* ----------------------------------------------------------- build ---- */
   function build() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -574,6 +589,7 @@ function ditherLoader(canvas, options) {
         cells.push({ x: cx, y: cy, u: u, v: v, t0: t, t1: t, cf: cf, p: phaseFor(u, v, i) });
       }
     }
+    recomputeCutoffs();
   }
 
   /* ------------------------------------------------------------ draw ---- */
@@ -603,16 +619,13 @@ function ditherLoader(canvas, options) {
       var ph = (now / o.cycle + c.p) % 1;
       var pulse = 0.5 - Math.cos(ph * Math.PI * 2) / 2;      /* 0 → 1 → 0 */
       var swell = 1 + (o.swell - 1) * pulse;
-      /* size and colour are deliberately fed from different places here */
-      var sizeT = ct, colourK = ct;
-      if (o.colourMode === 'split') {
-        var sp = Math.max(0.05, Math.min(0.95, o.split));
-        sizeT = Math.min(1, ct / sp);                 /* full size by the split */
-        colourK = Math.max(0, (ct - sp) / (1 - sp));  /* colour takes it from there */
-      } else if (o.colourMode === 'patches') {
-        colourK = c.cf;
-      }
-      var scale = (o.toneFloor + sizeT * o.toneRange) * swell;
+      var colourSrc = (o.colourMode === 'patches') ? c.cf : ct;
+      var cut = cutLo + (cutHi - cutLo) * mEase;
+      var f = o.accentFalloff;
+      var colourK = f <= 0 ? (colourSrc >= cut ? 1 : 0)
+        : Math.max(0, Math.min(1, (colourSrc - (cut - f)) / (2 * f)));
+      colourK = colourK * colourK * (3 - 2 * colourK) * o.accentStrength;
+      var scale = (o.toneFloor + ct * o.toneRange) * swell;
       if (resolving) scale = scale + (1 / (o.spacing * o.dotWeight) - scale) * ease;
 
       /* Opacity rides the same phase as the size. Both moving together is what
@@ -622,7 +635,7 @@ function ditherLoader(canvas, options) {
       if (resolving) alpha = alpha * (1 - ease);
       if (alpha <= 0.01) continue;
       var bi = Math.min(BUCKETS - 1, Math.max(0, Math.floor(alpha * BUCKETS)));
-      var ti = Math.min(TONES - 1, Math.max(0, Math.floor(colourK * TONES)));
+      var ti = Math.min(TONES - 1, Math.max(0, Math.round(colourK * (TONES - 1))));
       var row = groups[ti];
       var p2 = row[bi] || (row[bi] = new Path2D());
 
@@ -695,6 +708,7 @@ function ditherLoader(canvas, options) {
         cells[i].t0 = cells[i].t0 + (cells[i].t1 - cells[i].t0) * morph;   /* freeze where we are */
         cells[i].t1 = Math.max(0, Math.min(1, toneFn(cells[i].u, cells[i].v)));
       }
+      recomputeCutoffs();
       MORPH_MS = ms || 900;
       morph = 0; morphStart = performance.now(); morphing = 1;
       return api;
@@ -706,7 +720,8 @@ function ditherLoader(canvas, options) {
         return k in patch && patch[k] !== o[k];
       });
       Object.assign(o, patch);
-      if ('ink' in patch || 'duotone' in patch || 'base' in patch) {
+      if ('accentShare' in patch || 'colourMode' in patch) recomputeCutoffs();
+      if ('ink' in patch || 'base' in patch || 'accentStrength' in patch) {
         if ('base' in patch) {
           BASE = (o.base && o.base !== 'auto') ? hex(o.base)
                : (lum(hex(o.bg)) > 0.5 ? [0, 0, 0] : [255, 255, 255]);
@@ -945,8 +960,9 @@ function imageTone(img, bgHex, boxW, boxH) {
       cycle: +document.getElementById('lvCycle').value,
       ink: +document.getElementById('lvAlpha').value,
       alphaSwing: +document.getElementById('lvSwing').value,
-      duotone: +document.getElementById('lvDuo').value,
-      split: +document.getElementById('lvSplit').value,
+      accentShare: +document.getElementById('lvAt').value,
+      accentFalloff: +document.getElementById('lvFall').value,
+      accentStrength: +document.getElementById('lvStr').value,
       colourMode: COLOUR_MODE,
       base: BASE_MODE,
       fieldScale: +document.getElementById('lvField').value,
@@ -1059,8 +1075,9 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvSwell: function (v) { return (+v).toFixed(2) + '×'; },
     lvCycle: function (v) { return (v / 1000).toFixed(2) + 's'; },
     lvAlpha: function (v) { return (+v).toFixed(2); },
-    lvDuo: function (v) { return (+v).toFixed(2); },
-    lvSplit: function (v) { return (+v).toFixed(2); },
+    lvAt: function (v) { return Math.round(v * 100) + '%'; },
+    lvFall: function (v) { return (+v).toFixed(2); },
+    lvStr: function (v) { return (+v).toFixed(2); },
     lvSwing: function (v) { return (+v).toFixed(2); },
     lvField: function (v) { return (+v).toFixed(1); },
     lvCoh: function (v) { return (+v).toFixed(2); },
@@ -1070,7 +1087,8 @@ function imageTone(img, bgHex, boxW, boxH) {
   };
   var LIVE = { lvSpacing: 'spacing', lvDot: 'dotWeight', lvRound: 'roundness',
                lvFloor: 'toneFloor', lvRange: 'toneRange', lvSwell: 'swell',
-               lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvDuo: 'duotone', lvSplit: 'split' };
+               lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvAt: 'accentShare', lvFall: 'accentFalloff',
+               lvStr: 'accentStrength' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
