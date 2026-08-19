@@ -155,6 +155,13 @@
         <button data-v="crisp">Pixel</button>
       </div>
     </div>
+    <div class="grp"><span>Base</span>
+      <div class="seg" id="segBase">
+        <button data-v="auto" aria-pressed="true">Auto</button>
+        <button data-v="#FFFFFF">White</button>
+        <button data-v="#000000">Black</button>
+      </div>
+    </div>
     <div class="grp"><span>Render</span>
       <div class="seg" id="segSS">
         <button data-v="1">1×</button>
@@ -196,6 +203,8 @@
       <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" /></div>
     <div class="lev"><label for="lvAlpha">Ink<b id="vAlpha"></b></label>
       <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
+    <div class="lev"><label for="lvDuo">Duotone<b id="vDuo"></b></label>
+      <input type="range" id="lvDuo" min="0" max="1" step="0.02" value="0.7" /></div>
     <div class="lev"><label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
       <input type="range" id="lvSwing" min="0" max="1" step="0.02" value="0.55" /></div>
     <div class="lev"><label for="lvField">Patch size<b id="vField"></b></label>
@@ -308,6 +317,13 @@
  *    fieldScale how large the patches are (lower = bigger)
  *    coherence  0 = white noise, 1 = the field alone
  *    ink        peak dot alpha                 0.86
+ *    duotone    0 = every cell in the accent. 1 = a full two-colour ramp, the
+ *               accent in the low tones and a white or black base in the high
+ *               ones. Which of white or black is picked follows the slide
+ *               background, so on navy the highlights blow out to white and on
+ *               a pale slide the shadows sink to black — in both cases the
+ *               second tone is the one the background has room for.
+ *    base       'auto' | any CSS hex, to override that choice
  *    superSample  render the canvas at this multiple of device resolution and
  *                 let the browser downscale it. A 3px cell has too few pixels
  *                 to be a convincing circle; drawn at 2× or 3× and resolved
@@ -338,7 +354,7 @@ function ditherLoader(canvas, options) {
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.78, swell: 1.36, cycle: 1800,
     wave: 'clump', fieldScale: 4.5, coherence: 0.85, ink: 0.86, alphaSwing: 0.55,
-    tone: null, crisp: false, superSample: 2
+    tone: null, crisp: false, superSample: 2, duotone: 0.7, base: 'auto'
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -377,12 +393,31 @@ function ditherLoader(canvas, options) {
   })();
   var INK = inkRGB.map(Math.round);
 
-  /* eight alpha buckets, so a frame is eight fills instead of thousands */
-  var BUCKETS = 18, bucketStyle = [];
-  for (var b = 0; b < BUCKETS; b++) {
-    var a = (b + 1) / BUCKETS * o.ink;
-    bucketStyle.push('rgba(' + INK[0] + ',' + INK[1] + ',' + INK[2] + ',' + a.toFixed(3) + ')');
+  /* The second tone: whichever of black or white the background has room for. */
+  var BASE = (function () {
+    if (o.base && o.base !== 'auto') return hex(o.base);
+    return lum(hex(o.bg)) > 0.5 ? [0, 0, 0] : [255, 255, 255];
+  })();
+
+  /* Cells are batched by (colour step, alpha step) so a frame is a few dozen
+     fills rather than thousands. Colour comes from tone, alpha from tone and
+     the pulse, so the two axes have to be separate. */
+  var TONES = 7, BUCKETS = 12, palette = [];
+  function buildPalette() {
+    palette = [];
+    for (var t = 0; t < TONES; t++) {
+      var mixAmt = (TONES === 1 ? 0 : t / (TONES - 1)) * o.duotone;
+      var c = mix(INK, BASE, mixAmt);
+      var row = [];
+      for (var b = 0; b < BUCKETS; b++) {
+        var a = (b + 1) / BUCKETS * o.ink;
+        row.push('rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' +
+                 Math.round(c[2]) + ',' + a.toFixed(3) + ')');
+      }
+      palette.push(row);
+    }
   }
+  buildPalette();
 
   /* ----------------------------------------------------------- shape ---- */
   function boxPx() {
@@ -529,8 +564,8 @@ function ditherLoader(canvas, options) {
     }
     var mEase = morph * morph * (3 - 2 * morph);
 
-    var groups = [];
-    for (var g = 0; g < BUCKETS; g++) groups.push(null);
+    var groups = [];                       /* [toneStep][alphaStep] */
+    for (var g = 0; g < TONES; g++) groups.push(new Array(BUCKETS));
 
     for (var i = 0; i < cells.length; i++) {
       var c = cells[i];
@@ -548,7 +583,9 @@ function ditherLoader(canvas, options) {
       if (resolving) alpha = alpha * (1 - ease);
       if (alpha <= 0.01) continue;
       var bi = Math.min(BUCKETS - 1, Math.max(0, Math.floor(alpha * BUCKETS)));
-      var p2 = groups[bi] || (groups[bi] = new Path2D());
+      var ti = Math.min(TONES - 1, Math.max(0, Math.floor(ct * TONES)));
+      var row = groups[ti];
+      var p2 = row[bi] || (row[bi] = new Path2D());
 
       /* A cell must hold ONE shape and only change size. Two things make that
          true: the size is a whole number of device pixels and the box is
@@ -596,10 +633,12 @@ function ditherLoader(canvas, options) {
       }
     }
 
-    for (var g2 = 0; g2 < BUCKETS; g2++) {
-      if (!groups[g2]) continue;
-      ctx.fillStyle = bucketStyle[g2];
-      ctx.fill(groups[g2]);
+    for (var t2 = 0; t2 < TONES; t2++) {
+      for (var g2 = 0; g2 < BUCKETS; g2++) {
+        if (!groups[t2][g2]) continue;
+        ctx.fillStyle = palette[t2][g2];
+        ctx.fill(groups[t2][g2]);
+      }
     }
   }
 
@@ -628,11 +667,12 @@ function ditherLoader(canvas, options) {
         return k in patch && patch[k] !== o[k];
       });
       Object.assign(o, patch);
-      if ('ink' in patch) {
-        for (var b = 0; b < BUCKETS; b++) {
-          var a = (b + 1) / BUCKETS * o.ink;
-          bucketStyle[b] = 'rgba(' + INK[0] + ',' + INK[1] + ',' + INK[2] + ',' + a.toFixed(3) + ')';
+      if ('ink' in patch || 'duotone' in patch || 'base' in patch) {
+        if ('base' in patch) {
+          BASE = (o.base && o.base !== 'auto') ? hex(o.base)
+               : (lum(hex(o.bg)) > 0.5 ? [0, 0, 0] : [255, 255, 255]);
         }
+        buildPalette();
       }
       if (rebuild) build();
       return api;
@@ -866,13 +906,16 @@ function imageTone(img, bgHex, boxW, boxH) {
       cycle: +document.getElementById('lvCycle').value,
       ink: +document.getElementById('lvAlpha').value,
       alphaSwing: +document.getElementById('lvSwing').value,
+      duotone: +document.getElementById('lvDuo').value,
+      base: BASE_MODE,
       fieldScale: +document.getElementById('lvField').value,
       coherence: +document.getElementById('lvCoh').value,
       wave: WAVE, crisp: CRISP, superSample: SS
     };
   }
 
-  var WAVE = 'clump', LOOP = true, TONE = 'image', CRISP = false, SS = 2, timers = [];
+  var WAVE = 'clump', LOOP = true, TONE = 'image', CRISP = false, SS = 2,
+      BASE_MODE = 'auto', timers = [];
   function setPhase(t) { document.getElementById('phase').textContent = t; }
 
   /* preload the photographs, and build a tone sampler from each */
@@ -954,6 +997,10 @@ function imageTone(img, bgHex, boxW, boxH) {
     instances.forEach(function (i) { if (i.loader) i.loader.set({ crisp: CRISP }); });
   });
   seg('segSS', function (v) { SS = +v; boot(); });
+  seg('segBase', function (v) {
+    BASE_MODE = v;
+    instances.forEach(function (i) { if (i.loader) i.loader.set({ base: v }); });
+  });
   seg('segLoop', function (v) { LOOP = v === 'on'; if (LOOP) boot(); });
   document.getElementById('replay').addEventListener('click', boot);
 
@@ -967,6 +1014,7 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvSwell: function (v) { return (+v).toFixed(2) + '×'; },
     lvCycle: function (v) { return (v / 1000).toFixed(2) + 's'; },
     lvAlpha: function (v) { return (+v).toFixed(2); },
+    lvDuo: function (v) { return (+v).toFixed(2); },
     lvSwing: function (v) { return (+v).toFixed(2); },
     lvField: function (v) { return (+v).toFixed(1); },
     lvCoh: function (v) { return (+v).toFixed(2); },
@@ -976,7 +1024,7 @@ function imageTone(img, bgHex, boxW, boxH) {
   };
   var LIVE = { lvSpacing: 'spacing', lvDot: 'dotWeight', lvRound: 'roundness',
                lvFloor: 'toneFloor', lvRange: 'toneRange', lvSwell: 'swell',
-               lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing' };
+               lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvDuo: 'duotone' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
