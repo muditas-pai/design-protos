@@ -213,11 +213,11 @@
       <input type="range" id="lvAt" min="0.02" max="0.6" step="0.01" value="0.08" /></div>
     <div class="lev"><label for="lvFall">Accent falloff<b id="vFall"></b></label>
       <input type="range" id="lvFall" min="0" max="0.4" step="0.01" value="0.06" /></div>
-    <div class="lev"><label for="lvStr">Accent strength<b id="vStr"></b></label>
-      <input type="range" id="lvStr" min="0" max="1" step="0.02" value="1" /></div>
+    <div class="lev"><label for="lvStr">Second ink<b id="vStr"></b></label>
+      <input type="range" id="lvStr" min="0" max="1" step="0.02" value="0" /></div>
     <div class="lev"><label for="lvStroke">Stroke<b id="vStroke"></b></label>
       <input type="range" id="lvStroke" min="0" max="5" step="0.25" value="1.5" /></div>
-    <div class="lev"><label for="lvShadow">Inner shadow<b id="vShadow"></b></label>
+    <div class="lev"><label for="lvShadow">Inner glow<b id="vShadow"></b></label>
       <input type="range" id="lvShadow" min="0" max="48" step="1" value="18" /></div>
     <div class="lev"><label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
       <input type="range" id="lvSwing" min="0" max="1" step="0.02" value="0.88" /></div>
@@ -301,7 +301,10 @@
  *
  *  Required
  *    bg      slide background colour  (any CSS hex)
- *    accent  brand accent colour      (any CSS hex)
+ *
+ *  The dots, the stroke and the inner glow are all brand blue, in the shade the
+ *  background can carry. The slide's own accent is deliberately not used: the
+ *  loader is our UI sitting on their slide, not a part of their brand.
  *    box     the image element's rect in the slide, [x, y, w, h] in 0..1
  *    shape   the mask, as points in 0..1 of the ELEMENT box — the same
  *            numbers the slide's own clip-path polygon() uses. null = the
@@ -340,7 +343,10 @@
  *                           largest cells (default)
  *                 'patches' colour from its own noise field, so the accent
  *                           falls in regions instead of by cell size
- *    accentShare    the fraction of cells that take the accent, as a share
+ *    accentStrength how far a scarce set of cells is pushed toward a second
+ *                   ink (white or black by background). 0 by default, so every
+ *                   cell is brand blue.
+ *    accentShare    the fraction of cells that take that second ink, as a share
  *                   rather than an absolute tone. 0.16 means the largest 16%.
  *                   Expressed this way because tone clamps on a bright picture,
  *                   so an absolute threshold does not control scarcity at all.
@@ -350,9 +356,10 @@
  *                   canvas from the same Path2D as the dot test, so it follows
  *                   an angular mask exactly — a CSS border cannot, because a
  *                   border does not know about clip-path.
- *    innerShadow    inner shadow depth in CSS px, cast inward from every edge,
- *                   which is what makes the region read as a container rather
- *                   than a hole cut in the slide.
+ *    innerShadow    inner glow depth in CSS px, cast inward from every edge in
+ *                   the same brand blue as the stroke. Both it and the stroke
+ *                   fade out as the picture arrives — they belong to the wait,
+ *                   not to the finished slide.
  *    strokeColour   'auto' takes brand blue from the design system, and picks
  *                   the shade the background can carry: app-600 #0055ED on
  *                   light, app-300 #69A0FF on dark.
@@ -388,7 +395,7 @@ function ditherLoader(canvas, options) {
     toneFloor: 0.24, toneRange: 0.74, swell: 1.36, cycle: 1800,
     wave: 'clump', fieldScale: 4.5, coherence: 0.86, ink: 0.86, alphaSwing: 0.88,
     tone: null, crisp: false, superSample: 2, base: 'auto',
-    colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 1,
+    colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 0,
     strokeWidth: 1.5, innerShadow: 18, strokeColour: 'auto'
   }, options || {});
 
@@ -417,26 +424,21 @@ function ditherLoader(canvas, options) {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
 
-  /* The dot colour: the accent, but only when it can actually be seen against
-     this slide. A navy accent on a navy slide would vanish, so fall back to a
-     tint of the background pushed toward whichever end has room. */
-  var inkRGB = (function () {
-    var bg = hex(o.bg), ac = hex(o.accent);
-    if (contrast(ac, bg) >= 1.9) return ac;
-    var target = lum(bg) > 0.45 ? [0, 0, 0] : [255, 255, 255];
-    return mix(bg, target, 0.55);
-  })();
-  var INK = inkRGB.map(Math.round);
-
-  /* Brand blue, in the shade this background can actually carry. Both are
-     design-system tokens, not invented: app-600 is the held brand blue and
-     app-300 is its light-on-dark counterpart. */
+  /* ONE ink, and it is brand blue — not the slide's accent. Which shade is a
+     function of the background, both taken from the design system: app-600 is
+     the held brand blue, app-300 is its light-on-dark counterpart. */
   var BG_IS_LIGHT = lum(hex(o.bg)) > 0.5;
-  var STROKE = (o.strokeColour && o.strokeColour !== 'auto')
-    ? o.strokeColour
-    : (BG_IS_LIGHT ? '#0055ED' : '#69A0FF');
-  /* the shadow has to work harder on a light container than a dark one */
-  var SHADOW = BG_IS_LIGHT ? 'rgba(11,15,20,0.30)' : 'rgba(0,0,0,0.60)';
+  function brandBlue() { return BG_IS_LIGHT ? '#0055ED' : '#69A0FF'; }
+  var STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour : brandBlue();
+  var INK = hex(STROKE);
+
+  /* The inner glow is that same blue, carried at an alpha the background can
+     take: a light container needs less of it to read. */
+  function rgbaOf(h, a) {
+    var c = hex(h);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+  var SHADOW = rgbaOf(STROKE, BG_IS_LIGHT ? 0.45 : 0.62);
 
   /* The second tone: whichever of black or white the background has room for. */
   var BASE = (function () {
@@ -455,7 +457,9 @@ function ditherLoader(canvas, options) {
     palette = [];
     for (var t = 0; t < TONES; t++) {
       var k = (TONES === 1) ? 0 : t / (TONES - 1);
-      var c = mix(BASE, INK, k * o.accentStrength);
+      /* brand blue is the primary; the second ink is what a scarce set of
+         cells is pushed TOWARD, so strength 0 must leave everything blue */
+      var c = mix(INK, BASE, k * o.accentStrength);
       var row = [];
       for (var b = 0; b < BUCKETS; b++) {
         var a = (b + 1) / BUCKETS * o.ink;
@@ -718,14 +722,19 @@ function ditherLoader(canvas, options) {
       }
     }
 
-    drawContainer();
+    /* The stroke and glow belong to the WAIT. Once the picture is arriving
+       they fade with it, leaving the finished slide clean. */
+    drawContainer(1 - ease);
   }
 
   /* The stroke and the inner shadow. Both follow the mask, both are painted
      every frame including after the picture has resolved, because they belong
      to the container rather than to the loading state. */
-  function drawContainer() {
+  function drawContainer(strength) {
+    if (strength <= 0.002) return;
     var u = dpr * ss;
+    ctx.save();
+    ctx.globalAlpha = strength;
 
     if (o.innerShadow > 0) {
       /* Fill everything OUTSIDE the shape with a blurred black, clipped to the
@@ -757,6 +766,8 @@ function ditherLoader(canvas, options) {
       ctx.stroke(path);
       ctx.restore();
     }
+
+    ctx.restore();
   }
 
   function loop(now) { draw(now); raf = requestAnimationFrame(loop); }
@@ -788,9 +799,10 @@ function ditherLoader(canvas, options) {
       if ('accentShare' in patch || 'colourMode' in patch) recomputeCutoffs();
       if ('strokeColour' in patch || 'bg' in patch) {
         BG_IS_LIGHT = lum(hex(o.bg)) > 0.5;
-        STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour
-               : (BG_IS_LIGHT ? '#0055ED' : '#69A0FF');
-        SHADOW = BG_IS_LIGHT ? 'rgba(11,15,20,0.30)' : 'rgba(0,0,0,0.60)';
+        STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour : brandBlue();
+        INK = hex(STROKE);
+        SHADOW = rgbaOf(STROKE, BG_IS_LIGHT ? 0.45 : 0.62);
+        buildPalette();
       }
       if ('ink' in patch || 'base' in patch || 'accentStrength' in patch) {
         if ('base' in patch) {
