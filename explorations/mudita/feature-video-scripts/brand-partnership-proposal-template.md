@@ -28,12 +28,14 @@ text, so they need protecting.
 
 Shown beside `Use this Template`.
 
-> A partnership only gets signed when both sides can see exactly what they get.
+**Title:** Brand Partnership Proposal
+
+> A partnership gets signed when both sides can see exactly what they get.
 >
-> This template walks the questions a partnership proposal has to answer: where your audiences
-> overlap, what each side puts in, what the campaign actually is, and how you will both know it
-> worked. It keeps the sections partners always ask about, including the value exchange that most
-> proposals leave out. Bring your notes in any state and it fills in around them.
+> This free partnership proposal template walks the questions a deal has to answer: where your
+> audiences overlap, what each side puts in, what the campaign is, and how you will both know it
+> worked. It keeps the value exchange most proposals leave out. Bring your notes in any state and
+> it fills in around them.
 >
 > Works for brand collaborations, integration launches, sponsorships and channel partnerships.
 
