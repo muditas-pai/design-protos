@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Slide dither loader · design-protos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    :root {
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --page: #F5F5F5; --card: #FFFFFF;
+      --ink: #171717; --ink-2: #525252; --ink-3: #A3A3A3;
+      --hair: rgba(0,0,0,0.09);
+    }
+    body { background: var(--page); color: var(--ink); }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 44px 28px 120px; }
+    .back { display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      color: var(--ink-2); margin-bottom: 20px; transition: color 150ms var(--ease-out); }
+    .back:hover { color: var(--ink); }
+    h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; color: var(--ink); }
+    .lede { color: var(--ink-2); font-size: 15px; line-height: 1.62; max-width: 70ch; margin: 0 0 10px; }
+    h2.sec { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--ink-3); margin: 40px 0 14px; display: flex; align-items: center; gap: 12px; }
+    h2.sec::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+
+    /* ------------------------------------------------------------ controls */
+    .bar { position: sticky; top: 12px; z-index: 20; margin: 22px 0 26px;
+      display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+      padding: 10px 12px; border-radius: 14px;
+      background: color-mix(in srgb, var(--card) 86%, transparent);
+      backdrop-filter: saturate(180%) blur(14px); -webkit-backdrop-filter: saturate(180%) blur(14px);
+      box-shadow: 0 0 0 1px var(--hair), 0 6px 20px -14px rgba(0,0,0,0.4); }
+    .btn { appearance: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 9px;
+      cursor: pointer; background: #0A1925; color: #fff;
+      transition: transform 140ms var(--ease-out), opacity 140ms var(--ease-out); }
+    .btn:active { transform: scale(0.97); }
+    .btn.ghost { background: none; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair); }
+    .grp { display: flex; align-items: center; gap: 8px; }
+    .grp > span { font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--ink-3); }
+    .seg { display: flex; padding: 2px; border-radius: 9px; background: rgba(0,0,0,0.07); gap: 2px; }
+    .seg button { appearance: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 500;
+      color: var(--ink-2); background: transparent; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: #fff; color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.10); }
+    .levers { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 12px 18px; margin: 0 0 26px; padding: 12px; border-radius: 14px; background: var(--card);
+      box-shadow: 0 0 0 1px var(--hair); }
+    .lev { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .lev label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--ink-3); }
+    .lev label b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+      font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink);
+      font-variant-numeric: tabular-nums; }
+    .lev input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 16px;
+      background: none; cursor: ew-resize; margin: 0; }
+    .lev input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px;
+      background: rgba(0,0,0,0.14); }
+    .lev input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+      width: 12px; height: 12px; border-radius: 50%; background: #fff; margin-top: -4.5px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.22); }
+    .lev input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px; background: rgba(0,0,0,0.14); }
+    .lev input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%;
+      background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.22); }
+
+    /* -------------------------------------------------------------- slides */
+    .slide-wrap { margin-bottom: 30px; }
+    .slide-meta { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; flex-wrap: wrap; }
+    .slide-meta .name { font-size: 13.5px; font-weight: 600; }
+    .swatch { width: 13px; height: 13px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12); }
+    .slide-meta code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+      color: var(--ink-3); }
+
+    .slide { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+      border-radius: 10px; box-shadow: 0 0 0 1px var(--hair), 0 10px 30px -22px rgba(0,0,0,0.5); }
+    .slide > * { position: absolute; inset: 0; }
+    .slide .photo { background-size: cover; background-position: center; }
+    .slide .photo svg { width: 100%; height: 100%; display: block; }
+    .slide canvas { width: 100%; height: 100%; display: block; }
+
+    /* slide furniture, drawn only so the loader can be judged in context */
+    .copy { position: absolute; inset: auto auto 0 0; padding: 0; }
+    .kicker { position: absolute; font-weight: 700; }
+    .title { position: absolute; font-weight: 800; letter-spacing: -0.02em; line-height: 1.08; }
+    .sub { position: absolute; line-height: 1.45; }
+
+    pre.api { background: #12161C; color: #E6E9EE; border-radius: 12px; padding: 18px 20px;
+      overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; line-height: 1.65; margin: 0; }
+    pre.api .c { color: #7E8AA0; }
+    pre.api .k { color: #9FD0FF; }
+    pre.api .s { color: #F5C57B; }
+    .note { color: var(--ink-2); font-size: 13.5px; line-height: 1.6; max-width: 74ch; }
+    .note strong { color: var(--ink); }
+    .note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+      background: rgba(0,0,0,0.05); padding: 1.5px 5px; border-radius: 5px; }
+    ul.note { padding-left: 20px; }
+    ul.note li { margin: 7px 0; }
+  </style>
+</head>
+
+<body class="pai">
+<div class="wrap">
+  <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
+
+  <h1>Slide dither loader</h1>
+  <p class="lede">One renderer for the gap between "we asked for an image" and "the image arrived",
+    on any slide. It takes three things it can already know at render time, the slide background, the
+    accent colour, and the shape the image will occupy, and screens that shape in dots until the
+    picture lands.</p>
+  <p class="lede">The three slides below share a single function. Nothing about them is special-cased:
+    a full-bleed rectangle on white, a chevron on dark navy, and a folded polygon on cream all come
+    from the same call with different arguments.</p>
+
+  <div class="bar">
+    <button class="btn" id="replay"><i class="ph ph-arrow-clockwise"></i>Replay</button>
+    <div class="grp"><span>Wave</span>
+      <div class="seg" id="segWave">
+        <button data-v="random" aria-pressed="true">Random</button>
+        <button data-v="diagonal">Diagonal</button>
+        <button data-v="down">Down</button>
+        <button data-v="radial">Radial</button>
+      </div>
+    </div>
+    <div class="grp"><span>Loop</span>
+      <div class="seg" id="segLoop">
+        <button data-v="on" aria-pressed="true">On</button>
+        <button data-v="off">Off</button>
+      </div>
+    </div>
+    <button class="btn ghost" id="reset">Reset levers</button>
+  </div>
+
+  <div class="levers" id="levers">
+    <div class="lev"><label for="lvPitch">Pitch<b id="vPitch"></b></label>
+      <input type="range" id="lvPitch" min="4" max="24" step="1" value="8" /></div>
+    <div class="lev"><label for="lvSpacing">Spacing<b id="vSpacing"></b></label>
+      <input type="range" id="lvSpacing" min="20" max="100" step="1" value="45" /></div>
+    <div class="lev"><label for="lvDot">Dot weight<b id="vDot"></b></label>
+      <input type="range" id="lvDot" min="0.3" max="1.9" step="0.02" value="0.94" /></div>
+    <div class="lev"><label for="lvRound">Roundness<b id="vRound"></b></label>
+      <input type="range" id="lvRound" min="0" max="50" step="1" value="50" /></div>
+    <div class="lev"><label for="lvFloor">Tone floor<b id="vFloor"></b></label>
+      <input type="range" id="lvFloor" min="0" max="0.7" step="0.01" value="0.24" /></div>
+    <div class="lev"><label for="lvRange">Tone range<b id="vRange"></b></label>
+      <input type="range" id="lvRange" min="0.05" max="1.1" step="0.01" value="0.78" /></div>
+    <div class="lev"><label for="lvSwell">Swell<b id="vSwell"></b></label>
+      <input type="range" id="lvSwell" min="1" max="2.4" step="0.01" value="1.36" /></div>
+    <div class="lev"><label for="lvCycle">Cycle<b id="vCycle"></b></label>
+      <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" /></div>
+    <div class="lev"><label for="lvAlpha">Ink<b id="vAlpha"></b></label>
+      <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
+    <div class="lev"><label for="lvHold">Hold before resolve<b id="vHold"></b></label>
+      <input type="range" id="lvHold" min="600" max="6000" step="100" value="2600" /></div>
+  </div>
+
+  <h2 class="sec">Three slides, one call</h2>
+  <div id="slides"></div>
+
+  <h2 class="sec">The contract</h2>
+  <pre class="api" id="apiBlock"></pre>
+
+  <h2 class="sec">Why it is built this way</h2>
+  <ul class="note">
+    <li><strong>The shape is the source of truth, used twice.</strong> One normalised polygon becomes
+      both the <code>clip-path</code> for the arriving picture and a <code>Path2D</code> for the dot
+      test, so the loader and the image can never disagree about where the image goes.</li>
+    <li><strong>Dots are placed by centre, not clipped.</strong> Every cell centre is tested against
+      the shape and skipped if it falls outside. Clipping the canvas instead would slice dots in half
+      along the edge, which reads as a mistake on an angular mask.</li>
+    <li><strong>Ink colour is derived, then checked.</strong> The accent is used as the dot colour,
+      but only if it clears a contrast ratio against the slide background. A navy accent on a navy
+      slide falls back to a tint of the background, so the loader can never come out invisible.</li>
+    <li><strong>Canvas, not DOM.</strong> A full-bleed region at pitch 8 is around 7,000 cells. As
+      elements that is a stutter; as one canvas with dots batched into eight alpha buckets it is a
+      few fills per frame.</li>
+    <li><strong>Tone is pluggable.</strong> The default is a neutral field, because at loading time
+      we do not know the picture. Pass <code>tone</code> a sampler over a tiny preview and the same
+      renderer becomes a true low-resolution render of the actual image, resolving into itself.</li>
+  </ul>
+</div>
+
+<script>
+/* ======================================================================== *
+ *  ditherLoader(canvas, options)
+ *  ---------------------------------------------------------------------
+ *  Renders an animated halftone screen inside an arbitrary shape, sized to
+ *  the canvas, until the real picture is ready.
+ *
+ *  Required
+ *    bg      slide background colour  (any CSS hex)
+ *    accent  brand accent colour      (any CSS hex)
+ *    shape   normalised polygon [[x,y]…] in 0..1, or an SVG path string,
+ *            or a function (ctx, w, h) => Path2D. Omit for a full rect.
+ *
+ *  Optional, all with sane defaults
+ *    pitch      cell size in CSS px            8
+ *    spacing    dot's share of its cell        0.45
+ *    dotWeight  overall size multiplier        0.94
+ *    roundness  0 = square, 0.5 = circle       0.5
+ *    toneFloor  dot scale with no content      0.24
+ *    toneRange  extra scale from tone          0.78
+ *    swell      size multiplier at mid-cycle   1.36
+ *    cycle      ms per swell cycle             1800
+ *    wave       'random'|'diagonal'|'down'|'radial'
+ *    ink        peak dot alpha                 0.86
+ *    tone       (u, v) => 0..1                 neutral field
+ *
+ *  Returns { start, stop, resolve, reset, set, destroy }
+ * ======================================================================== */
+function ditherLoader(canvas, options) {
+  var o = Object.assign({
+    bg: '#FFFFFF', accent: '#000000', shape: null,
+    pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
+    toneFloor: 0.24, toneRange: 0.78, swell: 1.36, cycle: 1800,
+    wave: 'random', ink: 0.86, tone: null
+  }, options || {});
+
+  var ctx = canvas.getContext('2d');
+  var cells = [], path = null, W = 0, H = 0, dpr = 1;
+  var raf = null, resolving = 0, resolveStart = 0, RESOLVE_MS = 620;
+
+  /* ---------------------------------------------------------- colour ---- */
+  function hex(c) {
+    c = c.replace('#', '');
+    if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+    return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
+  }
+  function lum(rgb) {
+    var a = rgb.map(function (v) {
+      v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function contrast(a, b) {
+    var l1 = lum(a), l2 = lum(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  function mix(a, b, t) {
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+
+  /* The dot colour: the accent, but only when it can actually be seen against
+     this slide. A navy accent on a navy slide would vanish, so fall back to a
+     tint of the background pushed toward whichever end has room. */
+  var inkRGB = (function () {
+    var bg = hex(o.bg), ac = hex(o.accent);
+    if (contrast(ac, bg) >= 1.9) return ac;
+    var target = lum(bg) > 0.45 ? [0, 0, 0] : [255, 255, 255];
+    return mix(bg, target, 0.55);
+  })();
+  var INK = inkRGB.map(Math.round);
+
+  /* eight alpha buckets, so a frame is eight fills instead of thousands */
+  var BUCKETS = 8, bucketStyle = [];
+  for (var b = 0; b < BUCKETS; b++) {
+    var a = (b + 1) / BUCKETS * o.ink;
+    bucketStyle.push('rgba(' + INK[0] + ',' + INK[1] + ',' + INK[2] + ',' + a.toFixed(3) + ')');
+  }
+
+  /* ----------------------------------------------------------- shape ---- */
+  function buildPath() {
+    if (!o.shape) {                       /* no shape given: the whole canvas */
+      var p = new Path2D(); p.rect(0, 0, W, H); return p;
+    }
+    if (typeof o.shape === 'function') return o.shape(ctx, W, H);
+    if (typeof o.shape === 'string') return new Path2D(o.shape);
+    var poly = new Path2D();              /* normalised [[x,y]…] */
+    o.shape.forEach(function (pt, i) {
+      var x = pt[0] * W, y = pt[1] * H;
+      if (i === 0) poly.moveTo(x, y); else poly.lineTo(x, y);
+    });
+    poly.closePath();
+    return poly;
+  }
+
+  /* ------------------------------------------------------------ tone ---- */
+  /* Default field: we do not know the picture yet, so this is deliberately
+     non-representational — a soft diagonal falloff with a gentle centre lift,
+     enough to give the screen structure without implying content. */
+  function defaultTone(u, v) {
+    var d = 1 - (u * 0.55 + v * 0.45);
+    var cu = u - 0.5, cv = v - 0.5;
+    var centre = Math.exp(-(cu * cu + cv * cv) / 0.28);
+    return Math.max(0, Math.min(1, 0.22 + d * 0.5 + centre * 0.34));
+  }
+
+  /* deterministic hash, so a replay is identical */
+  function rnd(i) { var h = Math.sin(i * 12.9898) * 43758.5453; return h - Math.floor(h); }
+
+  function phaseFor(u, v, i) {
+    var s = rnd(i);
+    if (o.wave === 'down')     return v * 0.92 + s * 0.08;
+    if (o.wave === 'diagonal') return u * 0.35 + v * 0.5 + s * 0.15;
+    if (o.wave === 'radial') {
+      var du = u - 0.5, dv = v - 0.5;
+      return Math.min(1, Math.sqrt(du * du + dv * dv) / 0.7) * 0.9 + s * 0.1;
+    }
+    return s;                                              /* random */
+  }
+
+  /* ----------------------------------------------------------- build ---- */
+  function build() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    var rect = canvas.getBoundingClientRect();
+    W = Math.max(1, Math.round(rect.width));
+    H = Math.max(1, Math.round(rect.height));
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    path = buildPath();
+    var toneFn = o.tone || defaultTone;
+    var cols = Math.max(1, Math.floor(W / o.pitch));
+    var rows = Math.max(1, Math.floor(H / o.pitch));
+    var offX = (W - cols * o.pitch) / 2, offY = (H - rows * o.pitch) / 2;
+
+    cells = [];
+    var i = 0;
+    for (var y = 0; y < rows; y++) {
+      for (var x = 0; x < cols; x++, i++) {
+        var cx = offX + (x + 0.5) * o.pitch;
+        var cy = offY + (y + 0.5) * o.pitch;
+        /* placed by centre: a dot is either wholly in the shape or absent,
+           so an angular edge comes out dotted rather than sliced */
+        if (!ctx.isPointInPath(path, cx * dpr, cy * dpr)) continue;
+        var u = cx / W, v = cy / H;
+        var t = Math.max(0, Math.min(1, toneFn(u, v)));
+        cells.push({ x: cx, y: cy, t: t, p: phaseFor(u, v, i) });
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------ draw ---- */
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    var half = o.pitch * o.spacing * 0.5 * o.dotWeight;
+    var square = o.roundness < 0.25;
+    var rr = o.pitch * o.spacing * 0.5 * o.roundness * 2;   /* corner radius */
+
+    /* resolve: dots swell to fill their cell and fade out together */
+    var rp = 0;
+    if (resolving) rp = Math.min(1, (now - resolveStart) / RESOLVE_MS);
+    var ease = rp * rp * (3 - 2 * rp);
+
+    var groups = [];
+    for (var g = 0; g < BUCKETS; g++) groups.push(null);
+
+    for (var i = 0; i < cells.length; i++) {
+      var c = cells[i];
+      var ph = (now / o.cycle + c.p) % 1;
+      var swell = 1 + (o.swell - 1) * (0.5 - Math.cos(ph * Math.PI * 2) / 2);
+      var scale = (o.toneFloor + c.t * o.toneRange) * swell;
+      if (resolving) scale = scale + (1 / (o.spacing * o.dotWeight) - scale) * ease;
+      var r = half * scale;
+      if (r < 0.18) continue;
+
+      var alpha = c.t;
+      if (resolving) alpha = alpha * (1 - ease);
+      if (alpha <= 0.01) continue;
+      var bi = Math.min(BUCKETS - 1, Math.max(0, Math.floor(alpha * BUCKETS)));
+      var p2 = groups[bi] || (groups[bi] = new Path2D());
+
+      if (square) {
+        p2.rect(c.x - r, c.y - r, r * 2, r * 2);
+      } else if (rr > 0.6 && o.roundness < 0.48) {
+        p2.roundRect ? p2.roundRect(c.x - r, c.y - r, r * 2, r * 2, Math.min(r, rr))
+                     : p2.rect(c.x - r, c.y - r, r * 2, r * 2);
+      } else {
+        p2.moveTo(c.x + r, c.y);
+        p2.arc(c.x, c.y, r, 0, Math.PI * 2);
+      }
+    }
+
+    for (var g2 = 0; g2 < BUCKETS; g2++) {
+      if (!groups[g2]) continue;
+      ctx.fillStyle = bucketStyle[g2];
+      ctx.fill(groups[g2]);
+    }
+  }
+
+  function loop(now) { draw(now); raf = requestAnimationFrame(loop); }
+
+  /* ----------------------------------------------------------- public --- */
+  var api = {
+    start: function () { if (!raf) raf = requestAnimationFrame(loop); return api; },
+    stop:  function () { if (raf) cancelAnimationFrame(raf); raf = null; return api; },
+    resolve: function () { resolving = 1; resolveStart = performance.now(); return api; },
+    reset: function () { resolving = 0; build(); return api; },
+    set: function (patch) {
+      var rebuild = ['pitch', 'wave', 'shape', 'tone'].some(function (k) {
+        return k in patch && patch[k] !== o[k];
+      });
+      Object.assign(o, patch);
+      if ('ink' in patch) {
+        for (var b = 0; b < BUCKETS; b++) {
+          var a = (b + 1) / BUCKETS * o.ink;
+          bucketStyle[b] = 'rgba(' + INK[0] + ',' + INK[1] + ',' + INK[2] + ',' + a.toFixed(3) + ')';
+        }
+      }
+      if (rebuild) build();
+      return api;
+    },
+    resize: function () { build(); return api; },
+    destroy: function () { api.stop(); cells = []; }
+  };
+
+  build();
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) api.start();
+  else draw(0);
+  return api;
+}
+
+/* ======================================================================== *
+ * The three slides. Only bg, accent and shape differ.
+ * ======================================================================== */
+(function () {
+  var SLIDES = [
+    {
+      name: 'Instagram Moments',
+      bg: '#FFFFFF', accent: '#221C6B', second: '#E0703F',
+      shapeLabel: 'full-bleed rectangle',
+      shape: [[0.548, 0], [1, 0], [1, 1], [0.548, 1]],
+      scene: 0,
+      copy: function () {
+        return '<div class="kicker" style="left:5.2%;top:18.5%;font-size:1.35vw;color:#221C6B">Mudita Sisodia</div>' +
+          '<div style="position:absolute;left:5.2%;top:9%;width:3.2vw;height:3.2vw;background:#E0703F;' +
+            'display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.7vw;">M</div>' +
+          '<div class="title" style="left:5.2%;top:56%;font-size:3.4vw;color:#0B0B0B;">' +
+            'Instagram Moments<br/>Reimagines How<br/>Communities<br/>' +
+            '<span style="color:#221C6B;text-decoration:underline;">Share Together</span></div>' +
+          /* the decorative blocks that overlap the image edge */
+          '<div style="position:absolute;left:50%;top:0;width:4.4%;height:16%;background:#221C6B"></div>' +
+          '<div style="position:absolute;left:55.4%;top:17%;width:9.6%;height:8%;background:#E0703F"></div>' +
+          '<div style="position:absolute;left:50%;top:25.5%;width:4.4%;height:10%;background:#221C6B"></div>' +
+          '<div style="position:absolute;left:92.6%;top:70%;width:4%;height:16%;background:#E0703F"></div>' +
+          '<div style="position:absolute;left:88.4%;top:83%;width:4.2%;height:10%;background:#221C6B"></div>' +
+          '<div style="position:absolute;left:92.6%;top:83%;width:7.4%;height:10%;background:#6FA97A"></div>' +
+          '<div style="position:absolute;left:88.4%;top:93%;width:4.2%;height:7%;background:#F5D060"></div>';
+      }
+    },
+    {
+      name: 'Daniels PPE',
+      bg: '#191A4E', accent: '#D9A445', second: '#D9A445',
+      shapeLabel: 'chevron polygon',
+      shape: [[0.552, 0], [1, 0], [1, 1], [0.617, 1], [0.487, 0.545]],
+      scene: 1,
+      copy: function () {
+        return '<div class="title" style="left:4%;top:41%;font-family:Oswald,Inter,sans-serif;' +
+            'font-size:3.5vw;font-weight:700;color:#fff;letter-spacing:0;">' +
+            'LAUNCHING THE DANIELS<br/>PPE RECYCLING PILOT</div>' +
+          '<div class="sub" style="left:4%;top:62%;width:44%;font-size:1.15vw;color:#AEB3C7;">' +
+            'Low-cost, space-efficient solution creating zero extra work for staff while hitting ' +
+            '2026 sustainability targets.</div>' +
+          '<div class="kicker" style="left:4%;top:79%;font-family:Oswald,Inter,sans-serif;' +
+            'font-size:1.3vw;color:#fff;letter-spacing:0.02em;">MARY-ANN TOPPI</div>' +
+          '<div class="sub" style="left:4%;top:84%;font-size:1vw;color:#AEB3C7;">Senior Product Designer</div>';
+      }
+    },
+    {
+      name: 'Lenskart',
+      bg: '#F5F0E9', accent: '#8B3FD1', second: '#C04FD8',
+      shapeLabel: 'folded polygon',
+      shape: [[0.545, 0], [1, 0], [1, 1], [0.523, 1], [0.605, 0.66], [0.517, 0.40], [0.560, 0.235]],
+      scene: 2,
+      copy: function () {
+        return '<div class="kicker" style="left:4.2%;top:7.5%;font-size:1.1vw;color:#221C6B">Pentagram Design</div>' +
+          '<div class="title" style="left:4.2%;top:63%;font-size:2.6vw;color:#1E1B4B;">' +
+            'Lenskart: Reimagining<br/>India\'s Vision</div>' +
+          '<div style="position:absolute;left:4.2%;top:78%;width:15%;height:0.35vh;' +
+            'background:linear-gradient(90deg,#4C1D95,#C04FD8)"></div>' +
+          '<div class="sub" style="left:4.2%;top:82%;width:46%;font-size:1.05vw;color:#3B3663;">' +
+            'A strategic brand evolution for the leader of the eyewear revolution across Bharat.</div>';
+      }
+    }
+  ];
+
+  /* stand-in pictures: the real ones are generated, these just give the
+     resolve something to land on */
+  function scene(kind, uid) {
+    var s = '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">';
+    if (kind === 0) {
+      s += '<defs><linearGradient id="a' + uid + '" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0" stop-color="#2B1D14"/><stop offset="1" stop-color="#8A5A32"/></linearGradient></defs>' +
+        '<rect width="400" height="300" fill="url(#a' + uid + ')"/>' +
+        '<ellipse cx="300" cy="150" rx="92" ry="78" fill="#E8E2D4"/>' +
+        '<path d="M212 128 q88-34 176 0 l-6 26 q-84-30-164 0z" fill="#D8412F"/>' +
+        '<path d="M232 112 q68-24 136 0" stroke="#F0B429" stroke-width="13" fill="none"/>' +
+        '<rect x="40" y="150" width="170" height="112" rx="14" fill="#0E1418"/>' +
+        '<rect x="52" y="162" width="146" height="88" rx="8" fill="#2E5D82"/>';
+    } else if (kind === 1) {
+      s += '<defs><linearGradient id="a' + uid + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#C3CDD6"/><stop offset="1" stop-color="#7C8B99"/></linearGradient></defs>' +
+        '<rect width="400" height="300" fill="url(#a' + uid + ')"/>' +
+        '<path d="M0 60 L200 130 L200 300 L0 300 Z" fill="#9BA9B6"/>' +
+        '<path d="M400 0 L400 300 L210 300 L210 128 Z" fill="#5E6F80"/>' +
+        '<circle cx="316" cy="86" r="52" fill="#3A4A5C"/>' +
+        '<path d="M250 300 q70-120 150-96 l0 96z" fill="#2B4F8E"/>' +
+        '<rect x="228" y="52" width="16" height="86" rx="8" fill="#EFF3F7" opacity=".8"/>';
+    } else {
+      s += '<rect width="400" height="300" fill="#161616"/>' +
+        '<g fill="#F2F2F2">';
+      for (var r = 0; r < 11; r++) for (var c = 0; c < 15; c++) {
+        s += '<circle cx="' + (250 + c * 11) + '" cy="' + (18 + r * 26) + '" r="' + (3 + (c % 3)) + '"/>';
+      }
+      s += '</g><ellipse cx="150" cy="160" rx="110" ry="140" fill="#D9D4CE"/>' +
+        '<circle cx="120" cy="120" r="34" fill="none" stroke="#111" stroke-width="9"/>' +
+        '<circle cx="206" cy="120" r="34" fill="none" stroke="#111" stroke-width="9"/>' +
+        '<path d="M154 120 h18" stroke="#111" stroke-width="9"/>';
+    }
+    return s + '</svg>';
+  }
+
+  function clipPathOf(shape) {
+    return 'polygon(' + shape.map(function (p) {
+      return (p[0] * 100).toFixed(2) + '% ' + (p[1] * 100).toFixed(2) + '%';
+    }).join(', ') + ')';
+  }
+
+  /* ------------------------------------------------------------- build -- */
+  var host = document.getElementById('slides');
+  var instances = [];
+
+  SLIDES.forEach(function (S, i) {
+    var wrap = document.createElement('div');
+    wrap.className = 'slide-wrap';
+    wrap.innerHTML =
+      '<div class="slide-meta">' +
+        '<span class="name">' + S.name + '</span>' +
+        '<span class="swatch" style="background:' + S.bg + '"></span>' +
+        '<span class="swatch" style="background:' + S.accent + '"></span>' +
+        '<code>bg ' + S.bg + ' · accent ' + S.accent + ' · ' + S.shapeLabel + '</code>' +
+      '</div>' +
+      '<div class="slide" style="background:' + S.bg + '">' +
+        '<div class="photo" style="clip-path:' + clipPathOf(S.shape) + ';opacity:0;' +
+          'transition:opacity 420ms cubic-bezier(0.23,1,0.32,1)">' + scene(S.scene, i) + '</div>' +
+        '<canvas></canvas>' +
+        '<div class="copy" style="inset:0">' + S.copy() + '</div>' +
+      '</div>';
+    host.appendChild(wrap);
+
+    var canvas = wrap.querySelector('canvas');
+    var photo = wrap.querySelector('.photo');
+    instances.push({ canvas: canvas, photo: photo, slide: S, loader: null });
+  });
+
+  function opts() {
+    return {
+      pitch: +document.getElementById('lvPitch').value,
+      spacing: +document.getElementById('lvSpacing').value / 100,
+      dotWeight: +document.getElementById('lvDot').value,
+      roundness: +document.getElementById('lvRound').value / 100,
+      toneFloor: +document.getElementById('lvFloor').value,
+      toneRange: +document.getElementById('lvRange').value,
+      swell: +document.getElementById('lvSwell').value,
+      cycle: +document.getElementById('lvCycle').value,
+      ink: +document.getElementById('lvAlpha').value,
+      wave: WAVE
+    };
+  }
+
+  var WAVE = 'random', LOOP = true, timers = [];
+
+  function boot() {
+    timers.forEach(clearTimeout); timers = [];
+    instances.forEach(function (inst) {
+      if (inst.loader) inst.loader.destroy();
+      inst.photo.style.opacity = 0;
+      var o = opts();
+      o.bg = inst.slide.bg; o.accent = inst.slide.accent; o.shape = inst.slide.shape;
+      inst.loader = ditherLoader(inst.canvas, o);
+    });
+    var hold = +document.getElementById('lvHold').value;
+    timers.push(setTimeout(function () {
+      instances.forEach(function (inst, k) {
+        timers.push(setTimeout(function () {
+          inst.loader.resolve();
+          inst.photo.style.opacity = 1;
+        }, k * 260));
+      });
+      if (LOOP) timers.push(setTimeout(boot, 2600));
+    }, hold));
+  }
+
+  /* ---------------------------------------------------------- controls -- */
+  function seg(id, fn) {
+    var el = document.getElementById(id);
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      [].forEach.call(el.querySelectorAll('button'), function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      fn(b.getAttribute('data-v'));
+    });
+  }
+  seg('segWave', function (v) { WAVE = v; boot(); });
+  seg('segLoop', function (v) { LOOP = v === 'on'; if (LOOP) boot(); });
+  document.getElementById('replay').addEventListener('click', boot);
+
+  var FMT = {
+    lvPitch: function (v) { return v + 'px'; },
+    lvSpacing: function (v) { return v + '%'; },
+    lvDot: function (v) { return (+v).toFixed(2) + '×'; },
+    lvRound: function (v) { return v + '%'; },
+    lvFloor: function (v) { return (+v).toFixed(2); },
+    lvRange: function (v) { return (+v).toFixed(2); },
+    lvSwell: function (v) { return (+v).toFixed(2) + '×'; },
+    lvCycle: function (v) { return (v / 1000).toFixed(2) + 's'; },
+    lvAlpha: function (v) { return (+v).toFixed(2); },
+    lvHold: function (v) { return (v / 1000).toFixed(1) + 's'; }
+  };
+  var LIVE = { lvSpacing: 'spacing', lvDot: 'dotWeight', lvRound: 'roundness',
+               lvFloor: 'toneFloor', lvRange: 'toneRange', lvSwell: 'swell',
+               lvCycle: 'cycle', lvAlpha: 'ink' };
+
+  Object.keys(FMT).forEach(function (id) {
+    var el = document.getElementById(id);
+    var out = document.getElementById('v' + id.slice(2));
+    function run() {
+      out.textContent = FMT[id](el.value);
+      if (LIVE[id]) {
+        var patch = {};
+        var v = +el.value;
+        patch[LIVE[id]] = (id === 'lvSpacing' || id === 'lvRound') ? v / 100 : v;
+        instances.forEach(function (i) { if (i.loader) i.loader.set(patch); });
+      } else if (id === 'lvPitch') { boot(); }
+    }
+    el.addEventListener('input', run);
+    el._run = run;
+    run();
+  });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    Object.keys(FMT).forEach(function (id) {
+      var el = document.getElementById(id);
+      el.value = el.getAttribute('value'); el._run();
+    });
+    boot();
+  });
+
+  var rz = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(rz);
+    rz = setTimeout(function () {
+      instances.forEach(function (i) { if (i.loader) i.loader.resize(); });
+    }, 140);
+  });
+
+  /* ------------------------------------------------------- the contract - */
+  document.getElementById('apiBlock').innerHTML =
+    '<span class="c">// everything the renderer needs is already known at slide-render time</span>\n' +
+    'ditherLoader(canvas, {\n' +
+    '  <span class="k">bg</span>:     <span class="s">\'#191A4E\'</span>,   <span class="c">// slide background</span>\n' +
+    '  <span class="k">accent</span>: <span class="s">\'#D9A445\'</span>,   <span class="c">// brand accent — checked for contrast, tinted if it fails</span>\n' +
+    '  <span class="k">shape</span>:  [[.55,0],[1,0],[1,1],[.62,1],[.49,.55]]   <span class="c">// normalised, same one the image is clipped to</span>\n' +
+    '}).<span class="k">resolve</span>()   <span class="c">// call when the picture lands</span>\n\n' +
+    '<span class="c">// when a preview exists, the same renderer becomes a real low-res render</span>\n' +
+    'ditherLoader(canvas, { bg, accent, shape, <span class="k">tone</span>: sampleLQIP(thumb) })';
+
+  boot();
+})();
+</script>
+</body>
+</html>
