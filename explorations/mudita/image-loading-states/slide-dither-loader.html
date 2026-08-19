@@ -75,6 +75,13 @@
       background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.22); }
 
     /* -------------------------------------------------------------- slides */
+    .phasebar { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 16px;
+      font-size: 12.5px; font-weight: 500; color: var(--ink-2);
+      padding: 6px 12px 6px 10px; border-radius: 999px; background: var(--card);
+      box-shadow: 0 0 0 1px var(--hair); }
+    .phasebar .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3);
+      animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
     .slide-wrap { margin-bottom: 30px; }
     .slide-meta { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; flex-wrap: wrap; }
     .slide-meta .name { font-size: 13.5px; font-weight: 600; }
@@ -85,6 +92,7 @@
     .slide { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
       border-radius: 10px; box-shadow: 0 0 0 1px var(--hair), 0 10px 30px -22px rgba(0,0,0,0.5); }
     .slide > * { position: absolute; inset: 0; }
+    .slide .deco { inset: auto; pointer-events: none; }
     .slide .photo { background-size: cover; background-position: center; }
     .slide .photo svg { width: 100%; height: 100%; display: block; }
     .slide canvas { width: 100%; height: 100%; display: block; }
@@ -167,11 +175,16 @@
       <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" /></div>
     <div class="lev"><label for="lvAlpha">Ink<b id="vAlpha"></b></label>
       <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
-    <div class="lev"><label for="lvHold">Hold before resolve<b id="vHold"></b></label>
-      <input type="range" id="lvHold" min="600" max="6000" step="100" value="2600" /></div>
+    <div class="lev"><label for="lvPreview">Preview arrives<b id="vPreview"></b></label>
+      <input type="range" id="lvPreview" min="300" max="6000" step="100" value="2200" /></div>
+    <div class="lev"><label for="lvMorph">Morph<b id="vMorph"></b></label>
+      <input type="range" id="lvMorph" min="200" max="2500" step="50" value="900" /></div>
+    <div class="lev"><label for="lvHold">Picture arrives<b id="vHold"></b></label>
+      <input type="range" id="lvHold" min="600" max="9000" step="100" value="4600" /></div>
   </div>
 
   <h2 class="sec">Three slides, one call</h2>
+  <div class="phasebar"><span class="dot"></span><span id="phase">—</span></div>
   <div id="slides"></div>
 
   <h2 class="sec">The contract</h2>
@@ -188,9 +201,12 @@
       test, so the loader and the image can never disagree about where the image goes.</li>
     <li><strong>These are the live values, not a trace.</strong> Every box, clip-path, background
       and picture below was read out of the three decks in app.presentations.ai, so the geometry is
-      exact rather than eyeballed. Deck ids are printed on each slide. The one thing still sampled by
-      eye is the gold and purple accent, because on those layouts the decorative colour comes from a
-      mood asset rather than from DOM colour.</li>
+      exact rather than eyeballed. Deck ids are printed on each slide. The Daniels chevrons are the
+      real thing too: the mood paints a solid accent masked by its own PNGs
+      (<code>line-tr1.png</code>, <code>line-br1.png</code>), which is why its gold is
+      <code>#FFBA08</code> and not the softer tone a screenshot suggests. The Instagram blocks and
+      the Lenskart purple folds are rebuilt by eye — that deck's mood has since been changed in the
+      app, so its original decor is no longer there to read.</li>
     <li><strong>Dots are placed by centre, not clipped.</strong> Every cell centre is tested against
       the shape and skipped if it falls outside. Clipping the canvas instead would slice dots in half
       along the edge, which reads as a mistake on an angular mask.</li>
@@ -200,6 +216,12 @@
     <li><strong>Canvas, not DOM.</strong> A full-bleed region at pitch 8 is around 7,000 cells. As
       elements that is a stutter; as one canvas with dots batched into eight alpha buckets it is a
       few fills per frame.</li>
+    <li><strong>Three phases, because the first one cannot know the picture.</strong> At t=0 the
+      image does not exist yet, so a screen that already outlines the subject is lying. Phase 1 is a
+      neutral field. Phase 2 begins when a preview lands: <code>preview(toneFn)</code> morphs every
+      dot from the field toward the picture's own tone, so the noise reorganises itself into a
+      low-resolution render. Phase 3 swells the dots out as the full picture fades in. Only the
+      middle phase knows anything, and it only knows what a preview could actually tell it.</li>
     <li><strong>Tone is pluggable, and here it is plugged in.</strong> Switch <em>Tone</em> to
       <em>Neutral field</em> and the screen is decorative, which is all you can do when the picture
       is genuinely unknown. Leave it on <em>From image</em> and <code>imageTone()</code> samples the
@@ -245,7 +267,15 @@
  *    ink        peak dot alpha                 0.86
  *    tone       (u, v) => 0..1                 neutral field
  *
- *  Returns { start, stop, resolve, reset, set, destroy }
+ *  Three phases, in this order:
+ *    1  UNAWARE   the screen knows nothing about the picture. This is the
+ *                 honest state at t=0, because nothing has been generated yet.
+ *    2  AWARE     a preview lands. preview(toneFn) morphs every dot from the
+ *                 neutral field to the picture's own tone, so the noise
+ *                 reorganises itself into a low-resolution render.
+ *    3  RESOLVED  resolve() swells the dots out while the picture fades in.
+ *
+ *  Returns { start, stop, preview, resolve, reset, set, destroy }
  * ======================================================================== */
 function ditherLoader(canvas, options) {
   var o = Object.assign({
@@ -258,6 +288,7 @@ function ditherLoader(canvas, options) {
   var ctx = canvas.getContext('2d');
   var cells = [], path = null, W = 0, H = 0, dpr = 1;
   var raf = null, resolving = 0, resolveStart = 0, RESOLVE_MS = 620;
+  var morph = 0, morphStart = 0, morphing = 0, MORPH_MS = 900;
 
   /* ---------------------------------------------------------- colour ---- */
   function hex(c) {
@@ -375,7 +406,9 @@ function ditherLoader(canvas, options) {
            image sampler naturally works in */
         var u = (cx - b.x) / b.w, v = (cy - b.y) / b.h;
         var t = Math.max(0, Math.min(1, toneFn(u, v)));
-        cells.push({ x: cx, y: cy, t: t, p: phaseFor(u, v, i) });
+        /* t0 is what we know now, t1 is what we will know when a preview
+           arrives; until then they are the same */
+        cells.push({ x: cx, y: cy, u: u, v: v, t0: t, t1: t, p: phaseFor(u, v, i) });
       }
     }
   }
@@ -392,19 +425,27 @@ function ditherLoader(canvas, options) {
     if (resolving) rp = Math.min(1, (now - resolveStart) / RESOLVE_MS);
     var ease = rp * rp * (3 - 2 * rp);
 
+    /* how far through the unaware → aware morph we are */
+    if (morphing) {
+      morph = Math.min(1, (now - morphStart) / MORPH_MS);
+      if (morph >= 1) morphing = 0;
+    }
+    var mEase = morph * morph * (3 - 2 * morph);
+
     var groups = [];
     for (var g = 0; g < BUCKETS; g++) groups.push(null);
 
     for (var i = 0; i < cells.length; i++) {
       var c = cells[i];
+      var ct = c.t0 + (c.t1 - c.t0) * mEase;
       var ph = (now / o.cycle + c.p) % 1;
       var swell = 1 + (o.swell - 1) * (0.5 - Math.cos(ph * Math.PI * 2) / 2);
-      var scale = (o.toneFloor + c.t * o.toneRange) * swell;
+      var scale = (o.toneFloor + ct * o.toneRange) * swell;
       if (resolving) scale = scale + (1 / (o.spacing * o.dotWeight) - scale) * ease;
       var r = half * scale;
       if (r < 0.18) continue;
 
-      var alpha = c.t;
+      var alpha = ct;
       if (resolving) alpha = alpha * (1 - ease);
       if (alpha <= 0.01) continue;
       var bi = Math.min(BUCKETS - 1, Math.max(0, Math.floor(alpha * BUCKETS)));
@@ -435,7 +476,18 @@ function ditherLoader(canvas, options) {
     start: function () { if (!raf) raf = requestAnimationFrame(loop); return api; },
     stop:  function () { if (raf) cancelAnimationFrame(raf); raf = null; return api; },
     resolve: function () { resolving = 1; resolveStart = performance.now(); return api; },
-    reset: function () { resolving = 0; build(); return api; },
+    /* phase 2: a preview of the real picture has arrived */
+    preview: function (toneFn, ms) {
+      if (!toneFn) return api;
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].t0 = cells[i].t0 + (cells[i].t1 - cells[i].t0) * morph;   /* freeze where we are */
+        cells[i].t1 = Math.max(0, Math.min(1, toneFn(cells[i].u, cells[i].v)));
+      }
+      MORPH_MS = ms || 900;
+      morph = 0; morphStart = performance.now(); morphing = 1;
+      return api;
+    },
+    reset: function () { resolving = 0; morph = 0; morphing = 0; build(); return api; },
     set: function (patch) {
       var rebuild = ['pitch', 'wave', 'shape', 'tone', 'box'].some(function (k) {
         return k in patch && patch[k] !== o[k];
@@ -527,6 +579,16 @@ function imageTone(img, bgHex, boxW, boxH) {
       name: 'Instagram Moments', deck: 30871681,
       bg: '#FFFFFF', accent: '#1B1167', second: '#E06735',
       shapeLabel: 'no clip-path · plain rect',
+      /* the stepped edge is decorative blocks over a plain rect, eyeballed */
+      deco: [
+        { box: [0.460, 0.000, 0.044, 0.160], fill: '#1B1167' },
+        { box: [0.504, 0.170, 0.096, 0.080], fill: '#E06735' },
+        { box: [0.460, 0.255, 0.044, 0.100], fill: '#1B1167' },
+        { box: [0.926, 0.700, 0.040, 0.160], fill: '#E06735' },
+        { box: [0.884, 0.830, 0.042, 0.100], fill: '#1B1167' },
+        { box: [0.926, 0.830, 0.074, 0.100], fill: '#6FA97A' },
+        { box: [0.884, 0.930, 0.042, 0.070], fill: '#F5D060' }
+      ],
       box: [0.500, 0, 0.500, 1],
       shape: null,
       img: 'https://cdn.presentations.ai/bg/food/bggenfood123.jpg',
@@ -549,8 +611,15 @@ function imageTone(img, bgHex, boxW, boxH) {
     },
     {
       name: 'Daniels PPE', deck: 30251184,
-      bg: '#0B1136', accent: '#D9A445', second: '#D9A445',
+      bg: '#0B1136', accent: '#FFBA08', second: '#FFBA08',
       shapeLabel: 'polygon(0% 0%, 100% 0%, 100% 100%, 42.13% 100%, 0% 65.92%)',
+      /* exact: solid accent masked by the mood's own PNGs, boxes read from the DOM */
+      deco: [
+        { box: [0, 0, 1, 1],
+          fill: 'linear-gradient(108deg, rgba(10,36,114,0.1) 0%, rgb(11,17,54) 100%)' },
+        { box: [0.3234, 0, 0.6766, 0.6713], fill: '#FFBA08', mask: 'https://cdn.presentations.ai/docs/htmlAssets/assets/resources/moods/professional/svg/line-tr1.png' },
+        { box: [0.4068, 0.6426, 0.5932, 0.3574], fill: '#FFBA08', mask: 'https://cdn.presentations.ai/docs/htmlAssets/assets/resources/moods/professional/svg/line-br1.png' }
+      ],
       box: [0.551, 0, 0.4487, 1],
       shape: [[0, 0], [1, 0], [1, 1], [0.4213, 1], [0, 0.6592]],
       img: 'https://cdn.presentations.ai/bg/manufacturing/bggenmanufacturing137.jpg',
@@ -571,6 +640,13 @@ function imageTone(img, bgHex, boxW, boxH) {
       name: 'Lenskart', deck: 30555226,
       bg: '#F7FAFF', accent: '#8B3FD1', second: '#C04FD8',
       shapeLabel: 'polygon(29.18% 0%, 100% 0%, 100% 100%, 28.62% 100%, 27.3% 74.92%, 0% 31.61%)',
+      /* the purple folds flanking the picture, rebuilt from the render —
+         this deck's mood has since been changed in the app */
+      deco: [
+        { box: [0.500, 0, 0.230, 1], fill: 'linear-gradient(160deg,#9B4DDB,#5B2288)',
+          clip: [[0.62, 0], [1, 0], [0.30, 0.325], [1, 0.755], [0.66, 1], [0.22, 1],
+                 [0.92, 0.665], [0.20, 0.30]] }
+      ],
       box: [0.540, 0, 0.460, 1],
       shape: [[0.2918, 0], [1, 0], [1, 1], [0.2862, 1], [0.273, 0.7492], [0, 0.3161]],
       img: 'https://cdn.presentations.ai/bg/robotics/bggenrobotics152.jpg',
@@ -619,6 +695,16 @@ function imageTone(img, bgHex, boxW, boxH) {
         '<code style="margin-left:auto">' + S.credit + '</code>' +
       '</div>' +
       '<div class="slide" style="background:' + S.bg + '">' +
+        (S.deco || []).map(function (d) {
+          var st = 'position:absolute;' + boxStyle(d.box) + ';background:' + d.fill + ';';
+          if (d.mask) {
+            st += '-webkit-mask-image:url(' + d.mask + ');mask-image:url(' + d.mask + ');' +
+                  '-webkit-mask-size:100% 100%;mask-size:100% 100%;' +
+                  '-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;';
+          }
+          if (d.clip) st += 'clip-path:' + clipPathOf(d.clip) + ';';
+          return '<div class="deco" style="' + st + '"></div>';
+        }).join('') +
         '<div class="photo" style="inset:auto;position:absolute;' + boxStyle(S.box) +
           ';clip-path:' + clipPathOf(S.shape) + ';opacity:0;' +
           'background-image:url(' + S.img + ');' +
@@ -649,6 +735,7 @@ function imageTone(img, bgHex, boxW, boxH) {
   }
 
   var WAVE = 'random', LOOP = true, TONE = 'image', timers = [];
+  function setPhase(t) { document.getElementById('phase').textContent = t; }
 
   /* preload the photographs, and build a tone sampler from each */
   instances.forEach(function (inst) {
@@ -674,12 +761,30 @@ function imageTone(img, bgHex, boxW, boxH) {
       var o = opts();
       o.bg = inst.slide.bg; o.accent = inst.slide.accent; o.shape = inst.slide.shape;
       o.box = inst.slide.box;
-      /* the screen previews the real photograph when we have its pixels */
-      o.tone = (TONE === 'image' && inst.toneFn) ? inst.toneFn : null;
+      /* phase 1 is always unaware — the picture does not exist yet */
+      o.tone = null;
       inst.loader = ditherLoader(inst.canvas, o);
     });
-    var hold = +document.getElementById('lvHold').value;
+    var previewAt = +document.getElementById('lvPreview').value;
+    var morphMs   = +document.getElementById('lvMorph').value;
+    var hold      = Math.max(previewAt + morphMs + 300, +document.getElementById('lvHold').value);
+
+    setPhase('1 · generating — the screen knows nothing yet');
+
+    /* phase 2 — a preview lands and the screen becomes aware of the picture */
     timers.push(setTimeout(function () {
+      if (TONE !== 'image') { setPhase('2 · preview off — staying unaware'); return; }
+      setPhase('2 · preview received — the dots become the picture');
+      instances.forEach(function (inst, k) {
+        timers.push(setTimeout(function () {
+          if (inst.toneFn) inst.loader.preview(inst.toneFn, morphMs);
+        }, k * 160));
+      });
+    }, previewAt));
+
+    /* phase 3 — the picture itself */
+    timers.push(setTimeout(function () {
+      setPhase('3 · image loaded');
       instances.forEach(function (inst, k) {
         timers.push(setTimeout(function () {
           inst.loader.resolve();
@@ -717,6 +822,8 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvSwell: function (v) { return (+v).toFixed(2) + '×'; },
     lvCycle: function (v) { return (v / 1000).toFixed(2) + 's'; },
     lvAlpha: function (v) { return (+v).toFixed(2); },
+    lvPreview: function (v) { return (v / 1000).toFixed(1) + 's'; },
+    lvMorph: function (v) { return v + 'ms'; },
     lvHold: function (v) { return (v / 1000).toFixed(1) + 's'; }
   };
   var LIVE = { lvSpacing: 'spacing', lvDot: 'dotWeight', lvRound: 'roundness',
