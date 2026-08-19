@@ -63,6 +63,9 @@
     .lev label b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
       font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink);
       font-variant-numeric: tabular-nums; }
+    .pick { font: inherit; font-size: 12.5px; font-weight: 500; color: var(--ink);
+      background: #fff; border: 0; border-radius: 9px; padding: 6px 10px; cursor: pointer;
+      box-shadow: inset 0 0 0 1px var(--hair); }
     .lev input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 16px;
       background: none; cursor: ew-resize; margin: 0; }
     .lev input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px;
@@ -134,12 +137,17 @@
   <div class="bar">
     <button class="btn" id="replay"><i class="ph ph-arrow-clockwise"></i>Replay</button>
     <div class="grp"><span>Wave</span>
-      <div class="seg" id="segWave">
-        <button data-v="random" aria-pressed="true">Random</button>
-        <button data-v="diagonal">Diagonal</button>
-        <button data-v="down">Down</button>
-        <button data-v="radial">Radial</button>
-      </div>
+      <select id="selWave" class="pick">
+        <option value="clump" selected>Clumped</option>
+        <option value="drift">Drift</option>
+        <option value="rings">Rings</option>
+        <option value="bands">Bands</option>
+        <option value="sparse">Sparse</option>
+        <option value="random">Random (white)</option>
+        <option value="diagonal">Diagonal sweep</option>
+        <option value="down">Downward sweep</option>
+        <option value="radial">Radial sweep</option>
+      </select>
     </div>
     <div class="grp"><span>Edges</span>
       <div class="seg" id="segCrisp">
@@ -181,6 +189,10 @@
       <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" /></div>
     <div class="lev"><label for="lvAlpha">Ink<b id="vAlpha"></b></label>
       <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
+    <div class="lev"><label for="lvField">Patch size<b id="vField"></b></label>
+      <input type="range" id="lvField" min="1.5" max="16" step="0.5" value="4.5" /></div>
+    <div class="lev"><label for="lvCoh">Coherence<b id="vCoh"></b></label>
+      <input type="range" id="lvCoh" min="0" max="1" step="0.02" value="0.85" /></div>
     <div class="lev"><label for="lvPreview">Preview arrives<b id="vPreview"></b></label>
       <input type="range" id="lvPreview" min="300" max="6000" step="100" value="2200" /></div>
     <div class="lev"><label for="lvMorph">Morph<b id="vMorph"></b></label>
@@ -222,6 +234,13 @@
     <li><strong>Canvas, not DOM.</strong> A full-bleed region at pitch 8 is around 7,000 cells. As
       elements that is a stutter; as one canvas with dots batched into eight alpha buckets it is a
       few fills per frame.</li>
+    <li><strong>White noise stops working at this size.</strong> Over a few hundred cells a random
+      per-cell phase reads as lively. Over seven thousand it averages out and the whole region looks
+      uniform, because at any instant every phase is equally represented everywhere. The fix is
+      spatial coherence: neighbouring cells need to share a phase so the eye can see a patch. That is
+      what <em>Clumped</em>, <em>Drift</em>, <em>Rings</em> and <em>Bands</em> are — a smooth field
+      instead of noise, with <em>Patch size</em> setting how big a patch is and <em>Coherence</em>
+      blending back toward pure noise. <em>Random (white)</em> is kept so the difference is visible.</li>
     <li><strong>Three phases, because the first one cannot know the picture.</strong> At t=0 the
       image does not exist yet, so a screen that already outlines the subject is lying. Phase 1 is a
       neutral field. Phase 2 begins when a preview lands: <code>preview(toneFn)</code> morphs every
@@ -269,7 +288,16 @@
  *    toneRange  extra scale from tone          0.78
  *    swell      size multiplier at mid-cycle   1.36
  *    cycle      ms per swell cycle             1800
- *    wave       'random'|'diagonal'|'down'|'radial'
+ *    wave       how cell phase is distributed:
+ *               'random'   white noise — even fizz, goes uniform at scale
+ *               'clump'    patches breathing together
+ *               'drift'    patches carried across the frame
+ *               'rings'    repeating rings out of the centre
+ *               'bands'    repeating diagonal march
+ *               'sparse'   mostly still, a scattered few catching the light
+ *               'diagonal' | 'down' | 'radial'  single sweeps
+ *    fieldScale how large the patches are (lower = bigger)
+ *    coherence  0 = white noise, 1 = the field alone
  *    ink        peak dot alpha                 0.86
  *    tone       (u, v) => 0..1                 neutral field
  *
@@ -288,7 +316,7 @@ function ditherLoader(canvas, options) {
     bg: '#FFFFFF', accent: '#000000', shape: null, box: [0, 0, 1, 1],
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.78, swell: 1.36, cycle: 1800,
-    wave: 'random', ink: 0.86, tone: null, crisp: true
+    wave: 'clump', fieldScale: 4.5, coherence: 0.85, ink: 0.86, tone: null, crisp: true
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -368,16 +396,48 @@ function ditherLoader(canvas, options) {
 
   /* deterministic hash, so a replay is identical */
   function rnd(i) { var h = Math.sin(i * 12.9898) * 43758.5453; return h - Math.floor(h); }
+  function hash2(x, y) { var n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); }
+
+  /* Smooth value noise. This is what white noise cannot do: give neighbouring
+     cells a similar phase, so the eye sees patches of activity travelling
+     rather than an even fizz. Over a few hundred cells white noise reads as
+     lively; over seven thousand it averages out and looks uniform. */
+  function vnoise(x, y) {
+    var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    var su = xf * xf * (3 - 2 * xf), sv = yf * yf * (3 - 2 * yf);
+    var a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+    return a + (b - a) * su + (c - a) * sv + (a - b - c + d) * su * sv;
+  }
+  function fbm(x, y) { return vnoise(x, y) * 0.65 + vnoise(x * 2.3, y * 2.3) * 0.35; }
+  function frac(x) { return x - Math.floor(x); }
 
   function phaseFor(u, v, i) {
-    var s = rnd(i);
-    if (o.wave === 'down')     return v * 0.92 + s * 0.08;
-    if (o.wave === 'diagonal') return u * 0.35 + v * 0.5 + s * 0.15;
-    if (o.wave === 'radial') {
-      var du = u - 0.5, dv = v - 0.5;
-      return Math.min(1, Math.sqrt(du * du + dv * dv) / 0.7) * 0.9 + s * 0.1;
+    var white = rnd(i);                 /* the incoherent extreme */
+    var k = o.fieldScale, field;
+    switch (o.wave) {
+      case 'down':     field = v * 0.92; break;
+      case 'diagonal': field = u * 0.35 + v * 0.5; break;
+      case 'radial': {
+        var du = u - 0.5, dv = v - 0.5;
+        field = Math.min(1, Math.sqrt(du * du + dv * dv) / 0.7) * 0.9; break;
+      }
+      /* patches of cells breathing together, drifting nowhere in particular */
+      case 'clump':  field = fbm(u * k, v * k); break;
+      /* the same patches, but carried across the frame by a gradient */
+      case 'drift':  field = frac(fbm(u * k, v * k) * 0.55 + (u * 0.5 + v * 0.35)); break;
+      /* repeating rings out of the centre, so the sweep never stops */
+      case 'rings': {
+        var ru = u - 0.5, rv = v - 0.5;
+        field = frac(Math.sqrt(ru * ru + rv * rv) * k * 0.5); break;
+      }
+      /* repeating diagonal bands — a march rather than a single pass */
+      case 'bands':  field = frac((u * 0.62 + v * 0.38) * k * 0.34); break;
+      /* mostly still, with a scattered few catching the light */
+      case 'sparse': field = white < 0.18 ? white : 0.0; break;
+      default:       field = white;
     }
-    return s;                                              /* random */
+    if (o.wave === 'random') return white;
+    return field * o.coherence + white * (1 - o.coherence);
   }
 
   /* ----------------------------------------------------------- build ---- */
@@ -534,7 +594,7 @@ function ditherLoader(canvas, options) {
     },
     reset: function () { resolving = 0; morph = 0; morphing = 0; build(); return api; },
     set: function (patch) {
-      var rebuild = ['pitch', 'wave', 'shape', 'tone', 'box'].some(function (k) {
+      var rebuild = ['pitch', 'wave', 'shape', 'tone', 'box', 'fieldScale', 'coherence'].some(function (k) {
         return k in patch && patch[k] !== o[k];
       });
       Object.assign(o, patch);
@@ -775,11 +835,13 @@ function imageTone(img, bgHex, boxW, boxH) {
       swell: +document.getElementById('lvSwell').value,
       cycle: +document.getElementById('lvCycle').value,
       ink: +document.getElementById('lvAlpha').value,
+      fieldScale: +document.getElementById('lvField').value,
+      coherence: +document.getElementById('lvCoh').value,
       wave: WAVE, crisp: CRISP
     };
   }
 
-  var WAVE = 'random', LOOP = true, TONE = 'image', CRISP = true, timers = [];
+  var WAVE = 'clump', LOOP = true, TONE = 'image', CRISP = true, timers = [];
   function setPhase(t) { document.getElementById('phase').textContent = t; }
 
   /* preload the photographs, and build a tone sampler from each */
@@ -852,7 +914,9 @@ function imageTone(img, bgHex, boxW, boxH) {
       fn(b.getAttribute('data-v'));
     });
   }
-  seg('segWave', function (v) { WAVE = v; boot(); });
+  document.getElementById('selWave').addEventListener('change', function () {
+    WAVE = this.value; boot();
+  });
   seg('segTone', function (v) { TONE = v; boot(); });
   seg('segCrisp', function (v) {
     CRISP = v === 'crisp';
@@ -871,6 +935,8 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvSwell: function (v) { return (+v).toFixed(2) + '×'; },
     lvCycle: function (v) { return (v / 1000).toFixed(2) + 's'; },
     lvAlpha: function (v) { return (+v).toFixed(2); },
+    lvField: function (v) { return (+v).toFixed(1); },
+    lvCoh: function (v) { return (+v).toFixed(2); },
     lvPreview: function (v) { return (v / 1000).toFixed(1) + 's'; },
     lvMorph: function (v) { return v + 'ms'; },
     lvHold: function (v) { return (v / 1000).toFixed(1) + 's'; }
@@ -889,7 +955,7 @@ function imageTone(img, bgHex, boxW, boxH) {
         var v = +el.value;
         patch[LIVE[id]] = (id === 'lvSpacing' || id === 'lvRound') ? v / 100 : v;
         instances.forEach(function (i) { if (i.loader) i.loader.set(patch); });
-      } else if (id === 'lvPitch') { boot(); }
+      } else if (id === 'lvPitch' || id === 'lvField' || id === 'lvCoh') { boot(); }
     }
     el.addEventListener('input', run);
     el._run = run;
