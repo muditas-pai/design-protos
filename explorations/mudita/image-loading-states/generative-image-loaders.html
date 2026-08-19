@@ -220,7 +220,9 @@
      * 06 · dither — halftone dots grow in ordered (Bayer) sequence
      * ==================================================================== */
     .v-dither { --gap: 1.4%; }
-    .v-dither .g > i { border-radius: 50%; opacity: 0;
+    /* a halftone dot stays round inside a wide cell, the way real screening works */
+    .v-dither .g > i { width: auto; height: 100%; aspect-ratio: 1; margin: 0 auto;
+      border-radius: 50%; opacity: 0;
       animation: gl-dither var(--dur) var(--step) infinite;
       animation-delay: calc(var(--d) * var(--dur)); }
     @keyframes gl-dither {
@@ -333,8 +335,9 @@
     <p class="lede">Twelve landscape placeholders in the resolution and pixel family, the shape
       language <code>generative-loaders</code> uses for <code>variant="resolution"</code>. Nothing
       loads underneath: the loader is the picture. All twelve resolve the same latent subject on the
-      same 2.35s beat, so what you are comparing is grid, cadence, and how detail arrives. Cells stay
-      square at every frame ratio, so 16:9 gets more columns rather than stretched pixels.</p>
+      same 2.35s beat, so what you are comparing is grid, cadence, and how detail arrives. Frame and cell
+      ratios are set separately: cells are 16:9 by default, so a pixel is a wide block rather than a
+      square, and the column count is derived to hold that ratio.</p>
     <p class="lede" style="margin-top:10px;">Shortlisted so far: <strong>Resolution</strong>,
       <strong>Dither</strong>, <strong>Denoise</strong> and <strong>Radial</strong>. They lead the
       page; the other eight sit below for comparison.</p>
@@ -343,6 +346,14 @@
       <div class="grp">
         <span>Frame</span>
         <div class="seg" id="segAspect">
+          <button data-v="1.7778" aria-pressed="true">16:9</button>
+          <button data-v="1.3333">4:3</button>
+          <button data-v="1">1:1</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Cell</span>
+        <div class="seg" id="segCell">
           <button data-v="1.7778" aria-pressed="true">16:9</button>
           <button data-v="1.3333">4:3</button>
           <button data-v="1">1:1</button>
@@ -408,7 +419,8 @@
 
   <script>
   (function () {
-    var AR = 1.7778;   /* current frame ratio; every grid is derived from it */
+    var AR   = 1.7778;   /* frame ratio, w / h */
+    var CELL = 1.7778;   /* ratio of one cell — grids are derived from both */
 
     /* ------------------------------------------------------------------ *
      * The latent subject. Sampled in PHYSICAL space (x scaled by the frame
@@ -427,8 +439,9 @@
     function t(cols, rows, x, y) {
       return tone((x + 0.5) / cols, (y + 0.5) / rows).toFixed(3);
     }
-    /* columns that keep cells square at the current ratio */
-    function cols(rows) { return Math.max(1, Math.round(rows * AR)); }
+    /* column count that gives every cell the chosen ratio:
+       cellRatio = frameRatio * rows / cols  →  cols = rows * frameRatio / cellRatio */
+    function cols(rows) { return Math.max(1, Math.round(rows * AR / CELL)); }
 
     /* deterministic jitter, so a reload looks identical */
     function rnd(i) { var h = Math.sin(i * 12.9898) * 43758.5453; return h - Math.floor(h); }
@@ -492,7 +505,7 @@
         desc: 'Detail subdivides only where the subject is, so the busy corner refines and the empty one stays coarse.',
         spec: '3 depths · staged by depth · 2.35s',
         html: (function () {
-          var h = '', rootR = 2, rootC = Math.max(2, Math.round(rootR * AR));
+          var h = '', rootR = 2, rootC = Math.max(1, Math.round(rootR * AR / CELL));
           function node(x, y, w, hh, depth) {
             var c = tone(x + w / 2, y + hh / 2);
             /* subdivide where there is something to see, up to 3 levels deep */
@@ -633,6 +646,7 @@
     }
     var root = document.documentElement;
     seg('segAspect',  function (v) { AR = parseFloat(v); root.style.setProperty('--ar', v); render(); });
+    seg('segCell',    function (v) { CELL = parseFloat(v); render(); });
     seg('segSize',    function (v) { root.style.setProperty('--size', v + 'px'); });
     seg('segRadius',  function (v) { root.style.setProperty('--radius', v); });
     seg('segSpeed',   function (v) { root.style.setProperty('--speed', v); });
