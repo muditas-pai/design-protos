@@ -41,6 +41,17 @@
       --green: #16A34A;
       --speed: 1;
       --step-ms: calc(1900ms / var(--speed));
+      /* dither levers — all live except pitch and wave, which rebuild the grid */
+      --dmin:   0.24;   /* dot scale where there is no content */
+      --drange: 0.55;   /* added by tone: max scale = dmin + drange */
+      --dscale: 1;      /* overall dot size multiplier */
+      --swell:  1.35;   /* how far a dot swells at mid-cycle */
+      --dot-radius: 50%;
+      /* the gutter separating one container from the next, and from the card
+         edge. Drives the placeholder AND the finished content, so the geometry
+         does not shift at the handoff. */
+      --gutter: 8px;
+      --well-radius: 6px;
     }
 
     body { background: #F5F5F5; color: var(--ink); }
@@ -53,6 +64,9 @@
     .lede { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; max-width: 68ch; margin: 0; }
 
     /* ------------------------------------------------------------ controls */
+    .dither-only { display: none; }
+    body[data-treat="dither"] .dither-only { display: flex; }
+    .dither-only { margin-top: -8px !important; }
     .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
       margin: 22px 0 20px; padding: 10px 12px; border-radius: 14px; background: #fff;
       box-shadow: 0 0 0 1px var(--hair), 0 6px 20px -14px rgba(0,0,0,0.4); }
@@ -160,14 +174,17 @@
      * inside each. Card mode keeps one grid across the whole card, for
      * comparison.
      * ---------------------------------------------------------------------- */
-    .scaffold { position: absolute; inset: 0;
+    .scaffold { position: absolute; inset: var(--gutter);
+      display: flex; flex-direction: column; gap: var(--gutter);
       transition: opacity 380ms var(--ease-out), transform 520ms var(--ease-out),
                   filter 380ms var(--ease-out); }
-    .c-type .scaffold { inset: 16px; }
-    .slot { position: absolute; left: 0; right: 0; overflow: hidden; }
-    /* hairlines make the count legible before anything has arrived */
-    body[data-scaffold="slots"] .c-logo .slot + .slot,
-    body[data-scaffold="slots"] .c-palette .slot + .slot { border-top: 1px solid rgba(0,0,0,0.05); }
+    .c-type .scaffold { inset: calc(var(--gutter) + 8px); }
+    .slot { position: relative; overflow: hidden; border-radius: var(--well-radius); }
+    /* a faint well, so the container is perceptible before anything lands in it */
+    body[data-scaffold="slots"] .slot:not(.spacer) {
+      background: rgba(0,0,0,0.018); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.045); }
+    body[data-gutter="0"] .slot { border-radius: 0; }
+    .slot.spacer { background: none !important; box-shadow: none !important; }
     .card.resolved .scaffold { opacity: 0; transform: scale(1.01); filter: blur(2px); }
 
     .pxgrid { position: absolute; inset: 0; display: grid; gap: 2px;
@@ -191,16 +208,21 @@
        SIZE, and the size is what animates — an opacity pulse this small is
        invisible, which is why it read as static. */
     body[data-treat="dither"] .pxgrid { gap: 0; padding: 0; }
-    body[data-treat="dither"] .pxgrid > i { border-radius: 50%; width: auto; height: 82%;
-      aspect-ratio: 1; place-self: center;
+    body[data-treat="dither"] .pxgrid > i { border-radius: var(--dot-radius); width: auto;
+      height: 88%; aspect-ratio: 1; place-self: center;
       animation: ph-dot calc(1800ms / var(--speed)) ease-in-out infinite;
       animation-delay: calc(var(--d) * -1800ms); }
     @keyframes ph-dot {
-      0%, 100% { transform: scale(calc(0.18 + var(--t) * 0.56));
+      0%, 100% { transform: scale(calc((var(--dmin) + var(--t) * var(--drange)) * var(--dscale)));
                  opacity: calc(0.32 + var(--t) * 0.44); }
-      50%      { transform: scale(calc(0.30 + var(--t) * 0.74));
+      50%      { transform: scale(calc((var(--dmin) + var(--t) * var(--drange))
+                                       * var(--dscale) * var(--swell)));
                  opacity: calc(0.52 + var(--t) * 0.48); }
     }
+    /* Motion: Still — hold the resolved screen, no swell at all */
+    body[data-treat="dither"][data-motion="still"] .pxgrid > i { animation: none;
+      transform: scale(calc((var(--dmin) + var(--t) * var(--drange)) * var(--dscale)));
+      opacity: calc(0.34 + var(--t) * 0.52); }
     body[data-treat="denoise"] .pxgrid { gap: 1px; }
     body[data-treat="denoise"] .pxgrid > i { border-radius: 0;
       animation: ph-flick calc(280ms / var(--speed)) steps(2, end) infinite;
@@ -230,22 +252,33 @@
       transition: opacity 420ms var(--ease-out), transform 560ms var(--ease-out); }
     .card.resolved .real { opacity: 1; transform: none; }
 
-    /* ---- card 1 · logo ---------------------------------------------------- */
-    .c-logo .real { background: #101010; display: grid; place-items: center; }
-    .logo-lockup { display: flex; align-items: center; gap: 14px; }
-    .logo-lockup svg { width: 40px; height: 40px; display: block; }
-    .logo-lockup span { font-size: 27px; font-weight: 500; letter-spacing: -0.02em; color: #fff; }
+    /* ---- card 1 · logo — two wells, dark and light, as in the final frame -- */
+    .c-logo .real { display: flex; flex-direction: column; gap: var(--gutter);
+      padding: var(--gutter); }
+    .c-logo .well { flex: 1; display: grid; place-items: center;
+      border-radius: var(--well-radius); }
+    .c-logo .well.dark  { background: #101010; }
+    .c-logo .well.light { background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.07); }
+    body[data-gutter="0"] .c-logo .well { border-radius: 0; }
+    .logo-lockup { display: flex; align-items: center; gap: 11px; }
+    .logo-lockup svg { width: 32px; height: 32px; display: block; }
+    .logo-lockup span { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+    .well.dark  .logo-lockup span { color: #fff; }
+    .well.light .logo-lockup span { color: #101010; }
 
     /* ---- card 2 · type ---------------------------------------------------- */
-    .c-type .real { background: #fff; padding: 16px; display: flex; flex-direction: column;
+    .c-type .real { background: #fff; padding: calc(var(--gutter) + 8px);
+      display: flex; flex-direction: column;
       justify-content: space-between; box-shadow: inset 0 0 0 1px var(--hair); }
     .spec-title { font-family: "Source Serif 4", Georgia, serif; font-size: 27px; font-weight: 600;
       line-height: 1.18; letter-spacing: -0.01em; color: #101010; margin: 0; }
     .spec-body { font-size: 13px; line-height: 1.5; color: #262626; margin: 0; }
 
     /* ---- card 3 · palette ------------------------------------------------- */
-    .c-palette .real { display: flex; flex-direction: column; }
-    .c-palette .real span { flex: 1; display: block; }
+    .c-palette .real { display: flex; flex-direction: column; gap: var(--gutter);
+      padding: var(--gutter); }
+    .c-palette .real span { flex: 1; display: block; border-radius: var(--well-radius); }
+    body[data-gutter="0"] .c-palette .real span { border-radius: 0; }
 
     /* ------------------------------------------------------------ reduced */
     @media (prefers-reduced-motion: reduce) {
@@ -256,7 +289,7 @@
   </style>
 </head>
 
-<body class="pai" data-treat="resolution" data-scaffold="slots">
+<body class="pai" data-treat="resolution" data-scaffold="slots" data-gutter="8">
   <div class="wrap">
     <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
 
@@ -310,6 +343,60 @@
         <div class="seg" id="segMode">
           <button data-v="auto" aria-pressed="true">Auto</button>
           <button data-v="manual">Manual</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar dither-only" id="ditherBar">
+      <div class="grp"><span>Pitch</span>
+        <div class="seg" id="segPitch">
+          <button data-v="8">8</button>
+          <button data-v="10">10</button>
+          <button data-v="12" aria-pressed="true">12</button>
+          <button data-v="16">16</button>
+        </div>
+      </div>
+      <div class="grp"><span>Dot</span>
+        <div class="seg" id="segDot">
+          <button data-v="0.74">Fine</button>
+          <button data-v="1" aria-pressed="true">Medium</button>
+          <button data-v="1.28">Bold</button>
+        </div>
+      </div>
+      <div class="grp"><span>Contrast</span>
+        <div class="seg" id="segContrast">
+          <button data-v="0.42|0.30">Low</button>
+          <button data-v="0.24|0.55" aria-pressed="true">Medium</button>
+          <button data-v="0.08|0.80">High</button>
+        </div>
+      </div>
+      <div class="grp"><span>Motion</span>
+        <div class="seg" id="segMotion">
+          <button data-v="still">Still</button>
+          <button data-v="1.15">Subtle</button>
+          <button data-v="1.35" aria-pressed="true">Medium</button>
+          <button data-v="1.75">Strong</button>
+        </div>
+      </div>
+      <div class="grp"><span>Wave</span>
+        <div class="seg" id="segWave">
+          <button data-v="diagonal" aria-pressed="true">Diagonal</button>
+          <button data-v="down">Down</button>
+          <button data-v="radial">Radial</button>
+          <button data-v="random">Random</button>
+        </div>
+      </div>
+      <div class="grp"><span>Gutter</span>
+        <div class="seg" id="segGutter">
+          <button data-v="0">None</button>
+          <button data-v="8" aria-pressed="true">8</button>
+          <button data-v="14">14</button>
+        </div>
+      </div>
+      <div class="grp"><span>Shape</span>
+        <div class="seg" id="segShape">
+          <button data-v="50%" aria-pressed="true">Round</button>
+          <button data-v="1px">Square</button>
         </div>
       </div>
     </div>
@@ -413,22 +500,23 @@
     var SLOTS = {
       /* two logo wells: the dark lockup, then the light one */
       logo: [
-        { top: 0,  h: 50, cols: 6, rows: 8, sd: 0,   fill: '#101010', tone: wordmark() },
-        { top: 50, h: 50, cols: 6, rows: 8, sd: 0.8, fill: '#FFFFFF', tone: wordmark() }
+        { h: 50, cols: 6, rows: 8, sd: 0,   fill: '#101010', tone: wordmark() },
+        { h: 50, cols: 6, rows: 8, sd: 0.8, fill: '#B0B0B0', tone: wordmark() }
       ],
       /* the two text blocks, sitting where the specimen actually sits */
       type: [
-        { top: 0,  h: 30, cols: 6, rows: 3, sd: 0,   fill: '#101010',
+        { h: 30, cols: 6, rows: 3, sd: 0, fill: '#101010',
           tone: lines([0.98, 0.80, 0.60]) },
-        { top: 68, h: 32, cols: 6, rows: 5, sd: 0.6, fill: '#3A3A3A',
+        { h: 38, spacer: true },
+        { h: 32, cols: 6, rows: 5, sd: 0.6, fill: '#3A3A3A',
           tone: lines([0.98, 0.98, 0.80, 0.98, 0.55]) }
       ],
       /* four swatches, because four is what a palette comes back with */
       palette: [
-        { top: 0,  h: 25, cols: 6, rows: 4, sd: 0,    fill: PALETTE[0], tone: flat(0.40) },
-        { top: 25, h: 25, cols: 6, rows: 4, sd: 0.35, fill: PALETTE[1], tone: flat(0.58) },
-        { top: 50, h: 25, cols: 6, rows: 4, sd: 0.70, fill: PALETTE[2], tone: flat(0.72) },
-        { top: 75, h: 25, cols: 6, rows: 4, sd: 1.05, fill: PALETTE[3], tone: flat(0.92) }
+        { h: 25, cols: 6, rows: 4, sd: 0,    fill: PALETTE[0], tone: flat(0.40) },
+        { h: 25, cols: 6, rows: 4, sd: 0.35, fill: PALETTE[1], tone: flat(0.58) },
+        { h: 25, cols: 6, rows: 4, sd: 0.70, fill: PALETTE[2], tone: flat(0.72) },
+        { h: 25, cols: 6, rows: 4, sd: 1.05, fill: PALETTE[3], tone: flat(0.92) }
       ]
     };
 
@@ -437,14 +525,30 @@
      * 16:9 cells. Dither wants a tight square screen instead, so it derives
      * both counts from the slot's real pixel size at a fixed pitch.
      * ---------------------------------------------------------------------- */
-    var CARD_W = 228, CARD_H = 365, DITHER_PITCH = 12;
+    var CARD_W = 228, CARD_H = 365, DITHER_PITCH = 12, WAVE = 'diagonal';
+
+    /* where each cell sits in the resolve / swell order */
+    function delayFor(u, v, x, y) {
+      var scatter = rnd(x * 13 + y * 7);
+      if (WAVE === 'down')   return v * 0.92 + scatter * 0.08;
+      if (WAVE === 'radial') {
+        var du = u - 0.5, dv = v - 0.5;
+        return Math.min(1, Math.sqrt(du * du + dv * dv) / 0.7) * 0.9 + scatter * 0.1;
+      }
+      if (WAVE === 'random') return scatter;
+      return u * 0.35 + v * 0.5 + scatter * 0.15;   /* diagonal */
+    }
 
     function dims(kind, S) {
       if (document.body.getAttribute('data-treat') !== 'dither') {
         return { c: S.cols, r: S.rows };
       }
-      var pad = kind === 'type' ? 16 : 0;
-      var w = CARD_W - pad * 2, h = (CARD_H - pad * 2) * (S.h / 100);
+      var g = parseInt(document.body.getAttribute('data-gutter'), 10) || 0;
+      var pad = g + (kind === 'type' ? 8 : 0);
+      var w = CARD_W - pad * 2;
+      /* the gutters eat into the height before the slots divide what is left */
+      var count = SLOTS[kind] ? SLOTS[kind].length : 1;
+      var h = ((CARD_H - pad * 2) - g * (count - 1)) * (S.h / 100);
       return { c: Math.max(4, Math.round(w / DITHER_PITCH)),
                r: Math.max(3, Math.round(h / DITHER_PITCH)) };
     }
@@ -466,7 +570,7 @@
         var u = (x + 0.5) / cols, v = (y + 0.5) / rows;
         var t = tone(u, v);
         /* a diagonal wave, with enough scatter that it never looks like a scan */
-        var d = (u * 0.35 + v * 0.5) + rnd(x * 13 + y * 7) * 0.15;
+        var d = delayFor(u, v, x, y);
         h += '<i style="--t:' + t.toFixed(3) + ';--d:' + d.toFixed(3) +
              ';--fill:' + (typeof fill === 'function' ? fill(u, v) : fill) +
              ';--fo:' + (dim && t < 0.2 ? 0.05 : 1) + '"></i>';
@@ -478,13 +582,14 @@
       if (mode === 'card') {
         var whole = dims(kind, { h: 100, cols: COLS, rows: ROWS });
         return '<div class="scaffold" style="inset:0">' +
-          '<div class="slot" style="top:0;height:100%">' +
+          '<div class="slot" style="flex:1;border-radius:0">' +
             grid(whole.c, whole.r, CARD_TONE[kind], CARD_FILL[kind], kind === 'type') +
           '</div></div>';
       }
       return '<div class="scaffold">' + SLOTS[kind].map(function (S) {
+        if (S.spacer) return '<div class="slot spacer" style="flex:' + S.h + '"></div>';
         var d = dims(kind, S);
-        return '<div class="slot" style="top:' + S.top + '%;height:' + S.h + '%;--sd:' + S.sd + '">' +
+        return '<div class="slot" style="flex:' + S.h + ';--sd:' + S.sd + '">' +
           grid(d.c, d.r, S.tone, S.fill, kind === 'type') +
         '</div>';
       }).join('') + '</div>';
@@ -493,7 +598,7 @@
     /* how long the staggered fill takes before the real card can take over */
     function fillMs(kind, mode) {
       var maxSd = mode === 'card' ? 0 : SLOTS[kind].reduce(function (m, S) {
-        return Math.max(m, S.sd); }, 0);
+        return Math.max(m, S.sd || 0); }, 0);
       return (maxSd + 0.4) * 260 + 300;
     }
 
@@ -513,7 +618,12 @@
 
     var CARDS = [
       { kind: 'logo', cls: 'c-logo',
-        real: '<div class="real"><div class="logo-lockup">' + LINEAR_ICON + '<span>Linear</span></div></div>' },
+        real: '<div class="real">' +
+          '<div class="well dark"><div class="logo-lockup">' + LINEAR_ICON +
+            '<span>Linear</span></div></div>' +
+          '<div class="well light"><div class="logo-lockup">' +
+            LINEAR_ICON.replace(/#fff/g, '#101010') + '<span>Linear</span></div></div>' +
+        '</div>' },
       { kind: 'type', cls: 'c-type',
         real: '<div class="real">' +
           '<p class="spec-title">Your brand’s font for slide titles</p>' +
@@ -660,6 +770,28 @@
     seg('segSpeed', function (v) { document.documentElement.style.setProperty('--speed', v); start(); });
     seg('segMode',  function (v) { MODE = v; start(); });
     seg('segLoop',  function (v) { LOOP = v === 'on'; if (LOOP) start(); });
+    /* live levers — no rebuild, so you can dial while it runs */
+    seg('segDot',      function (v) { root.style.setProperty('--dscale', v); });
+    seg('segShape',    function (v) { root.style.setProperty('--dot-radius', v); });
+    seg('segContrast', function (v) {
+      var parts = v.split('|');
+      root.style.setProperty('--dmin', parts[0]);
+      root.style.setProperty('--drange', parts[1]);
+    });
+    seg('segMotion',   function (v) {
+      document.body.setAttribute('data-motion', v === 'still' ? 'still' : 'run');
+      if (v !== 'still') root.style.setProperty('--swell', v);
+    });
+    /* these two change the cell counts, so they rebuild */
+    seg('segGutter', function (v) {
+      root.style.setProperty('--gutter', v + 'px');
+      document.body.setAttribute('data-gutter', v);
+      paint();        /* slot pixel sizes change, so dither re-derives its grid */
+      start();
+    });
+    seg('segPitch', function (v) { DITHER_PITCH = parseInt(v, 10); paint(); start(); });
+    seg('segWave',  function (v) { WAVE = v; paint(); start(); });
+
     seg('segScaffold', function (v) {
       SCAFFOLD = v;
       document.body.setAttribute('data-scaffold', v);
