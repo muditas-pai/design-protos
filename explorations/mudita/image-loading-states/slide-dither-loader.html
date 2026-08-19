@@ -133,6 +133,12 @@
         <button data-v="radial">Radial</button>
       </div>
     </div>
+    <div class="grp"><span>Tone</span>
+      <div class="seg" id="segTone">
+        <button data-v="image" aria-pressed="true">From image</button>
+        <button data-v="field">Neutral field</button>
+      </div>
+    </div>
     <div class="grp"><span>Loop</span>
       <div class="seg" id="segLoop">
         <button data-v="on" aria-pressed="true">On</button>
@@ -185,9 +191,16 @@
     <li><strong>Canvas, not DOM.</strong> A full-bleed region at pitch 8 is around 7,000 cells. As
       elements that is a stutter; as one canvas with dots batched into eight alpha buckets it is a
       few fills per frame.</li>
-    <li><strong>Tone is pluggable.</strong> The default is a neutral field, because at loading time
-      we do not know the picture. Pass <code>tone</code> a sampler over a tiny preview and the same
-      renderer becomes a true low-resolution render of the actual image, resolving into itself.</li>
+    <li><strong>Tone is pluggable, and here it is plugged in.</strong> Switch <em>Tone</em> to
+      <em>Neutral field</em> and the screen is decorative, which is all you can do when the picture
+      is genuinely unknown. Leave it on <em>From image</em> and <code>imageTone()</code> samples the
+      real photograph, so the dots are a low-resolution render of the picture they resolve into. In
+      production that sampler would read a tiny preview from the generator rather than the full
+      image.</li>
+    <li><strong>The sampler matches the crop, and follows the ink.</strong> It applies the same
+      <code>cover</code> crop the CSS will, so the preview cannot be framed differently from the
+      photo. And tone means darkness on a light slide but brightness on a dark one, because the ink
+      flips. Without that, the halftone renders as a negative.</li>
   </ul>
 </div>
 
@@ -423,7 +436,60 @@ function ditherLoader(canvas, options) {
 }
 
 /* ======================================================================== *
- * The three slides. Only bg, accent and shape differ.
+ *  imageTone(img, bgHex, slideW, slideH)
+ *  ---------------------------------------------------------------------
+ *  Turns a real photograph into a tone function for the loader, so the
+ *  screen is a low-resolution render of the picture it is about to become
+ *  rather than a decorative field.
+ *
+ *  Two things it has to get right:
+ *
+ *  1. The SAME CROP the CSS will use. The photo is painted with
+ *     background-size: cover over the whole slide, so the sampler applies
+ *     that identical cover crop before reading pixels. Otherwise the dots
+ *     would preview a differently-framed version of the image and the
+ *     resolve would visibly jump.
+ *
+ *  2. POLARITY follows the ink. Dots are dark on a light slide, so there
+ *     tone must mean darkness. On a dark slide the ink is light, so tone
+ *     means brightness. Get this backwards and the halftone comes out as a
+ *     negative of the photo.
+ * ======================================================================== */
+function imageTone(img, bgHex, slideW, slideH) {
+  var SW = 120, SH = Math.max(1, Math.round(SW * slideH / slideW));
+  var off = document.createElement('canvas');
+  off.width = SW; off.height = SH;
+  var octx = off.getContext('2d', { willReadFrequently: true });
+
+  /* replicate background-size: cover */
+  var ia = img.naturalWidth / img.naturalHeight, sa = slideW / slideH;
+  var sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+  if (ia > sa) { sw = img.naturalHeight * sa; sx = (img.naturalWidth - sw) / 2; }
+  else         { sh = img.naturalWidth / sa;  sy = (img.naturalHeight - sh) / 2; }
+  octx.drawImage(img, sx, sy, sw, sh, 0, 0, SW, SH);
+
+  var data;
+  try { data = octx.getImageData(0, 0, SW, SH).data; }
+  catch (e) { return null; }          /* tainted canvas — caller falls back */
+
+  /* is the ink dark or light on this slide? */
+  var c = bgHex.replace('#', '');
+  if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  var br = parseInt(c.slice(0,2),16), bg2 = parseInt(c.slice(2,4),16), bb = parseInt(c.slice(4,6),16);
+  var bgLight = (0.2126*br + 0.7152*bg2 + 0.0722*bb) / 255 > 0.5;
+
+  return function (u, v) {
+    var x = Math.min(SW - 1, Math.max(0, Math.round(u * (SW - 1))));
+    var y = Math.min(SH - 1, Math.max(0, Math.round(v * (SH - 1))));
+    var i = (y * SW + x) * 4;
+    var l = (0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2]) / 255;
+    var t = bgLight ? 1 - l : l;      /* ink is dark on light, light on dark */
+    return Math.max(0, Math.min(1, 0.06 + t * 1.06));
+  };
+}
+
+/* ======================================================================== *
+ * The three slides. Only bg, accent, shape and the photograph differ.
  * ======================================================================== */
 (function () {
   var SLIDES = [
@@ -432,7 +498,8 @@ function ditherLoader(canvas, options) {
       bg: '#FFFFFF', accent: '#221C6B', second: '#E0703F',
       shapeLabel: 'full-bleed rectangle',
       shape: [[0.548, 0], [1, 0], [1, 1], [0.548, 1]],
-      scene: 0,
+      img: 'https://images.unsplash.com/photo-1611328857214-a5aae689f21a?w=1600&q=75&auto=format&fit=crop',
+      credit: 'unsplash.com/photos/ppg7GuXOUYc',
       copy: function () {
         return '<div class="kicker" style="left:5.2%;top:18.5%;font-size:1.35vw;color:#221C6B">Mudita Sisodia</div>' +
           '<div style="position:absolute;left:5.2%;top:9%;width:3.2vw;height:3.2vw;background:#E0703F;' +
@@ -455,7 +522,8 @@ function ditherLoader(canvas, options) {
       bg: '#191A4E', accent: '#D9A445', second: '#D9A445',
       shapeLabel: 'chevron polygon',
       shape: [[0.552, 0], [1, 0], [1, 1], [0.617, 1], [0.487, 0.545]],
-      scene: 1,
+      img: 'https://images.unsplash.com/photo-1598299803204-b73796f43289?w=1600&q=75&auto=format&fit=crop',
+      credit: 'unsplash.com · photo-1598299803204',
       copy: function () {
         return '<div class="title" style="left:4%;top:41%;font-family:Oswald,Inter,sans-serif;' +
             'font-size:3.5vw;font-weight:700;color:#fff;letter-spacing:0;">' +
@@ -473,7 +541,8 @@ function ditherLoader(canvas, options) {
       bg: '#F5F0E9', accent: '#8B3FD1', second: '#C04FD8',
       shapeLabel: 'folded polygon',
       shape: [[0.545, 0], [1, 0], [1, 1], [0.523, 1], [0.605, 0.66], [0.517, 0.40], [0.560, 0.235]],
-      scene: 2,
+      img: 'https://images.unsplash.com/photo-1548366565-b81d0aa77d2d?w=1600&q=75&auto=format&fit=crop',
+      credit: 'unsplash.com/photos/hBcTegZKiNc',
       copy: function () {
         return '<div class="kicker" style="left:4.2%;top:7.5%;font-size:1.1vw;color:#221C6B">Pentagram Design</div>' +
           '<div class="title" style="left:4.2%;top:63%;font-size:2.6vw;color:#1E1B4B;">' +
@@ -485,42 +554,6 @@ function ditherLoader(canvas, options) {
       }
     }
   ];
-
-  /* stand-in pictures: the real ones are generated, these just give the
-     resolve something to land on */
-  function scene(kind, uid) {
-    var s = '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">';
-    if (kind === 0) {
-      s += '<defs><linearGradient id="a' + uid + '" x1="0" y1="0" x2="1" y2="1">' +
-        '<stop offset="0" stop-color="#2B1D14"/><stop offset="1" stop-color="#8A5A32"/></linearGradient></defs>' +
-        '<rect width="400" height="300" fill="url(#a' + uid + ')"/>' +
-        '<ellipse cx="300" cy="150" rx="92" ry="78" fill="#E8E2D4"/>' +
-        '<path d="M212 128 q88-34 176 0 l-6 26 q-84-30-164 0z" fill="#D8412F"/>' +
-        '<path d="M232 112 q68-24 136 0" stroke="#F0B429" stroke-width="13" fill="none"/>' +
-        '<rect x="40" y="150" width="170" height="112" rx="14" fill="#0E1418"/>' +
-        '<rect x="52" y="162" width="146" height="88" rx="8" fill="#2E5D82"/>';
-    } else if (kind === 1) {
-      s += '<defs><linearGradient id="a' + uid + '" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0" stop-color="#C3CDD6"/><stop offset="1" stop-color="#7C8B99"/></linearGradient></defs>' +
-        '<rect width="400" height="300" fill="url(#a' + uid + ')"/>' +
-        '<path d="M0 60 L200 130 L200 300 L0 300 Z" fill="#9BA9B6"/>' +
-        '<path d="M400 0 L400 300 L210 300 L210 128 Z" fill="#5E6F80"/>' +
-        '<circle cx="316" cy="86" r="52" fill="#3A4A5C"/>' +
-        '<path d="M250 300 q70-120 150-96 l0 96z" fill="#2B4F8E"/>' +
-        '<rect x="228" y="52" width="16" height="86" rx="8" fill="#EFF3F7" opacity=".8"/>';
-    } else {
-      s += '<rect width="400" height="300" fill="#161616"/>' +
-        '<g fill="#F2F2F2">';
-      for (var r = 0; r < 11; r++) for (var c = 0; c < 15; c++) {
-        s += '<circle cx="' + (250 + c * 11) + '" cy="' + (18 + r * 26) + '" r="' + (3 + (c % 3)) + '"/>';
-      }
-      s += '</g><ellipse cx="150" cy="160" rx="110" ry="140" fill="#D9D4CE"/>' +
-        '<circle cx="120" cy="120" r="34" fill="none" stroke="#111" stroke-width="9"/>' +
-        '<circle cx="206" cy="120" r="34" fill="none" stroke="#111" stroke-width="9"/>' +
-        '<path d="M154 120 h18" stroke="#111" stroke-width="9"/>';
-    }
-    return s + '</svg>';
-  }
 
   function clipPathOf(shape) {
     return 'polygon(' + shape.map(function (p) {
@@ -541,10 +574,12 @@ function ditherLoader(canvas, options) {
         '<span class="swatch" style="background:' + S.bg + '"></span>' +
         '<span class="swatch" style="background:' + S.accent + '"></span>' +
         '<code>bg ' + S.bg + ' · accent ' + S.accent + ' · ' + S.shapeLabel + '</code>' +
+        '<code style="margin-left:auto">' + S.credit + '</code>' +
       '</div>' +
       '<div class="slide" style="background:' + S.bg + '">' +
         '<div class="photo" style="clip-path:' + clipPathOf(S.shape) + ';opacity:0;' +
-          'transition:opacity 420ms cubic-bezier(0.23,1,0.32,1)">' + scene(S.scene, i) + '</div>' +
+          'background-image:url(' + S.img + ');' +
+          'transition:opacity 420ms cubic-bezier(0.23,1,0.32,1)"></div>' +
         '<canvas></canvas>' +
         '<div class="copy" style="inset:0">' + S.copy() + '</div>' +
       '</div>';
@@ -570,7 +605,21 @@ function ditherLoader(canvas, options) {
     };
   }
 
-  var WAVE = 'random', LOOP = true, timers = [];
+  var WAVE = 'random', LOOP = true, TONE = 'image', timers = [];
+
+  /* preload the photographs, and build a tone sampler from each */
+  instances.forEach(function (inst) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      inst.img = img;
+      var slide = inst.canvas.getBoundingClientRect();
+      inst.toneFn = imageTone(img, inst.slide.bg, slide.width || 1600, slide.height || 900);
+      boot();
+    };
+    img.onerror = function () { inst.toneFn = null; };
+    img.src = inst.slide.img;
+  });
 
   function boot() {
     timers.forEach(clearTimeout); timers = [];
@@ -579,6 +628,8 @@ function ditherLoader(canvas, options) {
       inst.photo.style.opacity = 0;
       var o = opts();
       o.bg = inst.slide.bg; o.accent = inst.slide.accent; o.shape = inst.slide.shape;
+      /* the screen previews the real photograph when we have its pixels */
+      o.tone = (TONE === 'image' && inst.toneFn) ? inst.toneFn : null;
       inst.loader = ditherLoader(inst.canvas, o);
     });
     var hold = +document.getElementById('lvHold').value;
@@ -606,6 +657,7 @@ function ditherLoader(canvas, options) {
     });
   }
   seg('segWave', function (v) { WAVE = v; boot(); });
+  seg('segTone', function (v) { TONE = v; boot(); });
   seg('segLoop', function (v) { LOOP = v === 'on'; if (LOOP) boot(); });
   document.getElementById('replay').addEventListener('click', boot);
 
@@ -667,7 +719,7 @@ function ditherLoader(canvas, options) {
     '  <span class="k">shape</span>:  [[.55,0],[1,0],[1,1],[.62,1],[.49,.55]]   <span class="c">// normalised, same one the image is clipped to</span>\n' +
     '}).<span class="k">resolve</span>()   <span class="c">// call when the picture lands</span>\n\n' +
     '<span class="c">// when a preview exists, the same renderer becomes a real low-res render</span>\n' +
-    'ditherLoader(canvas, { bg, accent, shape, <span class="k">tone</span>: sampleLQIP(thumb) })';
+    'ditherLoader(canvas, { bg, accent, shape, <span class="k">tone</span>: imageTone(img, bg) })';
 
   boot();
 })();
