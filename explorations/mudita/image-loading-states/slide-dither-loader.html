@@ -151,8 +151,15 @@
     </div>
     <div class="grp"><span>Edges</span>
       <div class="seg" id="segCrisp">
-        <button data-v="crisp" aria-pressed="true">Crisp</button>
-        <button data-v="smooth">Smooth</button>
+        <button data-v="smooth" aria-pressed="true">Round</button>
+        <button data-v="crisp">Pixel</button>
+      </div>
+    </div>
+    <div class="grp"><span>Render</span>
+      <div class="seg" id="segSS">
+        <button data-v="1">1×</button>
+        <button data-v="2" aria-pressed="true">2×</button>
+        <button data-v="3">3×</button>
       </div>
     </div>
     <div class="grp"><span>Tone</span>
@@ -301,6 +308,14 @@
  *    fieldScale how large the patches are (lower = bigger)
  *    coherence  0 = white noise, 1 = the field alone
  *    ink        peak dot alpha                 0.86
+ *    superSample  render the canvas at this multiple of device resolution and
+ *                 let the browser downscale it. A 3px cell has too few pixels
+ *                 to be a convincing circle; drawn at 2× or 3× and resolved
+ *                 down, it gets the smooth round edge a DOM element with
+ *                 border-radius gets for free.
+ *    crisp        snap cells to whole device pixels. Hard edges, but a small
+ *                 cell then reads as a plus or a square rather than a circle —
+ *                 there are not enough pixels for both.
  *    alphaSwing how much a cell dims and brightens over its cycle, 0..1.
  *               Size alone is not enough here: crisp mode quantises it to a
  *               handful of whole-pixel steps, so without this the surface
@@ -323,11 +338,11 @@ function ditherLoader(canvas, options) {
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.78, swell: 1.36, cycle: 1800,
     wave: 'clump', fieldScale: 4.5, coherence: 0.85, ink: 0.86, alphaSwing: 0.55,
-    tone: null, crisp: true
+    tone: null, crisp: false, superSample: 2
   }, options || {});
 
   var ctx = canvas.getContext('2d');
-  var cells = [], path = null, W = 0, H = 0, dpr = 1, pitchDev = 8;
+  var cells = [], path = null, W = 0, H = 0, dpr = 1, ss = 1, pitchDev = 8;
   var raf = null, resolving = 0, resolveStart = 0, RESOLVE_MS = 620;
   var morph = 0, morphStart = 0, morphing = 0, MORPH_MS = 900;
 
@@ -456,12 +471,13 @@ function ditherLoader(canvas, options) {
        backing store lands on a rounded size against a fractional CSS size —
        measured 587 against 587.25 — and the browser resamples the whole
        canvas, which softens every edge before a single dot is drawn. */
-    W = Math.max(1, Math.round(rect.width * dpr));
-    H = Math.max(1, Math.round(rect.height * dpr));
+    ss = Math.max(1, Math.min(3, o.superSample || 1));
+    W = Math.max(1, Math.round(rect.width * dpr) * ss);
+    H = Math.max(1, Math.round(rect.height * dpr) * ss);
     canvas.width = W;
     canvas.height = H;
-    canvas.style.width = (W / dpr) + 'px';
-    canvas.style.height = (H / dpr) + 'px';
+    canvas.style.width = (W / (dpr * ss)) + 'px';
+    canvas.style.height = (H / (dpr * ss)) + 'px';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     path = buildPath();
@@ -469,7 +485,7 @@ function ditherLoader(canvas, options) {
     var b = boxPx();
     /* a whole number of device pixels per cell, so the grid never drifts
        off the pixel grid as it marches across the box */
-    pitchDev = Math.max(2, Math.round(o.pitch * dpr));
+    pitchDev = Math.max(2, Math.round(o.pitch * dpr) * ss);
     var cols = Math.max(1, Math.floor(b.w / pitchDev));
     var rows = Math.max(1, Math.floor(b.h / pitchDev));
     var offX = Math.round(b.x + (b.w - cols * pitchDev) / 2);
@@ -541,10 +557,12 @@ function ditherLoader(canvas, options) {
          stays the same square at every size instead of swelling into a blob. */
       var size, x0, y0;
       if (o.crisp) {
-        size = Math.round(maxD * scale);
-        if (size < 1) continue;
-        x0 = Math.round(c.x - size / 2);
-        y0 = Math.round(c.y - size / 2);
+        /* snap to whole DEVICE pixels, which are `ss` backing pixels across,
+           so supersampling never softens a deliberately hard edge */
+        size = Math.round(maxD * scale / ss) * ss;
+        if (size < ss) continue;
+        x0 = Math.round((c.x - size / 2) / ss) * ss;
+        y0 = Math.round((c.y - size / 2) / ss) * ss;
       } else {
         size = maxD * scale;
         if (size < 0.35) continue;
@@ -559,13 +577,13 @@ function ditherLoader(canvas, options) {
            round cell is drawn the way pixel art draws a circle: whole-pixel row
            runs inside the radius. Hard edges, still unmistakably round, and the
            disc keeps its shape at every size. */
-        if (o.crisp && size <= 14) {
-          var half = size / 2, r2 = half * half + 0.09;
-          for (var j = 0; j < size; j++) {
-            var dy = j + 0.5 - half;
+        if (o.crisp && size <= 14 * ss) {
+          var half = size / 2, r2 = half * half + 0.09 * ss * ss;
+          for (var j = 0; j < size; j += ss) {
+            var dy = j + ss / 2 - half;
             var hw = Math.sqrt(Math.max(0, r2 - dy * dy));
-            var xa = Math.round(half - hw), xb = Math.round(half + hw);
-            if (xb > xa) p2.rect(x0 + xa, y0 + j, xb - xa, 1);
+            var xa = Math.round((half - hw) / ss) * ss, xb = Math.round((half + hw) / ss) * ss;
+            if (xb > xa) p2.rect(x0 + xa, y0 + j, xb - xa, ss);
           }
         } else {
           p2.moveTo(x0 + size, y0 + size / 2);
@@ -605,7 +623,8 @@ function ditherLoader(canvas, options) {
     },
     reset: function () { resolving = 0; morph = 0; morphing = 0; build(); return api; },
     set: function (patch) {
-      var rebuild = ['pitch', 'wave', 'shape', 'tone', 'box', 'fieldScale', 'coherence'].some(function (k) {
+      var rebuild = ['pitch', 'wave', 'shape', 'tone', 'box', 'fieldScale', 'coherence',
+                     'superSample'].some(function (k) {
         return k in patch && patch[k] !== o[k];
       });
       Object.assign(o, patch);
@@ -849,11 +868,11 @@ function imageTone(img, bgHex, boxW, boxH) {
       alphaSwing: +document.getElementById('lvSwing').value,
       fieldScale: +document.getElementById('lvField').value,
       coherence: +document.getElementById('lvCoh').value,
-      wave: WAVE, crisp: CRISP
+      wave: WAVE, crisp: CRISP, superSample: SS
     };
   }
 
-  var WAVE = 'clump', LOOP = true, TONE = 'image', CRISP = true, timers = [];
+  var WAVE = 'clump', LOOP = true, TONE = 'image', CRISP = false, SS = 2, timers = [];
   function setPhase(t) { document.getElementById('phase').textContent = t; }
 
   /* preload the photographs, and build a tone sampler from each */
@@ -934,6 +953,7 @@ function imageTone(img, bgHex, boxW, boxH) {
     CRISP = v === 'crisp';
     instances.forEach(function (i) { if (i.loader) i.loader.set({ crisp: CRISP }); });
   });
+  seg('segSS', function (v) { SS = +v; boot(); });
   seg('segLoop', function (v) { LOOP = v === 'on'; if (LOOP) boot(); });
   document.getElementById('replay').addEventListener('click', boot);
 
