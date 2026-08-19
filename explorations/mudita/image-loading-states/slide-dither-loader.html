@@ -155,6 +155,13 @@
         <button data-v="crisp">Pixel</button>
       </div>
     </div>
+    <div class="grp"><span>Colour from</span>
+      <div class="seg" id="segColour">
+        <button data-v="linear" aria-pressed="true">Tone</button>
+        <button data-v="split">Tone split</button>
+        <button data-v="patches">Patches</button>
+      </div>
+    </div>
     <div class="grp"><span>Base</span>
       <div class="seg" id="segBase">
         <button data-v="auto" aria-pressed="true">Auto</button>
@@ -205,6 +212,8 @@
       <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
     <div class="lev"><label for="lvDuo">Duotone<b id="vDuo"></b></label>
       <input type="range" id="lvDuo" min="0" max="1" step="0.02" value="0.14" /></div>
+    <div class="lev"><label for="lvSplit">Split point<b id="vSplit"></b></label>
+      <input type="range" id="lvSplit" min="0.1" max="0.9" step="0.01" value="0.55" /></div>
     <div class="lev"><label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
       <input type="range" id="lvSwing" min="0" max="1" step="0.02" value="0.88" /></div>
     <div class="lev"><label for="lvField">Patch size<b id="vField"></b></label>
@@ -317,6 +326,18 @@
  *    fieldScale how large the patches are (lower = bigger)
  *    coherence  0 = white noise, 1 = the field alone
  *    ink        peak dot alpha                 0.86
+ *    colourMode where a cell's COLOUR comes from. Size is already driven by
+ *               tone, so driving colour from tone too correlates them
+ *               perfectly: the accent ends up only on the smallest cells and
+ *               the base only on the largest, and two inks that never appear
+ *               at the same weight do not read as two inks.
+ *                 'split'   size saturates at `split`, colour takes the range
+ *                           above it. Both inks appear at full size.
+ *                 'patches' colour from its own noise field, independent of
+ *                           tone. Regions of accent, regions of base.
+ *                 'linear'  colour straight from tone — correlated, kept to
+ *                           show the problem.
+ *    split      where size stops growing and colour starts moving, 0..1
  *    duotone    0 = every cell in the accent. 1 = a full two-colour ramp, the
  *               accent in the low tones and a white or black base in the high
  *               ones. Which of white or black is picked follows the slide
@@ -354,7 +375,8 @@ function ditherLoader(canvas, options) {
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.74, swell: 1.36, cycle: 1800,
     wave: 'clump', fieldScale: 4.5, coherence: 0.86, ink: 0.86, alphaSwing: 0.88,
-    tone: null, crisp: false, superSample: 2, duotone: 0.14, base: 'auto'
+    tone: null, crisp: false, superSample: 2, duotone: 0.14, base: 'auto',
+    colourMode: 'linear', split: 0.55
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -545,9 +567,11 @@ function ditherLoader(canvas, options) {
            image sampler naturally works in */
         var u = (cx - b.x) / b.w, v = (cy - b.y) / b.h;
         var t = Math.max(0, Math.min(1, toneFn(u, v)));
+        /* an independent field, so colour need not follow size */
+        var cf = fbm(u * o.fieldScale * 0.55 + 11.3, v * o.fieldScale * 0.55 + 7.7);
         /* t0 is what we know now, t1 is what we will know when a preview
            arrives; until then they are the same */
-        cells.push({ x: cx, y: cy, u: u, v: v, t0: t, t1: t, p: phaseFor(u, v, i) });
+        cells.push({ x: cx, y: cy, u: u, v: v, t0: t, t1: t, cf: cf, p: phaseFor(u, v, i) });
       }
     }
   }
@@ -579,7 +603,16 @@ function ditherLoader(canvas, options) {
       var ph = (now / o.cycle + c.p) % 1;
       var pulse = 0.5 - Math.cos(ph * Math.PI * 2) / 2;      /* 0 → 1 → 0 */
       var swell = 1 + (o.swell - 1) * pulse;
-      var scale = (o.toneFloor + ct * o.toneRange) * swell;
+      /* size and colour are deliberately fed from different places here */
+      var sizeT = ct, colourK = ct;
+      if (o.colourMode === 'split') {
+        var sp = Math.max(0.05, Math.min(0.95, o.split));
+        sizeT = Math.min(1, ct / sp);                 /* full size by the split */
+        colourK = Math.max(0, (ct - sp) / (1 - sp));  /* colour takes it from there */
+      } else if (o.colourMode === 'patches') {
+        colourK = c.cf;
+      }
+      var scale = (o.toneFloor + sizeT * o.toneRange) * swell;
       if (resolving) scale = scale + (1 / (o.spacing * o.dotWeight) - scale) * ease;
 
       /* Opacity rides the same phase as the size. Both moving together is what
@@ -589,7 +622,7 @@ function ditherLoader(canvas, options) {
       if (resolving) alpha = alpha * (1 - ease);
       if (alpha <= 0.01) continue;
       var bi = Math.min(BUCKETS - 1, Math.max(0, Math.floor(alpha * BUCKETS)));
-      var ti = Math.min(TONES - 1, Math.max(0, Math.floor(ct * TONES)));
+      var ti = Math.min(TONES - 1, Math.max(0, Math.floor(colourK * TONES)));
       var row = groups[ti];
       var p2 = row[bi] || (row[bi] = new Path2D());
 
@@ -913,6 +946,8 @@ function imageTone(img, bgHex, boxW, boxH) {
       ink: +document.getElementById('lvAlpha').value,
       alphaSwing: +document.getElementById('lvSwing').value,
       duotone: +document.getElementById('lvDuo').value,
+      split: +document.getElementById('lvSplit').value,
+      colourMode: COLOUR_MODE,
       base: BASE_MODE,
       fieldScale: +document.getElementById('lvField').value,
       coherence: +document.getElementById('lvCoh').value,
@@ -921,7 +956,7 @@ function imageTone(img, bgHex, boxW, boxH) {
   }
 
   var WAVE = 'clump', LOOP = true, TONE = 'image', CRISP = false, SS = 2,
-      BASE_MODE = 'auto', timers = [];
+      BASE_MODE = 'auto', COLOUR_MODE = 'linear', timers = [];
   function setPhase(t) { document.getElementById('phase').textContent = t; }
 
   /* preload the photographs, and build a tone sampler from each */
@@ -1003,6 +1038,10 @@ function imageTone(img, bgHex, boxW, boxH) {
     instances.forEach(function (i) { if (i.loader) i.loader.set({ crisp: CRISP }); });
   });
   seg('segSS', function (v) { SS = +v; boot(); });
+  seg('segColour', function (v) {
+    COLOUR_MODE = v;
+    instances.forEach(function (i) { if (i.loader) i.loader.set({ colourMode: v }); });
+  });
   seg('segBase', function (v) {
     BASE_MODE = v;
     instances.forEach(function (i) { if (i.loader) i.loader.set({ base: v }); });
@@ -1021,6 +1060,7 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvCycle: function (v) { return (v / 1000).toFixed(2) + 's'; },
     lvAlpha: function (v) { return (+v).toFixed(2); },
     lvDuo: function (v) { return (+v).toFixed(2); },
+    lvSplit: function (v) { return (+v).toFixed(2); },
     lvSwing: function (v) { return (+v).toFixed(2); },
     lvField: function (v) { return (+v).toFixed(1); },
     lvCoh: function (v) { return (+v).toFixed(2); },
@@ -1030,7 +1070,7 @@ function imageTone(img, bgHex, boxW, boxH) {
   };
   var LIVE = { lvSpacing: 'spacing', lvDot: 'dotWeight', lvRound: 'roundness',
                lvFloor: 'toneFloor', lvRange: 'toneRange', lvSwell: 'swell',
-               lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvDuo: 'duotone' };
+               lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvDuo: 'duotone', lvSplit: 'split' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
