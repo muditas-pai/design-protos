@@ -189,6 +189,8 @@
       <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" /></div>
     <div class="lev"><label for="lvAlpha">Ink<b id="vAlpha"></b></label>
       <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
+    <div class="lev"><label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
+      <input type="range" id="lvSwing" min="0" max="1" step="0.02" value="0.55" /></div>
     <div class="lev"><label for="lvField">Patch size<b id="vField"></b></label>
       <input type="range" id="lvField" min="1.5" max="16" step="0.5" value="4.5" /></div>
     <div class="lev"><label for="lvCoh">Coherence<b id="vCoh"></b></label>
@@ -299,6 +301,10 @@
  *    fieldScale how large the patches are (lower = bigger)
  *    coherence  0 = white noise, 1 = the field alone
  *    ink        peak dot alpha                 0.86
+ *    alphaSwing how much a cell dims and brightens over its cycle, 0..1.
+ *               Size alone is not enough here: crisp mode quantises it to a
+ *               handful of whole-pixel steps, so without this the surface
+ *               barely moves.
  *    tone       (u, v) => 0..1                 neutral field
  *
  *  Three phases, in this order:
@@ -316,7 +322,8 @@ function ditherLoader(canvas, options) {
     bg: '#FFFFFF', accent: '#000000', shape: null, box: [0, 0, 1, 1],
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.78, swell: 1.36, cycle: 1800,
-    wave: 'clump', fieldScale: 4.5, coherence: 0.85, ink: 0.86, tone: null, crisp: true
+    wave: 'clump', fieldScale: 4.5, coherence: 0.85, ink: 0.86, alphaSwing: 0.55,
+    tone: null, crisp: true
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -356,7 +363,7 @@ function ditherLoader(canvas, options) {
   var INK = inkRGB.map(Math.round);
 
   /* eight alpha buckets, so a frame is eight fills instead of thousands */
-  var BUCKETS = 8, bucketStyle = [];
+  var BUCKETS = 18, bucketStyle = [];
   for (var b = 0; b < BUCKETS; b++) {
     var a = (b + 1) / BUCKETS * o.ink;
     bucketStyle.push('rgba(' + INK[0] + ',' + INK[1] + ',' + INK[2] + ',' + a.toFixed(3) + ')');
@@ -513,11 +520,15 @@ function ditherLoader(canvas, options) {
       var c = cells[i];
       var ct = c.t0 + (c.t1 - c.t0) * mEase;
       var ph = (now / o.cycle + c.p) % 1;
-      var swell = 1 + (o.swell - 1) * (0.5 - Math.cos(ph * Math.PI * 2) / 2);
+      var pulse = 0.5 - Math.cos(ph * Math.PI * 2) / 2;      /* 0 → 1 → 0 */
+      var swell = 1 + (o.swell - 1) * pulse;
       var scale = (o.toneFloor + ct * o.toneRange) * swell;
       if (resolving) scale = scale + (1 / (o.spacing * o.dotWeight) - scale) * ease;
 
-      var alpha = ct;
+      /* Opacity rides the same phase as the size. Both moving together is what
+         made the brand kit version readable; size alone is nearly invisible
+         once crisp mode rounds it to whole pixels. */
+      var alpha = ct * (1 - o.alphaSwing + o.alphaSwing * pulse);
       if (resolving) alpha = alpha * (1 - ease);
       if (alpha <= 0.01) continue;
       var bi = Math.min(BUCKETS - 1, Math.max(0, Math.floor(alpha * BUCKETS)));
@@ -835,6 +846,7 @@ function imageTone(img, bgHex, boxW, boxH) {
       swell: +document.getElementById('lvSwell').value,
       cycle: +document.getElementById('lvCycle').value,
       ink: +document.getElementById('lvAlpha').value,
+      alphaSwing: +document.getElementById('lvSwing').value,
       fieldScale: +document.getElementById('lvField').value,
       coherence: +document.getElementById('lvCoh').value,
       wave: WAVE, crisp: CRISP
@@ -935,6 +947,7 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvSwell: function (v) { return (+v).toFixed(2) + '×'; },
     lvCycle: function (v) { return (v / 1000).toFixed(2) + 's'; },
     lvAlpha: function (v) { return (+v).toFixed(2); },
+    lvSwing: function (v) { return (+v).toFixed(2); },
     lvField: function (v) { return (+v).toFixed(1); },
     lvCoh: function (v) { return (+v).toFixed(2); },
     lvPreview: function (v) { return (v / 1000).toFixed(1) + 's'; },
@@ -943,7 +956,7 @@ function imageTone(img, bgHex, boxW, boxH) {
   };
   var LIVE = { lvSpacing: 'spacing', lvDot: 'dotWeight', lvRound: 'roundness',
                lvFloor: 'toneFloor', lvRange: 'toneRange', lvSwell: 'swell',
-               lvCycle: 'cycle', lvAlpha: 'ink' };
+               lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
