@@ -64,8 +64,6 @@
     .lede { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; max-width: 68ch; margin: 0; }
 
     /* ------------------------------------------------------------ controls */
-    .dither-only { display: none; }
-    body[data-treat="dither"] .dither-only { display: flex; }
     .dither-only { margin-top: -8px !important; }
     .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
       margin: 22px 0 20px; padding: 10px 12px; border-radius: 14px; background: #fff;
@@ -187,31 +185,20 @@
     .slot.spacer { background: none !important; box-shadow: none !important; }
     .card.resolved .scaffold { opacity: 0; transform: scale(1.01); filter: blur(2px); }
 
-    .pxgrid { position: absolute; inset: 0; display: grid; gap: 2px;
-      grid-template-columns: repeat(var(--n), 1fr);
-      grid-template-rows: repeat(var(--r), 1fr);
-      padding: 2px; }
-    .pxgrid > i { display: block; background: var(--cell); border-radius: 1.5px;
-      opacity: calc(0.05 + var(--t) * 0.52);
-      animation: ph-breathe calc(2200ms / var(--speed)) ease-in-out infinite;
-      animation-delay: calc(var(--d) * -2200ms);
-      transition: background-color 420ms var(--ease-out), opacity 420ms var(--ease-out),
-                  border-radius 420ms var(--ease-out), transform 420ms var(--ease-out); }
-    @keyframes ph-breathe {
-      0%, 100% { opacity: calc(0.04 + var(--t) * 0.40); }
-      50%      { opacity: calc(0.07 + var(--t) * 0.64); }
-    }
-
-    /* treatments — the placeholder's grain, switchable for comparison */
-    /* A halftone screen: square cells at a ~12px pitch (see dims() in the
+    /* A halftone screen: square cells at the chosen pitch (see dims() in the
        script), no gap, and the dot sized well inside its cell. Tone drives dot
        SIZE, and the size is what animates — an opacity pulse this small is
-       invisible, which is why it read as static. */
-    body[data-treat="dither"] .pxgrid { gap: 0; padding: 0; }
-    body[data-treat="dither"] .pxgrid > i { border-radius: var(--dot-radius); width: auto;
-      height: 88%; aspect-ratio: 1; place-self: center;
+       invisible, which is why an earlier pass read as static. */
+    .pxgrid { position: absolute; inset: 0; display: grid; gap: 0; padding: 0;
+      grid-template-columns: repeat(var(--n), 1fr);
+      grid-template-rows: repeat(var(--r), 1fr); }
+    .pxgrid > i { display: block; background: var(--cell);
+      border-radius: var(--dot-radius); width: auto; height: 88%;
+      aspect-ratio: 1; place-self: center;
       animation: ph-dot calc(1800ms / var(--speed)) ease-in-out infinite;
-      animation-delay: calc(var(--d) * -1800ms); }
+      animation-delay: calc(var(--d) * -1800ms);
+      transition: background-color 420ms var(--ease-out), opacity 420ms var(--ease-out),
+                  border-radius 420ms var(--ease-out), transform 420ms var(--ease-out); }
     @keyframes ph-dot {
       0%, 100% { transform: scale(calc((var(--dmin) + var(--t) * var(--drange)) * var(--dscale)));
                  opacity: calc(0.32 + var(--t) * 0.44); }
@@ -220,32 +207,17 @@
                  opacity: calc(0.52 + var(--t) * 0.48); }
     }
     /* Motion: Still — hold the resolved screen, no swell at all */
-    body[data-treat="dither"][data-motion="still"] .pxgrid > i { animation: none;
+    body[data-motion="still"] .pxgrid > i { animation: none;
       transform: scale(calc((var(--dmin) + var(--t) * var(--drange)) * var(--dscale)));
       opacity: calc(0.34 + var(--t) * 0.52); }
-    body[data-treat="denoise"] .pxgrid { gap: 1px; }
-    body[data-treat="denoise"] .pxgrid > i { border-radius: 0;
-      animation: ph-flick calc(280ms / var(--speed)) steps(2, end) infinite;
-      animation-delay: calc(var(--d) * -800ms); }
-    @keyframes ph-flick {
-      0%   { opacity: calc(0.05 + var(--t) * 0.62); }
-      50%  { opacity: calc(0.48 - var(--t) * 0.40); }
-    }
-    body[data-treat="plain"] .pxgrid { display: block; padding: 0; background: var(--skel); }
-    body[data-treat="plain"] .slot { background: var(--skel); }
-    body[data-treat="plain"] .pxgrid > i { display: none; }
-    body[data-treat="plain"] .pxgrid::after { content: ""; position: absolute; inset: 0;
-      background: linear-gradient(105deg, transparent 34%, rgba(255,255,255,0.85) 50%, transparent 66%);
-      background-size: 260% 100%; animation: sweep calc(1600ms / var(--speed)) ease-in-out infinite; }
 
     /* a dot stays a dot while it resolves, and eases up to full size rather
        than snapping when its animation is cut */
-    body[data-treat="dither"] .card.resolving .pxgrid > i { border-radius: 50%;
-      transform: scale(1); }
+    .card.resolving .pxgrid > i { border-radius: var(--dot-radius); transform: scale(1); }
 
     /* the resolve: cells take their real colour, then hand off to the content */
     .card.resolving .pxgrid > i { background: var(--fill); opacity: var(--fo, 1);
-      border-radius: 0; animation: none;
+      animation: none;
       transition-delay: calc((var(--sd, 0) + var(--d) * 0.4) * 260ms / var(--speed)); }
 
     .real { opacity: 0; transform: scale(0.995);
@@ -282,14 +254,14 @@
 
     /* ------------------------------------------------------------ reduced */
     @media (prefers-reduced-motion: reduce) {
-      .pxgrid > i, .step.active .lbl::after, body[data-treat="plain"] .pxgrid::after { animation: none; }
+      .pxgrid > i, .step.active .lbl::after { animation: none; }
       .card { animation: none; opacity: 1; transform: none; }
       .head .hstate, .real, .pxgrid { transition-duration: 1ms; }
     }
   </style>
 </head>
 
-<body class="pai" data-treat="resolution" data-scaffold="slots" data-gutter="8">
+<body class="pai" data-scaffold="slots" data-gutter="8" data-motion="run">
   <div class="wrap">
     <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
 
@@ -298,24 +270,15 @@
       <em>AMJ '26 Handoff → Extracting Loader</em>. Each placeholder is a low-resolution render of the
       content that is coming, so the resolve is a change of fidelity rather than a swap, and the wait
       tells you what you are waiting for.</p>
-    <p class="lede" style="margin-top:10px;"><strong>Scaffold</strong> is the thing to judge. On
-      <em>Slots</em>, the skeleton is the layout we already know the card will hold: two logo wells,
-      four swatch rows, a title block and a body block, with the effect running inside each and the
-      slots resolving in turn. On <em>Whole card</em>, one grid covers the card, which is the first
-      pass. Slots tell you the shape of the answer before it arrives, and nothing reflows on the
-      handoff.</p>
+    <p class="lede" style="margin-top:10px;">The treatment is a halftone <strong>dither</strong>: a square
+      screen where tone drives dot size, the way real screening does it. The second row tunes it.
+      <strong>Scaffold</strong> is the other thing to judge: on <em>Slots</em> the skeleton is the
+      layout we already know the card will hold, two logo wells, four swatch rows, a title block and
+      a body block, with the screen running inside each and the slots resolving in turn. On
+      <em>Whole card</em> one grid covers everything, which was the first pass.</p>
 
     <div class="bar">
       <button class="btn" id="replay"><i class="ph ph-arrow-clockwise"></i>Replay</button>
-      <div class="grp">
-        <span>Placeholder</span>
-        <div class="seg" id="segTreat">
-          <button data-v="resolution" aria-pressed="true">Resolution</button>
-          <button data-v="denoise">Denoise</button>
-          <button data-v="dither">Dither</button>
-          <button data-v="plain">Plain (Figma)</button>
-        </div>
-      </div>
       <div class="grp">
         <span>Speed</span>
         <div class="seg" id="segSpeed">
@@ -540,9 +503,6 @@
     }
 
     function dims(kind, S) {
-      if (document.body.getAttribute('data-treat') !== 'dither') {
-        return { c: S.cols, r: S.rows };
-      }
       var g = parseInt(document.body.getAttribute('data-gutter'), 10) || 0;
       var pad = g + (kind === 'type' ? 8 : 0);
       var w = CARD_W - pad * 2;
@@ -751,6 +711,8 @@
     });
 
     /* ---------------------------------------------------------- controls */
+    var root = document.documentElement;
+
     function seg(id, fn) {
       var el = document.getElementById(id);
       el.addEventListener('click', function (e) {
@@ -762,11 +724,6 @@
         fn(b.getAttribute('data-v'));
       });
     }
-    seg('segTreat', function (v) {
-      document.body.setAttribute('data-treat', v);
-      paint();          /* dither derives its own cell counts, so rebuild */
-      start();
-    });
     seg('segSpeed', function (v) { document.documentElement.style.setProperty('--speed', v); start(); });
     seg('segMode',  function (v) { MODE = v; start(); });
     seg('segLoop',  function (v) { LOOP = v === 'on'; if (LOOP) start(); });
