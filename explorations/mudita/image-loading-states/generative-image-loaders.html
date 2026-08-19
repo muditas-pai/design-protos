@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Generative image loaders · design-protos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    /* ==================================================================== *
+     * Resolution / pixel family. Every tile is a square placeholder that
+     * resolves and disperses on a loop. No photograph underneath: the
+     * loader is the whole picture, the way generativeloaders.com does it.
+     *
+     * All twelve resolve the SAME latent subject (see tone() in the script),
+     * so the difference you are judging is shape and motion, not content.
+     * ==================================================================== */
+    :root {
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --step:     cubic-bezier(0.65, 0, 0.35, 1);
+      --page:  #F4F5F7;
+      --card:  #FFFFFF;
+      --ink:   #171717;
+      --ink-2: #525252;
+      --ink-3: #A3A3A3;
+      --hair:  rgba(11,15,20,0.10);
+      --track: rgba(11,15,20,0.12);
+      --loader: #171717;      /* the loaders draw in currentColor */
+      --size:   168px;
+      --radius: 10%;
+      --speed:  1;
+      --dur:    calc(2.35s / var(--speed));
+    }
+    body[data-surface="dark"] {
+      --page:  #0D1015;
+      --card:  #161A20;
+      --ink:   #F2F3F5;
+      --ink-2: #9BA3AD;
+      --ink-3: #6B747E;
+      --hair:  rgba(255,255,255,0.12);
+      --track: rgba(255,255,255,0.14);
+      --loader:#F2F3F5;
+    }
+    body[data-tint="navy"]  { --loader: #0A1925; }
+    body[data-surface="dark"][data-tint="navy"] { --loader: #7FA8FF; }
+
+    body { background: var(--page); color: var(--ink);
+      transition: background-color 260ms var(--ease-out), color 260ms var(--ease-out); }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 44px 28px 120px; }
+    .back { display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      color: var(--ink-2); margin-bottom: 20px; transition: color 150ms var(--ease-out); }
+    .back:hover { color: var(--ink); }
+    h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; color: var(--ink); }
+    .lede { color: var(--ink-2); font-size: 15px; line-height: 1.6; max-width: 64ch; margin: 0; }
+
+    /* ------------------------------------------------------------ controls */
+    .bar { position: sticky; top: 12px; z-index: 20; margin: 26px 0 34px;
+      display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+      padding: 10px 12px; border-radius: 14px;
+      background: color-mix(in srgb, var(--card) 84%, transparent);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      box-shadow: 0 0 0 1px var(--hair), 0 6px 20px -12px rgba(11,15,20,0.35); }
+    .grp { display: flex; align-items: center; gap: 8px; }
+    .grp > span { font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--ink-3); }
+    .seg { display: flex; padding: 2px; border-radius: 9px; background: var(--track); gap: 2px; }
+    .seg button { appearance: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 500;
+      color: var(--ink-2); background: transparent; padding: 5px 10px; border-radius: 7px;
+      cursor: pointer; white-space: nowrap;
+      transition: color 140ms var(--ease-out), background-color 140ms var(--ease-out),
+                  transform 140ms var(--ease-out); }
+    .seg button:active { transform: scale(0.97); }
+    .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink);
+      box-shadow: 0 1px 2px rgba(11,15,20,0.10); }
+
+    /* ---------------------------------------------------------------- grid */
+    .grid { display: grid; gap: 26px;
+      grid-template-columns: repeat(auto-fill, minmax(calc(var(--size) + 64px), 1fr)); }
+    .cell { display: flex; flex-direction: column; align-items: center; }
+    .stage { display: grid; place-items: center; width: 100%;
+      padding: 20px 12px 18px; border-radius: 14px; background: var(--card);
+      box-shadow: 0 0 0 1px var(--hair); }
+
+    /* the loader frame itself — this block is the portable part */
+    .loader { width: var(--size); height: var(--size); color: var(--loader);
+      position: relative; display: block; overflow: hidden; border-radius: var(--radius);
+      background: color-mix(in srgb, currentColor 3%, transparent);
+      transition: width 240ms var(--ease-out), height 240ms var(--ease-out),
+                  border-radius 240ms var(--ease-out); }
+    .loader > * { position: absolute; inset: 0; }
+    .g { display: grid; inset: 8%; gap: 2.6%;
+      grid-template-columns: repeat(var(--n), 1fr); }
+    .g > i { display: block; width: 100%; height: 100%; background: currentColor;
+      border-radius: 2px; opacity: 0.1; }
+
+    .caption { margin-top: 14px; text-align: center; }
+    .lname { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+    .ldesc { font-size: 12px; line-height: 1.5; color: var(--ink-2); margin-top: 3px;
+      max-width: 30ch; margin-left: auto; margin-right: auto; }
+    .lspec { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px;
+      color: var(--ink-3); margin-top: 6px; }
+    .glabel { font-size: 12px; color: var(--ink-3); margin-top: 12px;
+      display: flex; align-items: center; gap: 6px; }
+    .glabel::before { content: ""; width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; animation: gl-pulse 1.6s ease-in-out infinite; }
+    body[data-label="off"] .glabel { display: none; }
+    @keyframes gl-pulse { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+
+    body[data-paused="true"] .loader *,
+    body[data-paused="true"] .glabel::before { animation-play-state: paused !important; }
+
+    /* ==================================================================== *
+     * 01 · resolution — tonal cells sharpen and dim on a shared beat
+     * ==================================================================== */
+    .v-resolution .g > i { border-radius: 16%;
+      animation: gl-resolution var(--dur) cubic-bezier(.4,0,.2,1) infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-resolution {
+      0%,18%,100% { opacity: .1; transform: scale(.88); filter: blur(.4px); }
+      46%,70%     { opacity: calc(.08 + var(--t) * .88); transform: scale(1); filter: blur(0); }
+      84%         { opacity: .24; transform: scale(.96); }
+    }
+
+    /* ==================================================================== *
+     * 02 · pixel grid — cells drift in from their own offset
+     * ==================================================================== */
+    .v-pixel .g > i { animation: gl-pixel var(--dur) var(--step) infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-pixel {
+      0%,14%,100% { opacity: .06; border-radius: 14%;
+        transform: translate(calc(var(--ox) * 1%), calc(var(--oy) * 1%)) scale(.72); }
+      44%,76%     { opacity: calc(.08 + var(--t) * .86); border-radius: 2%;
+        transform: translate(0,0) scale(1); }
+    }
+
+    /* ==================================================================== *
+     * 03 · mip ladder — 2 → 4 → 8 → 16, the same subject four times over
+     * ==================================================================== */
+    .v-mip .g { opacity: 0; animation: gl-mip var(--dur) linear infinite; }
+    .v-mip .g > i { opacity: calc(.06 + var(--t) * .84); }
+    .v-mip .g.l1 { animation-delay: 0s; }
+    .v-mip .g.l2 { animation-delay: calc(var(--dur) * .25); }
+    .v-mip .g.l3 { animation-delay: calc(var(--dur) * .50); }
+    .v-mip .g.l4 { animation-delay: calc(var(--dur) * .75); }
+    /* a hard cut, not a crossfade: each rung should snap to the next */
+    @keyframes gl-mip {
+      0%, 23.5% { opacity: 1; }
+      24%, 100% { opacity: 0; }
+    }
+
+    /* ==================================================================== *
+     * 04 · quadtree — detail subdivides only where the subject is
+     * ==================================================================== */
+    .v-quad .q { position: absolute; }
+    .v-quad .q > b { position: absolute; inset: 3%; display: block; background: currentColor;
+      border-radius: 3px; opacity: 0;
+      animation: gl-quad var(--dur) var(--step) infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-quad {
+      0%,8%    { opacity: 0; transform: scale(.72); }
+      26%,74%  { opacity: calc(.08 + var(--t) * .84); transform: scale(1); }
+      92%,100% { opacity: 0; transform: scale(.86); }
+    }
+
+    /* ==================================================================== *
+     * 05 · raster — reading order, with a lit cursor cell
+     * ==================================================================== */
+    .v-raster .g { gap: 1.6%; }
+    .v-raster .g > i { border-radius: 1px; opacity: 0;
+      animation: gl-raster var(--dur) linear infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-raster {
+      0%       { opacity: 0; }
+      3%       { opacity: .95; }
+      9%       { opacity: calc(.06 + var(--t) * .84); }
+      68%      { opacity: calc(.06 + var(--t) * .84); }
+      86%,100% { opacity: 0; }
+    }
+
+    /* ==================================================================== *
+     * 06 · dither — halftone dots grow in ordered (Bayer) sequence
+     * ==================================================================== */
+    .v-dither .g { gap: 1.4%; }
+    .v-dither .g > i { border-radius: 50%; opacity: 0;
+      animation: gl-dither var(--dur) var(--step) infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-dither {
+      0%,10%,100% { opacity: .05; transform: scale(.2); }
+      44%,72%     { opacity: .9;  transform: scale(calc(.25 + var(--t) * .78)); }
+    }
+
+    /* ==================================================================== *
+     * 07 · denoise — random tones settle onto the real ones
+     * ==================================================================== */
+    .v-denoise .g.noise > i { animation: gl-flick calc(var(--dur) * .16) steps(2, end) infinite;
+      animation-delay: calc(var(--d) * var(--dur) * -.4); }
+    .v-denoise .g.noise { animation: gl-noise-out var(--dur) var(--step) infinite; }
+    .v-denoise .g.real  { animation: gl-real-in var(--dur) var(--step) infinite; }
+    .v-denoise .g.real > i { opacity: calc(.06 + var(--t) * .86); }
+    @keyframes gl-flick { 0% { opacity: calc(var(--t) * .8); } 50% { opacity: calc(.9 - var(--t) * .7); } }
+    @keyframes gl-noise-out { 0%,20% { opacity: 1; } 56%,78% { opacity: 0; } 96%,100% { opacity: 1; } }
+    @keyframes gl-real-in  { 0%,22% { opacity: 0; } 56%,78% { opacity: 1; } 94%,100% { opacity: 0; } }
+
+    /* ==================================================================== *
+     * 08 · columns — one dimension only, heights quantised in steps
+     * ==================================================================== */
+    .v-columns .bars { inset: 10%; display: flex; align-items: flex-end; gap: 4%; }
+    .v-columns .bars > i { position: relative; flex: 1; display: block; background: currentColor;
+      border-radius: 2px; height: 12%; opacity: .5;
+      animation: gl-col var(--dur) steps(6, end) infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-col {
+      0%,12%,100% { height: 10%; opacity: .18; }
+      46%,74%     { height: calc(18% + var(--t) * 80%); opacity: calc(.35 + var(--t) * .5); }
+    }
+
+    /* ==================================================================== *
+     * 09 · radial — a ring of detail opening from the centre
+     * ==================================================================== */
+    .v-radial .g { gap: 1.8%; }
+    .v-radial .g > i { border-radius: 20%; opacity: 0;
+      animation: gl-radial var(--dur) var(--step) infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-radial {
+      0%,6%    { opacity: .04; transform: scale(.3); }
+      30%,66%  { opacity: calc(.06 + var(--t) * .86); transform: scale(1); }
+      92%,100% { opacity: .04; transform: scale(.3); }
+    }
+
+    /* ==================================================================== *
+     * 10 · sort — rows slide in from off-frame and lock
+     * ==================================================================== */
+    .v-sort .g { gap: 1.8%; overflow: hidden; }
+    .v-sort .g > i { border-radius: 1.5px;
+      animation: gl-sort var(--dur) var(--step) infinite;
+      animation-delay: calc(var(--d) * var(--dur)); }
+    @keyframes gl-sort {
+      0%,10%,100% { opacity: .07; transform: translateX(calc(var(--ox) * 1.6%)); }
+      46%,76%     { opacity: calc(.06 + var(--t) * .86); transform: translateX(0); }
+    }
+
+    /* ==================================================================== *
+     * 11 · crossfade — the coarse grid dissolving into the fine one
+     * ==================================================================== */
+    .v-cross .g.coarse { animation: gl-coarse var(--dur) var(--step) infinite; }
+    .v-cross .g.fine   { animation: gl-fine   var(--dur) var(--step) infinite; }
+    .v-cross .g.coarse > i { opacity: calc(.06 + var(--t) * .86); border-radius: 8%; }
+    .v-cross .g.fine   > i { opacity: calc(.06 + var(--t) * .86); border-radius: 1px; }
+    @keyframes gl-coarse { 0%,26% { opacity: 1; transform: scale(1); }
+                           60%,80% { opacity: 0; transform: scale(1.03); }
+                           96%,100% { opacity: 1; transform: scale(1); } }
+    @keyframes gl-fine   { 0%,30% { opacity: 0; transform: scale(.97); }
+                           60%,82% { opacity: 1; transform: scale(1); }
+                           98%,100% { opacity: 0; transform: scale(.97); } }
+
+    /* ==================================================================== *
+     * 12 · contour — the non-grid outlier, kept for contrast
+     * ==================================================================== */
+    .v-contour i { position: absolute; border: 1.5px solid currentColor; border-radius: 3px;
+      animation: gl-contour var(--dur) cubic-bezier(.22,1,.36,1) infinite; }
+    .v-contour i:nth-child(1) { inset: 8%;  animation-delay: 0s; }
+    .v-contour i:nth-child(2) { inset: 21%; animation-delay: calc(var(--dur) * -.07); }
+    .v-contour i:nth-child(3) { inset: 34%; animation-delay: calc(var(--dur) * -.14); }
+    .v-contour b { position: absolute; inset: 44%; background: currentColor; border-radius: 2px;
+      animation: gl-contour-core var(--dur) ease-in-out infinite; }
+    @keyframes gl-contour {
+      0%,14%,100% { opacity: .08; transform: scale(1.08); filter: blur(1px); }
+      46%,76%     { opacity: .55; transform: scale(1); filter: blur(0); }
+    }
+    @keyframes gl-contour-core {
+      0%,14%,100% { opacity: .08; transform: scale(.7); }
+      48%,76%     { opacity: .65; transform: scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .loader *, .glabel::before { animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important; }
+      /* every variant still holds a legible resolved frame with no motion */
+      .v-denoise .g.noise { opacity: 0; }
+      .v-mip .g.l4 { opacity: 1; }
+    }
+  </style>
+</head>
+
+<body class="pai" data-surface="light" data-tint="neutral" data-label="on" data-paused="false">
+  <div class="wrap">
+    <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
+
+    <h1>Generative image loaders</h1>
+    <p class="lede">Twelve square placeholders in the resolution and pixel family, the shape
+      language <code>generative-loaders</code> uses for <code>variant="resolution"</code>. Nothing
+      loads underneath: the loader is the picture. All twelve resolve the same latent subject on the
+      same 2.35s beat, so what you are comparing is grid, cadence, and how detail arrives.</p>
+
+    <div class="bar">
+      <div class="grp">
+        <span>Size</span>
+        <div class="seg" id="segSize">
+          <button data-v="96">96</button>
+          <button data-v="128">128</button>
+          <button data-v="168" aria-pressed="true">168</button>
+          <button data-v="224">224</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Radius</span>
+        <div class="seg" id="segRadius">
+          <button data-v="0">0</button>
+          <button data-v="10%" aria-pressed="true">10%</button>
+          <button data-v="26%">26%</button>
+          <button data-v="50%">Circle</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Speed</span>
+        <div class="seg" id="segSpeed">
+          <button data-v="0.6">0.6×</button>
+          <button data-v="1" aria-pressed="true">1×</button>
+          <button data-v="1.6">1.6×</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Colour</span>
+        <div class="seg" id="segTint">
+          <button data-v="neutral" aria-pressed="true">Ink</button>
+          <button data-v="navy">Navy</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Surface</span>
+        <div class="seg" id="segSurface">
+          <button data-v="light" aria-pressed="true">Light</button>
+          <button data-v="dark">Dark</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Label</span>
+        <div class="seg" id="segLabel">
+          <button data-v="on" aria-pressed="true">On</button>
+          <button data-v="off">Off</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Motion</span>
+        <div class="seg" id="segPaused">
+          <button data-v="false" aria-pressed="true">Play</button>
+          <button data-v="true">Pause</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <script>
+  (function () {
+    /* ------------------------------------------------------------------ *
+     * The latent subject. One function, sampled by every variant, so the
+     * twelve loaders are twelve renderings of the same thing rather than
+     * twelve piles of random squares.
+     * ------------------------------------------------------------------ */
+    function tone(u, v) {
+      var b1 = Math.exp(-((u - 0.36) * (u - 0.36) + (v - 0.32) * (v - 0.32)) / 0.052);
+      var b2 = Math.exp(-((u - 0.72) * (u - 0.72) + (v - 0.68) * (v - 0.68)) / 0.10);
+      var wash = 0.22 * (1 - v);
+      var c = Math.max(0, Math.min(1, 0.04 + 0.74 * b1 + 0.56 * b2 + wash));
+      return Math.pow(c, 1.35);   /* gamma: pushes the background down, subject up */
+    }
+    function t(n, x, y) { return tone((x + 0.5) / n, (y + 0.5) / n).toFixed(3); }
+
+    /* deterministic jitter, so a reload looks identical */
+    function rnd(i) { var h = Math.sin(i * 12.9898) * 43758.5453; return h - Math.floor(h); }
+
+    /* an 8×8 ordered dither matrix, normalised to 0..1 */
+    function bayer8() {
+      var m = [[0]], s;
+      for (s = 1; s < 4; s++) {
+        var n = m.length, out = [], r, c;
+        for (r = 0; r < n * 2; r++) out.push(new Array(n * 2));
+        for (r = 0; r < n; r++) for (c = 0; c < n; c++) {
+          var q = m[r][c] * 4;
+          out[r][c] = q; out[r][c + n] = q + 2; out[r + n][c] = q + 3; out[r + n][c + n] = q + 1;
+        }
+        m = out;
+      }
+      return m;
+    }
+    var BAYER = bayer8();
+
+    function grid(n, cls, cell) {
+      var h = '<span class="g ' + (cls || '') + '" style="--n:' + n + '">', x, y;
+      for (y = 0; y < n; y++) for (x = 0; x < n; x++) h += cell(x, y, n);
+      return h + '</span>';
+    }
+
+    /* ------------------------------------------------------------------ *
+     * The twelve.
+     * ------------------------------------------------------------------ */
+    var VARIANTS = [
+      { id: 'resolution', cls: 'v-resolution', name: 'Resolution',
+        desc: 'Tonal cells sharpen together, hold, then soften. The library’s default and the calmest of the set.',
+        spec: '6 × 6 · opacity + scale + blur · 2.35s',
+        html: grid(6, '', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + ';--d:' + (rnd(x * 7 + y * 13) * 0.09).toFixed(3) + '"></i>';
+        }) },
+
+      { id: 'pixel', cls: 'v-pixel', name: 'Pixel grid',
+        desc: 'Each cell drifts in from its own offset and squares off. Chunkier, more mechanical.',
+        spec: '4 × 4 · translate + radius 14% → 2%',
+        html: grid(4, '', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + ';--ox:' + ((x - 1.5) * 7).toFixed(1) +
+                 ';--oy:' + ((y - 1.5) * 7).toFixed(1) +
+                 ';--d:' + ((x + y) * 0.022).toFixed(3) + '"></i>';
+        }) },
+
+      { id: 'mip', cls: 'v-mip', name: 'Mip ladder',
+        desc: 'The subject drawn four times, each pass doubling the grid. Reads as resolution rather than as decoration.',
+        spec: '2 → 4 → 8 → 16 · steps(1) · four stacked layers',
+        html: [2, 4, 8, 16].map(function (n, i) {
+          return grid(n, 'l' + (i + 1), function (x, y, nn) {
+            return '<i style="--t:' + t(nn, x, y) + '"></i>';
+          });
+        }).join('') },
+
+      { id: 'quad', cls: 'v-quad', name: 'Quadtree',
+        desc: 'Detail subdivides only where the subject is, so the busy corner refines and the empty one stays coarse.',
+        spec: '3 depths · staged by depth · 2.35s',
+        html: (function () {
+          var h = '';
+          function node(x, y, s, depth) {
+            var c = tone(x + s / 2, y + s / 2);
+            /* subdivide where there is something to see, up to 3 levels deep */
+            if (depth < 3 && c > 0.34 + depth * 0.12) {
+              var half = s / 2;
+              node(x, y, half, depth + 1); node(x + half, y, half, depth + 1);
+              node(x, y + half, half, depth + 1); node(x + half, y + half, half, depth + 1);
+              return;
+            }
+            h += '<span class="q" style="left:' + (8 + x * 84) + '%;top:' + (8 + y * 84) +
+                 '%;width:' + (s * 84) + '%;height:' + (s * 84) + '%">' +
+                 '<b style="--t:' + c.toFixed(3) + ';--d:' + (depth * 0.075).toFixed(3) + '"></b></span>';
+          }
+          node(0, 0, 0.5, 0); node(0.5, 0, 0.5, 0); node(0, 0.5, 0.5, 0); node(0.5, 0.5, 0.5, 0);
+          return h;
+        })() },
+
+      { id: 'raster', cls: 'v-raster', name: 'Raster',
+        desc: 'Fills in reading order behind a lit cursor cell. Busiest of the set, and the most obviously "working".',
+        spec: '12 × 12 · linear cascade · 3% flash on arrival',
+        html: grid(12, '', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + ';--d:' + (((y * n + x) / (n * n)) * 0.55).toFixed(4) + '"></i>';
+        }) },
+
+      { id: 'dither', cls: 'v-dither', name: 'Dither',
+        desc: 'Halftone dots sized by tone, growing in ordered Bayer sequence. Print language, not screen language.',
+        spec: '8 × 8 dots · Bayer order · scale 0.2 → tone',
+        html: grid(8, '', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + ';--d:' + ((BAYER[y][x] / 64) * 0.3).toFixed(4) + '"></i>';
+        }) },
+
+      { id: 'denoise', cls: 'v-denoise', name: 'Denoise',
+        desc: 'Random tones flickering, then settling onto the real ones. The closest to what a diffusion model does.',
+        spec: '10 × 10 · two layers crossfading · flicker 0.16 × dur',
+        html: grid(10, 'noise', function (x, y, n) {
+          return '<i style="--t:' + rnd(x * 31 + y * 17).toFixed(3) + ';--d:' + rnd(x + y * 10).toFixed(3) + '"></i>';
+        }) + grid(10, 'real', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + '"></i>';
+        }) },
+
+      { id: 'columns', cls: 'v-columns', name: 'Columns',
+        desc: 'One dimension only, heights quantised in six steps. Small enough to sit inline next to a line of text.',
+        spec: '7 bars · steps(6) · height 10% → tone',
+        html: (function () {
+          var h = '<span class="bars">', i;
+          for (i = 0; i < 7; i++) {
+            h += '<i style="--t:' + tone((i + 0.5) / 7, 0.42).toFixed(3) +
+                 ';--d:' + (i * 0.028).toFixed(3) + '"></i>';
+          }
+          return h + '</span>';
+        })() },
+
+      { id: 'radial', cls: 'v-radial', name: 'Radial',
+        desc: 'Cells open outward from the centre. Puts the subject first, which is usually where it is.',
+        spec: '9 × 9 · delay by distance from centre',
+        html: grid(9, '', function (x, y, n) {
+          var dx = (x + 0.5) / n - 0.5, dy = (y + 0.5) / n - 0.5;
+          var d = Math.sqrt(dx * dx + dy * dy) / 0.71;
+          return '<i style="--t:' + t(n, x, y) + ';--d:' + (d * 0.34).toFixed(3) + '"></i>';
+        }) },
+
+      { id: 'sort', cls: 'v-sort', name: 'Sort',
+        desc: 'Rows slide in from off-frame and lock. Feels like assembly rather than appearance.',
+        spec: '8 × 8 · translateX ±off-frame · locks at 46%',
+        html: grid(8, '', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + ';--ox:' + ((rnd(x * 5 + y * 23) - 0.5) * 260).toFixed(0) +
+                 ';--d:' + (y * 0.03).toFixed(3) + '"></i>';
+        }) },
+
+      { id: 'cross', cls: 'v-cross', name: 'Crossfade',
+        desc: 'Coarse grid dissolving straight into the fine one. The idea of the mip ladder in one beat.',
+        spec: '4 × 4 over 16 × 16 · opposed opacity + scale',
+        html: grid(4, 'coarse', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + '"></i>';
+        }) + grid(16, 'fine', function (x, y, n) {
+          return '<i style="--t:' + t(n, x, y) + '"></i>';
+        }) },
+
+      { id: 'contour', cls: 'v-contour', name: 'Contour',
+        desc: 'The non-grid outlier. Concentric squares pulling into focus, kept here to test the family against a frame.',
+        spec: '3 rings + core · blur 1px → 0 · 2.35s',
+        html: '<i></i><i></i><i></i><b></b>' }
+    ];
+
+    /* ---------------------------------------------------------- build */
+    var grid_ = document.getElementById('grid');
+    VARIANTS.forEach(function (V, i) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.innerHTML =
+        '<div class="stage">' +
+          '<div class="loader ' + V.cls + '" role="img" aria-label="Generating image">' + V.html + '</div>' +
+          '<div class="glabel">Generating image</div>' +
+        '</div>' +
+        '<div class="caption">' +
+          '<div class="lname">' + V.name + '</div>' +
+          '<div class="ldesc">' + V.desc + '</div>' +
+          '<div class="lspec">' + V.spec + '</div>' +
+        '</div>';
+      grid_.appendChild(cell);
+    });
+
+    /* ------------------------------------------------------- controls */
+    function seg(id, fn) {
+      var el = document.getElementById(id);
+      el.addEventListener('click', function (e) {
+        var b = e.target.closest('button');
+        if (!b) return;
+        [].forEach.call(el.querySelectorAll('button'), function (x) {
+          x.setAttribute('aria-pressed', String(x === b));
+        });
+        fn(b.getAttribute('data-v'));
+      });
+    }
+    var root = document.documentElement;
+    seg('segSize',    function (v) { root.style.setProperty('--size', v + 'px'); });
+    seg('segRadius',  function (v) { root.style.setProperty('--radius', v); });
+    seg('segSpeed',   function (v) { root.style.setProperty('--speed', v); });
+    seg('segTint',    function (v) { document.body.setAttribute('data-tint', v); });
+    seg('segSurface', function (v) { document.body.setAttribute('data-surface', v); });
+    seg('segLabel',   function (v) { document.body.setAttribute('data-label', v); });
+    seg('segPaused',  function (v) { document.body.setAttribute('data-paused', v); });
+  })();
+  </script>
+</body>
+</html>

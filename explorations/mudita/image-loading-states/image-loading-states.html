@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Image loading states · design-protos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    /* ------------------------------------------------------------------ *
+     * Surfaces. Everything below reads from these, so the light/dark
+     * toggle swaps one block instead of thirteen loaders.
+     * ------------------------------------------------------------------ */
+    :root {
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+      --page:        #F4F5F7;
+      --card:        #FFFFFF;
+      --ink:         #171717;
+      --ink-2:       #525252;
+      --ink-3:       #A3A3A3;
+      --hair:        rgba(11,15,20,0.10);
+      --skel:        #E7E9EC;
+      --skel-2:      #F1F2F5;
+      --sheen:       rgba(255,255,255,0.82);
+      --plate:       rgba(255,255,255,0.86);
+      --track:       rgba(11,15,20,0.12);
+      --accent:      #0A1925;          /* navy = the action colour */
+      --glow:        rgba(255,255,255,0.92);   /* lines drawn over a picture */
+      --line:        rgba(11,15,20,0.55);      /* lines drawn over skeleton */
+      --blob-a:      rgba(255,255,255,0.95);
+      --blob-b:      rgba(11,15,20,0.08);
+      --ar:          16 / 9;
+      --frame-radius: 12px;
+    }
+    body[data-surface="dark"] {
+      --page:  #0D1015;
+      --card:  #161A20;
+      --ink:   #F2F3F5;
+      --ink-2: #9BA3AD;
+      --ink-3: #6B747E;
+      --hair:  rgba(255,255,255,0.12);
+      --skel:  #232830;
+      --skel-2:#2E343D;
+      --sheen: rgba(255,255,255,0.10);
+      --plate: rgba(14,17,22,0.72);
+      --track: rgba(255,255,255,0.14);
+      --accent:#FFFFFF;
+      --glow:  rgba(255,255,255,0.85);
+      --line:  rgba(255,255,255,0.72);
+      --blob-a:rgba(255,255,255,0.16);
+      --blob-b:rgba(0,0,0,0.30);
+    }
+    body[data-shape="16x9"]  { --ar: 16 / 9; }
+    body[data-shape="4x3"]   { --ar: 4 / 3; }
+    body[data-shape="1x1"]   { --ar: 1 / 1; }
+    body[data-shape="3x4"]   { --ar: 3 / 4; }
+    body[data-shape="circle"]{ --ar: 1 / 1; --frame-radius: 50%; }
+
+    body { background: var(--page); color: var(--ink);
+      transition: background-color 280ms var(--ease-out), color 280ms var(--ease-out); }
+
+    /* ---------------------------------------------------------------- page */
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 44px 28px 120px; }
+    .back { display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      color: var(--ink-2); margin-bottom: 20px; transition: color 150ms var(--ease-out); }
+    .back:hover { color: var(--ink); }
+    h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; color: var(--ink); }
+    .lede { color: var(--ink-2); font-size: 15px; line-height: 1.6; max-width: 62ch; margin: 0; }
+
+    /* ------------------------------------------------------------- controls */
+    .bar { position: sticky; top: 12px; z-index: 20; margin: 26px 0 30px;
+      display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+      padding: 10px 12px; border-radius: 14px;
+      background: color-mix(in srgb, var(--card) 82%, transparent);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      box-shadow: 0 0 0 1px var(--hair), 0 6px 20px -12px rgba(11,15,20,0.35); }
+    .grp { display: flex; align-items: center; gap: 8px; }
+    .grp > span { font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--ink-3); }
+    .seg { display: flex; padding: 2px; border-radius: 9px; background: var(--track); gap: 2px; }
+    .seg button { appearance: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 500;
+      color: var(--ink-2); background: transparent; padding: 5px 10px; border-radius: 7px;
+      cursor: pointer; white-space: nowrap;
+      transition: color 140ms var(--ease-out), background-color 140ms var(--ease-out),
+                  transform 140ms var(--ease-out); }
+    .seg button:active { transform: scale(0.97); }
+    .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink);
+      box-shadow: 0 1px 2px rgba(11,15,20,0.10); }
+    .btn { appearance: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 9px;
+      cursor: pointer; background: var(--accent);
+      color: var(--card);
+      transition: transform 140ms var(--ease-out), opacity 140ms var(--ease-out); }
+    .btn:active { transform: scale(0.97); }
+    .btn:hover { opacity: 0.9; }
+    .hint { margin-left: auto; font-size: 12px; color: var(--ink-3); }
+    .hint kbd { font: inherit; font-size: 11px; padding: 2px 5px; border-radius: 5px;
+      background: var(--track); }
+
+    /* ---------------------------------------------------------------- grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(286px, 1fr)); gap: 24px; }
+    .card { margin: 0; padding: 0; cursor: pointer; }
+    .frame { position: relative; width: 100%; aspect-ratio: var(--ar); overflow: hidden;
+      border-radius: var(--frame-radius); background: var(--skel);
+      box-shadow: 0 0 0 1px var(--hair);
+      transition: border-radius 280ms var(--ease-out); }
+    .card:active .frame { transform: scale(0.995); }
+    .frame > * { position: absolute; inset: 0; }
+
+    /* the resolved picture */
+    .art { display: block; width: 100%; height: 100%; }
+    .art svg { width: 100%; height: 100%; display: block; }
+    .skin { pointer-events: none; }
+
+    /* default handoff: skin clears, picture settles in */
+    .art { opacity: 0; transform: scale(1.015);
+      transition: opacity 380ms var(--ease-out), transform 520ms var(--ease-out),
+                  filter 420ms var(--ease-out); }
+    .is-done .art { opacity: 1; transform: none; }
+    .is-done .skin { opacity: 0; transition: opacity 300ms var(--ease-out); }
+
+    /* caption */
+    figcaption { padding: 12px 2px 0; }
+    .name { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; color: var(--ink);
+      display: flex; align-items: baseline; gap: 8px; }
+    .name .n { font-size: 11px; font-weight: 600; color: var(--ink-3);
+      font-variant-numeric: tabular-nums; }
+    .desc { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); margin-top: 3px; }
+    .spec { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
+      color: var(--ink-3); margin-top: 6px; letter-spacing: 0.01em; }
+
+    /* shared skeleton fill */
+    .fill { background: var(--skel); }
+    .sweep::after { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(105deg, transparent 32%, var(--sheen) 50%, transparent 68%);
+      background-size: 260% 100%; animation: sweep 1.55s ease-in-out infinite; }
+    @keyframes sweep { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+
+    /* =================================================================== *
+     *  1 · shimmer skeleton
+     * =================================================================== */
+    /* nothing extra: .fill.sweep does the work */
+
+    /* =================================================================== *
+     *  2 · blur-up
+     * =================================================================== */
+    [data-loader="blurup"] .art { opacity: 1; transform: scale(calc(1.05 - var(--p) * 0.05));
+      filter: blur(calc((1 - var(--p)) * 20px)) saturate(calc(0.5 + var(--p) * 0.5));
+      transition: none; }
+    [data-loader="blurup"].is-done .art { transition: filter 320ms var(--ease-out),
+      transform 420ms var(--ease-out); filter: none; transform: none; }
+    [data-loader="blurup"] .skin { background: var(--skel);
+      opacity: calc(1 - var(--p) * 3.4); }
+
+    /* =================================================================== *
+     *  3 · progressive decode (band descends, sharp above, skeleton below)
+     * =================================================================== */
+    [data-loader="decode"] .art { opacity: 1; transform: none; transition: none;
+      clip-path: inset(0 0 calc((1 - var(--p)) * 100%) 0); }
+    [data-loader="decode"].is-done .art { clip-path: inset(0 0 0 0); }
+    [data-loader="decode"] .skin { background: var(--skel);
+      clip-path: inset(calc(var(--p) * 100%) 0 0 0); }
+    [data-loader="decode"] .edge { position: absolute; left: 0; right: 0; height: 2px;
+      top: calc(var(--p) * 100%); background: var(--line);
+      box-shadow: 0 0 16px 4px var(--line); opacity: calc(0.9 - var(--p) * var(--p) * 0.9); }
+    [data-loader="decode"].is-done .edge { opacity: 0; transition: opacity 200ms ease-out; }
+
+    /* =================================================================== *
+     *  4 · mosaic resolve
+     * =================================================================== */
+    [data-loader="mosaic"] .art { opacity: 1; transform: none; transition: none; }
+    [data-loader="mosaic"] .skin { display: grid;
+      grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(7, 1fr); }
+    [data-loader="mosaic"] .tile { position: static; background: var(--skel);
+      opacity: clamp(0, calc(1 - (var(--p) - var(--d)) * 5), 1);
+      transform: scale(clamp(0.86, calc(1 - (var(--p) - var(--d)) * 0.7), 1)); }
+
+    /* =================================================================== *
+     *  5 · noise dissipate
+     * =================================================================== */
+    [data-loader="noise"] .art { opacity: 1; transform: none; transition: none;
+      filter: blur(calc((1 - var(--p)) * 12px)); }
+    [data-loader="noise"].is-done .art { filter: none; transition: filter 300ms var(--ease-out); }
+    [data-loader="noise"] .grain { background-image: var(--grain); background-size: 180px 180px;
+      opacity: calc(1 - var(--p) * var(--p) * 1.15); animation: grain-drift 0.5s steps(3) infinite;
+      mix-blend-mode: normal; }
+    @keyframes grain-drift {
+      0%   { transform: translate3d(0,0,0); }
+      33%  { transform: translate3d(-3%, 2%, 0); }
+      66%  { transform: translate3d(2%, -3%, 0); }
+      100% { transform: translate3d(0,0,0); }
+    }
+
+    /* =================================================================== *
+     *  6 · iris open
+     * =================================================================== */
+    [data-loader="iris"] .art { opacity: 1; transform: none; transition: none; z-index: 2;
+      clip-path: circle(calc(var(--p) * 78%) at 50% 50%); }
+    [data-loader="iris"].is-done .art { clip-path: circle(140% at 50% 50%);
+      transition: clip-path 300ms var(--ease-out); }
+    [data-loader="iris"] .skin { background: var(--skel); }
+    [data-loader="iris"] .ring { position: absolute; z-index: 3; top: 50%; left: 50%;
+      width: calc(var(--p) * 156%); aspect-ratio: 1; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 1.5px var(--line), 0 0 20px 3px var(--line);
+      opacity: calc(0.75 - var(--p) * 0.75); }
+
+    /* =================================================================== *
+     *  7 · curtain split
+     * =================================================================== */
+    [data-loader="curtain"] .art { opacity: 1;
+      transform: scale(calc(1.04 - var(--p) * 0.04)); transition: none; }
+    [data-loader="curtain"].is-done .art { transform: none; transition: transform 420ms var(--ease-out); }
+    [data-loader="curtain"] .half { top: 0; bottom: 0; width: 50.4%; background: var(--skel); }
+    [data-loader="curtain"] .half.l { left: 0;  transform: translateX(calc(var(--p) * -100%)); }
+    [data-loader="curtain"] .half.r { right: 0; left: auto; transform: translateX(calc(var(--p) * 100%)); }
+    [data-loader="curtain"] .seam { left: 50%; right: auto; top: 0; bottom: 0; width: 1.5px;
+      transform: translateX(-50%); background: var(--line);
+      opacity: calc(0.7 - var(--p)); }
+
+    /* =================================================================== *
+     *  8 · progress ring
+     * =================================================================== */
+    [data-loader="ring"] .plate { display: grid; place-items: center; }
+    [data-loader="ring"] .dial { position: relative; inset: auto; width: 56px; height: 56px;
+      display: grid; place-items: center; border-radius: 50%;
+      background: var(--plate); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 0 0 1px var(--hair), 0 4px 14px -8px rgba(11,15,20,0.5);
+      transform: scale(1); transition: transform 260ms var(--ease-out), opacity 220ms var(--ease-out); }
+    [data-loader="ring"].is-done .dial { transform: scale(0.9); opacity: 0; }
+    [data-loader="ring"] .dial svg { position: absolute; inset: 0; width: 56px; height: 56px;
+      transform: rotate(-90deg); }
+    [data-loader="ring"] .dial .tr { fill: none; stroke: var(--track); stroke-width: 2.5; }
+    [data-loader="ring"] .dial .pr { fill: none; stroke: var(--accent); stroke-width: 2.5;
+      stroke-linecap: round; stroke-dasharray: 138.2;
+      stroke-dashoffset: calc(138.2 - var(--p) * 138.2); }
+    [data-loader="ring"] .pct { font-size: 12px; font-weight: 600; color: var(--ink);
+      font-variant-numeric: tabular-nums; }
+
+    /* =================================================================== *
+     *  9 · edge bar
+     * =================================================================== */
+    [data-loader="edgebar"] .rail { top: auto; height: 2px; background: var(--track); }
+    [data-loader="edgebar"] .rail i { position: absolute; inset: 0 auto 0 0; display: block;
+      width: calc(var(--p) * 100%); background: var(--accent); }
+    [data-loader="edgebar"].is-done .rail { opacity: 0; transition: opacity 180ms ease-out; }
+    [data-loader="edgebar"] .glyph { display: grid; place-items: center;
+      color: var(--ink-3); font-size: 26px; opacity: 0.55; }
+
+    /* =================================================================== *
+     * 10 · breathing gradient
+     * =================================================================== */
+    [data-loader="breathe"] .skin { background: var(--skel); overflow: hidden; }
+    [data-loader="breathe"] .blob { position: absolute; border-radius: 50%; filter: blur(28px);
+      background: var(--blob-a); }
+    [data-loader="breathe"] .blob.b { background: var(--blob-b); }
+    [data-loader="breathe"] .blob.a { width: 62%; aspect-ratio: 1; top: -14%; left: -8%;
+      animation: drift-a 5.2s ease-in-out infinite; }
+    [data-loader="breathe"] .blob.b { width: 54%; aspect-ratio: 1; bottom: -18%; right: -6%;
+      animation: drift-b 6.4s ease-in-out infinite; opacity: 0.8; }
+    [data-loader="breathe"] .blob.c { width: 40%; aspect-ratio: 1; top: 34%; left: 40%;
+      animation: drift-c 4.4s ease-in-out infinite; opacity: 0.6; }
+    @keyframes drift-a { 0%,100% { transform: translate(0,0) scale(1); }
+                         50% { transform: translate(18%, 14%) scale(1.16); } }
+    @keyframes drift-b { 0%,100% { transform: translate(0,0) scale(1.1); }
+                         50% { transform: translate(-16%, -12%) scale(0.94); } }
+    @keyframes drift-c { 0%,100% { transform: translate(0,0) scale(0.9); }
+                         50% { transform: translate(-12%, 10%) scale(1.2); } }
+
+    /* =================================================================== *
+     * 11 · focus brackets
+     * =================================================================== */
+    [data-loader="brackets"] .art { opacity: 1; transform: none; transition: none;
+      filter: blur(calc((1 - var(--p)) * 9px)) brightness(calc(0.86 + var(--p) * 0.14)); }
+    [data-loader="brackets"].is-done .art { filter: none; transition: filter 300ms var(--ease-out); }
+    [data-loader="brackets"] .veil { background: var(--skel); opacity: calc(0.55 - var(--p) * 0.55); }
+    [data-loader="brackets"] .cage { inset: calc(7% + (1 - var(--p)) * 11%); }
+    [data-loader="brackets"] .br { position: absolute; width: 16px; height: 16px;
+      border: 1.5px solid var(--glow); opacity: calc(0.5 + (1 - var(--p)) * 0.5);
+      filter: drop-shadow(0 0 1.5px rgba(11,15,20,0.55)); }
+    [data-loader="brackets"] .br.tl { top: 0; left: 0;  border-right: 0; border-bottom: 0; border-top-left-radius: 3px; }
+    [data-loader="brackets"] .br.tr { top: 0; right: 0; border-left: 0;  border-bottom: 0; border-top-right-radius: 3px; }
+    [data-loader="brackets"] .br.bl { bottom: 0; left: 0;  border-right: 0; border-top: 0; border-bottom-left-radius: 3px; }
+    [data-loader="brackets"] .br.br2{ bottom: 0; right: 0; border-left: 0;  border-top: 0; border-bottom-right-radius: 3px; }
+    [data-loader="brackets"].is-done .cage { transform: scale(1.04); opacity: 0;
+      transition: transform 300ms var(--ease-out), opacity 240ms var(--ease-out); }
+
+    /* =================================================================== *
+     * 12 · stroke draw
+     * =================================================================== */
+    [data-loader="stroke"] .skin { background: var(--skel); display: grid; place-items: center; }
+    [data-loader="stroke"] .draw { position: relative; inset: auto; width: 46%; max-width: 108px;
+      aspect-ratio: 4 / 3; }
+    [data-loader="stroke"] .draw svg { width: 100%; height: 100%; overflow: visible; }
+    [data-loader="stroke"] .draw path, [data-loader="stroke"] .draw circle,
+    [data-loader="stroke"] .draw rect { fill: none; stroke: var(--ink-3); stroke-width: 4;
+      stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke;
+      stroke-dasharray: var(--len);
+      /* --s / --e stage each shape, so the glyph draws in sequence */
+      stroke-dashoffset: calc(var(--len) -
+        clamp(0, calc((var(--p) - var(--s)) / (var(--e) - var(--s))), 1) * var(--len)); }
+
+    /* =================================================================== *
+     * 13 · candidate shuffle
+     * =================================================================== */
+    [data-loader="shuffle"] .skin { background: var(--skel); display: grid; place-items: center; }
+    [data-loader="shuffle"] .deck { position: relative; inset: auto; width: 52%;
+      max-height: 74%; aspect-ratio: 4 / 3; }
+    [data-loader="shuffle"] .pane { position: absolute; inset: 0; border-radius: 6px;
+      background: var(--skel-2); box-shadow: 0 0 0 1px var(--hair), 0 6px 14px -10px rgba(11,15,20,0.6);
+      display: grid; place-items: center; color: var(--ink-3); font-size: 20px;
+      animation: deal 2.1s ease-in-out infinite; }
+    [data-loader="shuffle"] .pane:nth-child(1) { animation-delay: 0ms; }
+    [data-loader="shuffle"] .pane:nth-child(2) { animation-delay: 700ms; }
+    [data-loader="shuffle"] .pane:nth-child(3) { animation-delay: 1400ms; }
+    @keyframes deal {
+      0%   { transform: translate(6%, 8%) rotate(4deg) scale(0.94); opacity: 0; }
+      18%  { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+      62%  { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+      82%  { transform: translate(-5%, -7%) rotate(-3.5deg) scale(0.96); opacity: 0; }
+      100% { transform: translate(-5%, -7%) rotate(-3.5deg) scale(0.96); opacity: 0; }
+    }
+
+    /* ------------------------------------------------------- reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .sweep::after, [data-loader="noise"] .grain,
+      [data-loader="breathe"] .blob, [data-loader="shuffle"] .pane { animation: none; }
+      [data-loader="shuffle"] .pane { opacity: 1; transform: none; }
+      .art { transform: none !important; }
+    }
+  </style>
+</head>
+
+<body class="pai" data-surface="light" data-shape="16x9">
+  <div class="wrap">
+    <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
+
+    <h1>Image loading states</h1>
+    <p class="lede">Thirteen ways to hold the frame while a picture arrives, from plain shimmer to a
+      ChatGPT-style top-down decode. Every tile runs the same fake load, so shape and motion are the
+      only things that differ. Click a tile to replay it on its own.</p>
+
+    <div class="bar">
+      <div class="grp">
+        <button class="btn" id="replay"><i class="ph ph-arrow-clockwise"></i>Replay</button>
+      </div>
+      <div class="grp">
+        <span>Speed</span>
+        <div class="seg" id="segDur">
+          <button data-v="1200">Fast</button>
+          <button data-v="2600" aria-pressed="true">Normal</button>
+          <button data-v="5200">Slow</button>
+          <button data-v="hold">Hold 60%</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Frame</span>
+        <div class="seg" id="segShape">
+          <button data-v="16x9" aria-pressed="true">16:9</button>
+          <button data-v="4x3">4:3</button>
+          <button data-v="1x1">1:1</button>
+          <button data-v="3x4">3:4</button>
+          <button data-v="circle">Circle</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Surface</span>
+        <div class="seg" id="segSurface">
+          <button data-v="light" aria-pressed="true">Light</button>
+          <button data-v="dark">Dark</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Loop</span>
+        <div class="seg" id="segLoop">
+          <button data-v="on" aria-pressed="true">On</button>
+          <button data-v="off">Off</button>
+        </div>
+      </div>
+      <div class="hint">Press <kbd>R</kbd> to replay</div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <script>
+  (function () {
+    /* ----------------------------------------------------------------- *
+     * Pictures. Inline SVG scenes so the proto stays one portable file,
+     * and so blur / clip / pixel-tile treatments have real detail to bite
+     * into (a flat gradient hides every one of them).
+     * ----------------------------------------------------------------- */
+    function scene(kind, u) {
+      var s = '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">';
+      if (kind === 0) {           /* dusk ridge */
+        s += '<defs><linearGradient id="g' + u + '" x1="0" y1="0" x2="0" y2="1">' +
+             '<stop offset="0" stop-color="#26324B"/><stop offset=".5" stop-color="#9E6285"/>' +
+             '<stop offset=".78" stop-color="#E08A6E"/><stop offset="1" stop-color="#F6C08A"/></linearGradient></defs>' +
+             '<rect width="400" height="300" fill="url(#g' + u + ')"/>' +
+             '<circle cx="286" cy="168" r="30" fill="#FFE0B0"/>' +
+             '<path d="M104 96 l10 4-10 4-4 9-4-9-10-4 10-4 4-9z" fill="#FFF4DF" opacity=".9"/>' +
+             '<path d="M0 214 L84 130 L142 182 L206 116 L292 214 Z" fill="#3B2F4F"/>' +
+             '<path d="M158 214 L250 138 L330 196 L400 158 L400 214 Z" fill="#241C33"/>' +
+             '<rect y="212" width="400" height="88" fill="#1A1428"/>' +
+             '<rect x="256" y="222" width="60" height="5" rx="2.5" fill="#E3A97F" opacity=".55"/>' +
+             '<rect x="244" y="238" width="84" height="4" rx="2" fill="#E3A97F" opacity=".38"/>' +
+             '<rect x="262" y="252" width="48" height="3" rx="1.5" fill="#E3A97F" opacity=".28"/>' +
+             '<path d="M52 78 q8-6 16 0 M74 88 q7-5 14 0" stroke="#2B2340" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+      } else if (kind === 1) {    /* night skyline */
+        s += '<defs><linearGradient id="g' + u + '" x1="0" y1="0" x2="0" y2="1">' +
+             '<stop offset="0" stop-color="#0B1830"/><stop offset=".62" stop-color="#22406E"/>' +
+             '<stop offset="1" stop-color="#4B7CA8"/></linearGradient></defs>' +
+             '<rect width="400" height="300" fill="url(#g' + u + ')"/>' +
+             '<circle cx="92" cy="66" r="20" fill="#F4F0E2"/><circle cx="84" cy="60" r="20" fill="#16294A"/>' +
+             '<g fill="#0C182C">' +
+             '<rect x="12" y="168" width="46" height="132"/><rect x="66" y="132" width="34" height="168"/>' +
+             '<rect x="108" y="192" width="52" height="108"/><rect x="168" y="108" width="40" height="192"/>' +
+             '<rect x="216" y="156" width="30" height="144"/><rect x="254" y="182" width="56" height="118"/>' +
+             '<rect x="318" y="140" width="38" height="160"/><rect x="362" y="196" width="30" height="104"/></g>' +
+             '<g fill="#F7D98E" opacity=".85">' +
+             '<rect x="22" y="180" width="7" height="9"/><rect x="38" y="198" width="7" height="9"/>' +
+             '<rect x="76" y="146" width="7" height="9"/><rect x="88" y="170" width="7" height="9"/>' +
+             '<rect x="120" y="206" width="7" height="9"/><rect x="142" y="228" width="7" height="9"/>' +
+             '<rect x="178" y="124" width="7" height="9"/><rect x="192" y="156" width="7" height="9"/>' +
+             '<rect x="226" y="172" width="7" height="9"/><rect x="266" y="200" width="7" height="9"/>' +
+             '<rect x="288" y="224" width="7" height="9"/><rect x="330" y="158" width="7" height="9"/>' +
+             '<rect x="342" y="192" width="7" height="9"/><rect x="370" y="212" width="7" height="9"/></g>';
+      } else if (kind === 2) {    /* botanical */
+        s += '<defs><linearGradient id="g' + u + '" x1="0" y1="0" x2="1" y2="1">' +
+             '<stop offset="0" stop-color="#F3EFE6"/><stop offset="1" stop-color="#DCE3D4"/></linearGradient></defs>' +
+             '<rect width="400" height="300" fill="url(#g' + u + ')"/>' +
+             '<g stroke="#4E6B4A" stroke-width="3" fill="none" stroke-linecap="round">' +
+             '<path d="M120 300 C118 220 132 158 168 104"/><path d="M248 300 C256 222 246 162 214 116"/>' +
+             '<path d="M320 300 C316 244 330 206 356 176"/></g>' +
+             '<g fill="#6E9463">' +
+             '<ellipse cx="150" cy="176" rx="42" ry="19" transform="rotate(-32 150 176)"/>' +
+             '<ellipse cx="200" cy="126" rx="38" ry="17" transform="rotate(-14 200 126)"/>' +
+             '<ellipse cx="238" cy="184" rx="40" ry="18" transform="rotate(26 238 184)"/>' +
+             '<ellipse cx="330" cy="212" rx="34" ry="15" transform="rotate(-40 330 212)"/></g>' +
+             '<g fill="#3F5C3C" opacity=".55">' +
+             '<ellipse cx="104" cy="228" rx="34" ry="15" transform="rotate(24 104 228)"/>' +
+             '<ellipse cx="286" cy="248" rx="30" ry="13" transform="rotate(-18 286 248)"/></g>' +
+             '<circle cx="308" cy="82" r="26" fill="#E9C27A"/>';
+      } else {                    /* studio object */
+        s += '<defs><radialGradient id="g' + u + '" cx=".38" cy=".3" r=".85">' +
+             '<stop offset="0" stop-color="#3A414B"/><stop offset="1" stop-color="#12161C"/></radialGradient>' +
+             '<radialGradient id="s' + u + '" cx=".34" cy=".28" r=".8">' +
+             '<stop offset="0" stop-color="#FDFCFA"/><stop offset=".45" stop-color="#C9CFD8"/>' +
+             '<stop offset="1" stop-color="#5C6572"/></radialGradient></defs>' +
+             '<rect width="400" height="300" fill="url(#g' + u + ')"/>' +
+             '<ellipse cx="204" cy="248" rx="106" ry="20" fill="#080A0D" opacity=".75"/>' +
+             '<circle cx="200" cy="158" r="82" fill="url(#s' + u + ')"/>' +
+             '<ellipse cx="172" cy="124" rx="24" ry="16" fill="#FFFFFF" opacity=".7" transform="rotate(-28 172 124)"/>' +
+             '<path d="M140 214 a82 82 0 0 0 120 -14" stroke="#FFFFFF" stroke-opacity=".25" stroke-width="4" fill="none"/>' +
+             '<rect x="40" y="40" width="46" height="3" rx="1.5" fill="#FFFFFF" opacity=".18"/>' +
+             '<rect x="40" y="52" width="28" height="3" rx="1.5" fill="#FFFFFF" opacity=".12"/>';
+      }
+      return s + '</svg>';
+    }
+
+    /* film grain, kept inline so the file stays self-contained */
+    var GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
+    /* ----------------------------------------------------------------- *
+     * The thirteen treatments.
+     * ----------------------------------------------------------------- */
+    var LOADERS = [
+      { id: 'shimmer', name: 'Shimmer skeleton',
+        desc: 'The house baseline. Flat fill, one diagonal sweep, picture crossfades in at the end.',
+        spec: 'background-position · 1.55s ease-in-out · loop',
+        skin: '<div class="skin fill sweep"></div>' },
+
+      { id: 'blurup', name: 'Blur-up',
+        desc: 'The picture is there the whole time, just out of focus. Reads as "we already have it" rather than "nothing yet".',
+        spec: 'blur 20px → 0 · saturate 0.5 → 1 · progress-driven',
+        skin: '<div class="skin"></div>' },
+
+      { id: 'decode', name: 'Progressive decode',
+        desc: 'ChatGPT’s move. A lit band walks down the frame, sharp above it, skeleton below. Feels like the picture is being made, not fetched.',
+        spec: 'clip-path inset · top → bottom · progress-driven',
+        skin: '<div class="skin fill sweep"></div><div class="edge"></div>' },
+
+      { id: 'mosaic', name: 'Mosaic resolve',
+        desc: 'Seventy tiles clear in a scattered order, like a progressive JPEG landing. Busy, but it shows real work happening.',
+        spec: '10 × 7 tiles · staggered opacity + scale · progress-driven',
+        skin: '<div class="skin"></div>' },
+
+      { id: 'noise', name: 'Noise dissipate',
+        desc: 'Grain over a soft picture, both clearing together. The closest thing to what a diffusion model actually does.',
+        spec: 'feTurbulence · opacity 1 → 0 · blur 12px → 0',
+        skin: '<div class="skin grain"></div>' },
+
+      { id: 'iris', name: 'Iris open',
+        desc: 'A circle opens from the centre with a ring running ahead of it. Draws the eye to the middle, which is usually the subject.',
+        spec: 'clip-path circle · 0 → 78% · progress-driven',
+        skin: '<div class="skin"></div><div class="ring"></div>' },
+
+      { id: 'curtain', name: 'Curtain split',
+        desc: 'Two halves part from a seam. Theatrical, so it suits a reveal moment more than a grid of thumbnails.',
+        spec: 'translateX ±100% · seam fades · progress-driven',
+        skin: '<div class="skin"></div><div class="half l"></div><div class="half r"></div><div class="seam"></div>' },
+
+      { id: 'ring', name: 'Progress ring',
+        desc: 'The only honest one when you know the percentage. Frosted plate keeps the number legible on any picture.',
+        spec: 'stroke-dashoffset · tabular numerals · determinate',
+        skin: '<div class="skin fill"></div><div class="skin plate"><div class="dial">' +
+              '<svg viewBox="0 0 56 56"><circle class="tr" cx="28" cy="28" r="22"/>' +
+              '<circle class="pr" cx="28" cy="28" r="22"/></svg><span class="pct">0%</span></div></div>' },
+
+      { id: 'edgebar', name: 'Edge bar',
+        desc: 'Quietest option. A hairline along the bottom edge and a placeholder glyph, nothing moving in the middle.',
+        spec: 'width 0 → 100% · 2px rail · determinate',
+        skin: '<div class="skin fill"></div><div class="skin glyph"><i class="ph ph-image"></i></div>' +
+              '<div class="skin rail"><i></i></div>' },
+
+      { id: 'breathe', name: 'Breathing gradient',
+        desc: 'Soft shapes drifting under the surface. Claims no progress, so it survives a slow generation without lying.',
+        spec: 'three blurred blobs · 4.4–6.4s ease-in-out · loop',
+        skin: '<div class="skin"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div></div>' },
+
+      { id: 'brackets', name: 'Focus brackets',
+        desc: 'Camera language. Brackets pull in while the picture sharpens, so the arrival lands as a focus lock.',
+        spec: 'inset 18% → 7% · blur 9px → 0 · progress-driven',
+        skin: '<div class="skin veil"></div><div class="skin cage"><span class="br tl"></span>' +
+              '<span class="br tr"></span><span class="br bl"></span><span class="br br2"></span></div>' },
+
+      { id: 'stroke', name: 'Stroke draw',
+        desc: 'A picture glyph drawing itself. Charming once, tiring in a grid of twelve.',
+        spec: 'stroke-dashoffset · single path · progress-driven',
+        skin: '<div class="skin"><div class="draw"><svg viewBox="0 0 100 78">' +
+              '<rect x="6" y="6" width="88" height="66" rx="9" style="--len:300;--s:0;--e:0.5"/>' +
+              '<circle cx="32" cy="29" r="8" style="--len:52;--s:0.5;--e:0.68"/>' +
+              '<path d="M12 64 L38 40 L56 56 L70 44 L90 62" style="--len:118;--s:0.68;--e:1"/>' +
+              '</svg></div></div>' },
+
+      { id: 'shuffle', name: 'Candidate shuffle',
+        desc: 'For the moment we are choosing between options, not loading one. Cards deal through behind the frame.',
+        spec: 'three panes · 2.1s cycle · 700ms stagger · loop',
+        skin: '<div class="skin"><div class="deck">' +
+              '<span class="pane"><i class="ph ph-image"></i></span>' +
+              '<span class="pane"><i class="ph ph-mountains"></i></span>' +
+              '<span class="pane"><i class="ph ph-image"></i></span></div></div>' }
+    ];
+
+    /* --------------------------------------------------------- build grid */
+    var grid = document.getElementById('grid');
+    var cards = [];
+
+    LOADERS.forEach(function (L, i) {
+      var fig = document.createElement('figure');
+      fig.className = 'card';
+      fig.setAttribute('data-loader', L.id);
+      fig.style.setProperty('--p', 0);
+      fig.style.setProperty('--grain', GRAIN);
+
+      var skin = L.skin;
+      if (L.id === 'mosaic') {
+        var tiles = '';
+        /* deterministic scatter: a hash, not Math.random, so a replay looks the same */
+        for (var t = 0; t < 70; t++) {
+          var h = (t * 9301 + 49297) % 233280;
+          var d = (h / 233280) * 0.72;
+          tiles += '<span class="tile" style="--d:' + d.toFixed(3) + '"></span>';
+        }
+        skin = '<div class="skin">' + tiles + '</div>';
+      }
+
+      fig.innerHTML =
+        '<div class="frame">' +
+          '<div class="art">' + scene(i % 4, i) + '</div>' +
+          skin +
+        '</div>' +
+        '<figcaption>' +
+          '<div class="name">' + L.name + '<span class="n">' + String(i + 1).padStart(2, '0') + '</span></div>' +
+          '<div class="desc">' + L.desc + '</div>' +
+          '<div class="spec">' + L.spec + '</div>' +
+        '</figcaption>';
+
+      fig.addEventListener('click', function () { start(fig); });
+      grid.appendChild(fig);
+      cards.push(fig);
+    });
+
+    /* ------------------------------------------------------------ driver */
+    var DUR = 2600, HOLD = false, LOOP = true;
+
+    function start(card) {
+      card.classList.remove('is-done');
+      card._t0 = performance.now();
+      card._done = false;
+      card._next = 0;
+      if (HOLD) {
+        setP(card, 0.6);
+        card._t0 = null;
+      }
+    }
+
+    function setP(card, p) {
+      card.style.setProperty('--p', p.toFixed(4));
+      var pct = card.querySelector('.pct');
+      if (pct) pct.textContent = Math.round(p * 100) + '%';
+    }
+
+    function startAll() { cards.forEach(start); }
+
+    function tick(now) {
+      for (var i = 0; i < cards.length; i++) {
+        var c = cards[i];
+        if (c._next && now >= c._next) { start(c); continue; }
+        if (c._t0 == null) continue;
+        var p = Math.min(1, (now - c._t0) / DUR);
+        setP(c, p);
+        if (p >= 1 && !c._done) {
+          c._done = true;
+          c.classList.add('is-done');
+          c._t0 = null;
+          if (LOOP) c._next = now + 1500;
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    /* ---------------------------------------------------------- controls */
+    function seg(id, fn) {
+      var el = document.getElementById(id);
+      el.addEventListener('click', function (e) {
+        var b = e.target.closest('button');
+        if (!b) return;
+        [].forEach.call(el.querySelectorAll('button'), function (x) {
+          x.setAttribute('aria-pressed', String(x === b));
+        });
+        fn(b.getAttribute('data-v'));
+      });
+    }
+
+    seg('segDur', function (v) {
+      if (v === 'hold') { HOLD = true; }
+      else { HOLD = false; DUR = parseInt(v, 10); }
+      startAll();
+    });
+    seg('segShape',   function (v) { document.body.setAttribute('data-shape', v); });
+    seg('segSurface', function (v) { document.body.setAttribute('data-surface', v); });
+    seg('segLoop',    function (v) { LOOP = v === 'on'; });
+
+    document.getElementById('replay').addEventListener('click', startAll);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'r' || e.key === 'R') startAll();
+    });
+
+    startAll();
+  })();
+  </script>
+</body>
+</html>
