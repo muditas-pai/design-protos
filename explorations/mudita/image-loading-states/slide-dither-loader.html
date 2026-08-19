@@ -179,9 +179,18 @@
 
   <h2 class="sec">Why it is built this way</h2>
   <ul class="note">
-    <li><strong>The shape is the source of truth, used twice.</strong> One normalised polygon becomes
-      both the <code>clip-path</code> for the arriving picture and a <code>Path2D</code> for the dot
+    <li><strong>Box and shape are separate, because that is how the product models it.</strong>
+      In app.presentations.ai the picture is a <code>.ci-element-image</code> placed in the slide,
+      carrying a <code>clip-path</code> written in percentages of its own box. The renderer takes the
+      same two values, so a mask can be lifted from a layout and dropped in here unchanged.</li>
+    <li><strong>The shape is the source of truth, used twice.</strong> The same percentages become
+      both the <code>clip-path</code> on the arriving picture and a <code>Path2D</code> for the dot
       test, so the loader and the image can never disagree about where the image goes.</li>
+    <li><strong>These are the live values, not a trace.</strong> Every box, clip-path, background
+      and picture below was read out of the three decks in app.presentations.ai, so the geometry is
+      exact rather than eyeballed. Deck ids are printed on each slide. The one thing still sampled by
+      eye is the gold and purple accent, because on those layouts the decorative colour comes from a
+      mood asset rather than from DOM colour.</li>
     <li><strong>Dots are placed by centre, not clipped.</strong> Every cell centre is tested against
       the shape and skipped if it falls outside. Clipping the canvas instead would slice dots in half
       along the edge, which reads as a mistake on an angular mask.</li>
@@ -214,8 +223,14 @@
  *  Required
  *    bg      slide background colour  (any CSS hex)
  *    accent  brand accent colour      (any CSS hex)
- *    shape   normalised polygon [[x,y]…] in 0..1, or an SVG path string,
- *            or a function (ctx, w, h) => Path2D. Omit for a full rect.
+ *    box     the image element's rect in the slide, [x, y, w, h] in 0..1
+ *    shape   the mask, as points in 0..1 of the ELEMENT box — the same
+ *            numbers the slide's own clip-path polygon() uses. null = the
+ *            whole box. Also accepts an SVG path string or a Path2D builder.
+ *
+ *  box and shape are separate on purpose: that is how presentations.ai models
+ *  it. The element is placed in the slide, and the clip-path is expressed in
+ *  percentages of that element, so the same mask travels between layouts.
  *
  *  Optional, all with sane defaults
  *    pitch      cell size in CSS px            8
@@ -234,7 +249,7 @@
  * ======================================================================== */
 function ditherLoader(canvas, options) {
   var o = Object.assign({
-    bg: '#FFFFFF', accent: '#000000', shape: null,
+    bg: '#FFFFFF', accent: '#000000', shape: null, box: [0, 0, 1, 1],
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.78, swell: 1.36, cycle: 1800,
     wave: 'random', ink: 0.86, tone: null
@@ -283,15 +298,20 @@ function ditherLoader(canvas, options) {
   }
 
   /* ----------------------------------------------------------- shape ---- */
+  function boxPx() {
+    return { x: o.box[0] * W, y: o.box[1] * H, w: o.box[2] * W, h: o.box[3] * H };
+  }
+
   function buildPath() {
-    if (!o.shape) {                       /* no shape given: the whole canvas */
-      var p = new Path2D(); p.rect(0, 0, W, H); return p;
+    var b = boxPx();
+    if (!o.shape) {                       /* no clip-path: the element rect */
+      var p = new Path2D(); p.rect(b.x, b.y, b.w, b.h); return p;
     }
-    if (typeof o.shape === 'function') return o.shape(ctx, W, H);
+    if (typeof o.shape === 'function') return o.shape(ctx, W, H, b);
     if (typeof o.shape === 'string') return new Path2D(o.shape);
-    var poly = new Path2D();              /* normalised [[x,y]…] */
+    var poly = new Path2D();              /* points in 0..1 of the element box */
     o.shape.forEach(function (pt, i) {
-      var x = pt[0] * W, y = pt[1] * H;
+      var x = b.x + pt[0] * b.w, y = b.y + pt[1] * b.h;
       if (i === 0) poly.moveTo(x, y); else poly.lineTo(x, y);
     });
     poly.closePath();
@@ -335,9 +355,12 @@ function ditherLoader(canvas, options) {
 
     path = buildPath();
     var toneFn = o.tone || defaultTone;
-    var cols = Math.max(1, Math.floor(W / o.pitch));
-    var rows = Math.max(1, Math.floor(H / o.pitch));
-    var offX = (W - cols * o.pitch) / 2, offY = (H - rows * o.pitch) / 2;
+    var b = boxPx();
+    /* only the element's own rect can hold dots, so only walk that */
+    var cols = Math.max(1, Math.floor(b.w / o.pitch));
+    var rows = Math.max(1, Math.floor(b.h / o.pitch));
+    var offX = b.x + (b.w - cols * o.pitch) / 2;
+    var offY = b.y + (b.h - rows * o.pitch) / 2;
 
     cells = [];
     var i = 0;
@@ -348,7 +371,9 @@ function ditherLoader(canvas, options) {
         /* placed by centre: a dot is either wholly in the shape or absent,
            so an angular edge comes out dotted rather than sliced */
         if (!ctx.isPointInPath(path, cx * dpr, cy * dpr)) continue;
-        var u = cx / W, v = cy / H;
+        /* tone is asked in the ELEMENT's own space, which is the space an
+           image sampler naturally works in */
+        var u = (cx - b.x) / b.w, v = (cy - b.y) / b.h;
         var t = Math.max(0, Math.min(1, toneFn(u, v)));
         cells.push({ x: cx, y: cy, t: t, p: phaseFor(u, v, i) });
       }
@@ -412,7 +437,7 @@ function ditherLoader(canvas, options) {
     resolve: function () { resolving = 1; resolveStart = performance.now(); return api; },
     reset: function () { resolving = 0; build(); return api; },
     set: function (patch) {
-      var rebuild = ['pitch', 'wave', 'shape', 'tone'].some(function (k) {
+      var rebuild = ['pitch', 'wave', 'shape', 'tone', 'box'].some(function (k) {
         return k in patch && patch[k] !== o[k];
       });
       Object.assign(o, patch);
@@ -455,14 +480,14 @@ function ditherLoader(canvas, options) {
  *     means brightness. Get this backwards and the halftone comes out as a
  *     negative of the photo.
  * ======================================================================== */
-function imageTone(img, bgHex, slideW, slideH) {
-  var SW = 120, SH = Math.max(1, Math.round(SW * slideH / slideW));
+function imageTone(img, bgHex, boxW, boxH) {
+  var SW = 120, SH = Math.max(1, Math.round(SW * boxH / boxW));
   var off = document.createElement('canvas');
   off.width = SW; off.height = SH;
   var octx = off.getContext('2d', { willReadFrequently: true });
 
   /* replicate background-size: cover */
-  var ia = img.naturalWidth / img.naturalHeight, sa = slideW / slideH;
+  var ia = img.naturalWidth / img.naturalHeight, sa = boxW / boxH;
   var sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
   if (ia > sa) { sw = img.naturalHeight * sa; sx = (img.naturalWidth - sw) / 2; }
   else         { sh = img.naturalWidth / sa;  sy = (img.naturalHeight - sh) / 2; }
@@ -492,38 +517,44 @@ function imageTone(img, bgHex, slideW, slideH) {
  * The three slides. Only bg, accent, shape and the photograph differ.
  * ======================================================================== */
 (function () {
+  /* Read straight out of app.presentations.ai — box, clip-path, background and
+     picture are the live values, not traced from a screenshot. Deck ids kept so
+     any of it can be re-checked. Accents: the Instagram pair came from the DOM;
+     the gold and purple are sampled from the render, because on those two the
+     decorative layer is a mood asset rather than DOM colour. */
   var SLIDES = [
     {
-      name: 'Instagram Moments',
-      bg: '#FFFFFF', accent: '#221C6B', second: '#E0703F',
-      shapeLabel: 'full-bleed rectangle',
-      shape: [[0.548, 0], [1, 0], [1, 1], [0.548, 1]],
-      img: 'https://images.unsplash.com/photo-1611328857214-a5aae689f21a?w=1600&q=75&auto=format&fit=crop',
-      credit: 'unsplash.com/photos/ppg7GuXOUYc',
+      name: 'Instagram Moments', deck: 30871681,
+      bg: '#FFFFFF', accent: '#1B1167', second: '#E06735',
+      shapeLabel: 'no clip-path · plain rect',
+      box: [0.500, 0, 0.500, 1],
+      shape: null,
+      img: 'https://cdn.presentations.ai/bg/food/bggenfood123.jpg',
+      credit: 'cdn.presentations.ai · bggenfood123',
       copy: function () {
-        return '<div class="kicker" style="left:5.2%;top:18.5%;font-size:1.35vw;color:#221C6B">Mudita Sisodia</div>' +
-          '<div style="position:absolute;left:5.2%;top:9%;width:3.2vw;height:3.2vw;background:#E0703F;' +
+        return '<div class="kicker" style="left:5.2%;top:18.5%;font-size:1.35vw;color:#1B1167">Mudita Sisodia</div>' +
+          '<div style="position:absolute;left:5.2%;top:9%;width:3.2vw;height:3.2vw;background:#E06735;' +
             'display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.7vw;">M</div>' +
           '<div class="title" style="left:5.2%;top:56%;font-size:3.4vw;color:#0B0B0B;">' +
             'Instagram Moments<br/>Reimagines How<br/>Communities<br/>' +
-            '<span style="color:#221C6B;text-decoration:underline;">Share Together</span></div>' +
-          /* the decorative blocks that overlap the image edge */
-          '<div style="position:absolute;left:50%;top:0;width:4.4%;height:16%;background:#221C6B"></div>' +
-          '<div style="position:absolute;left:55.4%;top:17%;width:9.6%;height:8%;background:#E0703F"></div>' +
-          '<div style="position:absolute;left:50%;top:25.5%;width:4.4%;height:10%;background:#221C6B"></div>' +
-          '<div style="position:absolute;left:92.6%;top:70%;width:4%;height:16%;background:#E0703F"></div>' +
-          '<div style="position:absolute;left:88.4%;top:83%;width:4.2%;height:10%;background:#221C6B"></div>' +
+            '<span style="color:#1B1167;text-decoration:underline;">Share Together</span></div>' +
+          '<div style="position:absolute;left:46%;top:0;width:4.4%;height:16%;background:#1B1167"></div>' +
+          '<div style="position:absolute;left:50.4%;top:17%;width:9.6%;height:8%;background:#E06735"></div>' +
+          '<div style="position:absolute;left:46%;top:25.5%;width:4.4%;height:10%;background:#1B1167"></div>' +
+          '<div style="position:absolute;left:92.6%;top:70%;width:4%;height:16%;background:#E06735"></div>' +
+          '<div style="position:absolute;left:88.4%;top:83%;width:4.2%;height:10%;background:#1B1167"></div>' +
           '<div style="position:absolute;left:92.6%;top:83%;width:7.4%;height:10%;background:#6FA97A"></div>' +
           '<div style="position:absolute;left:88.4%;top:93%;width:4.2%;height:7%;background:#F5D060"></div>';
       }
     },
     {
-      name: 'Daniels PPE',
-      bg: '#191A4E', accent: '#D9A445', second: '#D9A445',
-      shapeLabel: 'chevron polygon',
-      shape: [[0.552, 0], [1, 0], [1, 1], [0.617, 1], [0.487, 0.545]],
-      img: 'https://images.unsplash.com/photo-1598299803204-b73796f43289?w=1600&q=75&auto=format&fit=crop',
-      credit: 'unsplash.com · photo-1598299803204',
+      name: 'Daniels PPE', deck: 30251184,
+      bg: '#0B1136', accent: '#D9A445', second: '#D9A445',
+      shapeLabel: 'polygon(0% 0%, 100% 0%, 100% 100%, 42.13% 100%, 0% 65.92%)',
+      box: [0.551, 0, 0.4487, 1],
+      shape: [[0, 0], [1, 0], [1, 1], [0.4213, 1], [0, 0.6592]],
+      img: 'https://cdn.presentations.ai/bg/manufacturing/bggenmanufacturing137.jpg',
+      credit: 'cdn.presentations.ai · bggenmanufacturing137',
       copy: function () {
         return '<div class="title" style="left:4%;top:41%;font-family:Oswald,Inter,sans-serif;' +
             'font-size:3.5vw;font-weight:700;color:#fff;letter-spacing:0;">' +
@@ -537,12 +568,13 @@ function imageTone(img, bgHex, slideW, slideH) {
       }
     },
     {
-      name: 'Lenskart',
-      bg: '#F5F0E9', accent: '#8B3FD1', second: '#C04FD8',
-      shapeLabel: 'folded polygon',
-      shape: [[0.545, 0], [1, 0], [1, 1], [0.523, 1], [0.605, 0.66], [0.517, 0.40], [0.560, 0.235]],
-      img: 'https://images.unsplash.com/photo-1548366565-b81d0aa77d2d?w=1600&q=75&auto=format&fit=crop',
-      credit: 'unsplash.com/photos/hBcTegZKiNc',
+      name: 'Lenskart', deck: 30555226,
+      bg: '#F7FAFF', accent: '#8B3FD1', second: '#C04FD8',
+      shapeLabel: 'polygon(29.18% 0%, 100% 0%, 100% 100%, 28.62% 100%, 27.3% 74.92%, 0% 31.61%)',
+      box: [0.540, 0, 0.460, 1],
+      shape: [[0.2918, 0], [1, 0], [1, 1], [0.2862, 1], [0.273, 0.7492], [0, 0.3161]],
+      img: 'https://cdn.presentations.ai/bg/robotics/bggenrobotics152.jpg',
+      credit: 'cdn.presentations.ai · bggenrobotics152',
       copy: function () {
         return '<div class="kicker" style="left:4.2%;top:7.5%;font-size:1.1vw;color:#221C6B">Pentagram Design</div>' +
           '<div class="title" style="left:4.2%;top:63%;font-size:2.6vw;color:#1E1B4B;">' +
@@ -555,10 +587,17 @@ function imageTone(img, bgHex, slideW, slideH) {
     }
   ];
 
+  /* the shape is already in the element's own percentages, so it drops
+     straight into CSS — the very same string the slide itself uses */
   function clipPathOf(shape) {
+    if (!shape) return 'none';
     return 'polygon(' + shape.map(function (p) {
       return (p[0] * 100).toFixed(2) + '% ' + (p[1] * 100).toFixed(2) + '%';
     }).join(', ') + ')';
+  }
+  function boxStyle(b) {
+    return 'left:' + (b[0]*100).toFixed(2) + '%;top:' + (b[1]*100).toFixed(2) +
+           '%;width:' + (b[2]*100).toFixed(2) + '%;height:' + (b[3]*100).toFixed(2) + '%';
   }
 
   /* ------------------------------------------------------------- build -- */
@@ -573,11 +612,15 @@ function imageTone(img, bgHex, slideW, slideH) {
         '<span class="name">' + S.name + '</span>' +
         '<span class="swatch" style="background:' + S.bg + '"></span>' +
         '<span class="swatch" style="background:' + S.accent + '"></span>' +
-        '<code>bg ' + S.bg + ' · accent ' + S.accent + ' · ' + S.shapeLabel + '</code>' +
+        '<code style="max-width:44ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+          S.shapeLabel + '</code>' +
+        '<code>bg ' + S.bg + ' · accent ' + S.accent + '</code>' +
+        '<code style="margin-left:auto">deck ' + S.deck + '</code>' +
         '<code style="margin-left:auto">' + S.credit + '</code>' +
       '</div>' +
       '<div class="slide" style="background:' + S.bg + '">' +
-        '<div class="photo" style="clip-path:' + clipPathOf(S.shape) + ';opacity:0;' +
+        '<div class="photo" style="inset:auto;position:absolute;' + boxStyle(S.box) +
+          ';clip-path:' + clipPathOf(S.shape) + ';opacity:0;' +
           'background-image:url(' + S.img + ');' +
           'transition:opacity 420ms cubic-bezier(0.23,1,0.32,1)"></div>' +
         '<canvas></canvas>' +
@@ -613,8 +656,10 @@ function imageTone(img, bgHex, slideW, slideH) {
     img.crossOrigin = 'anonymous';
     img.onload = function () {
       inst.img = img;
-      var slide = inst.canvas.getBoundingClientRect();
-      inst.toneFn = imageTone(img, inst.slide.bg, slide.width || 1600, slide.height || 900);
+      var sr = inst.canvas.getBoundingClientRect();
+      var b = inst.slide.box;
+      inst.toneFn = imageTone(img, inst.slide.bg,
+        (sr.width || 1600) * b[2], (sr.height || 900) * b[3]);
       boot();
     };
     img.onerror = function () { inst.toneFn = null; };
@@ -628,6 +673,7 @@ function imageTone(img, bgHex, slideW, slideH) {
       inst.photo.style.opacity = 0;
       var o = opts();
       o.bg = inst.slide.bg; o.accent = inst.slide.accent; o.shape = inst.slide.shape;
+      o.box = inst.slide.box;
       /* the screen previews the real photograph when we have its pixels */
       o.tone = (TONE === 'image' && inst.toneFn) ? inst.toneFn : null;
       inst.loader = ditherLoader(inst.canvas, o);
