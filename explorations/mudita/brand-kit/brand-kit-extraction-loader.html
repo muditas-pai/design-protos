@@ -151,34 +151,52 @@
 
     .card > * { position: absolute; inset: 0; }
 
-    /* ---- the low-resolution placeholder ---------------------------------- */
-    .ph { display: grid; gap: 2px;
-      grid-template-columns: repeat(var(--n), 1fr);
-      grid-template-rows: repeat(var(--r), 1fr);
-      padding: 2px;
+    /* ---- the low-resolution placeholder ---------------------------------- *
+     * Slots mode: the skeleton is the real layout scaffold — two logo wells,
+     * four swatch rows, a title block and a body block — and the effect runs
+     * inside each. Card mode keeps one grid across the whole card, for
+     * comparison.
+     * ---------------------------------------------------------------------- */
+    .scaffold { position: absolute; inset: 0;
       transition: opacity 380ms var(--ease-out), transform 520ms var(--ease-out),
                   filter 380ms var(--ease-out); }
+    .c-type .scaffold { inset: 16px; }
+    .slot { position: absolute; left: 0; right: 0; overflow: hidden; }
+    /* hairlines make the count legible before anything has arrived */
+    body[data-scaffold="slots"] .c-logo .slot + .slot,
+    body[data-scaffold="slots"] .c-palette .slot + .slot { border-top: 1px solid rgba(0,0,0,0.05); }
+    .card.resolved .scaffold { opacity: 0; transform: scale(1.01); filter: blur(2px); }
+
+    .ph { position: absolute; inset: 0; display: grid; gap: 2px;
+      grid-template-columns: repeat(var(--n), 1fr);
+      grid-template-rows: repeat(var(--r), 1fr);
+      padding: 2px; }
     .ph > i { display: block; background: var(--cell); border-radius: 1.5px;
       opacity: calc(0.05 + var(--t) * 0.52);
       animation: ph-breathe calc(2200ms / var(--speed)) ease-in-out infinite;
       animation-delay: calc(var(--d) * -2200ms);
       transition: background-color 420ms var(--ease-out), opacity 420ms var(--ease-out),
-                  border-radius 420ms var(--ease-out); }
+                  border-radius 420ms var(--ease-out), transform 420ms var(--ease-out); }
     @keyframes ph-breathe {
       0%, 100% { opacity: calc(0.04 + var(--t) * 0.40); }
       50%      { opacity: calc(0.07 + var(--t) * 0.64); }
     }
 
     /* treatments — the placeholder's grain, switchable for comparison */
-    /* a fine halftone: dots about a quarter of the cell, centred. At this size
-       tone has to be carried by DOT SIZE, the way real screening does it —
-       opacity alone washes out and the shape stops reading. */
-    body[data-treat="dither"] .ph > i { border-radius: 50%; width: auto;
-      height: calc(6% + var(--t) * 24%); aspect-ratio: 1; place-self: center;
-      animation-name: ph-breathe-dot; }
-    @keyframes ph-breathe-dot {
-      0%, 100% { opacity: calc(0.30 + var(--t) * 0.45); }
-      50%      { opacity: calc(0.42 + var(--t) * 0.55); }
+    /* A halftone screen: square cells at a ~12px pitch (see dims() in the
+       script), no gap, and the dot sized well inside its cell. Tone drives dot
+       SIZE, and the size is what animates — an opacity pulse this small is
+       invisible, which is why it read as static. */
+    body[data-treat="dither"] .ph { gap: 0; padding: 0; }
+    body[data-treat="dither"] .ph > i { border-radius: 50%; width: auto; height: 82%;
+      aspect-ratio: 1; place-self: center;
+      animation: ph-dot calc(1800ms / var(--speed)) ease-in-out infinite;
+      animation-delay: calc(var(--d) * -1800ms); }
+    @keyframes ph-dot {
+      0%, 100% { transform: scale(calc(0.18 + var(--t) * 0.56));
+                 opacity: calc(0.32 + var(--t) * 0.44); }
+      50%      { transform: scale(calc(0.30 + var(--t) * 0.74));
+                 opacity: calc(0.52 + var(--t) * 0.48); }
     }
     body[data-treat="denoise"] .ph { gap: 1px; }
     body[data-treat="denoise"] .ph > i { border-radius: 0;
@@ -189,19 +207,21 @@
       50%  { opacity: calc(0.48 - var(--t) * 0.40); }
     }
     body[data-treat="plain"] .ph { display: block; padding: 0; background: var(--skel); }
+    body[data-treat="plain"] .slot { background: var(--skel); }
     body[data-treat="plain"] .ph > i { display: none; }
     body[data-treat="plain"] .ph::after { content: ""; position: absolute; inset: 0;
       background: linear-gradient(105deg, transparent 34%, rgba(255,255,255,0.85) 50%, transparent 66%);
       background-size: 260% 100%; animation: sweep calc(1600ms / var(--speed)) ease-in-out infinite; }
 
-    /* a dot stays a dot while it resolves — only the square treatments square off */
-    body[data-treat="dither"] .card.resolving .ph > i { border-radius: 50%; }
+    /* a dot stays a dot while it resolves, and eases up to full size rather
+       than snapping when its animation is cut */
+    body[data-treat="dither"] .card.resolving .ph > i { border-radius: 50%;
+      transform: scale(1); }
 
     /* the resolve: cells take their real colour, then hand off to the content */
     .card.resolving .ph > i { background: var(--fill); opacity: var(--fo, 1);
       border-radius: 0; animation: none;
-      transition-delay: calc(var(--d) * calc(260ms / var(--speed))); }
-    .card.resolved .ph { opacity: 0; transform: scale(1.01); filter: blur(2px); }
+      transition-delay: calc((var(--sd, 0) + var(--d) * 0.4) * 260ms / var(--speed)); }
 
     .real { opacity: 0; transform: scale(0.995);
       transition: opacity 420ms var(--ease-out), transform 560ms var(--ease-out); }
@@ -233,16 +253,21 @@
   </style>
 </head>
 
-<body class="pai" data-treat="resolution">
+<body class="pai" data-treat="resolution" data-scaffold="slots">
   <div class="wrap">
     <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
 
     <h1 class="page">Brand kit extraction loader</h1>
     <p class="lede">The wait between "analyze linear.app" and "your kit is ready", from
       <em>AMJ '26 Handoff → Extracting Loader</em>. Each placeholder is a low-resolution render of the
-      content that is coming: four grey bands that become the four brand colours, a paragraph shape
-      that becomes the type specimen, a centred mass that becomes the logo. So the resolve is a change
-      of fidelity, not a swap, and the wait tells you what you are waiting for.</p>
+      content that is coming, so the resolve is a change of fidelity rather than a swap, and the wait
+      tells you what you are waiting for.</p>
+    <p class="lede" style="margin-top:10px;"><strong>Scaffold</strong> is the thing to judge. On
+      <em>Slots</em>, the skeleton is the layout we already know the card will hold: two logo wells,
+      four swatch rows, a title block and a body block, with the effect running inside each and the
+      slots resolving in turn. On <em>Whole card</em>, one grid covers the card, which is the first
+      pass. Slots tell you the shape of the answer before it arrives, and nothing reflows on the
+      handoff.</p>
 
     <div class="bar">
       <button class="btn" id="replay"><i class="ph ph-arrow-clockwise"></i>Replay</button>
@@ -261,6 +286,13 @@
           <button data-v="0.5">0.5×</button>
           <button data-v="1" aria-pressed="true">1×</button>
           <button data-v="2">2×</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span>Scaffold</span>
+        <div class="seg" id="segScaffold">
+          <button data-v="slots" aria-pressed="true">Slots</button>
+          <button data-v="card">Whole card</button>
         </div>
       </div>
       <div class="grp">
@@ -331,54 +363,135 @@
      * Placeholder tone maps. Each returns 0..1 for a cell, and each is a
      * blurry version of that card's real content.
      * ------------------------------------------------------------------ */
-    var COLS = 6, ROWS = 16;   /* 236 × 378 card → cells land close to 16:9 */
+    var COLS = 6, ROWS = 16;   /* whole-card mode: 228 × 365 card → cells near 16:9 */
 
-    var TONE = {
-      /* four horizontal bands, tone = how dark that brand colour is */
-      palette: function (x, y) {
-        var band = Math.floor(y / (ROWS / 4));
-        return [0.42, 0.62, 0.72, 0.95][Math.min(3, band)];
-      },
-      /* the paragraph shape: three title lines up top, four body lines below */
-      type: function (x, y) {
-        var title = [[0, 5], [0, 4], [0, 3]];        /* rows 1–3, ragged right */
-        var body  = [[0, 5], [0, 5], [0, 4], [0, 5], [0, 3]];
-        if (y >= 1 && y <= 3) return x <= title[y - 1][1] ? 0.95 : 0.04;
-        if (y >= 10 && y <= 14) return x <= body[y - 10][1] ? 0.55 : 0.04;
+    /* ---- whole-card tone maps (the first pass, kept for comparison) ------ *
+     * All tone maps take normalised (u, v) in 0..1, so the same shape survives
+     * whatever cell density a treatment asks for.
+     * ---------------------------------------------------------------------- */
+    function band4(v) { return Math.min(3, Math.floor(v * 4)); }
+
+    var CARD_TONE = {
+      palette: function (u, v) { return [0.42, 0.62, 0.72, 0.95][band4(v)]; },
+      type: function (u, v) {
+        var title = [0.98, 0.80, 0.60], body = [0.98, 0.98, 0.80, 0.98, 0.55];
+        if (v > 0.05 && v < 0.26) return u <= title[Math.floor((v - 0.05) / 0.07)] ? 0.95 : 0.04;
+        if (v > 0.60 && v < 0.93) return u <= body[Math.floor((v - 0.60) / 0.066)] ? 0.55 : 0.04;
         return 0.04;
       },
-      /* a centred mass on a full dark field */
-      logo: function (x, y) {
-        /* blocky on purpose: a low-res render of an icon + wordmark, centred on
-           a mid field that is about to go dark */
-        var inCol = x >= 1 && x <= 4;
-        if (inCol && y >= 7 && y <= 9) return 0.96;
-        if (inCol && (y === 6 || y === 10)) return 0.58;
+      logo: function (u, v) {
+        var inCol = u > 0.14 && u < 0.86, dy = Math.abs(v - 0.5);
+        if (inCol && dy <= 0.075) return 0.96;
+        if (inCol && dy <= 0.135) return 0.58;
         return 0.26;
       }
     };
 
-    /* the colour each cell resolves to, before the content takes over */
-    var FILL = {
-      palette: function (x, y) { return PALETTE[Math.min(3, Math.floor(y / (ROWS / 4)))]; },
-      type:    function (x, y) { return y <= 3 ? '#101010' : '#3A3A3A'; },
+    /* ---- slot scaffolds -------------------------------------------------- *
+     * Each card is described as the containers we already know it will hold,
+     * and the effect runs inside each one. `sd` staggers the resolve so the
+     * pieces arrive in the order the data would.
+     * ---------------------------------------------------------------------- */
+    function wordmark() {                    /* a centred lockup in a logo well */
+      return function (u, v) {
+        var inCol = u > 0.13 && u < 0.87, dy = Math.abs(v - 0.5);
+        if (inCol && dy <= 0.11) return 0.96;
+        if (inCol && dy <= 0.21) return 0.58;
+        return 0.24;
+      };
+    }
+    function lines(fracs) {                  /* one text line per band of rows */
+      return function (u, v) {
+        return u <= fracs[Math.min(fracs.length - 1, Math.floor(v * fracs.length))] ? 0.92 : 0.04;
+      };
+    }
+    function flat(t) { return function () { return t; }; }
+
+    var SLOTS = {
+      /* two logo wells: the dark lockup, then the light one */
+      logo: [
+        { top: 0,  h: 50, cols: 6, rows: 8, sd: 0,   fill: '#101010', tone: wordmark() },
+        { top: 50, h: 50, cols: 6, rows: 8, sd: 0.8, fill: '#FFFFFF', tone: wordmark() }
+      ],
+      /* the two text blocks, sitting where the specimen actually sits */
+      type: [
+        { top: 0,  h: 30, cols: 6, rows: 3, sd: 0,   fill: '#101010',
+          tone: lines([0.98, 0.80, 0.60]) },
+        { top: 68, h: 32, cols: 6, rows: 5, sd: 0.6, fill: '#3A3A3A',
+          tone: lines([0.98, 0.98, 0.80, 0.98, 0.55]) }
+      ],
+      /* four swatches, because four is what a palette comes back with */
+      palette: [
+        { top: 0,  h: 25, cols: 6, rows: 4, sd: 0,    fill: PALETTE[0], tone: flat(0.40) },
+        { top: 25, h: 25, cols: 6, rows: 4, sd: 0.35, fill: PALETTE[1], tone: flat(0.58) },
+        { top: 50, h: 25, cols: 6, rows: 4, sd: 0.70, fill: PALETTE[2], tone: flat(0.72) },
+        { top: 75, h: 25, cols: 6, rows: 4, sd: 1.05, fill: PALETTE[3], tone: flat(0.92) }
+      ]
+    };
+
+    /* ---- cell density ---------------------------------------------------- *
+     * Every treatment but dither uses the declared counts, which give roughly
+     * 16:9 cells. Dither wants a tight square screen instead, so it derives
+     * both counts from the slot's real pixel size at a fixed pitch.
+     * ---------------------------------------------------------------------- */
+    var CARD_W = 228, CARD_H = 365, DITHER_PITCH = 12;
+
+    function dims(kind, S) {
+      if (document.body.getAttribute('data-treat') !== 'dither') {
+        return { c: S.cols, r: S.rows };
+      }
+      var pad = kind === 'type' ? 16 : 0;
+      var w = CARD_W - pad * 2, h = (CARD_H - pad * 2) * (S.h / 100);
+      return { c: Math.max(4, Math.round(w / DITHER_PITCH)),
+               r: Math.max(3, Math.round(h / DITHER_PITCH)) };
+    }
+
+    /* the colour each cell resolves to in whole-card mode */
+    var CARD_FILL = {
+      palette: function (u, v) { return PALETTE[band4(v)]; },
+      type:    function (u, v) { return v < 0.3 ? '#101010' : '#3A3A3A'; },
       logo:    function ()     { return '#101010'; }
     };
 
     /* deterministic jitter, so every replay is identical */
     function rnd(i) { var h = Math.sin(i * 12.9898) * 43758.5453; return h - Math.floor(h); }
 
-    function placeholder(kind) {
-      var h = '<div class="ph" style="--n:' + COLS + ';--r:' + ROWS + '">', x, y;
-      for (y = 0; y < ROWS; y++) for (x = 0; x < COLS; x++) {
-        var t = TONE[kind](x, y);
-        /* resolve sweeps top-to-bottom with a little scatter across each row */
-        var d = (y / ROWS) * 0.8 + rnd(x * 13 + y * 7) * 0.2;
+    /* one grid, whatever box it is asked to fill */
+    function grid(cols, rows, tone, fill, dim) {
+      var h = '<div class="ph" style="--n:' + cols + ';--r:' + rows + '">', x, y;
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) {
+        var u = (x + 0.5) / cols, v = (y + 0.5) / rows;
+        var t = tone(u, v);
+        /* a diagonal wave, with enough scatter that it never looks like a scan */
+        var d = (u * 0.35 + v * 0.5) + rnd(x * 13 + y * 7) * 0.15;
         h += '<i style="--t:' + t.toFixed(3) + ';--d:' + d.toFixed(3) +
-             ';--fill:' + FILL[kind](x, y) +
-             ';--fo:' + (kind === 'type' ? (t > 0.2 ? 1 : 0.05) : 1) + '"></i>';
+             ';--fill:' + (typeof fill === 'function' ? fill(u, v) : fill) +
+             ';--fo:' + (dim && t < 0.2 ? 0.05 : 1) + '"></i>';
       }
       return h + '</div>';
+    }
+
+    function placeholder(kind, mode) {
+      if (mode === 'card') {
+        var whole = dims(kind, { h: 100, cols: COLS, rows: ROWS });
+        return '<div class="scaffold" style="inset:0">' +
+          '<div class="slot" style="top:0;height:100%">' +
+            grid(whole.c, whole.r, CARD_TONE[kind], CARD_FILL[kind], kind === 'type') +
+          '</div></div>';
+      }
+      return '<div class="scaffold">' + SLOTS[kind].map(function (S) {
+        var d = dims(kind, S);
+        return '<div class="slot" style="top:' + S.top + '%;height:' + S.h + '%;--sd:' + S.sd + '">' +
+          grid(d.c, d.r, S.tone, S.fill, kind === 'type') +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    /* how long the staggered fill takes before the real card can take over */
+    function fillMs(kind, mode) {
+      var maxSd = mode === 'card' ? 0 : SLOTS[kind].reduce(function (m, S) {
+        return Math.max(m, S.sd); }, 0);
+      return (maxSd + 0.4) * 260 + 300;
     }
 
     /* an approximation of the Linear icon — a rounded square built from diagonal
@@ -425,17 +538,22 @@
       '</div>';
     }).join('');
 
-    cardsEl.innerHTML = CARDS.map(function (C) {
-      return '<div class="card ' + C.cls + '" data-kind="' + C.kind + '">' +
-        placeholder(C.kind) + C.real +
-      '</div>';
-    }).join('');
+    var SCAFFOLD = 'slots';
+    function paint() {
+      cardsEl.innerHTML = CARDS.map(function (C) {
+        return '<div class="card ' + C.cls + '" data-kind="' + C.kind + '">' +
+          placeholder(C.kind, SCAFFOLD) + C.real +
+        '</div>';
+      }).join('');
+      cardEls = {};
+      [].forEach.call(cardsEl.querySelectorAll('.card'), function (c) {
+        cardEls[c.getAttribute('data-kind')] = c;
+      });
+    }
 
     var stepEls = [].slice.call(stepsEl.querySelectorAll('.step'));
     var cardEls = {};
-    [].forEach.call(cardsEl.querySelectorAll('.card'), function (c) {
-      cardEls[c.getAttribute('data-kind')] = c;
-    });
+    paint();
 
     /* ---------------------------------------------------------- run */
     var timers = [], cursor = -1;
@@ -474,9 +592,9 @@
       if (kind && cardEls[kind]) {
         var card = cardEls[kind];
         card.classList.add('resolving');
-        /* let the cells take their colour first, then hand off to the content */
+        /* every slot fills in turn, then the finished card takes over */
         timers.push(setTimeout(function () { card.classList.add('resolved'); },
-          420 / speed()));
+          fillMs(kind, SCAFFOLD) / speed()));
       }
       cursor = i;
       if (i + 1 < STEPS.length) activate(i + 1);
@@ -531,10 +649,20 @@
         fn(b.getAttribute('data-v'));
       });
     }
-    seg('segTreat', function (v) { document.body.setAttribute('data-treat', v); start(); });
+    seg('segTreat', function (v) {
+      document.body.setAttribute('data-treat', v);
+      paint();          /* dither derives its own cell counts, so rebuild */
+      start();
+    });
     seg('segSpeed', function (v) { document.documentElement.style.setProperty('--speed', v); start(); });
     seg('segMode',  function (v) { MODE = v; start(); });
     seg('segLoop',  function (v) { LOOP = v === 'on'; if (LOOP) start(); });
+    seg('segScaffold', function (v) {
+      SCAFFOLD = v;
+      document.body.setAttribute('data-scaffold', v);
+      paint();
+      start();
+    });
     document.getElementById('replay').addEventListener('click', start);
     document.addEventListener('keydown', function (e) {
       if (e.key === 'r' || e.key === 'R') start();
