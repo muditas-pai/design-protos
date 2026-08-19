@@ -202,8 +202,7 @@
      * ---------------------------------------------------------------------- */
     .scaffold { position: absolute; inset: var(--gutter);
       display: flex; flex-direction: column; gap: var(--gutter);
-      transition: opacity 380ms var(--ease-out), transform 520ms var(--ease-out),
-                  filter 380ms var(--ease-out); }
+      transition: opacity 380ms var(--ease-out), transform 520ms var(--ease-out); }
     .c-type .scaffold { inset: calc(var(--gutter) + 8px); }
     .slot { position: relative; overflow: hidden; border-radius: var(--well-radius); }
     /* a faint well, so the container is perceptible before anything lands in it */
@@ -211,7 +210,12 @@
       background: rgba(0,0,0,0.018); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.045); }
     body[data-gutter="0"] .slot { border-radius: 0; }
     .slot.spacer { background: none !important; box-shadow: none !important; }
-    .card.resolved .scaffold { opacity: 0; transform: scale(1.01); filter: blur(2px); }
+    .card.resolved .scaffold { opacity: 0; transform: scale(1.01); }
+    /* Resetting must SNAP, not play the resolve backwards. Without this every
+       loop began by transitioning out of the resolved state, which read as the
+       screen fading up out of nothing. */
+    .card.snap .scaffold, .card.snap .real, .card.snap .pxgrid > i {
+      transition: none !important; }
 
     /* A halftone screen: square cells at the chosen pitch (see dims() in the
        script), no gap, and the dot sized well inside its cell. Tone drives dot
@@ -669,8 +673,16 @@
         el.className = 'step';
         el.querySelector('.lbl').textContent = STEPS[i].pending;
       });
-      [].forEach.call(cardsEl.querySelectorAll('.card'), function (c) {
+      var cards = [].slice.call(cardsEl.querySelectorAll('.card'));
+      cards.forEach(function (c) {
+        c.classList.add('snap');
         c.classList.remove('resolving', 'resolved');
+      });
+      /* two frames: one for the snapped styles to land, one to re-arm */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          cards.forEach(function (c) { c.classList.remove('snap'); });
+        });
       });
       activate(0);
     }
