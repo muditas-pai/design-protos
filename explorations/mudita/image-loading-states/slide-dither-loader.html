@@ -141,6 +141,12 @@
         <button data-v="radial">Radial</button>
       </div>
     </div>
+    <div class="grp"><span>Edges</span>
+      <div class="seg" id="segCrisp">
+        <button data-v="crisp" aria-pressed="true">Crisp</button>
+        <button data-v="smooth">Smooth</button>
+      </div>
+    </div>
     <div class="grp"><span>Tone</span>
       <div class="seg" id="segTone">
         <button data-v="image" aria-pressed="true">From image</button>
@@ -282,11 +288,11 @@ function ditherLoader(canvas, options) {
     bg: '#FFFFFF', accent: '#000000', shape: null, box: [0, 0, 1, 1],
     pitch: 8, spacing: 0.45, dotWeight: 0.94, roundness: 0.5,
     toneFloor: 0.24, toneRange: 0.78, swell: 1.36, cycle: 1800,
-    wave: 'random', ink: 0.86, tone: null
+    wave: 'random', ink: 0.86, tone: null, crisp: true
   }, options || {});
 
   var ctx = canvas.getContext('2d');
-  var cells = [], path = null, W = 0, H = 0, dpr = 1;
+  var cells = [], path = null, W = 0, H = 0, dpr = 1, pitchDev = 8;
   var raf = null, resolving = 0, resolveStart = 0, RESOLVE_MS = 620;
   var morph = 0, morphStart = 0, morphing = 0, MORPH_MS = 900;
 
@@ -378,30 +384,39 @@ function ditherLoader(canvas, options) {
   function build() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
     var rect = canvas.getBoundingClientRect();
-    W = Math.max(1, Math.round(rect.width));
-    H = Math.max(1, Math.round(rect.height));
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* Everything below works in DEVICE pixels, and the element is sized back
+       to exactly backing/dpr so the two grids line up 1:1. Without this the
+       backing store lands on a rounded size against a fractional CSS size —
+       measured 587 against 587.25 — and the browser resamples the whole
+       canvas, which softens every edge before a single dot is drawn. */
+    W = Math.max(1, Math.round(rect.width * dpr));
+    H = Math.max(1, Math.round(rect.height * dpr));
+    canvas.width = W;
+    canvas.height = H;
+    canvas.style.width = (W / dpr) + 'px';
+    canvas.style.height = (H / dpr) + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     path = buildPath();
     var toneFn = o.tone || defaultTone;
     var b = boxPx();
-    /* only the element's own rect can hold dots, so only walk that */
-    var cols = Math.max(1, Math.floor(b.w / o.pitch));
-    var rows = Math.max(1, Math.floor(b.h / o.pitch));
-    var offX = b.x + (b.w - cols * o.pitch) / 2;
-    var offY = b.y + (b.h - rows * o.pitch) / 2;
+    /* a whole number of device pixels per cell, so the grid never drifts
+       off the pixel grid as it marches across the box */
+    pitchDev = Math.max(2, Math.round(o.pitch * dpr));
+    var cols = Math.max(1, Math.floor(b.w / pitchDev));
+    var rows = Math.max(1, Math.floor(b.h / pitchDev));
+    var offX = Math.round(b.x + (b.w - cols * pitchDev) / 2);
+    var offY = Math.round(b.y + (b.h - rows * pitchDev) / 2);
 
     cells = [];
     var i = 0;
     for (var y = 0; y < rows; y++) {
       for (var x = 0; x < cols; x++, i++) {
-        var cx = offX + (x + 0.5) * o.pitch;
-        var cy = offY + (y + 0.5) * o.pitch;
+        var cx = offX + x * pitchDev + pitchDev / 2;
+        var cy = offY + y * pitchDev + pitchDev / 2;
         /* placed by centre: a dot is either wholly in the shape or absent,
            so an angular edge comes out dotted rather than sliced */
-        if (!ctx.isPointInPath(path, cx * dpr, cy * dpr)) continue;
+        if (!ctx.isPointInPath(path, cx, cy)) continue;
         /* tone is asked in the ELEMENT's own space, which is the space an
            image sampler naturally works in */
         var u = (cx - b.x) / b.w, v = (cy - b.y) / b.h;
@@ -416,9 +431,8 @@ function ditherLoader(canvas, options) {
   /* ------------------------------------------------------------ draw ---- */
   function draw(now) {
     ctx.clearRect(0, 0, W, H);
-    var half = o.pitch * o.spacing * 0.5 * o.dotWeight;
-    var square = o.roundness < 0.25;
-    var rr = o.pitch * o.spacing * 0.5 * o.roundness * 2;   /* corner radius */
+    /* the widest a cell can ever be, in device pixels */
+    var maxD = pitchDev * o.spacing * o.dotWeight;
 
     /* resolve: dots swell to fill their cell and fade out together */
     var rp = 0;
@@ -442,8 +456,6 @@ function ditherLoader(canvas, options) {
       var swell = 1 + (o.swell - 1) * (0.5 - Math.cos(ph * Math.PI * 2) / 2);
       var scale = (o.toneFloor + ct * o.toneRange) * swell;
       if (resolving) scale = scale + (1 / (o.spacing * o.dotWeight) - scale) * ease;
-      var r = half * scale;
-      if (r < 0.18) continue;
 
       var alpha = ct;
       if (resolving) alpha = alpha * (1 - ease);
@@ -451,14 +463,47 @@ function ditherLoader(canvas, options) {
       var bi = Math.min(BUCKETS - 1, Math.max(0, Math.floor(alpha * BUCKETS)));
       var p2 = groups[bi] || (groups[bi] = new Path2D());
 
-      if (square) {
-        p2.rect(c.x - r, c.y - r, r * 2, r * 2);
-      } else if (rr > 0.6 && o.roundness < 0.48) {
-        p2.roundRect ? p2.roundRect(c.x - r, c.y - r, r * 2, r * 2, Math.min(r, rr))
-                     : p2.rect(c.x - r, c.y - r, r * 2, r * 2);
+      /* A cell must hold ONE shape and only change size. Two things make that
+         true: the size is a whole number of device pixels and the box is
+         snapped to the pixel grid, so edges are hard; and the corner radius is
+         a fraction of the size rather than a fixed length, so a rounded square
+         stays the same square at every size instead of swelling into a blob. */
+      var size, x0, y0;
+      if (o.crisp) {
+        size = Math.round(maxD * scale);
+        if (size < 1) continue;
+        x0 = Math.round(c.x - size / 2);
+        y0 = Math.round(c.y - size / 2);
       } else {
-        p2.moveTo(c.x + r, c.y);
-        p2.arc(c.x, c.y, r, 0, Math.PI * 2);
+        size = maxD * scale;
+        if (size < 0.35) continue;
+        x0 = c.x - size / 2;
+        y0 = c.y - size / 2;
+      }
+      var radius = size * o.roundness;        /* proportional, so shape is fixed */
+
+      if (o.roundness >= 0.48) {
+        /* A 3px arc cannot rasterise hard — the renderer has no choice but to
+           anti-alias its corners, which is the last of the softness. So a small
+           round cell is drawn the way pixel art draws a circle: whole-pixel row
+           runs inside the radius. Hard edges, still unmistakably round, and the
+           disc keeps its shape at every size. */
+        if (o.crisp && size <= 14) {
+          var half = size / 2, r2 = half * half + 0.09;
+          for (var j = 0; j < size; j++) {
+            var dy = j + 0.5 - half;
+            var hw = Math.sqrt(Math.max(0, r2 - dy * dy));
+            var xa = Math.round(half - hw), xb = Math.round(half + hw);
+            if (xb > xa) p2.rect(x0 + xa, y0 + j, xb - xa, 1);
+          }
+        } else {
+          p2.moveTo(x0 + size, y0 + size / 2);
+          p2.arc(x0 + size / 2, y0 + size / 2, size / 2, 0, Math.PI * 2);
+        }
+      } else if (radius > 0.5 && p2.roundRect && !o.crisp) {
+        p2.roundRect(x0, y0, size, size, radius);
+      } else {
+        p2.rect(x0, y0, size, size);
       }
     }
 
@@ -730,11 +775,11 @@ function imageTone(img, bgHex, boxW, boxH) {
       swell: +document.getElementById('lvSwell').value,
       cycle: +document.getElementById('lvCycle').value,
       ink: +document.getElementById('lvAlpha').value,
-      wave: WAVE
+      wave: WAVE, crisp: CRISP
     };
   }
 
-  var WAVE = 'random', LOOP = true, TONE = 'image', timers = [];
+  var WAVE = 'random', LOOP = true, TONE = 'image', CRISP = true, timers = [];
   function setPhase(t) { document.getElementById('phase').textContent = t; }
 
   /* preload the photographs, and build a tone sampler from each */
@@ -809,6 +854,10 @@ function imageTone(img, bgHex, boxW, boxH) {
   }
   seg('segWave', function (v) { WAVE = v; boot(); });
   seg('segTone', function (v) { TONE = v; boot(); });
+  seg('segCrisp', function (v) {
+    CRISP = v === 'crisp';
+    instances.forEach(function (i) { if (i.loader) i.loader.set({ crisp: CRISP }); });
+  });
   seg('segLoop', function (v) { LOOP = v === 'on'; if (LOOP) boot(); });
   document.getElementById('replay').addEventListener('click', boot);
 
