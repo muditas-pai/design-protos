@@ -215,6 +215,10 @@
       <input type="range" id="lvFall" min="0" max="0.4" step="0.01" value="0.06" /></div>
     <div class="lev"><label for="lvStr">Accent strength<b id="vStr"></b></label>
       <input type="range" id="lvStr" min="0" max="1" step="0.02" value="1" /></div>
+    <div class="lev"><label for="lvStroke">Stroke<b id="vStroke"></b></label>
+      <input type="range" id="lvStroke" min="0" max="5" step="0.25" value="1.5" /></div>
+    <div class="lev"><label for="lvShadow">Inner shadow<b id="vShadow"></b></label>
+      <input type="range" id="lvShadow" min="0" max="48" step="1" value="18" /></div>
     <div class="lev"><label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
       <input type="range" id="lvSwing" min="0" max="1" step="0.02" value="0.88" /></div>
     <div class="lev"><label for="lvField">Patch size<b id="vField"></b></label>
@@ -342,6 +346,16 @@
  *                   so an absolute threshold does not control scarcity at all.
  *    accentFalloff  how soft that threshold is. Small keeps the delta crisp.
  *    accentStrength how fully the accent replaces the base once past it.
+ *    strokeWidth    brand-blue stroke around the mask, in CSS px. Drawn on the
+ *                   canvas from the same Path2D as the dot test, so it follows
+ *                   an angular mask exactly — a CSS border cannot, because a
+ *                   border does not know about clip-path.
+ *    innerShadow    inner shadow depth in CSS px, cast inward from every edge,
+ *                   which is what makes the region read as a container rather
+ *                   than a hole cut in the slide.
+ *    strokeColour   'auto' takes brand blue from the design system, and picks
+ *                   the shade the background can carry: app-600 #0055ED on
+ *                   light, app-300 #69A0FF on dark.
  *    base       'auto' | any CSS hex, to override that choice
  *    superSample  render the canvas at this multiple of device resolution and
  *                 let the browser downscale it. A 3px cell has too few pixels
@@ -374,7 +388,8 @@ function ditherLoader(canvas, options) {
     toneFloor: 0.24, toneRange: 0.74, swell: 1.36, cycle: 1800,
     wave: 'clump', fieldScale: 4.5, coherence: 0.86, ink: 0.86, alphaSwing: 0.88,
     tone: null, crisp: false, superSample: 2, base: 'auto',
-    colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 1
+    colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 1,
+    strokeWidth: 1.5, innerShadow: 18, strokeColour: 'auto'
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -412,6 +427,16 @@ function ditherLoader(canvas, options) {
     return mix(bg, target, 0.55);
   })();
   var INK = inkRGB.map(Math.round);
+
+  /* Brand blue, in the shade this background can actually carry. Both are
+     design-system tokens, not invented: app-600 is the held brand blue and
+     app-300 is its light-on-dark counterpart. */
+  var BG_IS_LIGHT = lum(hex(o.bg)) > 0.5;
+  var STROKE = (o.strokeColour && o.strokeColour !== 'auto')
+    ? o.strokeColour
+    : (BG_IS_LIGHT ? '#0055ED' : '#69A0FF');
+  /* the shadow has to work harder on a light container than a dark one */
+  var SHADOW = BG_IS_LIGHT ? 'rgba(11,15,20,0.30)' : 'rgba(0,0,0,0.60)';
 
   /* The second tone: whichever of black or white the background has room for. */
   var BASE = (function () {
@@ -692,6 +717,46 @@ function ditherLoader(canvas, options) {
         ctx.fill(groups[t2][g2]);
       }
     }
+
+    drawContainer();
+  }
+
+  /* The stroke and the inner shadow. Both follow the mask, both are painted
+     every frame including after the picture has resolved, because they belong
+     to the container rather than to the loading state. */
+  function drawContainer() {
+    var u = dpr * ss;
+
+    if (o.innerShadow > 0) {
+      /* Fill everything OUTSIDE the shape with a blurred black, clipped to the
+         inside. The blur bleeds across the edge and lands as an inner shadow on
+         every side at once — no offset, so no side is favoured. */
+      ctx.save();
+      ctx.clip(path);
+      var outer = new Path2D();
+      outer.rect(-W, -H, W * 3, H * 3);
+      outer.addPath(path);
+      ctx.shadowColor = SHADOW;
+      ctx.shadowBlur = o.innerShadow * u;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.fillStyle = '#000';
+      ctx.fill(outer, 'evenodd');
+      ctx.restore();
+    }
+
+    if (o.strokeWidth > 0) {
+      /* Clipped and double width, so the stroke sits wholly inside the mask
+         and its outer half is cut away — an inside-aligned stroke, which keeps
+         the silhouette exactly the size the picture will be. */
+      ctx.save();
+      ctx.clip(path);
+      ctx.lineWidth = o.strokeWidth * 2 * u;
+      ctx.strokeStyle = STROKE;
+      ctx.lineJoin = 'miter';
+      ctx.stroke(path);
+      ctx.restore();
+    }
   }
 
   function loop(now) { draw(now); raf = requestAnimationFrame(loop); }
@@ -721,6 +786,12 @@ function ditherLoader(canvas, options) {
       });
       Object.assign(o, patch);
       if ('accentShare' in patch || 'colourMode' in patch) recomputeCutoffs();
+      if ('strokeColour' in patch || 'bg' in patch) {
+        BG_IS_LIGHT = lum(hex(o.bg)) > 0.5;
+        STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour
+               : (BG_IS_LIGHT ? '#0055ED' : '#69A0FF');
+        SHADOW = BG_IS_LIGHT ? 'rgba(11,15,20,0.30)' : 'rgba(0,0,0,0.60)';
+      }
       if ('ink' in patch || 'base' in patch || 'accentStrength' in patch) {
         if ('base' in patch) {
           BASE = (o.base && o.base !== 'auto') ? hex(o.base)
@@ -963,6 +1034,8 @@ function imageTone(img, bgHex, boxW, boxH) {
       accentShare: +document.getElementById('lvAt').value,
       accentFalloff: +document.getElementById('lvFall').value,
       accentStrength: +document.getElementById('lvStr').value,
+      strokeWidth: +document.getElementById('lvStroke').value,
+      innerShadow: +document.getElementById('lvShadow').value,
       colourMode: COLOUR_MODE,
       base: BASE_MODE,
       fieldScale: +document.getElementById('lvField').value,
@@ -1078,6 +1151,8 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvAt: function (v) { return Math.round(v * 100) + '%'; },
     lvFall: function (v) { return (+v).toFixed(2); },
     lvStr: function (v) { return (+v).toFixed(2); },
+    lvStroke: function (v) { return (+v).toFixed(2) + 'px'; },
+    lvShadow: function (v) { return v + 'px'; },
     lvSwing: function (v) { return (+v).toFixed(2); },
     lvField: function (v) { return (+v).toFixed(1); },
     lvCoh: function (v) { return (+v).toFixed(2); },
@@ -1088,7 +1163,7 @@ function imageTone(img, bgHex, boxW, boxH) {
   var LIVE = { lvSpacing: 'spacing', lvDot: 'dotWeight', lvRound: 'roundness',
                lvFloor: 'toneFloor', lvRange: 'toneRange', lvSwell: 'swell',
                lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvAt: 'accentShare', lvFall: 'accentFalloff',
-               lvStr: 'accentStrength' };
+               lvStr: 'accentStrength', lvStroke: 'strokeWidth', lvShadow: 'innerShadow' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
