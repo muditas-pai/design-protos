@@ -402,8 +402,8 @@
         <input type="range" id="lvStagger" min="40" max="700" step="10" value="260" />
       </div>
       <div class="lev">
-        <label for="lvSpeed">Sequence speed<b id="vSpeed"></b></label>
-        <input type="range" id="lvSpeed" min="0.3" max="3" step="0.05" value="1" />
+        <label for="lvDur">Loading duration<b id="vDur"></b></label>
+        <input type="range" id="lvDur" min="4" max="180" step="1" value="36" />
       </div>
     </div>
 
@@ -783,10 +783,17 @@
       return parseFloat(document.documentElement.style.getPropertyValue('--speed')) || 1;
     }
 
+    /* How long the whole extraction takes, end to end. A real brand fetch is
+       not quick — the screen's own copy says "a few minutes" — so this is a
+       lever rather than the hardcoded 1.9s per step it used to be, and the
+       steps divide it evenly. */
+    var DURATION_MS = 36000;
+
     function runAuto() {
       reset();
+      var per = DURATION_MS / STEPS.length;
       STEPS.forEach(function (S, i) {
-        timers.push(setTimeout(function () { complete(i); }, (i + 1) * (1900 / speed())));
+        timers.push(setTimeout(function () { complete(i); }, (i + 1) * per));
       });
     }
 
@@ -882,8 +889,9 @@
             }, function (v) { return v + 'px'; }, true),
       lever('lvStagger', 'vStagger', function (v) { root.style.setProperty('--stagger', v + 'ms'); },
             function (v) { return v + 'ms'; }),
-      lever('lvSpeed',   'vSpeed',   function (v) { root.style.setProperty('--speed', v); },
-            function (v) { return v.toFixed(2) + '×'; })
+      lever('lvDur',     'vDur',     function (v) { DURATION_MS = v * 1000; },
+            function (v) { return v < 60 ? v + 's'
+              : Math.floor(v / 60) + 'm' + (v % 60 ? ' ' + (v % 60) + 's' : ''); }, true)
     ];
 
     document.getElementById('resetLevers').addEventListener('click', function () {
