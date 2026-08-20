@@ -222,6 +222,8 @@
       <input type="range" id="lvBlob" min="0" max="0.40" step="0.005" value="0.10" /></div>
     <div class="lev"><label for="lvPeriod">Gradient period<b id="vPeriod"></b></label>
       <input type="range" id="lvPeriod" min="3" max="40" step="1" value="11" /></div>
+    <div class="lev"><label for="lvSoft">Edge softness<b id="vSoft"></b></label>
+      <input type="range" id="lvSoft" min="0" max="90" step="1" value="28" /></div>
     <div class="lev"><label for="lvDrive">Gradient drive<b id="vDrive"></b></label>
       <input type="range" id="lvDrive" min="0" max="1" step="0.01" value="0.65" /></div>
     <div class="lev"><label for="lvDrift">Gradient drift<b id="vDrift"></b></label>
@@ -380,6 +382,11 @@
  *    blobAlpha      peak opacity of the gradients drifting through that tint.
  *                   They breathe between 0 and this, so the region is alive
  *                   without anything moving fast enough to read as motion.
+ *    edgeSoft       how far the blue wash fades across the mask boundary, in
+ *                   CSS px. 0 clips it hard to the shape, which leaves a crisp
+ *                   geometric line; anything above blurs the edge so the tint
+ *                   dissolves rather than stopping. The dots are unaffected —
+ *                   they stay hard clipped, so the region is still exact.
  *    fieldDrive     how much the drifting gradients modulate the dots. This
  *                   is what makes the movement visible: a tint painted under
  *                   the dot layer is swamped by it, the same field applied to
@@ -436,11 +443,13 @@ function ditherLoader(canvas, options) {
     colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 0,
     strokeWidth: 0, strokeAlpha: 0.55,
     innerShadow: 0, glowAlpha: 0.26, strokeColour: 'auto',
-    fieldAlpha: 0.05, blobAlpha: 0.10, fieldPeriod: 11, drift: 1, fieldDrive: 0.65
+    fieldAlpha: 0.05, blobAlpha: 0.10, fieldPeriod: 11, drift: 1, fieldDrive: 0.65,
+    edgeSoft: 28
   }, options || {});
 
   var ctx = canvas.getContext('2d');
-  var cells = [], path = null, W = 0, H = 0, dpr = 1, ss = 1, pitchDev = 8;
+  var cells = [], path = null, pathScaled = null, W = 0, H = 0, dpr = 1, ss = 1, pitchDev = 8;
+  var FIELD_SCALE = 0.25, fieldCanvas = null, fieldCtx = null;
   var raf = null, resolving = 0, resolveStart = 0, RESOLVE_MS = 620;
   var morph = 0, morphStart = 0, morphing = 0, MORPH_MS = 900;
 
@@ -628,6 +637,10 @@ function ditherLoader(canvas, options) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     path = buildPath();
+    /* the same shape at buffer scale, so the soft edge can be blurred with an
+       identity transform and a predictable radius */
+    pathScaled = new Path2D();
+    pathScaled.addPath(path, new DOMMatrix([FIELD_SCALE, 0, 0, FIELD_SCALE, 0, 0]));
     var toneFn = o.tone || defaultTone;
     var b = boxPx();
     /* a whole number of device pixels per cell, so the grid never drifts
@@ -870,31 +883,69 @@ function ditherLoader(canvas, options) {
      tints the region rather than outlining it, so the shape is felt instead of
      drawn, and the drift says "working" without a spinner. Painted UNDER the
      dots so it never competes with them. */
+  function paintField(g2, b, strength) {
+    if (o.fieldAlpha > 0) {
+      g2.fillStyle = rgbaOf(STROKE, o.fieldAlpha * strength);
+      g2.fillRect(b.x, b.y, b.w, b.h);
+    }
+    if (o.blobAlpha <= 0) return;
+    for (var i = 0; i < fieldNow.length; i++) {
+      var f = fieldNow[i];
+      var a = o.blobAlpha * strength * f.a;
+      if (a < 0.002) continue;
+      var rg = g2.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
+      rg.addColorStop(0, rgbaOf(STROKE, a));
+      rg.addColorStop(1, rgbaOf(STROKE, 0));
+      g2.fillStyle = rg;
+      g2.fillRect(b.x, b.y, b.w, b.h);
+    }
+  }
+
   function drawField(now, strength) {
     if (strength <= 0.002) return;
     if (o.fieldAlpha <= 0 && o.blobAlpha <= 0) return;
     var b = boxPx();
-    ctx.save();
-    ctx.clip(path);
 
-    if (o.fieldAlpha > 0) {
-      ctx.fillStyle = rgbaOf(STROKE, o.fieldAlpha * strength);
-      ctx.fillRect(b.x, b.y, b.w, b.h);
+    if (o.edgeSoft <= 0) {                 /* hard clip, the geometric edge */
+      ctx.save();
+      ctx.clip(path);
+      paintField(ctx, b, strength);
+      ctx.restore();
+      return;
     }
 
-    if (o.blobAlpha > 0) {
-      for (var i = 0; i < fieldNow.length; i++) {
-        var f = fieldNow[i];
-        var a = o.blobAlpha * strength * f.a;
-        if (a < 0.002) continue;
-        var g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
-        g.addColorStop(0, rgbaOf(STROKE, a));
-        g.addColorStop(1, rgbaOf(STROKE, 0));
-        ctx.fillStyle = g;
-        ctx.fillRect(b.x, b.y, b.w, b.h);
-      }
+    /* Soft edge. The field is painted on a quarter-scale buffer and then
+       masked by a BLURRED copy of the shape, so it fades across the boundary
+       instead of being cut at it. Quarter scale is not just cheaper than
+       blurring a 4K surface every frame — the upscale is itself a smooth
+       interpolation, which is part of the organic edge. The dots stay hard
+       clipped, so the region is still exactly defined; only the wash is soft. */
+    var fw = Math.max(2, Math.round(W * FIELD_SCALE));
+    var fh = Math.max(2, Math.round(H * FIELD_SCALE));
+    if (!fieldCanvas) {
+      fieldCanvas = document.createElement('canvas');
+      fieldCtx = fieldCanvas.getContext('2d');
     }
-    ctx.restore();
+    if (fieldCanvas.width !== fw || fieldCanvas.height !== fh) {
+      fieldCanvas.width = fw; fieldCanvas.height = fh;
+    }
+
+    fieldCtx.setTransform(1, 0, 0, 1, 0, 0);
+    fieldCtx.clearRect(0, 0, fw, fh);
+    fieldCtx.setTransform(FIELD_SCALE, 0, 0, FIELD_SCALE, 0, 0);
+    paintField(fieldCtx, b, strength);
+
+    /* identity transform for the mask, so the blur radius is exact */
+    fieldCtx.setTransform(1, 0, 0, 1, 0, 0);
+    fieldCtx.globalCompositeOperation = 'destination-in';
+    fieldCtx.filter = 'blur(' +
+      Math.max(0.4, o.edgeSoft * dpr * ss * FIELD_SCALE).toFixed(2) + 'px)';
+    fieldCtx.fillStyle = '#000';
+    fieldCtx.fill(pathScaled);
+    fieldCtx.filter = 'none';
+    fieldCtx.globalCompositeOperation = 'source-over';
+
+    ctx.drawImage(fieldCanvas, 0, 0, fw, fh, 0, 0, W, H);
   }
 
   function loop(now) { draw(now); raf = requestAnimationFrame(loop); }
@@ -1179,6 +1230,7 @@ function imageTone(img, bgHex, boxW, boxH) {
       fieldPeriod: +document.getElementById('lvPeriod').value,
       drift: +document.getElementById('lvDrift').value,
       fieldDrive: +document.getElementById('lvDrive').value,
+      edgeSoft: +document.getElementById('lvSoft').value,
       strokeWidth: +document.getElementById('lvStroke').value,
       strokeAlpha: +document.getElementById('lvStrokeA').value,
       innerShadow: +document.getElementById('lvShadow').value,
@@ -1303,6 +1355,7 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvPeriod: function (v) { return v + 's'; },
     lvDrift: function (v) { return (+v).toFixed(2) + '×'; },
     lvDrive: function (v) { return (+v).toFixed(2); },
+    lvSoft: function (v) { return v + 'px'; },
     lvStroke: function (v) { return (+v).toFixed(2) + 'px'; },
     lvStrokeA: function (v) { return (+v).toFixed(2); },
     lvShadow: function (v) { return v + 'px'; },
@@ -1319,7 +1372,7 @@ function imageTone(img, bgHex, boxW, boxH) {
                lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvAt: 'accentShare', lvFall: 'accentFalloff',
                lvStr: 'accentStrength', lvStroke: 'strokeWidth', lvShadow: 'innerShadow',
                lvStrokeA: 'strokeAlpha', lvGlowA: 'glowAlpha',
-               lvField2: 'fieldAlpha', lvBlob: 'blobAlpha', lvPeriod: 'fieldPeriod', lvDrift: 'drift', lvDrive: 'fieldDrive' };
+               lvField2: 'fieldAlpha', lvBlob: 'blobAlpha', lvPeriod: 'fieldPeriod', lvDrift: 'drift', lvDrive: 'fieldDrive', lvSoft: 'edgeSoft' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
