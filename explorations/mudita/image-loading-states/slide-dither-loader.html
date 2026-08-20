@@ -222,6 +222,8 @@
       <input type="range" id="lvBlob" min="0" max="0.40" step="0.005" value="0.10" /></div>
     <div class="lev"><label for="lvPeriod">Gradient period<b id="vPeriod"></b></label>
       <input type="range" id="lvPeriod" min="3" max="40" step="1" value="11" /></div>
+    <div class="lev"><label for="lvDrift">Gradient drift<b id="vDrift"></b></label>
+      <input type="range" id="lvDrift" min="0" max="1.6" step="0.05" value="1" /></div>
     <div class="lev"><label for="lvStroke">Stroke<b id="vStroke"></b></label>
       <input type="range" id="lvStroke" min="0" max="5" step="0.25" value="0" /></div>
     <div class="lev"><label for="lvStrokeA">Stroke opacity<b id="vStrokeA"></b></label>
@@ -376,6 +378,8 @@
  *    blobAlpha      peak opacity of the gradients drifting through that tint.
  *                   They breathe between 0 and this, so the region is alive
  *                   without anything moving fast enough to read as motion.
+ *    drift          how far the gradients travel, as a multiple of their
+ *                   built-in paths. 0 pins them and leaves only the pulse.
  *    fieldPeriod    seconds for the slowest drift. Deliberately far longer
  *                   than the dot cycle: two rates that close together would
  *                   beat against each other.
@@ -426,7 +430,7 @@ function ditherLoader(canvas, options) {
     colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 0,
     strokeWidth: 0, strokeAlpha: 0.55,
     innerShadow: 0, glowAlpha: 0.26, strokeColour: 'auto',
-    fieldAlpha: 0.05, blobAlpha: 0.10, fieldPeriod: 11
+    fieldAlpha: 0.05, blobAlpha: 0.10, fieldPeriod: 11, drift: 1
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -804,10 +808,13 @@ function ditherLoader(canvas, options) {
 
   /* Three gradients on incommensurable periods, so the field never visibly
      repeats. Fixed table rather than random, so a replay is identical. */
+  /* Travel has to beat size, or nothing reads as moving: a gradient 78% of the
+     frame wide, shifted 22%, looks like the same soft light barely leaning.
+     Smaller radii and much longer paths make the same opacities legible. */
   var FIELD_BLOBS = [
-    { ax: 0.22, ay: 0.18, r: 0.64, rate: 1.00, pulse: 0.70, px: 0.0, py: 1.1, po: 0.0 },
-    { ax: 0.28, ay: 0.24, r: 0.46, rate: 1.43, pulse: 0.90, px: 2.1, py: 3.4, po: 2.2 },
-    { ax: 0.17, ay: 0.31, r: 0.78, rate: 0.71, pulse: 1.20, px: 4.3, py: 0.6, po: 4.1 }
+    { ax: 0.42, ay: 0.34, r: 0.40, rate: 1.00, pulse: 0.70, px: 0.0, py: 1.1, po: 0.0 },
+    { ax: 0.52, ay: 0.40, r: 0.30, rate: 1.43, pulse: 0.90, px: 2.1, py: 3.4, po: 2.2 },
+    { ax: 0.36, ay: 0.46, r: 0.52, rate: 0.71, pulse: 1.20, px: 4.3, py: 0.6, po: 4.1 }
   ];
 
   /* A soft blue field inside the mask, with very large gradients drifting
@@ -832,10 +839,12 @@ function ditherLoader(canvas, options) {
       for (var i = 0; i < FIELD_BLOBS.length; i++) {
         var bl = FIELD_BLOBS[i];
         var ph = (t / (o.fieldPeriod * bl.rate)) * Math.PI * 2;
-        var cx = b.x + b.w * (0.5 + Math.cos(ph + bl.px) * bl.ax);
-        var cy = b.y + b.h * (0.5 + Math.sin(ph * 0.8 + bl.py) * bl.ay);
+        var cx = b.x + b.w * (0.5 + Math.cos(ph + bl.px) * bl.ax * o.drift);
+        var cy = b.y + b.h * (0.5 + Math.sin(ph * 0.8 + bl.py) * bl.ay * o.drift);
+        /* the pulse keeps a floor: a gradient that fades to nothing cannot be
+           seen travelling, and half the movement was being spent invisible */
         var a = o.blobAlpha * strength *
-                (0.5 - Math.cos(ph * bl.pulse + bl.po) / 2);
+                (0.4 + 0.6 * (0.5 - Math.cos(ph * bl.pulse + bl.po) / 2));
         if (a < 0.002) continue;
         var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, span * bl.r);
         g.addColorStop(0, rgbaOf(STROKE, a));
@@ -1127,6 +1136,7 @@ function imageTone(img, bgHex, boxW, boxH) {
       fieldAlpha: +document.getElementById('lvField2').value,
       blobAlpha: +document.getElementById('lvBlob').value,
       fieldPeriod: +document.getElementById('lvPeriod').value,
+      drift: +document.getElementById('lvDrift').value,
       strokeWidth: +document.getElementById('lvStroke').value,
       strokeAlpha: +document.getElementById('lvStrokeA').value,
       innerShadow: +document.getElementById('lvShadow').value,
@@ -1249,6 +1259,7 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvField2: function (v) { return (+v).toFixed(3); },
     lvBlob: function (v) { return (+v).toFixed(3); },
     lvPeriod: function (v) { return v + 's'; },
+    lvDrift: function (v) { return (+v).toFixed(2) + '×'; },
     lvStroke: function (v) { return (+v).toFixed(2) + 'px'; },
     lvStrokeA: function (v) { return (+v).toFixed(2); },
     lvShadow: function (v) { return v + 'px'; },
@@ -1265,7 +1276,7 @@ function imageTone(img, bgHex, boxW, boxH) {
                lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvAt: 'accentShare', lvFall: 'accentFalloff',
                lvStr: 'accentStrength', lvStroke: 'strokeWidth', lvShadow: 'innerShadow',
                lvStrokeA: 'strokeAlpha', lvGlowA: 'glowAlpha',
-               lvField2: 'fieldAlpha', lvBlob: 'blobAlpha', lvPeriod: 'fieldPeriod' };
+               lvField2: 'fieldAlpha', lvBlob: 'blobAlpha', lvPeriod: 'fieldPeriod', lvDrift: 'drift' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
