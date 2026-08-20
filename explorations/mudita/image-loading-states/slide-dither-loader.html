@@ -216,12 +216,18 @@
       <input type="range" id="lvFall" min="0" max="0.4" step="0.01" value="0.06" /></div>
     <div class="lev"><label for="lvStr">Second ink<b id="vStr"></b></label>
       <input type="range" id="lvStr" min="0" max="1" step="0.02" value="0" /></div>
+    <div class="lev"><label for="lvField2">Field tint<b id="vField2"></b></label>
+      <input type="range" id="lvField2" min="0" max="0.30" step="0.005" value="0.05" /></div>
+    <div class="lev"><label for="lvBlob">Gradient peak<b id="vBlob"></b></label>
+      <input type="range" id="lvBlob" min="0" max="0.40" step="0.005" value="0.10" /></div>
+    <div class="lev"><label for="lvPeriod">Gradient period<b id="vPeriod"></b></label>
+      <input type="range" id="lvPeriod" min="3" max="40" step="1" value="11" /></div>
     <div class="lev"><label for="lvStroke">Stroke<b id="vStroke"></b></label>
-      <input type="range" id="lvStroke" min="0" max="5" step="0.25" value="1.5" /></div>
+      <input type="range" id="lvStroke" min="0" max="5" step="0.25" value="0" /></div>
     <div class="lev"><label for="lvStrokeA">Stroke opacity<b id="vStrokeA"></b></label>
       <input type="range" id="lvStrokeA" min="0" max="1" step="0.01" value="0.55" /></div>
     <div class="lev"><label for="lvShadow">Glow spread<b id="vShadow"></b></label>
-      <input type="range" id="lvShadow" min="0" max="120" step="1" value="40" /></div>
+      <input type="range" id="lvShadow" min="0" max="120" step="1" value="0" /></div>
     <div class="lev"><label for="lvGlowA">Glow opacity<b id="vGlowA"></b></label>
       <input type="range" id="lvGlowA" min="0" max="1" step="0.01" value="0.26" /></div>
     <div class="lev"><label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
@@ -247,6 +253,11 @@
 
   <h2 class="sec">Why it is built this way</h2>
   <ul class="note">
+    <li><strong>The region is tinted, not outlined.</strong> A stroke and an inner glow drew the
+      container's edge; a low-opacity blue field with a few very large gradients drifting through it
+      says the same thing without a line. The mask is felt at the tint boundary rather than traced,
+      which suits an angular shape better, and the slow drift reads as "working" without a spinner.
+      Stroke and glow are still there at 0 if you want to compare.</li>
     <li><strong>Box and shape are separate, because that is how the product models it.</strong>
       In app.presentations.ai the picture is a <code>.ci-element-image</code> placed in the slide,
       carrying a <code>clip-path</code> written in percentages of its own box. The renderer takes the
@@ -361,6 +372,13 @@
  *                   canvas from the same Path2D as the dot test, so it follows
  *                   an angular mask exactly — a CSS border cannot, because a
  *                   border does not know about clip-path.
+ *    fieldAlpha     flat blue tint inside the mask. Off at 0.
+ *    blobAlpha      peak opacity of the gradients drifting through that tint.
+ *                   They breathe between 0 and this, so the region is alive
+ *                   without anything moving fast enough to read as motion.
+ *    fieldPeriod    seconds for the slowest drift. Deliberately far longer
+ *                   than the dot cycle: two rates that close together would
+ *                   beat against each other.
  *    strokeAlpha    stroke opacity. The stroke is structure, not emphasis, so
  *                   it sits under full strength.
  *    glowAlpha      inner glow opacity. Wide and faint reads as depth; tight
@@ -406,8 +424,9 @@ function ditherLoader(canvas, options) {
     wave: 'clump', fieldScale: 4.5, coherence: 0.86, ink: 0.86, alphaSwing: 0.88,
     tone: null, crisp: false, superSample: 2, base: 'auto',
     colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 0,
-    strokeWidth: 1.5, strokeAlpha: 0.55,
-    innerShadow: 40, glowAlpha: 0.26, strokeColour: 'auto'
+    strokeWidth: 0, strokeAlpha: 0.55,
+    innerShadow: 0, glowAlpha: 0.26, strokeColour: 'auto',
+    fieldAlpha: 0.05, blobAlpha: 0.10, fieldPeriod: 11
   }, options || {});
 
   var ctx = canvas.getContext('2d');
@@ -650,6 +669,8 @@ function ditherLoader(canvas, options) {
     }
     var mEase = morph * morph * (3 - 2 * morph);
 
+    drawField(now, 1 - ease);              /* under the dots */
+
     var groups = [];                       /* [toneStep][alphaStep] */
     for (var g = 0; g < TONES; g++) groups.push(new Array(BUCKETS));
 
@@ -778,6 +799,51 @@ function ditherLoader(canvas, options) {
       ctx.restore();
     }
 
+    ctx.restore();
+  }
+
+  /* Three gradients on incommensurable periods, so the field never visibly
+     repeats. Fixed table rather than random, so a replay is identical. */
+  var FIELD_BLOBS = [
+    { ax: 0.22, ay: 0.18, r: 0.64, rate: 1.00, pulse: 0.70, px: 0.0, py: 1.1, po: 0.0 },
+    { ax: 0.28, ay: 0.24, r: 0.46, rate: 1.43, pulse: 0.90, px: 2.1, py: 3.4, po: 2.2 },
+    { ax: 0.17, ay: 0.31, r: 0.78, rate: 0.71, pulse: 1.20, px: 4.3, py: 0.6, po: 4.1 }
+  ];
+
+  /* A soft blue field inside the mask, with very large gradients drifting
+     through it. This is the alternative to the stroke-and-glow container: it
+     tints the region rather than outlining it, so the shape is felt instead of
+     drawn, and the drift says "working" without a spinner. Painted UNDER the
+     dots so it never competes with them. */
+  function drawField(now, strength) {
+    if (strength <= 0.002) return;
+    if (o.fieldAlpha <= 0 && o.blobAlpha <= 0) return;
+    var b = boxPx();
+    ctx.save();
+    ctx.clip(path);
+
+    if (o.fieldAlpha > 0) {
+      ctx.fillStyle = rgbaOf(STROKE, o.fieldAlpha * strength);
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+    }
+
+    if (o.blobAlpha > 0) {
+      var t = now / 1000, span = Math.max(b.w, b.h);
+      for (var i = 0; i < FIELD_BLOBS.length; i++) {
+        var bl = FIELD_BLOBS[i];
+        var ph = (t / (o.fieldPeriod * bl.rate)) * Math.PI * 2;
+        var cx = b.x + b.w * (0.5 + Math.cos(ph + bl.px) * bl.ax);
+        var cy = b.y + b.h * (0.5 + Math.sin(ph * 0.8 + bl.py) * bl.ay);
+        var a = o.blobAlpha * strength *
+                (0.5 - Math.cos(ph * bl.pulse + bl.po) / 2);
+        if (a < 0.002) continue;
+        var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, span * bl.r);
+        g.addColorStop(0, rgbaOf(STROKE, a));
+        g.addColorStop(1, rgbaOf(STROKE, 0));
+        ctx.fillStyle = g;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+      }
+    }
     ctx.restore();
   }
 
@@ -1058,6 +1124,9 @@ function imageTone(img, bgHex, boxW, boxH) {
       accentShare: +document.getElementById('lvAt').value,
       accentFalloff: +document.getElementById('lvFall').value,
       accentStrength: +document.getElementById('lvStr').value,
+      fieldAlpha: +document.getElementById('lvField2').value,
+      blobAlpha: +document.getElementById('lvBlob').value,
+      fieldPeriod: +document.getElementById('lvPeriod').value,
       strokeWidth: +document.getElementById('lvStroke').value,
       strokeAlpha: +document.getElementById('lvStrokeA').value,
       innerShadow: +document.getElementById('lvShadow').value,
@@ -1177,6 +1246,9 @@ function imageTone(img, bgHex, boxW, boxH) {
     lvAt: function (v) { return Math.round(v * 100) + '%'; },
     lvFall: function (v) { return (+v).toFixed(2); },
     lvStr: function (v) { return (+v).toFixed(2); },
+    lvField2: function (v) { return (+v).toFixed(3); },
+    lvBlob: function (v) { return (+v).toFixed(3); },
+    lvPeriod: function (v) { return v + 's'; },
     lvStroke: function (v) { return (+v).toFixed(2) + 'px'; },
     lvStrokeA: function (v) { return (+v).toFixed(2); },
     lvShadow: function (v) { return v + 'px'; },
@@ -1192,7 +1264,8 @@ function imageTone(img, bgHex, boxW, boxH) {
                lvFloor: 'toneFloor', lvRange: 'toneRange', lvSwell: 'swell',
                lvCycle: 'cycle', lvAlpha: 'ink', lvSwing: 'alphaSwing', lvAt: 'accentShare', lvFall: 'accentFalloff',
                lvStr: 'accentStrength', lvStroke: 'strokeWidth', lvShadow: 'innerShadow',
-               lvStrokeA: 'strokeAlpha', lvGlowA: 'glowAlpha' };
+               lvStrokeA: 'strokeAlpha', lvGlowA: 'glowAlpha',
+               lvField2: 'fieldAlpha', lvBlob: 'blobAlpha', lvPeriod: 'fieldPeriod' };
 
   Object.keys(FMT).forEach(function (id) {
     var el = document.getElementById(id);
