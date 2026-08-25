@@ -326,6 +326,8 @@ tailwind.config = {
   .cb-pass-note i{font-size:15px;flex:none;margin-top:1px}
   .cb-wrap.from-pass .cb-pass-note{display:flex}
   .up-card--pass{margin-top:30px}
+  .up-card--plans.single .up-radio{display:none}
+  .up-card--plans.single .up-row{cursor:default}
   .cb-wrap.mode-plan .up-card--pass{display:none}
   /* form (chargebee-lite pm-* set) */
   .field{margin-bottom:20px}
@@ -1595,7 +1597,14 @@ tailwind.config = {
         wrap.classList.toggle('mode-plan', mode === 'plan');
         wrap.classList.toggle('from-pass', !!opts.fromPass);
         wrap.classList.remove('is-done');
+        // Upsell rule: show the chosen tier and everything above it. Gold alone
+        // when Gold is chosen; pass mode keeps all three plans under the pass.
+        const TIERS = ['basic', 'pro', 'gold'];
+        const from = key === 'pass' ? 0 : TIERS.indexOf(key);
+        TIERS.forEach((t, i) => { wrap.querySelector('.up-row[data-up="' + t + '"]').hidden = key === 'team' || i < from; });
         wrap.querySelector('.up-row[data-up="team"]').hidden = key !== 'team';
+        const plans = wrap.querySelector('.up-card--plans');
+        plans.classList.toggle('single', key === 'gold' || key === 'team');
         const pd = document.getElementById('pd-basic');
         if (pd && pd.classList.contains('is-open')) { pd.classList.remove('is-open'); document.body.style.overflow = ''; }
         renderPlan(key);
