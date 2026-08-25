@@ -683,6 +683,7 @@ tailwind.config = {
   body.offer-on .up-amt--full{display:none}
   body:not(.offer-on) .up-card--offer, body:not(.offer-on) .cb-wrap.mode-plan .up-card--offer{margin-top:0}
   body:not(.offer-on) .dash .offer-wrap{display:none !important}
+  .up-card--basic .up-row{border-top:0}
 </style>
 </head>
 <body>
@@ -1652,12 +1653,6 @@ tailwind.config = {
           <p class="up-label up-label--or">Or pick a plan</p>
           <div class="up-card up-card--plans up-card--offer">
             <span class="pass-chip-wrap"><span class="pass-chip"><i class="ph-fill ph-clock"></i>Offer ends in <span data-timer>59:56</span></span></span>
-            <div class="up-row" data-up="basic">
-              <span class="up-radio"></span>
-              <div class="up-body">
-                <div class="up-name">Basic</div>
-                <div class="up-sub">Our simplest plan</div>
-              </div>
               <div class="up-price"><div><span class="up-amt">$48</span><span class="up-per">/year</span></div></div>
             </div>
             <div class="up-row" data-up="pro">
@@ -1684,6 +1679,15 @@ tailwind.config = {
               </div>
               <div class="up-price"><div><span class="up-amt">$600</span><span class="up-per">/year</span></div></div>
             </div>
+          </div>
+
+          <div class="up-card up-card--basic">
+            <div class="up-row" data-up="basic">
+              <span class="up-radio"></span>
+              <div class="up-body">
+                <div class="up-name">Basic</div>
+                <div class="up-sub">Our simplest plan</div>
+              </div>
           </div>
 
           <ul class="up-feats" id="cb-feats"></ul>
@@ -2053,6 +2057,15 @@ tailwind.config = {
         document.querySelectorAll('[data-timer]').forEach((n) => n.textContent = t);
       };
       setInterval(tick, 1000);
+      // Basic sits in its own card under the offer card; with the offer on, Pro and Gold always show
+      const _oc = window.openCheckout;
+      window.openCheckout = function (key, opts) {
+        _oc(key, opts);
+        const on = document.body.classList.contains('offer-on');
+        const w = document.getElementById('cb-wrap');
+        w.querySelector('.up-card--basic').hidden = !(on || key === 'basic');
+        if (on) { ['pro', 'gold'].forEach((t) => { w.querySelector('.up-row[data-up="' + t + '"]').hidden = false; }); w.querySelector('.up-card--plans').classList.remove('single'); }
+      };
       // Offer state: surfaces once the user has seen the nudge (close intent) or landed on the dashboard
       const _open = window.openNudge; window.openNudge = function (f) { document.body.classList.add('offer-on'); return _open(f); };
       const _dash = window.showDash; window.showDash = function () { document.body.classList.add('offer-on'); return _dash(); };
