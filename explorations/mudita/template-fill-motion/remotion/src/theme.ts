@@ -4,6 +4,7 @@ export const FPS = 30;
 export const W = 1920;
 export const H = 1080;
 export const DURATION = 210; // 7s per treatment
+export const DURATION_SEQ = 310; // treatment 4 runs one component at a time, so it needs the room
 
 // Brand values lifted straight from the Figma slide.
 export const GREEN = '#bbfb67';

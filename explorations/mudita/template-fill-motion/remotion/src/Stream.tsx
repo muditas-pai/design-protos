@@ -10,67 +10,14 @@ import {
   footStyle,
   titleStyle,
 } from './slide';
-import {EASE_IN, EASE_IN_OUT, EASE_OUT, FINAL, GREEN, L, TEMPLATE, segLen, sliceSegs} from './theme';
+import {EASE_IN_OUT, EASE_OUT, FINAL, GREEN, L, TEMPLATE, segLen, sliceSegs} from './theme';
+import {Caret, DissolveLine} from './typewriter';
 
 /**
  * Treatment 1 — Stream.
  * The placeholders evaporate upward, the block reflows, and the real copy is typed in
  * behind a caret while a scan line resolves the picture from the top down.
  */
-
-const Caret: React.FC<{h: number; opacity: number}> = ({h, opacity}) => (
-  <span
-    style={{
-      display: 'inline-block',
-      width: 3,
-      height: h,
-      marginLeft: 6,
-      backgroundColor: GREEN,
-      boxShadow: `0 0 12px rgba(187,251,103,0.9)`,
-      transform: `translateY(${h * 0.12}px)`,
-      opacity,
-      verticalAlign: 'baseline',
-    }}
-  />
-);
-
-/** Placeholder text leaving: last word first, lifted and blurred out. */
-const DissolveLine: React.FC<{
-  segs: {t: string; c: string}[];
-  frame: number;
-  start: number;
-  style: React.CSSProperties;
-}> = ({segs, frame, start, style}) => {
-  const chars: {ch: string; c: string}[] = [];
-  segs.forEach((s) => s.t.split('').forEach((ch) => chars.push({ch, c: s.c})));
-  return (
-    <div style={{...style, whiteSpace: 'pre'}}>
-      {chars.map((c, i) => {
-        const from = start + (chars.length - 1 - i) * 0.55;
-        const p = interpolate(frame, [from, from + 11], [0, 1], {
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-          easing: EASE_IN,
-        });
-        return (
-          <span
-            key={i}
-            style={{
-              display: 'inline-block',
-              color: c.c,
-              opacity: 1 - p,
-              filter: `blur(${p * 7}px)`,
-              transform: `translateY(${-14 * p}px)`,
-              whiteSpace: 'pre',
-            }}
-          >
-            {c.ch}
-          </span>
-        );
-      })}
-    </div>
-  );
-};
 
 export const Stream: React.FC = () => {
   const frame = useCurrentFrame();
@@ -129,7 +76,6 @@ export const Stream: React.FC = () => {
     easing: EASE_IN_OUT,
   });
   const scanY = scan * L.img.h;
-  const gridFade = interpolate(frame, [40, 100], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const settle = interpolate(frame, [142, 168], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: EASE_OUT});
 
   const caretAlive = frame >= typeStart && frame <= typeEnd + 6;
@@ -219,7 +165,7 @@ export const Stream: React.FC = () => {
 
       {/* picture: a scan line resolves the mosaic from the top down */}
       <PhotoFrame glow={settle * 0.7}>
-        <MosaicPhoto grid={gridFade} wash={gridFade} />
+        <MosaicPhoto grid={1} wash={1} />
         <div style={{position: 'absolute', inset: 0, clipPath: `inset(0 0 ${100 - scan * 100}% 0)`}}>
           <SharpPhoto />
         </div>
