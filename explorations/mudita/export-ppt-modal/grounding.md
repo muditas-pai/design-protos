@@ -71,8 +71,62 @@ provenance comment and the `<title>`. Every rem value maps back to its original 
 including the four fractional ones (9.5, 11.5, 12.5px), which needed five decimal places to
 round-trip cleanly.
 
+## Snapping to the scale (27 Aug 2026)
+
+The TODO below is closed: every `font-size` in the file now sits on the published ramp.
+**10 / 12 / 13 / 14 / 16 / 18 / 20 / 24 / 32**, spelled the way `pai.tailwind.js` spells it
+(13px is `.813rem`, the `2xs` token's own value, not the arithmetically-exact `.8125rem`).
+
+Three rules did the work, and they are worth stating because they disagree about where a
+value like 15px should land.
+
+| kind | ramp | why |
+|---|---|---|
+| text | 10 / 12 / 13 / 14 / 16 / 18 / 20 / 24 / 32 | the type tokens |
+| an icon sitting beside a label | 12 / 16 / 20 | `--icon-xs/sm/md`. Phosphor sizes glyphs by `font-size`, so a 15px icon reads as an off-scale type step and is not one |
+| a standalone display icon | left alone | the 32px success tick in its 64px circle and the 24px step icons are drawn objects, not chrome |
+
+### What actually moved on screen
+
+Three things, all on the tier card, and they are the point of the pass rather than a side
+effect of it:
+
+- **Tier name and price 28 → 24.** 28px is the gap between 24 and 32 and belongs to neither.
+- **Credit number 26 → 20.** It was 2px off the tier name, which reads as a mistake rather
+  than a hierarchy. At 20 the card has an actual ladder: 24 price → 20 credits → 14 features
+  → 13 captions. The price is the decision; the credits are the evidence for it.
+- **The Reach seller note 9.5 → 12, the renewal legal 11 → 12.** DESIGN.md sets 12 as the
+  floor for a paragraph and neither of these was near it. The checkout panel grows about
+  30px as a result. The better fix is shorter copy, not smaller type — that is a VOICE
+  question and it is still open.
+
+Everything else is invisible at a 16px root: 11 → 10 or 12 by role (badges and tracked
+uppercase labels down, captions and prose up), 12.5 → 13, 11.2 and 11.5 → 12, 22 → 20,
+and the two spellings of 13px collapsed into one.
+
+Line-heights were snapped to the published pairing for each size (10 → 1.33, 12 → 1.33,
+14 → 1.43, 16 → 1.5, 24 → 1.3), except multi-line prose, which is 1.55 throughout. The
+arbitrary 1.35 / 1.4 / 1.45 / 1.5 one-offs are gone.
+
+The last six px `font:` shorthands the rem pass missed (`font:600 15px`, `font:400 14px/1.43`,
+`font:700 9px`, …) are rem now, so the file's own claim in its header comment is true.
+
+### Still off the ramp on purpose
+
+- **The 280px quote glyph** (`.testimonial .quote-mark`, 17.5rem) — decoration, not type.
+  The older TODO about it stands.
+- **Weight.** The card sets 700 and 800; the type ramp publishes nothing above 600, and
+  DESIGN.md says to make hierarchy with size and reach for weight second. Left alone because
+  dropping the card to 600 is a visible change nobody asked for, but it is the next thing to
+  settle here.
+- **The serif quote at 24px.** On the numeric ramp, but not a quote token: the house tokens
+  are `text-quote-lg` (28) and `text-quote-base` (20), and 24 is neither. 28 pushes it to a
+  sixth line in the left panel.
+
 ## TODO
 
 - [ ] Decide whether the quote glyph goes back to px.
-- [ ] Decide whether to snap the seven off-scale values to the system scale.
+- [ ] Decide whether the card drops from 700/800 to the published 600.
+- [ ] Shorten the Reach seller note and the renewal legal so 12px costs no height.
+- [x] Snap the off-scale values to the system scale — done 27 Aug 2026, see above.
 - [ ] If this direction sticks, try a root override (e.g. 18px) to see what actually breaks.
