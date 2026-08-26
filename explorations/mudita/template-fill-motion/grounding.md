@@ -55,10 +55,10 @@ Everything the animation reconstructs was read off those two nodes, not eyeballe
 - **Treatment 4 needs its own duration.** Strictly sequencing the four components costs 100 extra
   frames, so it runs at `DURATION_SEQ` (310) while the other three share `DURATION` (210). The reel is
   the sum, not four times one.
-- **The focus rail is the only invented element in the whole folder.** Nothing in the Figma slide has a
-  left-margin bar; it exists because sequencing is hard to read without something naming the current
-  component. If it feels like scaffolding rather than design, it is the first thing to cut, and
-  treatment 4 still works without it, just less legibly.
+- **Treatment 4 marks nothing.** A first pass had a green rail in the left margin holding the current
+  component. It was the only invented element in the folder, nothing in the Figma slide has one, and it
+  read as scaffolding, so it was cut on 26 Aug 2026. The caret, the rule's single pulse and the scan line
+  carry the sequence on their own; everything waiting its turn sits at its template opacity.
 - **The mosaic grid stays put until the scan line covers it.** Fading the grid out on a region the scan
   has not reached yet reads as the placeholder giving up early. Both streaming treatments now hold
   `grid={1}` and let the resolving photograph cover it.
@@ -82,8 +82,6 @@ re-render** or the page keeps showing the old cut.
 ## TODO
 
 - Pick one treatment (or a hybrid: sweep for the picture, stream for the text).
-- Decide whether the focus rail in treatment 4 earns its place, or whether the sequencing should read
-  purely from the caret and the scan line.
 - Decide whether the caret in treatment 1 is on-brand or too "chat app".
 - Try treatment 2 on a dense body-copy slide, where the diagonal has more to cross.
 - Sound is out of scope so far; a single soft transient on the sweep would probably carry it.

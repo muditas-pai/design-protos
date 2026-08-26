@@ -8,12 +8,11 @@ import {Caret, DissolveLine} from './typewriter';
  * Treatment 4 — Stream, in sequence.
  * Same mechanics as treatment 1, but nothing overlaps: the title is finished before the rule
  * and subtitle are touched, those are finished before the footer starts, and the picture is
- * last. A green rail on the left margin marks whichever component is being worked on, so the
- * order is legible rather than implied.
+ * last. The order is carried by the caret and the scan line alone — whatever is not its turn
+ * yet simply sits at its template opacity.
  */
 
 const T = {
-  hold: 20,
   titleOut: 20,
   reflow: [34, 50] as const,
   type: [50, 92] as const,
@@ -25,8 +24,6 @@ const T = {
   scan: [190, 272] as const,
   settle: [272, 298] as const,
 };
-
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export const StreamSequence: React.FC = () => {
   const frame = useCurrentFrame();
@@ -94,30 +91,8 @@ export const StreamSequence: React.FC = () => {
     extrapolateRight: 'clamp',
     easing: EASE_OUT,
   });
-  // the picture's turn is signalled by its own border coming up, since the rail has gone by then
+  // the picture's turn is signalled by its own border coming up
   const picAttention = interpolate(frame, [T.scan[0] - 10, T.scan[0], T.scan[1], T.settle[1]], [0, 0.5, 0.5, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  // --- the focus rail ----------------------------------------------------
-  // one slim bar in the left margin, stepping down the slide as each component's turn comes
-  const slotTitle = {top: blockTop, h: titleH};
-  const slotSub = {top: blockTop + titleH + L.gap, h: L.dividerH + L.gap + L.subLine};
-  const slotFoot = {top: L.footY - 6, h: L.footLine * 2 + 12};
-  const toSub = interpolate(frame, [T.ruleBeat[0] - 4, T.ruleBeat[0] + 10], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: EASE_IN_OUT,
-  });
-  const toFoot = interpolate(frame, [T.footOut - 4, T.footOut + 10], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: EASE_IN_OUT,
-  });
-  const railTop = lerp(lerp(slotTitle.top, slotSub.top, toSub), slotFoot.top, toFoot);
-  const railH = lerp(lerp(slotTitle.h, slotSub.h, toSub), slotFoot.h, toFoot);
-  const railOpacity = interpolate(frame, [T.hold - 8, T.hold + 2, T.footType[1] + 2, T.footType[1] + 14], [0, 1, 1, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -125,20 +100,6 @@ export const StreamSequence: React.FC = () => {
   return (
     <AbsoluteFill>
       <Backdrop />
-
-      <div
-        style={{
-          position: 'absolute',
-          left: 84,
-          top: railTop,
-          width: 4,
-          height: railH,
-          borderRadius: 2,
-          backgroundColor: GREEN,
-          opacity: railOpacity * 0.85,
-          boxShadow: `0 0 18px rgba(187,251,103,${0.45 * railOpacity})`,
-        }}
-      />
 
       {/* title / rule / subtitle */}
       <div
