@@ -57,6 +57,34 @@ outside typography.
   are inline in a single `<style>` block. So the rem tokens in `pai.tailwind.js` are not in
   play here, the conversion is hand-rolled against a 16px root.
 
+## The tier illustration (27 Aug 2026)
+
+The card's one image is a paper plane for Basic, a fighter jet for Pro and a gold rocket
+for Gold — Apple-style 3D emoji, arranged as a speed ladder. Three things are wrong with it
+and only the third is a taste question:
+
+1. **Speed is not the axis.** The plans differ on how many decks you get (1,000 / 5,000 /
+   15,000 credits) and how much of the product you get (standard AI / agents + Brand Kit +
+   analytics / frontier models). Nothing about velocity.
+2. **It is clipart** in a screen that is otherwise flat Phosphor outline and navy, and
+   DESIGN.md §6 asks for real product over metaphor — slide thumbnails, real charts, covers
+   at casual angles.
+3. **At 44 px all three read as one thing**, a small blue-grey aeroplane. The tier is legible
+   from the word underneath, never from the picture. Whatever replaces it has to survive
+   44 px or the slot has to grow.
+
+Eight replacements are drawn in `tier-illustration-riff.html`, each carried across all three
+tiers (Gold is on the checkout panel, so a two-tier idea is not an answer) and shown twice —
+large, and again at the real 44 px. Each carries what it costs. Nothing is picked yet.
+
+### The house answer disagrees with the house rule
+
+`design-system/assets/pricing-plans/` ships the same family — a propeller plane, a fighter
+jet and a shuttle — and its README says *"Speed is the metaphor."* DESIGN.md §6 says *"Real
+product over metaphor … never AI-brain metaphors."* Those two sentences cannot both stand,
+and settling them is a design-system decision, not a proto one. It wants an issue against
+`design-system/`, not a change made here.
+
 ## Repo context
 
 The design system's type scale is already rem (`text-body-base-regular` is 0.875rem), but
@@ -128,5 +156,7 @@ The last six px `font:` shorthands the rem pass missed (`font:600 15px`, `font:4
 - [ ] Decide whether the quote glyph goes back to px.
 - [ ] Decide whether the card drops from 700/800 to the published 600.
 - [ ] Shorten the Reach seller note and the renewal legal so 12px costs no height.
+- [ ] Pick a tier illustration concept from the riff, or say none of them is it.
+- [ ] File the pricing-plans README vs DESIGN.md §6 contradiction against `design-system/`.
 - [x] Snap the off-scale values to the system scale — done 27 Aug 2026, see above.
 - [ ] If this direction sticks, try a root override (e.g. 18px) to see what actually breaks.
