@@ -46,7 +46,7 @@
       --drange: 0.61;   /* added by tone: peak opacity = dmin + drange */
       --oswing: 0.63;   /* how far a pixel dims at the trough of its cycle */
       --cell-gap: 5px;  /* space between pixels */
-      --px-radius: 0px; /* corner rounding on each pixel */
+      --px-radius: 1.5px; /* corner rounding on each pixel */
       --swell:  1.73;   /* how far a dot swells at mid-cycle */
       /* the gutter separating one container from the next, and from the card
          edge. Drives the placeholder AND the finished content, so the geometry
@@ -364,31 +364,23 @@
       </div>
       <div class="lev">
         <label for="lvRadius">Pixel radius<b id="vRadius"></b></label>
-        <input type="range" id="lvRadius" min="0" max="10" step="0.5" value="0" />
+        <input type="range" id="lvRadius" min="0" max="10" step="0.5" value="1.5" />
       </div>
       <div class="lev" data-rebuild="1">
         <label for="lvGap">Pixel gap<b id="vGap"></b></label>
         <input type="range" id="lvGap" min="0" max="12" step="1" value="5" />
       </div>
       <div class="lev">
-        <label for="lvFloor">Tone floor<b id="vFloor"></b></label>
-        <input type="range" id="lvFloor" min="0" max="0.70" step="0.01" value="0.10" />
+        <label for="lvContrast">Contrast<b id="vContrast"></b></label>
+        <input type="range" id="lvContrast" min="0" max="1" step="0.01" value="0.67" />
       </div>
       <div class="lev">
-        <label for="lvRange">Tone range<b id="vRange"></b></label>
-        <input type="range" id="lvRange" min="0.05" max="1.10" step="0.01" value="0.61" />
-      </div>
-      <div class="lev">
-        <label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
+        <label for="lvSwing">Pulse depth<b id="vSwing"></b></label>
         <input type="range" id="lvSwing" min="0" max="1" step="0.01" value="0.63" />
       </div>
       <div class="lev">
-        <label for="lvCycle">Cycle<b id="vCycle"></b></label>
+        <label for="lvCycle">Pulse rate<b id="vCycle"></b></label>
         <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" />
-      </div>
-      <div class="lev" data-rebuild="1">
-        <label for="lvSpread">Wave spread<b id="vSpread"></b></label>
-        <input type="range" id="lvSpread" min="0" max="2" step="0.05" value="0.75" />
       </div>
       <div class="lev" data-rebuild="1">
         <label for="lvGutter">Gutter<b id="vGutter"></b></label>
@@ -870,10 +862,13 @@
       lever('lvGap',    'vGap',    function (v) {
               GAP = v; root.style.setProperty('--cell-gap', v + 'px'); },
             function (v) { return v + 'px'; }, true),
-      lever('lvFloor',   'vFloor',   function (v) { root.style.setProperty('--dmin', v); },
-            function (v) { return v.toFixed(2); }),
-      lever('lvRange',   'vRange',   function (v) { root.style.setProperty('--drange', v); },
-            function (v) { return v.toFixed(2); }),
+      /* One Contrast lever drives both ends of the ramp: a low floor with a
+         wide range is high contrast, a high floor with a narrow range is flat.
+         Two sliders were describing one idea. */
+      lever('lvContrast', 'vContrast', function (v) {
+              root.style.setProperty('--dmin', (0.30 * (1 - v)).toFixed(3));
+              root.style.setProperty('--drange', (0.25 + 0.54 * v).toFixed(3));
+            }, function (v) { return v.toFixed(2); }),
       lever('lvSwing',   'vSwing',   function (v) {
               root.style.setProperty('--oswing', v);
               /* no swing is genuinely still, so drop the animation entirely */
@@ -881,8 +876,6 @@
             }, function (v) { return v <= 0.005 ? 'still' : v.toFixed(2); }),
       lever('lvCycle',   'vCycle',   function (v) { root.style.setProperty('--cycle', v + 'ms'); },
             function (v) { return (v / 1000).toFixed(2) + 's'; }),
-      lever('lvSpread',  'vSpread',  function (v) { SPREAD = v; },
-            function (v) { return v.toFixed(2) + '×'; }, true),
       lever('lvGutter',  'vGutter',  function (v) {
               root.style.setProperty('--gutter', v + 'px');
               document.body.setAttribute('data-gutter', v);
