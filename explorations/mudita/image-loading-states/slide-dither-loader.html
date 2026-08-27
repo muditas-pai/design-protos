@@ -1070,18 +1070,17 @@ function imageTone(img, bgHex, boxW, boxH) {
       name: 'Instagram Moments', deck: 30871681,
       bg: '#FFFFFF', accent: '#1B1167', second: '#E06735',
       shapeLabel: 'no clip-path · plain rect',
-      /* the stepped edge is decorative blocks over a plain rect, eyeballed */
+      /* The real four, read from deck 30871681. They sit ENTIRELY inside the
+         image box (every x >= 0.83) and land on the mood's 24 x 27 grid. The
+         earlier hand-placed set had three more straddling the image's left
+         edge at x = 0.46, which is what looked broken: blocks half on the
+         picture and half on the white, aligned to nothing. */
       deco: [
-        { box: [0.460, 0.000, 0.044, 0.160], fill: '#1B1167' },
-        { box: [0.504, 0.170, 0.096, 0.080], fill: '#E06735' },
-        { box: [0.460, 0.255, 0.044, 0.100], fill: '#1B1167' },
-        { box: [0.926, 0.700, 0.040, 0.160], fill: '#E06735' },
-        { box: [0.884, 0.830, 0.042, 0.100], fill: '#1B1167' },
-        { box: [0.926, 0.830, 0.074, 0.100], fill: '#6FA97A' },
-        { box: [0.884, 0.930, 0.042, 0.070], fill: '#F5D060' }
+        { box: [0.8333, 0.8519, 0.0417, 0.0741], fill: '#1B1167' },
+        { box: [0.9167, 0.7037, 0.0438, 0.1481], fill: '#E06735' },
+        { box: [0.9167, 0.8519, 0.0833, 0.0741], fill: '#60A462' },
+        { box: [0.8750, 0.9259, 0.0417, 0.0741], fill: '#FFCB3F' }
       ],
-      box: [0.500, 0, 0.500, 1],
-      shape: null,
       img: 'https://cdn.presentations.ai/bg/food/bggenfood123.jpg',
       credit: 'cdn.presentations.ai · bggenfood123',
       copy: function () {
@@ -1090,14 +1089,7 @@ function imageTone(img, bgHex, boxW, boxH) {
             'display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.7vw;">M</div>' +
           '<div class="title" style="left:5.2%;top:56%;font-size:3.4vw;color:#0B0B0B;">' +
             'Instagram Moments<br/>Reimagines How<br/>Communities<br/>' +
-            '<span style="color:#1B1167;text-decoration:underline;">Share Together</span></div>' +
-          '<div style="position:absolute;left:46%;top:0;width:4.4%;height:16%;background:#1B1167"></div>' +
-          '<div style="position:absolute;left:50.4%;top:17%;width:9.6%;height:8%;background:#E06735"></div>' +
-          '<div style="position:absolute;left:46%;top:25.5%;width:4.4%;height:10%;background:#1B1167"></div>' +
-          '<div style="position:absolute;left:92.6%;top:70%;width:4%;height:16%;background:#E06735"></div>' +
-          '<div style="position:absolute;left:88.4%;top:83%;width:4.2%;height:10%;background:#1B1167"></div>' +
-          '<div style="position:absolute;left:92.6%;top:83%;width:7.4%;height:10%;background:#6FA97A"></div>' +
-          '<div style="position:absolute;left:88.4%;top:93%;width:4.2%;height:7%;background:#F5D060"></div>';
+            '<span style="color:#1B1167;text-decoration:underline;">Share Together</span></div>';
       }
     },
     {
@@ -1131,12 +1123,12 @@ function imageTone(img, bgHex, boxW, boxH) {
       name: 'Lenskart', deck: 30555226,
       bg: '#F7FAFF', accent: '#8B3FD1', second: '#C04FD8',
       shapeLabel: 'polygon(29.18% 0%, 100% 0%, 100% 100%, 28.62% 100%, 27.3% 74.92%, 0% 31.61%)',
-      /* the purple folds flanking the picture, rebuilt from the render —
-         this deck's mood has since been changed in the app */
+      /* Generated FROM the image's own polygon rather than drawn beside it,
+         so the fold and the picture share an edge by construction and cannot
+         drift apart. This deck's mood has since changed in the app, so the
+         purple is a design choice; the geometry is not. */
       deco: [
-        { box: [0.500, 0, 0.230, 1], fill: 'linear-gradient(160deg,#9B4DDB,#5B2288)',
-          clip: [[0.62, 0], [1, 0], [0.30, 0.325], [1, 0.755], [0.66, 1], [0.22, 1],
-                 [0.92, 0.665], [0.20, 0.30]] }
+        { edgeBand: 0.085, fill: 'linear-gradient(160deg,#9B4DDB,#5B2288)' }
       ],
       box: [0.540, 0, 0.460, 1],
       shape: [[0.2918, 0], [1, 0], [1, 1], [0.2862, 1], [0.273, 0.7492], [0, 0.3161]],
@@ -1162,6 +1154,31 @@ function imageTone(img, bgHex, boxW, boxH) {
       return (p[0] * 100).toFixed(2) + '% ' + (p[1] * 100).toFixed(2) + '%';
     }).join(', ') + ')';
   }
+  /* The left boundary of a mask, in traversal order: start just after the
+     last vertex on the right edge and walk until we reach it again. */
+  function leftBoundary(shape) {
+    var n = shape.length, start = 0;
+    for (var i = 0; i < n; i++) {
+      if (shape[i][0] > 0.999 && shape[(i + 1) % n][0] <= 0.999) { start = (i + 1) % n; break; }
+    }
+    var out = [];
+    for (var k = 0; k < n; k++) {
+      var p = shape[(start + k) % n];
+      if (p[0] > 0.999) break;
+      out.push(p);
+    }
+    return out;
+  }
+
+  /* A band hugging that boundary, `w` wide, in the element's own coordinates.
+     Shares its vertices with the mask, so the two edges meet exactly. */
+  function edgeBandShape(shape, w) {
+    var edge = leftBoundary(shape);
+    var out = edge.slice();
+    for (var i = edge.length - 1; i >= 0; i--) out.push([edge[i][0] - w, edge[i][1]]);
+    return out;
+  }
+
   function boxStyle(b) {
     return 'left:' + (b[0]*100).toFixed(2) + '%;top:' + (b[1]*100).toFixed(2) +
            '%;width:' + (b[2]*100).toFixed(2) + '%;height:' + (b[3]*100).toFixed(2) + '%';
@@ -1186,21 +1203,27 @@ function imageTone(img, bgHex, boxW, boxH) {
         '<code style="margin-left:auto">' + S.credit + '</code>' +
       '</div>' +
       '<div class="slide" style="background:' + S.bg + '">' +
-        (S.deco || []).map(function (d) {
-          var st = 'position:absolute;' + boxStyle(d.box) + ';background:' + d.fill + ';';
-          if (d.mask) {
-            st += '-webkit-mask-image:url(' + d.mask + ');mask-image:url(' + d.mask + ');' +
-                  '-webkit-mask-size:100% 100%;mask-size:100% 100%;' +
-                  '-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;';
-          }
-          if (d.clip) st += 'clip-path:' + clipPathOf(d.clip) + ';';
-          return '<div class="deco" style="' + st + '"></div>';
-        }).join('') +
+
         '<div class="photo" style="inset:auto;position:absolute;' + boxStyle(S.box) +
           ';clip-path:' + clipPathOf(S.shape) + ';opacity:0;' +
           'background-image:url(' + S.img + ');' +
           'transition:opacity 420ms cubic-bezier(0.23,1,0.32,1)"></div>' +
         '<canvas></canvas>' +
+        /* the blocks sit ON the picture in the real slide, so they belong
+           above the loader too — the dither stands in for the image */
+        (S.deco || []).map(function (d) {
+          /* an edgeBand rides the image's own box and clip space */
+          var box = d.edgeBand ? S.box : d.box;
+          var clip = d.edgeBand ? edgeBandShape(S.shape, d.edgeBand) : d.clip;
+          var st = 'position:absolute;' + boxStyle(box) + ';background:' + d.fill + ';';
+          if (d.mask) {
+            st += '-webkit-mask-image:url(' + d.mask + ');mask-image:url(' + d.mask + ');' +
+                  '-webkit-mask-size:100% 100%;mask-size:100% 100%;' +
+                  '-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;';
+          }
+          if (clip) st += 'clip-path:' + clipPathOf(clip) + ';';
+          return '<div class="deco" style="' + st + '"></div>';
+        }).join('') +
         '<div class="copy" style="inset:0">' + S.copy() + '</div>' +
       '</div>';
     host.appendChild(wrap);
