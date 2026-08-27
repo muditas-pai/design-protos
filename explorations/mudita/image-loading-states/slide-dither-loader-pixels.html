@@ -139,8 +139,8 @@
     <button class="btn" id="replay"><i class="ph ph-arrow-clockwise"></i>Replay</button>
     <div class="grp"><span>Wave</span>
       <select id="selWave" class="pick">
-        <option value="clump" selected>Clumped</option>
-        <option value="drift">Drift</option>
+        <option value="clump">Clumped</option>
+        <option value="drift" selected>Drift</option>
         <option value="rings">Rings</option>
         <option value="bands">Bands</option>
         <option value="sparse">Sparse</option>
@@ -149,6 +149,14 @@
         <option value="down">Downward sweep</option>
         <option value="radial">Radial sweep</option>
       </select>
+    </div>
+    <div class="grp"><span>Colour</span>
+      <div class="seg" id="segColourway">
+        <button data-v="grey">Grey</button>
+        <button data-v="duotone">Duotone</button>
+        <button data-v="blue" aria-pressed="true">Blue</button>
+        <button data-v="accent">Slide accent</button>
+      </div>
     </div>
     <div class="grp"><span>Render</span>
       <div class="seg" id="segSS">
@@ -174,17 +182,17 @@
 
   <div class="levers" id="levers">
     <div class="lev"><label for="lvSize">Pixel height<b id="vSize"></b></label>
-      <input type="range" id="lvSize" min="3" max="30" step="1" value="6" /></div>
+      <input type="range" id="lvSize" min="3" max="30" step="1" value="4" /></div>
     <div class="lev"><label for="lvAspect">Pixel ratio<b id="vAspect"></b></label>
       <input type="range" id="lvAspect" min="1" max="3" step="0.02" value="1.78" /></div>
     <div class="lev"><label for="lvGap">Pixel gap<b id="vGap"></b></label>
-      <input type="range" id="lvGap" min="0" max="12" step="1" value="5" /></div>
+      <input type="range" id="lvGap" min="0" max="12" step="1" value="4" /></div>
     <div class="lev"><label for="lvRadius">Pixel radius<b id="vRadius"></b></label>
-      <input type="range" id="lvRadius" min="0" max="10" step="0.5" value="1.5" /></div>
+      <input type="range" id="lvRadius" min="0" max="10" step="0.5" value="0.5" /></div>
     <div class="lev"><label for="lvContrast">Contrast<b id="vContrast"></b></label>
-      <input type="range" id="lvContrast" min="0" max="1" step="0.01" value="0.67" /></div>
+      <input type="range" id="lvContrast" min="0" max="1" step="0.01" value="0.74" /></div>
     <div class="lev"><label for="lvAlpha">Ink<b id="vAlpha"></b></label>
-      <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.86" /></div>
+      <input type="range" id="lvAlpha" min="0.2" max="1" step="0.01" value="0.75" /></div>
     <div class="lev"><label for="lvSwing">Pulse depth<b id="vSwing"></b></label>
       <input type="range" id="lvSwing" min="0" max="1" step="0.01" value="0.63" /></div>
     <div class="lev"><label for="lvCycle">Pulse rate<b id="vCycle"></b></label>
@@ -385,10 +393,10 @@
 function ditherLoader(canvas, options) {
   var o = Object.assign({
     bg: '#FFFFFF', accent: '#000000', shape: null, box: [0, 0, 1, 1],
-    cellH: 6, aspect: 1.78, gap: 5, pxRadius: 1.5,
+    cellH: 4, aspect: 1.78, gap: 4, pxRadius: 0.5,
     toneFloor: 0.10, toneRange: 0.61, swell: 1.36, cycle: 1800,
     wave: 'clump', fieldScale: 4.5, coherence: 0.86, ink: 0.86, alphaSwing: 0.63,
-    tone: null, superSample: 2, base: 'auto',
+    tone: null, superSample: 2, base: 'auto', colourway: 'blue',
     colourMode: 'linear', accentShare: 0.08, accentFalloff: 0.05, accentStrength: 0,
     strokeWidth: 0, strokeAlpha: 0.55,
     innerShadow: 0, glowAlpha: 0.26, strokeColour: 'auto',
@@ -425,12 +433,27 @@ function ditherLoader(canvas, options) {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
 
-  /* ONE ink, and it is brand blue — not the slide's accent. Which shade is a
-     function of the background, both taken from the design system: app-600 is
-     the held brand blue, app-300 is its light-on-dark counterpart. */
+  /* Four colourways. Each picks a shade the background can carry, so the same
+     setting reads on white, cream and navy without per-slide tuning.
+       grey     one neutral ink
+       duotone  grey ink with brand blue on the strongest cells
+       blue     brand blue only, the design-system pair app-600 / app-300
+       accent   the slide's own accent, whatever the deck's mood set */
   var BG_IS_LIGHT = lum(hex(o.bg)) > 0.5;
   function brandBlue() { return BG_IS_LIGHT ? '#0055ED' : '#69A0FF'; }
-  var STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour : brandBlue();
+  function neutral()   { return BG_IS_LIGHT ? '#4A4A4A' : '#C9CDD4'; }
+  function inkFor() {
+    if (o.colourway === 'grey' || o.colourway === 'duotone') return neutral();
+    if (o.colourway === 'accent') return o.accent || brandBlue();
+    return brandBlue();
+  }
+  /* in duotone the second ink is the blue; otherwise the second ink is off and
+     this value never reaches the canvas */
+  function secondFor() {
+    if (o.colourway === 'duotone') return brandBlue();
+    return BG_IS_LIGHT ? '#000000' : '#FFFFFF';
+  }
+  var STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour : inkFor();
   var INK = hex(STROKE);
 
   /* The inner glow is that same blue. Its alpha is a lever rather than a
@@ -441,11 +464,7 @@ function ditherLoader(canvas, options) {
   }
   var SHADOW = rgbaOf(STROKE, o.glowAlpha);
 
-  /* The second tone: whichever of black or white the background has room for. */
-  var BASE = (function () {
-    if (o.base && o.base !== 'auto') return hex(o.base);
-    return lum(hex(o.bg)) > 0.5 ? [0, 0, 0] : [255, 255, 255];
-  })();
+  var BASE = hex(secondFor());
 
   /* Cells are batched by (colour step, alpha step) so a frame is a few dozen
      fills rather than thousands. Colour comes from tone, alpha from tone and
@@ -886,10 +905,12 @@ function ditherLoader(canvas, options) {
       Object.assign(o, patch);
       if ('accentShare' in patch || 'colourMode' in patch) recomputeCutoffs();
       if ('glowAlpha' in patch) SHADOW = rgbaOf(STROKE, o.glowAlpha);
-      if ('strokeColour' in patch || 'bg' in patch) {
+      if ('strokeColour' in patch || 'bg' in patch || 'colourway' in patch ||
+          'accent' in patch) {
         BG_IS_LIGHT = lum(hex(o.bg)) > 0.5;
-        STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour : brandBlue();
+        STROKE = (o.strokeColour && o.strokeColour !== 'auto') ? o.strokeColour : inkFor();
         INK = hex(STROKE);
+        BASE = hex(secondFor());
         SHADOW = rgbaOf(STROKE, o.glowAlpha);
         buildPalette();
       }
@@ -1143,8 +1164,10 @@ function imageTone(img, bgHex, boxW, boxH) {
          default — the second ink, the stroke and the glow are all off — or
          moved something too subtle to see. Kept as constants so the look is
          unchanged and any of them can be reopened later. */
-      accentStrength: 0, accentShare: 0.08, accentFalloff: 0.06,
-      colourMode: 'linear', base: 'auto',
+      colourway: COLOURWAY,
+      accentStrength: COLOURWAY === 'duotone' ? 1 : 0,
+      accentShare: COLOURWAY === 'duotone' ? 0.35 : 0.08,
+      accentFalloff: 0.06, colourMode: 'linear', base: 'auto',
       fieldAlpha: 0.05, blobAlpha: 0.10, drift: 1, edgeSoft: 28,
       fieldScale: 4.5, coherence: 0.86,
       strokeWidth: 0, strokeAlpha: 0.55, innerShadow: 0, glowAlpha: 0.26,
@@ -1152,7 +1175,7 @@ function imageTone(img, bgHex, boxW, boxH) {
     };
   }
 
-  var WAVE = 'clump', LOOP = true, TONE = 'image', SS = 2,
+  var WAVE = 'drift', COLOURWAY = 'blue', LOOP = true, TONE = 'image', SS = 2,
       BASE_MODE = 'auto', COLOUR_MODE = 'linear', timers = [];
   function setPhase(t) { document.getElementById('phase').textContent = t; }
 
@@ -1231,6 +1254,17 @@ function imageTone(img, bgHex, boxW, boxH) {
   });
   seg('segTone', function (v) { TONE = v; boot(); });
   seg('segSS', function (v) { SS = +v; boot(); });
+  seg('segColourway', function (v) {
+    COLOURWAY = v;
+    instances.forEach(function (i) {
+      if (i.loader) i.loader.set({
+        colourway: v,
+        /* duotone is the only way that uses the second ink at all */
+        accentStrength: v === 'duotone' ? 1 : 0,
+        accentShare: v === 'duotone' ? 0.35 : 0.08
+      });
+    });
+  });
   seg('segLoop', function (v) { LOOP = v === 'on'; if (LOOP) boot(); });
   document.getElementById('replay').addEventListener('click', boot);
 
