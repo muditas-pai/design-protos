@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Brand kit loader — landscape pixels · design-protos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    /* ==================================================================== *
+     * Brand kit extraction — the wait between "Analyze linear.app" and
+     * "your kit is ready". Figma: AMJ '26 Handoff → Extracting Loader.
+     *
+     * The idea under it: each placeholder is a LOW-RESOLUTION RENDER of the
+     * content that is coming, not a generic grey rectangle. The palette card
+     * shows four grey bands that become the four brand colours; the type card
+     * shows the paragraph shape that becomes the specimen; the logo card
+     * shows a centred mass that becomes the logo. So the wait predicts the
+     * payoff, and the resolve is a change of fidelity rather than a swap.
+     * ==================================================================== */
+    :root {
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+      --page: #FFFFFF;
+      --stage: #FAFAFA;
+      --ink: #171717;
+      --ink-2: #525252;
+      --ink-3: #A3A3A3;
+      --hair: rgba(0,0,0,0.09);
+      --skel: #E5E5E5;
+      --cell: #B8B8B8;      /* neutral, no blue in the ramp */
+      --green: #16A34A;
+      --speed: 1;
+      --step-ms: calc(1900ms / var(--speed));
+      /* dither levers — all live except pitch and wave, which rebuild the grid */
+      --dmin:   0.33;   /* opacity where there is no content */
+      --drange: 0.46;   /* added by tone: peak opacity = dmin + drange */
+      --oswing: 0.55;   /* how far a pixel dims at the trough of its cycle */
+      --cell-gap: 2px;  /* space between pixels */
+      --swell:  1.73;   /* how far a dot swells at mid-cycle */
+      /* the gutter separating one container from the next, and from the card
+         edge. Drives the placeholder AND the finished content, so the geometry
+         does not shift at the handoff. */
+      --gutter: 8px;
+      --cycle: 1800ms;
+      --stagger: 260ms;
+      --well-radius: 6px;
+    }
+
+    body { background: #F5F5F5; color: var(--ink); }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 96px; }
+    .back { display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      color: var(--ink-2); margin-bottom: 18px; transition: color 150ms var(--ease-out); }
+    .back:hover { color: var(--ink); }
+    h1.page { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px;
+      color: var(--ink); }
+    .lede { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; max-width: 68ch; margin: 0; }
+
+    /* ------------------------------------------------------------ controls */
+    .levers { margin-top: -8px !important; display: grid; align-items: start;
+      grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 14px 20px; }
+    .lev { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+    .lev label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--ink-3); }
+    .lev label b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+      font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink);
+      font-variant-numeric: tabular-nums; }
+    .lev input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%;
+      height: 18px; background: none; cursor: ew-resize; margin: 0; }
+    .lev input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px;
+      background: rgba(0,0,0,0.14); }
+    .lev input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px;
+      background: rgba(0,0,0,0.14); }
+    .lev input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+      width: 13px; height: 13px; border-radius: 50%; background: #fff; margin-top: -5px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.22);
+      transition: transform 120ms var(--ease-out); }
+    .lev input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border: 0;
+      border-radius: 50%; background: #fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.22); }
+    .lev input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
+    .lev input[type="range"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+    .btn.ghost { background: none; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair); }
+    .btn.ghost:hover { color: var(--ink); }
+    .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+      margin: 22px 0 20px; padding: 10px 12px; border-radius: 14px; background: #fff;
+      box-shadow: 0 0 0 1px var(--hair), 0 6px 20px -14px rgba(0,0,0,0.4); }
+    .grp { display: flex; align-items: center; gap: 8px; }
+    .grp > span { font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--ink-3); }
+    .seg { display: flex; padding: 2px; border-radius: 9px; background: rgba(0,0,0,0.07); gap: 2px; }
+    .seg button { appearance: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 500;
+      color: var(--ink-2); background: transparent; padding: 5px 10px; border-radius: 7px;
+      cursor: pointer; white-space: nowrap;
+      transition: color 140ms var(--ease-out), background-color 140ms var(--ease-out),
+                  transform 140ms var(--ease-out); }
+    .seg button:active { transform: scale(0.97); }
+    .seg button[aria-pressed="true"] { background: #fff; color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.10); }
+    .btn { appearance: none; border: 0; font: inherit; font-size: 12.5px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 9px;
+      cursor: pointer; background: #0A1925; color: #fff;
+      transition: transform 140ms var(--ease-out), opacity 140ms var(--ease-out); }
+    .btn:active { transform: scale(0.97); }
+    .btn:hover { opacity: 0.9; }
+
+    /* ==================================================================== *
+     * the screen
+     * ==================================================================== */
+    .screen { position: relative; display: grid; grid-template-columns: 400px 1fr;
+      min-height: 600px; border-radius: 16px; overflow: hidden; background: var(--page);
+      box-shadow: 0 0 0 1px var(--hair), 0 18px 40px -28px rgba(0,0,0,0.45); }
+
+    .topbar { position: absolute; inset: 0 0 auto 0; height: 96px; pointer-events: none; z-index: 3; }
+    .iconbtn { position: absolute; top: 28px; width: 40px; height: 40px; border-radius: 50%;
+      display: grid; place-items: center; background: #fff; border: 0; cursor: pointer;
+      box-shadow: 0 0 0 1px var(--hair); color: var(--ink); pointer-events: auto;
+      transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out); }
+    .iconbtn:hover { box-shadow: 0 0 0 1px rgba(0,0,0,0.18); }
+    .iconbtn:active { transform: scale(0.94); }
+    .iconbtn.l { left: 28px; }
+    .iconbtn.r { right: 28px; }
+
+    /* ------------------------------------------------------------ left pane */
+    .left { padding: 108px 32px 40px 56px; display: flex; flex-direction: column; }
+    .head { position: relative; min-height: 86px; }
+    .head h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;
+      line-height: 1.3; color: var(--ink); }
+    .head p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--ink-2);
+      max-width: 30ch; }
+    /* the two headlines are stacked and crossfade, so nothing jumps */
+    .head .hstate { position: absolute; inset: 0; transition: opacity 320ms var(--ease-out),
+      transform 420ms var(--ease-out); }
+    .head .hstate.out { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+    .head .hstate.in  { opacity: 0; transform: translateY(8px); pointer-events: none; }
+
+    .steps { margin-top: 56px; display: flex; flex-direction: column; gap: 20px; }
+    .step { display: flex; align-items: center; gap: 8px; height: 20px; }
+    .step .ic { position: relative; width: 20px; height: 20px; flex: 0 0 20px;
+      display: grid; place-items: center; }
+    .step .ic i { position: absolute; font-size: 20px; line-height: 1;
+      transition: opacity 220ms var(--ease-out), transform 320ms var(--ease-out); }
+    .step .ic .pend { color: var(--ink-3); }
+    .step .ic .tick { color: var(--green); opacity: 0; transform: scale(0.7); }
+    .step .lbl { position: relative; font-size: 14px; line-height: 20px; color: var(--ink-3);
+      transition: color 260ms var(--ease-out); white-space: nowrap; }
+
+    /* pending items sit quiet; the active one gets the sweep from the Figma */
+    .step.active .lbl { color: var(--ink); }
+    .step.active .lbl::after { content: ""; position: absolute; inset: -2px -6px;
+      background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.9) 50%, transparent 70%);
+      background-size: 260% 100%; animation: sweep calc(1500ms / var(--speed)) ease-in-out infinite; }
+    @keyframes sweep { from { background-position: 150% 0; } to { background-position: -60% 0; } }
+
+    .step.done .ic .pend { opacity: 0; transform: scale(0.8); }
+    .step.done .ic .tick { opacity: 1; transform: scale(1); }
+    .step.done .lbl { color: var(--ink); }
+    .step.done .lbl::after { display: none; }
+
+    .cta { margin-top: auto; padding-top: 28px; }
+    .cta button { appearance: none; border: 0; font: inherit; font-size: 14px; font-weight: 500;
+      padding: 9px 20px; border-radius: 8px; background: #101010; color: #fff; cursor: pointer;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 320ms var(--ease-out), transform 420ms var(--ease-out); }
+    .screen.finished .cta button { opacity: 1; transform: none; }
+    .cta button:active { transform: scale(0.98); }
+
+    /* ----------------------------------------------------------- right pane */
+    .right { background: var(--stage); display: grid; place-items: center; padding: 48px 24px; }
+    .cards { display: flex; gap: 12px; }
+
+    .card { position: relative; width: 228px; height: 365px; border-radius: 10px;
+      overflow: hidden; background: #fff; box-shadow: 0 0 0 1px var(--hair);
+      opacity: 0; transform: translateY(10px) scale(0.99);
+      animation: card-in 520ms var(--ease-out) forwards; }
+    .card:nth-child(1) { animation-delay: 60ms; }
+    .card:nth-child(2) { animation-delay: 120ms; }
+    .card:nth-child(3) { animation-delay: 180ms; }
+    @keyframes card-in { to { opacity: 1; transform: none; } }
+
+    .card > * { position: absolute; inset: 0; }
+
+    /* ---- the low-resolution placeholder ---------------------------------- *
+     * NB: the class is `pxgrid`, not `ph` — `.ph` belongs to Phosphor Icons,
+     * which every proto here loads. A `.ph` rule silently restyles every icon
+     * on the page.
+     * Slots mode: the skeleton is the real layout scaffold — two logo wells,
+     * a colour region, a title block and a body block — and the effect runs
+     * inside each. Card mode keeps one grid across the whole card, for
+     * comparison.
+     * ---------------------------------------------------------------------- */
+    .scaffold { position: absolute; inset: var(--gutter);
+      display: flex; flex-direction: column; gap: var(--gutter);
+      transition: opacity 380ms var(--ease-out), transform 520ms var(--ease-out); }
+    .c-type .scaffold { inset: calc(var(--gutter) + 8px); }
+    .slot { position: relative; overflow: hidden; border-radius: var(--well-radius); }
+    /* No fill and no border on a slot: a container is read from the gap around
+       it and the dots clustering inside it, nothing else. */
+    body[data-gutter="0"] .slot { border-radius: 0; }
+    .card.resolved .scaffold { opacity: 0; transform: scale(1.01); }
+    /* Resetting must SNAP, not play the resolve backwards. Without this every
+       loop began by transitioning out of the resolved state, which read as the
+       screen fading up out of nothing. */
+    .card.snap .scaffold, .card.snap .real, .card.snap .pxgrid > i {
+      transition: none !important; }
+
+    /* A halftone screen: square cells at the chosen pitch (see dims() in the
+       script), no gap, and the dot sized well inside its cell. Tone drives dot
+       SIZE, and the size is what animates — an opacity pulse this small is
+       invisible, which is why an earlier pass read as static. */
+    .pxgrid { position: absolute; inset: 0; display: grid; gap: var(--cell-gap); padding: 0;
+      grid-template-columns: repeat(var(--n), 1fr);
+      grid-template-rows: repeat(var(--r), 1fr); }
+    .pxgrid > i { display: block; background: var(--cell);
+      width: 100%; height: 100%; border-radius: 0;
+      animation: ph-dot calc(var(--cycle) / var(--speed)) ease-in-out infinite;
+      animation-delay: calc(var(--d) * var(--cycle) * -1);
+      transition: background-color 420ms var(--ease-out), opacity 420ms var(--ease-out); }
+    /* Opacity only. Nothing scales — a landscape pixel that grows and shrinks
+       stops reading as a pixel and starts reading as a dot again. */
+    @keyframes ph-dot {
+      0%, 100% { opacity: calc((var(--dmin) + var(--t) * var(--drange)) * (1 - var(--oswing))); }
+      50%      { opacity: calc(var(--dmin) + var(--t) * var(--drange)); }
+    }
+
+    /* Motion: Still — hold the resolved screen, no pulse at all */
+    body[data-motion="still"] .pxgrid > i { animation: none;
+      opacity: calc(var(--dmin) + var(--t) * var(--drange)); }
+
+    /* a dot stays a dot while it resolves, and eases up to full size rather
+       than snapping when its animation is cut */
+
+
+    /* the resolve: cells take their real colour, then hand off to the content */
+    .card.resolving .pxgrid > i { background: var(--fill); opacity: var(--fo, 1);
+      animation: none;
+      transition-delay: calc((var(--sd, 0) + var(--d) * 0.4) * var(--stagger) / var(--speed)); }
+
+    .real { opacity: 0; transform: scale(0.995);
+      transition: opacity 420ms var(--ease-out), transform 560ms var(--ease-out); }
+    .card.resolved .real { opacity: 1; transform: none; }
+
+    /* ---- card 1 · logo — two wells, dark and light, as in the final frame -- */
+    .c-logo .real { display: flex; flex-direction: column; gap: var(--gutter);
+      padding: var(--gutter); }
+    .c-logo .well { flex: 1; display: grid; place-items: center;
+      border-radius: var(--well-radius); }
+    .c-logo .well.dark  { background: #101010; }
+    .c-logo .well.light { background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.07); }
+    body[data-gutter="0"] .c-logo .well { border-radius: 0; }
+    .logo-lockup { display: flex; align-items: center; gap: 11px; }
+    .logo-lockup svg { width: 32px; height: 32px; display: block; }
+    .logo-lockup span { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+    .well.dark  .logo-lockup span { color: #fff; }
+    .well.light .logo-lockup span { color: #101010; }
+
+    /* ---- card 2 · type ---------------------------------------------------- */
+    .c-type .real { background: #fff; padding: calc(var(--gutter) + 8px);
+      display: flex; flex-direction: column;
+      justify-content: space-between; box-shadow: inset 0 0 0 1px var(--hair); }
+    .spec-title { font-family: "Source Serif 4", Georgia, serif; font-size: 27px; font-weight: 600;
+      line-height: 1.18; letter-spacing: -0.01em; color: #101010; margin: 0; }
+    .spec-body { font-size: 13px; line-height: 1.5; color: #262626; margin: 0; }
+
+    /* ---- card 3 · palette ------------------------------------------------- */
+    /* A continuous stack, as in the Figma, and as the skeleton's single wash
+       region implies — so the handoff is a reveal rather than a reflow. */
+    .c-palette .real { display: flex; flex-direction: column; padding: var(--gutter); }
+    .c-palette .real span { flex: 1; display: block; }
+    .c-palette .real span:first-child { border-radius: var(--well-radius) var(--well-radius) 0 0; }
+    .c-palette .real span:last-child { border-radius: 0 0 var(--well-radius) var(--well-radius); }
+    body[data-gutter="0"] .c-palette .real span { border-radius: 0; }
+
+    /* ------------------------------------------------------------ reduced */
+    @media (prefers-reduced-motion: reduce) {
+      .pxgrid > i, .step.active .lbl::after { animation: none; }
+      .card { animation: none; opacity: 1; transform: none; }
+      .head .hstate, .real, .pxgrid { transition-duration: 1ms; }
+    }
+  </style>
+</head>
+
+<body class="pai" data-scaffold="slots" data-gutter="8" data-motion="run">
+  <div class="wrap">
+    <a class="back text-body-sm-medium" href="../index.html"><i class="ph ph-arrow-left"></i>Mudita</a>
+
+    <h1 class="page">Brand kit extraction loader</h1>
+    <p class="lede">The wait between "analyze linear.app" and "your kit is ready", from
+      <em>AMJ '26 Handoff → Extracting Loader</em>. Each placeholder is a low-resolution render of the
+      content that is coming, so the resolve is a change of fidelity rather than a swap, and the wait
+      tells you what you are waiting for.</p>
+    <p class="lede" style="margin-top:10px;">The treatment is a halftone <strong>dither</strong>: a square
+      screen where tone drives dot size, the way real screening does it. The second row tunes it.
+      <strong>Scaffold</strong> is the other thing to judge: on <em>Slots</em> the skeleton is the
+      layout we already know the card will hold, with the screen running inside each region and the
+      regions resolving in turn. On <em>Whole card</em> one grid covers everything, which was the
+      first pass.</p>
+    <p class="lede" style="margin-top:10px;">The skeleton only claims what it can actually know. We
+      do not know how many colours the extractor returns, where the type breaks, how long each line
+      runs, or whether a logo is a square icon or a long wordmark, so none of that is drawn: colour
+      is one continuous wash rather than countable swatches, type is a streak texture with a ragged
+      right edge rather than set line lengths, and a logo is a soft centred mass rather than a
+      lockup. Change <strong>Colours found</strong> between 3 and 6 and the skeleton does not move
+      at all, only the resolve does.</p>
+
+    <div class="bar">
+      <button class="btn" id="replay"><i class="ph ph-arrow-clockwise"></i>Replay</button>
+      <div class="grp"><span>Colours found</span>
+        <div class="seg" id="segCount">
+          <button data-v="3">3</button>
+          <button data-v="4" aria-pressed="true">4</button>
+          <button data-v="5">5</button>
+          <button data-v="6">6</button>
+        </div>
+      </div>
+      <div class="grp"><span>Scaffold</span>
+        <div class="seg" id="segScaffold">
+          <button data-v="slots" aria-pressed="true">Slots</button>
+          <button data-v="card">Whole card</button>
+        </div>
+      </div>
+      <div class="grp"><span>Wave</span>
+        <div class="seg" id="segWave">
+          <button data-v="diagonal">Diagonal</button>
+          <button data-v="down">Down</button>
+          <button data-v="radial">Radial</button>
+          <button data-v="random" aria-pressed="true">Random</button>
+        </div>
+      </div>
+      <div class="grp"><span>Loop</span>
+        <div class="seg" id="segLoop">
+          <button data-v="on" aria-pressed="true">On</button>
+          <button data-v="off">Off</button>
+        </div>
+      </div>
+      <div class="grp"><span>Step</span>
+        <div class="seg" id="segMode">
+          <button data-v="auto" aria-pressed="true">Auto</button>
+          <button data-v="manual">Manual</button>
+        </div>
+      </div>
+      <button class="btn ghost" id="resetLevers">Reset levers</button>
+    </div>
+
+    <div class="bar levers" id="levers">
+      <div class="lev" data-rebuild="1">
+        <label for="lvSize">Pixel height<b id="vSize"></b></label>
+        <input type="range" id="lvSize" min="3" max="30" step="1" value="9" />
+      </div>
+      <div class="lev" data-rebuild="1">
+        <label for="lvAspect">Pixel ratio<b id="vAspect"></b></label>
+        <input type="range" id="lvAspect" min="1" max="3" step="0.02" value="1.78" />
+      </div>
+      <div class="lev" data-rebuild="1">
+        <label for="lvGap">Pixel gap<b id="vGap"></b></label>
+        <input type="range" id="lvGap" min="0" max="12" step="1" value="2" />
+      </div>
+      <div class="lev">
+        <label for="lvFloor">Tone floor<b id="vFloor"></b></label>
+        <input type="range" id="lvFloor" min="0" max="0.70" step="0.01" value="0.33" />
+      </div>
+      <div class="lev">
+        <label for="lvRange">Tone range<b id="vRange"></b></label>
+        <input type="range" id="lvRange" min="0.05" max="1.10" step="0.01" value="0.46" />
+      </div>
+      <div class="lev">
+        <label for="lvSwing">Opacity swing<b id="vSwing"></b></label>
+        <input type="range" id="lvSwing" min="0" max="1" step="0.01" value="0.55" />
+      </div>
+      <div class="lev">
+        <label for="lvCycle">Cycle<b id="vCycle"></b></label>
+        <input type="range" id="lvCycle" min="400" max="4500" step="50" value="1800" />
+      </div>
+      <div class="lev" data-rebuild="1">
+        <label for="lvSpread">Wave spread<b id="vSpread"></b></label>
+        <input type="range" id="lvSpread" min="0" max="2" step="0.05" value="1" />
+      </div>
+      <div class="lev" data-rebuild="1">
+        <label for="lvGutter">Gutter<b id="vGutter"></b></label>
+        <input type="range" id="lvGutter" min="0" max="26" step="1" value="8" />
+      </div>
+      <div class="lev">
+        <label for="lvStagger">Resolve stagger<b id="vStagger"></b></label>
+        <input type="range" id="lvStagger" min="40" max="700" step="10" value="260" />
+      </div>
+      <div class="lev">
+        <label for="lvDur">Loading duration<b id="vDur"></b></label>
+        <input type="range" id="lvDur" min="4" max="180" step="1" value="36" />
+      </div>
+    </div>
+
+    <div class="screen" id="screen">
+      <div class="topbar">
+        <button class="iconbtn l" aria-label="Back"><i class="ph ph-arrow-left"></i></button>
+        <button class="iconbtn r" aria-label="Close"><i class="ph ph-x"></i></button>
+      </div>
+
+      <div class="left">
+        <div class="head">
+          <div class="hstate" id="hLoading">
+            <h2>Analyzing linear.app...</h2>
+            <p>We're prepping your brand. It might take a few minutes, so hang tight.</p>
+          </div>
+          <div class="hstate in" id="hDone">
+            <h2>Your brand kit is ready</h2>
+            <p>We've pulled your colors, fonts, logo, and brand voice.</p>
+          </div>
+        </div>
+
+        <div class="steps" id="steps"></div>
+
+        <div class="cta"><button>Continue</button></div>
+      </div>
+
+      <div class="right">
+        <div class="cards" id="cards"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    /* ------------------------------------------------------------------ *
+     * The six extraction steps. Done labels are past tense throughout —
+     * the Figma mixes tenses from the fourth item on ("Setting up slide
+     * preference", "Pulling your logo", "Fetching org info" stay present
+     * even once ticked), which reads as still-running next to a green check.
+     * ------------------------------------------------------------------ */
+    var STEPS = [
+      { icon: 'ph-palette',             pending: 'Extracting color...',           done: 'Color extracted',      card: 'palette' },
+      { icon: 'ph-text-aa',             pending: 'Extracting font...',            done: 'Font extracted',       card: 'type' },
+      { icon: 'ph-books',               pending: 'Getting your brand voice...',   done: 'Brand voice pulled' },
+      { icon: 'ph-cards-three',         pending: 'Setting up slide preference...', done: 'Slide preferences set' },
+      { icon: 'ph-sketch-logo',         pending: 'Pulling your logo...',          done: 'Logo pulled',          card: 'logo' },
+      { icon: 'ph-identification-card', pending: 'Fetching org info...',          done: 'Org info fetched' }
+    ];
+
+    /* The extractor decides how many colours come back. Six are kept here and
+       the control slices however many the run is pretending to have found, so
+       the skeleton can be checked against 3 and against 6 without changing. */
+    var PALETTE_POOL = ['#5E6AD2', '#F0B500', '#4A4A4A', '#101010', '#2F8F6B', '#C7452F'];
+    var PALETTE = PALETTE_POOL.slice(0, 4);
+
+    /* ------------------------------------------------------------------ *
+     * Placeholder tone maps. Each returns 0..1 for a cell, and each is a
+     * blurry version of that card's real content.
+     * ------------------------------------------------------------------ */
+    var COLS = 6, ROWS = 16;   /* whole-card mode: 228 × 365 card → cells near 16:9 */
+
+    /* ---- whole-card tone maps (the first pass, kept for comparison) ------ *
+     * All tone maps take normalised (u, v) in 0..1, so the same shape survives
+     * whatever cell density a treatment asks for.
+     * ---------------------------------------------------------------------- */
+    function band4(v) { return Math.min(3, Math.floor(v * 4)); }
+
+    var CARD_TONE = {
+      palette: function (u, v) { return [0.42, 0.62, 0.72, 0.95][band4(v)]; },
+      type: function (u, v) {
+        var title = [0.98, 0.80, 0.60], body = [0.98, 0.98, 0.80, 0.98, 0.55];
+        if (v > 0.05 && v < 0.26) return u <= title[Math.floor((v - 0.05) / 0.07)] ? 0.95 : 0.04;
+        if (v > 0.60 && v < 0.93) return u <= body[Math.floor((v - 0.60) / 0.066)] ? 0.55 : 0.04;
+        return 0.04;
+      },
+      logo: function (u, v) {
+        var inCol = u > 0.14 && u < 0.86, dy = Math.abs(v - 0.5);
+        if (inCol && dy <= 0.075) return 0.96;
+        if (inCol && dy <= 0.135) return 0.58;
+        return 0.26;
+      }
+    };
+
+    /* ---- slot scaffolds -------------------------------------------------- *
+     * Each card is described as the containers we already know it will hold,
+     * and the effect runs inside each one. `sd` staggers the resolve so the
+     * pieces arrive in the order the data would.
+     * ---------------------------------------------------------------------- */
+    /* A placeholder should predict the KIND of thing arriving, never its
+       measurements. We do not know how many colours the extractor returns,
+       where the type breaks, how long each line runs, or whether a logo is a
+       square icon or a long wordmark. So none of that is drawn. Each field
+       says only "colour, stacked", "type, set here", "a logo, centred", and
+       lets the real content settle the rest. */
+
+    /* smooth 1-D noise, for soft irregular edges */
+    function n1(x) {
+      var i = Math.floor(x), f = x - i;
+      var a = rnd(i * 1.7 + 0.5), b = rnd((i + 1) * 1.7 + 0.5);
+      return a + (b - a) * (f * f * (3 - 2 * f));
+    }
+
+    /* colour: a vertical wash that never resolves into countable bands,
+       because the count is precisely what is unknown */
+    function wash() {
+      return function (u, v) {
+        return 0.30 + v * 0.50 + (n1(v * 3.4) - 0.5) * 0.12;
+      };
+    }
+
+    /* type: a horizontal streak texture. Rows read as lines without being
+       countable, and the right edge trails off irregularly, so neither a line
+       count nor a line length is claimed. */
+    function textBlock(density) {
+      return function (u, v) {
+        var row = 0.5 + 0.5 * Math.cos(v * density * Math.PI * 2);
+        var end = 0.60 + n1(v * density + 4.3) * 0.38;
+        var fade = 1 - Math.max(0, Math.min(1, (u - end) / 0.16));
+        return 0.05 + row * fade * 0.88;
+      };
+    }
+
+    /* logo: a soft centred mass, not a lockup silhouette */
+    function centred() {
+      return function (u, v) {
+        var du = (u - 0.5) / 0.44, dv = (v - 0.5) / 0.30;
+        return 0.16 + Math.exp(-(du * du + dv * dv)) * 0.80;
+      };
+    }
+
+    /* the resolve maps position onto whatever palette actually arrived */
+    function paletteFill(u, v) {
+      return PALETTE[Math.min(PALETTE.length - 1, Math.floor(v * PALETTE.length))];
+    }
+
+    var SLOTS = {
+      /* Two wells, because showing the logo on a dark field and a light one is
+         OUR preview layout rather than extracted data. What the logo looks
+         like is not ours to know, so the field inside is a centred mass. */
+      logo: [
+        { h: 50, sd: 0,   fill: '#101010', tone: centred() },
+        { h: 50, sd: 0.8, fill: '#B0B0B0', tone: centred() }
+      ],
+      /* A title region and a body region — again our layout. Where the type
+         breaks inside them, and how long each line runs, is not. */
+      type: [
+        { h: 30, sd: 0,   fill: '#101010', tone: textBlock(2.4) },
+        { h: 38, spacer: true },
+        { h: 32, sd: 0.6, fill: '#3A3A3A', tone: textBlock(4.6) }
+      ],
+      /* ONE region, not one per colour. The count is the thing we cannot know,
+         so the skeleton refuses to commit to it and resolves into however many
+         swatches actually come back. */
+      palette: [
+        { h: 100, sd: 0, fill: paletteFill, tone: wash() }
+      ]
+    };
+
+    /* ---- cell density ---------------------------------------------------- *
+     * Every treatment but dither uses the declared counts, which give roughly
+     * 16:9 cells. Dither wants a tight square screen instead, so it derives
+     * both counts from the slot's real pixel size at a fixed pitch.
+     * ---------------------------------------------------------------------- */
+    var CARD_W = 228, CARD_H = 365, WAVE = 'random', SPREAD = 1;
+    /* a pixel is CELL tall and CELL * ASPECT wide, with GAP between */
+    var CELL = 9, ASPECT = 1.78, GAP = 2;
+
+    /* where each cell sits in the resolve / swell order */
+    function delayFor(u, v, x, y) {
+      var scatter = rnd(x * 13 + y * 7);
+      if (WAVE === 'down')   return v * 0.92 + scatter * 0.08;
+      if (WAVE === 'radial') {
+        var du = u - 0.5, dv = v - 0.5;
+        return Math.min(1, Math.sqrt(du * du + dv * dv) / 0.7) * 0.9 + scatter * 0.1;
+      }
+      if (WAVE === 'random') return scatter;
+      return u * 0.35 + v * 0.5 + scatter * 0.15;   /* diagonal */
+    }
+
+    function dims(kind, S) {
+      var g = parseInt(document.body.getAttribute('data-gutter'), 10) || 0;
+      var pad = g + (kind === 'type' ? 8 : 0);
+      var w = CARD_W - pad * 2;
+      /* the gutters eat into the height before the slots divide what is left */
+      var count = SLOTS[kind] ? SLOTS[kind].length : 1;
+      var h = ((CARD_H - pad * 2) - g * (count - 1)) * (S.h / 100);
+      return { c: Math.max(3, Math.round(w / (CELL * ASPECT + GAP))),
+               r: Math.max(2, Math.round(h / (CELL + GAP))) };
+    }
+
+    /* the colour each cell resolves to in whole-card mode */
+    var CARD_FILL = {
+      palette: function (u, v) { return PALETTE[band4(v)]; },
+      type:    function (u, v) { return v < 0.3 ? '#101010' : '#3A3A3A'; },
+      logo:    function ()     { return '#101010'; }
+    };
+
+    /* deterministic jitter, so every replay is identical */
+    function rnd(i) { var h = Math.sin(i * 12.9898) * 43758.5453; return h - Math.floor(h); }
+
+    /* one grid, whatever box it is asked to fill */
+    function grid(cols, rows, tone, fill, dim) {
+      var h = '<div class="pxgrid" style="--n:' + cols + ';--r:' + rows + '">', x, y;
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) {
+        var u = (x + 0.5) / cols, v = (y + 0.5) / rows;
+        var t = tone(u, v);
+        /* a diagonal wave, with enough scatter that it never looks like a scan */
+        var d = delayFor(u, v, x, y) * SPREAD;
+        h += '<i style="--t:' + t.toFixed(3) + ';--d:' + d.toFixed(3) +
+             ';--fill:' + (typeof fill === 'function' ? fill(u, v) : fill) +
+             ';--fo:' + (dim && t < 0.2 ? 0.05 : 1) + '"></i>';
+      }
+      return h + '</div>';
+    }
+
+    function placeholder(kind, mode) {
+      if (mode === 'card') {
+        var whole = dims(kind, { h: 100, cols: COLS, rows: ROWS });
+        return '<div class="scaffold" style="inset:0">' +
+          '<div class="slot" style="flex:1;border-radius:0">' +
+            grid(whole.c, whole.r, CARD_TONE[kind], CARD_FILL[kind], kind === 'type') +
+          '</div></div>';
+      }
+      return '<div class="scaffold">' + SLOTS[kind].map(function (S) {
+        if (S.spacer) return '<div class="slot spacer" style="flex:' + S.h + '"></div>';
+        var d = dims(kind, S);
+        return '<div class="slot" style="flex:' + S.h + ';--sd:' + S.sd + '">' +
+          grid(d.c, d.r, S.tone, S.fill, kind === 'type') +
+        '</div>';
+      }).join('') + '</div>';
+    }
+
+    /* how long the staggered fill takes before the real card can take over */
+    function fillMs(kind, mode) {
+      var maxSd = mode === 'card' ? 0 : SLOTS[kind].reduce(function (m, S) {
+        return Math.max(m, S.sd || 0); }, 0);
+      var st = parseFloat(root.style.getPropertyValue('--stagger')) || 260;
+      return (maxSd + 0.4) * st + 300;
+    }
+
+    /* an approximation of the Linear icon — a rounded square built from diagonal
+       strokes. Close enough to read as a logo in a prototype; not the real asset. */
+    var LINEAR_ICON =
+      '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+        '<defs><clipPath id="lc"><rect x="1" y="1" width="38" height="38" rx="11"/></clipPath></defs>' +
+        '<g clip-path="url(#lc)" stroke="#fff" stroke-width="4" stroke-linecap="square" fill="none">' +
+          '<path d="M-6 18 L18 -6"/>' +
+          '<path d="M-6 28 L28 -6"/>' +
+          '<path d="M-2 40 L40 -2"/>' +
+          '<path d="M10 44 L44 10"/>' +
+          '<path d="M22 46 L46 22"/>' +
+        '</g>' +
+      '</svg>';
+
+    var CARDS = [
+      { kind: 'logo', cls: 'c-logo',
+        real: '<div class="real">' +
+          '<div class="well dark"><div class="logo-lockup">' + LINEAR_ICON +
+            '<span>Linear</span></div></div>' +
+          '<div class="well light"><div class="logo-lockup">' +
+            LINEAR_ICON.replace(/#fff/g, '#101010') + '<span>Linear</span></div></div>' +
+        '</div>' },
+      { kind: 'type', cls: 'c-type',
+        real: '<div class="real">' +
+          '<p class="spec-title">Your brand’s font for slide titles</p>' +
+          '<p class="spec-body">Your brand’s body text appears in paragraphs, bullet points, ' +
+          'captions, and labels throughout your slides, all set in your brand’s typeface.</p>' +
+        '</div>' },
+      { kind: 'palette', cls: 'c-palette',
+        real: function () {
+          return '<div class="real">' + PALETTE.map(function (c) {
+            return '<span style="background:' + c + '"></span>';
+          }).join('') + '</div>';
+        } }
+    ];
+
+    /* ---------------------------------------------------------- build */
+    var stepsEl = document.getElementById('steps');
+    var cardsEl = document.getElementById('cards');
+    var screen  = document.getElementById('screen');
+
+    stepsEl.innerHTML = STEPS.map(function (S, i) {
+      return '<div class="step" data-i="' + i + '">' +
+        '<span class="ic">' +
+          '<i class="ph ' + S.icon + ' pend"></i>' +
+          '<i class="ph-fill ph-check-circle tick"></i>' +
+        '</span>' +
+        '<span class="lbl">' + S.pending + '</span>' +
+      '</div>';
+    }).join('');
+
+    var SCAFFOLD = 'slots';
+    function paint() {
+      cardsEl.innerHTML = CARDS.map(function (C) {
+        var real = (typeof C.real === 'function') ? C.real() : C.real;
+        return '<div class="card ' + C.cls + '" data-kind="' + C.kind + '">' +
+          placeholder(C.kind, SCAFFOLD) + real +
+        '</div>';
+      }).join('');
+      cardEls = {};
+      [].forEach.call(cardsEl.querySelectorAll('.card'), function (c) {
+        cardEls[c.getAttribute('data-kind')] = c;
+      });
+    }
+
+    var stepEls = [].slice.call(stepsEl.querySelectorAll('.step'));
+    var cardEls = {};
+    paint();
+
+    /* ---------------------------------------------------------- run */
+    var timers = [], cursor = -1;
+
+    function stepMs() {
+      return 1900 / parseFloat(getComputedStyle(document.documentElement)
+        .getPropertyValue('--speed')) || 1900;
+    }
+
+    function reset() {
+      timers.forEach(clearTimeout); timers = []; cursor = -1;
+      screen.classList.remove('finished');
+      document.getElementById('hLoading').classList.remove('out');
+      document.getElementById('hDone').classList.add('in');
+      stepEls.forEach(function (el, i) {
+        el.className = 'step';
+        el.querySelector('.lbl').textContent = STEPS[i].pending;
+      });
+      var cards = [].slice.call(cardsEl.querySelectorAll('.card'));
+      cards.forEach(function (c) {
+        c.classList.add('snap');
+        c.classList.remove('resolving', 'resolved');
+      });
+      /* two frames: one for the snapped styles to land, one to re-arm */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          cards.forEach(function (c) { c.classList.remove('snap'); });
+        });
+      });
+      activate(0);
+    }
+
+    function activate(i) {
+      if (i < STEPS.length) stepEls[i].classList.add('active');
+    }
+
+    function complete(i) {
+      var el = stepEls[i];
+      el.classList.remove('active');
+      el.classList.add('done');
+      el.querySelector('.lbl').textContent = STEPS[i].done;
+
+      var kind = STEPS[i].card;
+      if (kind && cardEls[kind]) {
+        var card = cardEls[kind];
+        card.classList.add('resolving');
+        /* every slot fills in turn, then the finished card takes over */
+        timers.push(setTimeout(function () { card.classList.add('resolved'); },
+          fillMs(kind, SCAFFOLD) / speed()));
+      }
+      cursor = i;
+      if (i + 1 < STEPS.length) activate(i + 1);
+      else finish();
+    }
+
+    function finish() {
+      timers.push(setTimeout(function () {
+        document.getElementById('hLoading').classList.add('out');
+        document.getElementById('hDone').classList.remove('in');
+        screen.classList.add('finished');
+        /* hold the finished state, then run it again — without this, every
+           treatment looks identical a few seconds in, because the placeholder
+           is the only part that differs and it is already gone */
+        if (LOOP && MODE === 'auto') {
+          timers.push(setTimeout(runAuto, 2600 / speed()));
+        }
+      }, 500 / speed()));
+    }
+
+    function speed() {
+      return parseFloat(document.documentElement.style.getPropertyValue('--speed')) || 1;
+    }
+
+    /* How long the whole extraction takes, end to end. A real brand fetch is
+       not quick — the screen's own copy says "a few minutes" — so this is a
+       lever rather than the hardcoded 1.9s per step it used to be, and the
+       steps divide it evenly. */
+    var DURATION_MS = 36000;
+
+    function runAuto() {
+      reset();
+      var per = DURATION_MS / STEPS.length;
+      STEPS.forEach(function (S, i) {
+        timers.push(setTimeout(function () { complete(i); }, (i + 1) * per));
+      });
+    }
+
+    var MODE = 'auto', LOOP = true;
+    function start() { if (MODE === 'auto') runAuto(); else reset(); }
+
+    /* manual: click the screen (or press space) to advance one step */
+    screen.addEventListener('click', function (e) {
+      if (MODE !== 'manual') return;
+      if (e.target.closest('.iconbtn') || e.target.closest('.cta')) return;
+      if (cursor + 1 < STEPS.length) complete(cursor + 1);
+      else start();
+    });
+
+    /* ---------------------------------------------------------- controls */
+    var root = document.documentElement;
+
+    function seg(id, fn) {
+      var el = document.getElementById(id);
+      el.addEventListener('click', function (e) {
+        var b = e.target.closest('button');
+        if (!b) return;
+        [].forEach.call(el.querySelectorAll('button'), function (x) {
+          x.setAttribute('aria-pressed', String(x === b));
+        });
+        fn(b.getAttribute('data-v'));
+      });
+    }
+    seg('segMode',  function (v) { MODE = v; start(); });
+    seg('segLoop',  function (v) { LOOP = v === 'on'; if (LOOP) start(); });
+    seg('segWave',  function (v) { WAVE = v; rebuild(); });
+    seg('segCount', function (v) {
+      /* only the RESOLVED card changes — the skeleton is identical at 3 and at
+         6, which is the whole point of the single wash region */
+      PALETTE = PALETTE_POOL.slice(0, parseInt(v, 10));
+      paint();
+      start();
+    });
+    seg('segScaffold', function (v) {
+      SCAFFOLD = v;
+      document.body.setAttribute('data-scaffold', v);
+      rebuild();
+    });
+
+    /* rebuilding regenerates every cell, so dragging a rebuild slider is
+       debounced — otherwise a drag re-creates a few thousand nodes per frame */
+    var rebuildTimer = null;
+    function rebuild() {
+      clearTimeout(rebuildTimer);
+      rebuildTimer = setTimeout(function () { paint(); start(); }, 110);
+    }
+
+    /* one slider: reads live, writes a CSS variable, prints its own value */
+    function lever(id, out, apply, fmt, needsRebuild) {
+      var el = document.getElementById(id), label = document.getElementById(out);
+      function run() {
+        var v = parseFloat(el.value);
+        apply(v);
+        label.textContent = fmt(v);
+        if (needsRebuild) rebuild();
+      }
+      el.addEventListener('input', run);
+      el._run = run;
+      run();
+      return el;
+    }
+
+    var LEVERS = [
+      lever('lvSize',   'vSize',   function (v) { CELL = v; },
+            function (v) { return v + 'px'; }, true),
+      lever('lvAspect', 'vAspect', function (v) { ASPECT = v; },
+            function (v) { return v.toFixed(2) + ':1'; }, true),
+      lever('lvGap',    'vGap',    function (v) {
+              GAP = v; root.style.setProperty('--cell-gap', v + 'px'); },
+            function (v) { return v + 'px'; }, true),
+      lever('lvFloor',   'vFloor',   function (v) { root.style.setProperty('--dmin', v); },
+            function (v) { return v.toFixed(2); }),
+      lever('lvRange',   'vRange',   function (v) { root.style.setProperty('--drange', v); },
+            function (v) { return v.toFixed(2); }),
+      lever('lvSwing',   'vSwing',   function (v) {
+              root.style.setProperty('--oswing', v);
+              /* no swing is genuinely still, so drop the animation entirely */
+              document.body.setAttribute('data-motion', v <= 0.005 ? 'still' : 'run');
+            }, function (v) { return v <= 0.005 ? 'still' : v.toFixed(2); }),
+      lever('lvCycle',   'vCycle',   function (v) { root.style.setProperty('--cycle', v + 'ms'); },
+            function (v) { return (v / 1000).toFixed(2) + 's'; }),
+      lever('lvSpread',  'vSpread',  function (v) { SPREAD = v; },
+            function (v) { return v.toFixed(2) + '×'; }, true),
+      lever('lvGutter',  'vGutter',  function (v) {
+              root.style.setProperty('--gutter', v + 'px');
+              document.body.setAttribute('data-gutter', v);
+            }, function (v) { return v + 'px'; }, true),
+      lever('lvStagger', 'vStagger', function (v) { root.style.setProperty('--stagger', v + 'ms'); },
+            function (v) { return v + 'ms'; }),
+      lever('lvDur',     'vDur',     function (v) { DURATION_MS = v * 1000; },
+            function (v) { return v < 60 ? v + 's'
+              : Math.floor(v / 60) + 'm' + (v % 60 ? ' ' + (v % 60) + 's' : ''); }, true)
+    ];
+
+    document.getElementById('resetLevers').addEventListener('click', function () {
+      LEVERS.forEach(function (el) { el.value = el.getAttribute('value'); el._run(); });
+      start();
+    });
+
+    document.getElementById('replay').addEventListener('click', start);
+    document.addEventListener('keydown', function (e) {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'r' || e.key === 'R') start();
+      if (e.key === ' ' && MODE === 'manual') {
+        e.preventDefault();
+        if (cursor + 1 < STEPS.length) complete(cursor + 1); else start();
+      }
+    });
+
+    start();
+  })();
+  </script>
+</body>
+</html>
