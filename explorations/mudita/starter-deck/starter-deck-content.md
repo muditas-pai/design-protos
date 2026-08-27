@@ -2,9 +2,15 @@
 
 **Type:** Content spec, stable design intent · **Owner:** Mudita · **Updated:** 27 Aug 2026
 
-The ten slides from [starter-deck-spec.md](starter-deck-spec.html), rewritten so each one lands on a
+The ten slides from [starter-deck-spec.md](starter-deck-spec.html), written so each one lands on a
 layout that actually exists, with copy inside the character bands the product uses to pick that
-layout. Read against [grounding.md](grounding.html) for where all of this comes from in the code.
+layout. Read against [grounding.md](grounding.html) for where all of this comes from in the code, and
+[layout-reference.html](layout-reference.html) for what happened when it was generated.
+
+**The copy is instructional.** This is a tutorial someone works through, not a feature tour they
+read. Every point names a real control, says where it is, and says what happens when they press it.
+The reader is expected to be doing each step on this deck as they go, which is what the cover
+promises them.
 
 ---
 
@@ -179,8 +185,20 @@ plain list below two items. Under-writing a slide is how you lose the diagram yo
 
 ## The ten slides
 
-Every string below sits in the S or M band for its slot, verified against the buckets rather than
-estimated. `nodes` is what to write, and it is the hard gate.
+**Instructional, not descriptive.** Every node heading is an action naming a control that actually
+exists in the product, and every body says where that control is and what happens when you press it.
+The reader is expected to be doing this on the deck in front of them, which is what slide 1 promises.
+
+Two rules that fall out of that and govern all the copy below:
+
+- **Name the control exactly as the interface labels it.** `Import PowerPoint`, `Upload files, or
+  links`, `Use a Template`, `Edit with AI`, `Make shorter`, `Redesign slide`, `Invite new members`,
+  `Share`, `Export as PPT`. A paraphrase sends the reader hunting, which is the one thing a tutorial
+  cannot afford. All of these were read off qc1 on 27 Aug 2026 and want re-checking when the UI moves.
+- **Say where it is before you say what it does.** "Left sidebar, under Created by me" costs eleven
+  words and saves the reader the search. Location first, effect second.
+
+Every string is inside the S or M band for its slot, verified rather than estimated.
 
 ---
 
@@ -191,84 +209,97 @@ estimated. `nodes` is what to write, and it is the hard gate.
 | Slot | Copy | Chars |
 |---|---|---|
 | Title | Made here, in four minutes | 26, M |
-| Subtitle | Here is how, and how to do it better than we did. | 48, M |
+| Subtitle | Try every step on this deck as you read. | 40, M |
 
-Deck name in the dashboard grid: **Start here**. Slide layout pattern `single-cover-title`.
+The subtitle changed from a claim to an instruction, and it is the most important edit in this pass.
+It sets the contract for the other nine slides: this is a thing to do, not a thing to read. Without
+it, slide 5 telling you to press a button reads as a description of a button.
+
+Deck name in the dashboard grid: **Start here**.
 
 ---
 
 ### 2 · The mess
 
-`Diagram / Comparison` · `comparison` · **2 nodes** · code **SM**
+`Diagram / Comparison` · `comparison` · **2 nodes** · code **MM**
 
 | Heading | Body |
 |---|---|
-| What you paste | Half-formed notes, an open question, a number you are not sure about. |
-| What you get back | A structured outline you can correct, with your own words still in it. |
+| Type into the prompt box | On Home. Paste notes, drop a file, or add a link. |
+| Get an outline back | Sections in order. You correct it instead of writing it. |
 
-Two nodes is the floor for Comparison, and it is the right count: the slide is an argument with two
-sides, not a list. The left node's body has to *read* like real notes, so keep the ragged phrasing
-when you edit it.
+The left node is now the action and the right node is the payoff, which is a better use of a two
+column layout than two halves of a claim. "You correct it instead of writing it" is the sentence
+doing the persuading, so protect it if anything has to be cut.
 
 ---
 
 ### 3 · Five ways in
 
-`List / Icon List` · variation **Grid Icon Detailed Points** · `list_with_description` · **5 nodes** · code **SM**
+`List / Icon List` · variation **Grid Icon Detailed Points** · `list_with_description` · **5 nodes** · code **MM**
 
 | Heading | Body |
 |---|---|
-| A prompt | One line about the deck you want. Good when you are starting cold. |
-| An outline | Your section headings, in order. We fill them in. |
-| A PowerPoint | Bring an old deck. We rebuild it rather than re-skin it. |
-| Notes and documents | A brief, a transcript, a doc. Paste it or upload it. |
-| A template | Someone has already worked out what a good one covers. |
+| Type a prompt | The box in the middle. One line is enough to start. |
+| Paste an outline | Same box. Your headings, in the order you want them. |
+| Import PowerPoint | The button below. We rebuild the deck, not re-skin it. |
+| Upload files, or links | Inside the box. Briefs, transcripts, docs, a URL. |
+| Use a Template | Next to Import PowerPoint. Starts from a proven shape. |
 
-Five is inside the 5 to 10 range for this variation but one past the comfortable four, so this is the
-first slide to eyeball. If it looks tight, **Grid Icon Multirow Points** takes the same five.
+Slide title becomes **"Five ways in, all on Home"**, which does real work: it tells the reader every
+one of the five is reachable without leaving the screen they are on.
 
-Order is deliberate: prompt first because it costs least, template last because it changes the
-outcome most and last is what stays in the head.
+Three of the five headings are now verbatim button labels. That is deliberate, and it is why this
+slide survives the reader looking away and back.
 
 ---
 
 ### 4 · Brand
 
-`List / Image List` · variation **Horizontal** · `list_with_description` · **3 nodes** · code **SM**
+`List / Image List` · variation **Horizontal** · `list_with_description` · **3 nodes** · code **MM**
 
 | Heading | Body |
 |---|---|
-| Your logo | Light and dark, picked automatically per slide. |
-| Your colors and type | Read from your site, editable when we get it wrong. |
-| Your voice | How you write, so the words sound like you too. |
+| Open Brand kit | Left sidebar, under Created by me. Give us your site. |
+| Fix what we got wrong | Logo, colors, type and voice all stay editable. |
+| Switch it on per deck | The For your brand toggle above the prompt box. |
 
-The three images are the demonstration: **the same slide rendered in three different brands.** If
-they are three unrelated pictures the slide says nothing. Voice is third because it is the one nobody
-expects a brand feature to cover.
+The third node is the one nobody discovers on their own: the brand kit strip sits at the top of the
+prompt box with a live toggle, so a kit can be on for one deck and off for the next. It is the
+single most useful thing on this slide and it was missing from the descriptive version.
+
+Still needs three hand-made images of one layout in three brands.
 
 ---
 
 ### 5 · Edit by asking
 
-`List / Icon List` · variation **Vertical** · `list_with_description` · **3 nodes** · code **MM**
+`List / Icon List` · variation **Vertical** · `list_with_description` · **3 nodes** · code **SM**
 
 | Heading | Body |
 |---|---|
-| Cut this to three points | The slide reflows. Nothing else in the deck moves. |
-| Make the tone less formal | Same facts, different register, same layout. |
-| Add a pricing slide after this | It arrives in your theme, in the right place. |
+| Open Edit with AI | Bottom toolbar of the editor. Try the Write tab. |
+| Press Make shorter | This slide reflows. Nothing else in the deck moves. |
+| Or type your own | Search AI action takes a plain request, five credits. |
 
-The headings are the requests, written the way someone would type them. The bodies all say a version
-of the same thing on purpose: **nothing else moves.** That fear is why people will not try AI editing
-on a deck they have already put work into.
+**This is the slide the whole instructional turn was for.** The old version listed three requests you
+might type. This one walks the reader to a real button, has them press it, and tells them what will
+happen before it does.
 
-"Add a pricing slide after this" is 30 characters, the top of the M band exactly. Do not lengthen it.
+`Make shorter` is the right first action to name: it is unmistakable, instant, and reversible, so the
+reader's first use of AI editing cannot go wrong. Naming the credit cost is honest and stops the
+reader feeling ambushed the second time.
 
 ---
 
 ### 6 · Remix
 
 `List / Image List` · variation **Grid** · `list_with_description` · **6 nodes** · code **SS**
+
+| Slot | Copy |
+|---|---|
+| Title | The first layout is a guess |
+| Subtitle | Edit with AI, then Design, then Redesign slide. |
 
 | Heading | Body |
 |---|---|
@@ -279,10 +310,13 @@ on a deck they have already put work into.
 | Image cards | When each point has a picture. |
 | Timeline | When the points are dates. |
 
-Six is the upper normal, which is why this one is written down to `SS`: the shortest copy in the deck,
-because six nodes need the room. **The six images must show the same content in six layouts**, and
-that only reads if the text inside them stays legible. If it does not, drop to four and lose Metric
-blocks and Timeline.
+At six nodes there is no room for instruction inside the nodes, so **the subtitle carries the whole
+route**: `Edit with AI` → `Design` → `Redesign slide`. That path is not guessable. Remix used to live
+on the slide and now sits three clicks deep behind an AI actions panel, and the editor's own tooltip
+admits it ("Remix & Layout have moved here"). Spelling out the three steps is the difference between
+this feature being found and not.
+
+Nodes stay at `SS`, the shortest copy in the deck, because six of them need the room.
 
 ---
 
@@ -292,10 +326,12 @@ blocks and Timeline.
 
 | Slot | Copy |
 |---|---|
-| Title | Send a link. Learn what landed |
-| Subtitle | Slide 6 lost half the room. That is the one to rewrite. |
+| Title | Slide 6 lost half the room |
+| Subtitle | Press Share, top right, to start seeing this on yours. |
 
-Chart data, percentage of viewers who reached each slide:
+**The title and subtitle swapped jobs.** The conclusion moved up into the title, where it is the
+first thing read, and the subtitle became the instruction. The old arrangement buried the only
+sentence that explains why analytics is worth anything.
 
 ```
  1  ####################  100
@@ -303,33 +339,33 @@ Chart data, percentage of viewers who reached each slide:
  3  ##################     92
  4  #################      88
  5  ################       81
- 6  ########               42   <- the cliff
+ 6  ########               42   <- the cliff the title names
  7  #######                38
  8  #######                35
  9  ######                 33
 10  ######                 31
 ```
 
-Ten categories fits `columnSimpleRectangle`, which takes up to 12. Values stay two digits, well
-inside the 10-character truncation on chart values.
-
-**The subtitle is the slide.** A drop-off chart on its own is a dashboard. A drop-off chart with the
-decision already read out of it is the argument for why analytics matters, and it sets up slide 9.
+`Share` is top right in the editor, next to `Present` and `Export as PPT`. Naming its neighbours is
+worth the characters, because three buttons sit together and only one of them starts analytics.
 
 ---
 
 ### 8 · When your team joins
 
-`List / Icon List` · variation **Icon And Title In Card** · `list_with_description` · **3 nodes** · code **MM**
+`List / Icon List` · variation **Icon And Title In Card** · `list_with_description` · **3 nodes** · code **SM**
 
 | Heading | Body |
 |---|---|
-| Invite your team | They edit, comment and reuse what you built. |
-| One brand kit for everyone | Nobody has to ask what the hex was. |
-| Save a deck as a template | The next person starts from your best one. |
+| Invite new members | Bottom of the left sidebar. They edit and comment. |
+| Share one brand kit | Everyone in the workspace builds from the same one. |
+| Save as template | Editor overflow menu. Your best deck becomes a start. |
 
-Two of the brief's seven sections compressed to two lines, deliberately. Someone with zero decks does
-not have a team problem yet, and full sections would push slide 9 past where anyone reads.
+`Invite new members` is verbatim from the left nav. `Save as template` lives in the editor's overflow
+menu and is close to undiscoverable, so naming the menu is the whole value of that line.
+
+Watch the composition on this one. When generated it came out correct but pinned to the bottom under
+half a slide of white, so it needs a Remix or a manual nudge.
 
 ---
 
@@ -340,16 +376,16 @@ not have a team problem yet, and full sections would push slide 9 past where any
 | Heading | Body |
 |---|---|
 | Make it | Paste what you have. Fix what we got wrong. |
-| Send it | One link, not an attachment. |
-| See where it lost people | Per slide, not just a view count. |
-| Change those two slides | Then send it again. |
+| Send it | Press Share, not Export as PPT. |
+| See the drop-off | Reopen the deck. Analytics sits in the same menu. |
+| Change those two slides | Then send the same link again. |
 
-Four nodes is both the Loop Sequence default and the diagram engine's own default maximum, so this is
-the safest layout in the deck. Loop Sequence over Process because the shape has to close: the point
-is that it comes back around.
+**"Press Share, not Export as PPT" is the most useful line on the slide.** Those two buttons sit
+side by side, the export is the habit people arrive with, and taking the export kills the loop this
+slide is about. Naming the wrong button is what makes the right one stick.
 
-The fourth step is specific on purpose. "Iterate" is advice nobody acts on. "Change those two slides"
-is a task.
+"Then send the same link again" replaces the vaguer close: the link is stable, so the reader does not
+need to redistribute anything, and that is the fact that makes iterating cheap.
 
 ---
 
@@ -360,60 +396,103 @@ is a task.
 | Slot | Copy | Chars |
 |---|---|---|
 | Title | Start with the one you owe | 26, M |
-| Subtitle | Paste your notes. We will take it from there. | 45, M |
+| Subtitle | Go Home, then type into the prompt box. | 39, M |
 
-Closes on the cover's treatment, so the deck reads as a thing rather than a list. One action. Every
-extra link here costs the first one, and eight slides have already offered the rest.
+Closes on the cover's treatment. One action, and it now names where that action happens rather than
+gesturing at it.
 
 ---
 
+## The controls this deck names
+
+Everything the copy points at, so it can be re-checked in one pass when the UI moves. All read off
+qc1 on 27 Aug 2026.
+
+| Slide | Control | Where it is |
+|---|---|---|
+| 2, 3, 10 | The prompt box | Home, centre of the screen |
+| 3 | `Upload files, or links` | Inside the prompt box, bottom left |
+| 3 | `Import PowerPoint` | Quick actions row, below the prompt box |
+| 3 | `Use a Template` | Same row, third from the left |
+| 4 | `Brand kit` | Left sidebar, third item, under `Created by me` |
+| 4 | The brand kit toggle | Strip above the prompt box, reads "For your brand" |
+| 5, 6 | `Edit with AI` | Editor bottom toolbar, third button |
+| 5 | `Write` tab, `Make shorter` | Inside the Edit with AI panel |
+| 5 | `Search AI action` | Bottom of that panel. Five credits per action |
+| 6 | `Design` tab, `Redesign slide` | Same panel, the Remix entry point |
+| 7, 9 | `Share` | Editor top right, between `Present` and `Export as PPT` |
+| 8 | `Invite new members` | Bottom of the left sidebar |
+| 8, 9 | Overflow menu | Editor top right, far right of `Export as PPT` |
+
+**Re-check this table before the deck ships.** A tutorial that points at a button which has moved is
+worse than one that never pointed at all, and Remix has already moved once.
 ## Generating it
 
-Paste this into the create box with Glaze selected, then check slide by slide against the tables
+Paste this into the prompt box with Glaze selected. Then check slide by slide against the tables
 above and Remix the misses.
 
-```
-A ten slide deck called "Start here" that teaches a new Presentations.AI
-user how to get a good deck made. Keep it to exactly ten slides, in this
-order, every heading under 30 characters and every description under 90.
+**Expect the copy not to survive.** When this was run on 27 Aug 2026 the layouts landed on nine of
+ten slides and almost every string came back rewritten and much shorter. On an instructional deck
+that is worse than it sounds: "Left sidebar, under Created by me" is the half that gets cut, and
+without it the line stops being an instruction. See the
+[layout reference](layout-reference.html) for what actually arrived.
 
-1. Cover. Title "Made here, in four minutes", subtitle "Here is how, and
-   how to do it better than we did."
-2. A two column comparison, "We would rather have your mess": what you
-   paste (half-formed notes) versus what you get back (a structured
-   outline you can correct).
-3. Five ways to start, as an icon grid with five points: a prompt, an
-   outline, a PowerPoint, notes and documents, a template. One short line
-   each on when it is the right way in.
-4. Three part image list on setting your brand once: your logo, your
-   colors and type, your voice.
-5. Three example editing requests, as a vertical icon list: cut this to
-   three points, make the tone less formal, add a pricing slide after
-   this. Each with one line saying nothing else in the deck moves.
-6. Six layout options as an image grid, one short line each on when to
-   use it: vertical list, icon grid, process flow, metric blocks, image
-   cards, timeline.
-7. A column chart, "Send a link. Learn what landed", ten slides on the x
-   axis and percentage of viewers reaching each one: 100, 96, 92, 88, 81,
-   42, 38, 35, 33, 31. Subtitle "Slide 6 lost half the room. That is the
-   one to rewrite."
-8. Three cards, "Work that outlives one deck": invite your team, one
-   brand kit for everyone, save a deck as a template.
-9. A four step circular loop, "A deck is finished when it works": make
-   it, send it, see where it lost people, change those two slides.
-10. Closing slide. Title "Start with the one you owe", subtitle "Paste
-    your notes. We will take it from there."
+So generate for structure, then **type the real strings in by hand**. The prompt below is a way to
+get ten correctly shaped slides, not a way to get this copy.
+
+```
+A ten slide tutorial deck called "Start here" that teaches a new
+Presentations.AI user by having them do each step as they read. Keep it to
+exactly ten slides, in this order, every heading under 30 characters and
+every description under 90.
+
+Write every point as an instruction: the heading is an action naming a real
+button, the description says where that button is and what happens. Do not
+paraphrase button names.
+
+1. Cover. Title "Made here, in four minutes", subtitle "Try every step on
+   this deck as you read."
+2. Two column comparison, "We would rather have your mess": typing into the
+   prompt box on Home, versus getting an outline back that you correct
+   instead of write.
+3. Icon grid, five points, titled "Five ways in, all on Home": type a
+   prompt, paste an outline, Import PowerPoint, Upload files or links, Use
+   a Template. Each says where it is on the Home screen.
+4. Three part image list, "Set your brand once": open Brand kit in the left
+   sidebar, fix what we got wrong, switch it on per deck with the toggle
+   above the prompt box.
+5. Three point vertical icon list, "Ask for the change": open Edit with AI
+   in the editor's bottom toolbar, press Make shorter, or type your own
+   into Search AI action.
+6. Six layout options as a grid, title "The first layout is a guess",
+   subtitle "Edit with AI, then Design, then Redesign slide.": vertical
+   list, icon grid, process flow, metric blocks, image cards, timeline.
+   One short line each on when to use it.
+7. A column chart titled "Slide 6 lost half the room", subtitle "Press
+   Share, top right, to start seeing this on yours." Ten slides on the x
+   axis, percentage reaching each: 100, 96, 92, 88, 81, 42, 38, 35, 33, 31.
+8. Three cards, "Work that outlives one deck": Invite new members, share
+   one brand kit, save as template from the editor overflow menu.
+9. A four step circular loop, "A deck is finished when it works": make it,
+   send it with Share not Export as PPT, see the drop-off, change those two
+   slides.
+10. Closing slide. Title "Start with the one you owe", subtitle "Go Home,
+    then type into the prompt box."
 
 Voice: plain, short sentences, "we" language, no hype, no exclamation
-marks, no em dashes. Never use the word AI on any slide.
+marks, no em dashes. Never use the word AI on any slide. Never write
+"mark" when you mean a logo.
 ```
 
-**Check these four first**, in this order, because they are where it will go wrong:
+**Check these five first**, because they are where it went wrong last time:
 
-1. **Slide 6** got a six-up grid and the text inside the six images is still readable.
-2. **Slide 3** got a five-point grid rather than falling back to a plain list.
-3. **Slide 7** got a column chart with ten bars and one series, not a table.
-4. **Slide 9** got a closed loop rather than a left-to-right process.
+1. **Slide 7** got a column chart with ten bars. Last run it produced a one-value gauge and silently
+   discarded nine data points.
+2. **Slide 8** is not pinned to the bottom of the frame under a band of white.
+3. **Slide 6** got a six-up grid with the subtitle's three step route intact.
+4. **Slide 3** got a five point grid rather than falling back to a plain list.
+5. **Every control name survived verbatim.** This is the new one, and it is the check that matters
+   most on an instructional deck.
 
 ---
 
@@ -423,16 +502,22 @@ marks, no em dashes. Never use the word AI on any slide.
   ships. If it is not defensible, cut the title to "Made here" and let the subtitle carry the rest.
 - **"We rebuild it rather than re-skin it"** on slide 3 is the strongest line in the deck and the one
   most likely to overpromise. Check what PPT import does today.
+- **The control names age faster than anything else here.** Remix has already moved once, from the
+  slide into an AI actions panel. Re-check the controls table above before the deck ships, and
+  again whenever the editor toolbar changes.
 - **Node counts are from the live qc1 catalog on 27 Aug 2026.** The bundled repo copy already differs
-  slightly (about 800 variations against 861), so re-check before building rather than trusting these
-  numbers months from now.
+  slightly (about 800 variations against 861), so re-check rather than trusting these months from now.
 - **Slide 4 needs three real brand renders and slide 6 needs six real layout renders.** Neither is
   something the generator can produce. Both are images to make and drop in.
+- **Replace every stock image.** The generated run reached for studio speakers, a green app icon and
+  a paper-craft photo on a blue cutting mat, none related to their slide.
 
 ---
 
 ## Related
 
+- [layout-reference.html](layout-reference.html), the ten slides generated and captured, with a
+  scoreboard of which layout each one landed on
 - [starter-deck-spec.md](starter-deck-spec.html), the design intent these ten slides carry, including
   the action on each slide and the two problems that pattern runs into
 - [grounding.md](grounding.html), where the layout system, the character buckets and the plan gates
