@@ -10,16 +10,17 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
-  body{background:#0b0f14;font-family:Inter,system-ui,sans-serif;color:#171717;-webkit-font-smoothing:antialiased;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+  body{background:#0b0f14;font-family:Inter,system-ui,sans-serif;color:#171717;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow:hidden}
   img{display:block}
 
-  /* ── 1440 x 800 stage, exact Figma frame ── */
-  .stage{position:relative;width:1440px;height:800px;overflow:hidden;background:#fff}
-  .stage > .bg{position:absolute;left:0;top:0;width:1440px;height:800px;object-fit:cover;object-position:top left}
+  /* ── stage fills the viewport, modal only ── */
+  .stage{position:fixed;inset:0;overflow:hidden;background:#f5f6f8}
 
   /* ── overlay ── */
-  .overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
-  .box{position:absolute;left:120px;top:90px;width:1200px;height:620px;background:#fff;border-radius:8px;overflow:hidden}
+  .overlay{position:absolute;inset:0}
+  /* modal keeps its 1200 x 620 Figma geometry, centred, and scales down on small screens */
+  .modal{position:absolute;left:50%;top:50%;width:1200px;height:620px;transform:translate(-50%,-50%) scale(var(--s,1));transform-origin:center}
+  .box{position:absolute;left:0;top:0;width:1200px;height:620px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px rgba(11,15,20,.06),0 24px 60px -20px rgba(11,15,20,.25)}
 
   /* testimonials, 480 x 620 */
   .tm{position:absolute;left:0;top:0;width:480px;height:620px;background:#f5f9ff;overflow:hidden}
@@ -89,15 +90,15 @@
   .lf .fadeL{position:absolute;left:283px;top:5px;width:120px;height:48px;background:linear-gradient(90deg,#fff,rgba(255,255,255,0))}
 
   /* close, 28 at 1330,90 */
-  .close{position:absolute;left:1330px;top:90px;width:28px;height:28px;border-radius:24px;background:#fafafa;border:0;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 1px rgba(26,26,26,.09),0 1px 2px rgba(26,26,26,.09),inset 0 0 0 1px rgba(255,255,255,.8)}
+  .close{position:absolute;left:1210px;top:0;width:28px;height:28px;border-radius:24px;background:#fafafa;border:0;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 1px rgba(26,26,26,.09),0 1px 2px rgba(26,26,26,.09),inset 0 0 0 1px rgba(255,255,255,.8)}
   .close img{width:20px;height:20px}
 </style>
 </head>
 <body>
 <div class="stage">
-  <img class="bg" src="assets/tier1/bg@2x.png" alt="" width="1440" height="800" />
 
   <div class="overlay" id="overlay">
+    <div class="modal" id="modal">
     <div class="box">
 
       <div class="tm">
@@ -181,10 +182,17 @@
 
     </div>
     <button class="close" type="button" aria-label="Close" id="close"><img src="assets/tier1/x.svg" alt="" /></button>
+    </div>
   </div>
 </div>
 
 <script>
+  // Fit the 1200 x 620 modal (plus 28px close gutter) inside the viewport with 24px margins
+  function fit(){
+    const s = Math.min(1, (innerWidth - 48) / 1240, (innerHeight - 48) / 620);
+    document.getElementById('modal').style.setProperty('--s', s.toFixed(4));
+  }
+  fit(); addEventListener('resize', fit);
   document.getElementById('close').addEventListener('click', () => { document.getElementById('overlay').style.display = 'none'; });
   document.getElementById('seg').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
