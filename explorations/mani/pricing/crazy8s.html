@@ -26,11 +26,17 @@
   .dp-title { font-size: 24px; font-weight: 500; line-height: 32px; letter-spacing: -0.02em; margin-bottom: 22px; max-width: 280px; }
   .dp-title .off { background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#0055ED 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
   .dp-title .setup { display: block; font-size: 15px; line-height: 22px; font-weight: 400; color: #6b6b6b; letter-spacing: 0; margin-bottom: 4px; }
-  .dp-pill { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#0055ED 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 12px; white-space: nowrap; }
+  .dp-pill { display: none; align-items: center; gap: 8px; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#0055ED 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 12px; white-space: nowrap; }
+  .is-offer .dp-pill { display: inline-flex; animation: pill-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+  @keyframes pill-in { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: none; } }
   .dp-pill .sep { opacity: 0.5; font-weight: 400; }
   .dp-pill .t { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; opacity: 0.95; font-variant-numeric: tabular-nums; }
-  .dp-banner { background: #e8f0fe; border-radius: 4px 4px 0 0; padding: 10px 16px; text-align: center; font-size: 13px; color: #1c2b3a; }
-  .dp-stack.has-banner .dp-box { border-radius: 0 0 4px 4px; }
+  .dp-title.swap { animation: title-in 0.45s ease both; }
+  @keyframes title-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .dp-banner { display: none; background: #e8f0fe; border-radius: 4px 4px 0 0; padding: 10px 16px; text-align: center; font-size: 13px; color: #1c2b3a; overflow: hidden; }
+  .is-offer .dp-banner { display: block; animation: banner-in 0.45s ease both; }
+  @keyframes banner-in { from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; } to { opacity: 1; max-height: 44px; padding-top: 10px; padding-bottom: 10px; } }
+  .is-offer.has-banner .dp-box { border-radius: 0 0 4px 4px; }
   .dp-feat-item { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 9px 10px; background: transparent; border: 0; border-radius: 6px; cursor: pointer; text-align: left; font-family: inherit; color: #171717; }
   .dp-feat-item:hover { background: #f7f7f7; }
   .dp-feat-item.is-active { background: #f2f2f2; }
@@ -77,6 +83,9 @@
   .btn--gold { border: 0; background: linear-gradient(90deg,#dcb05e 0%,#ca9e4c 30%,#c39643 65%,#b8893a 100%); color: #fff; }
   .btn--gold:hover { filter: brightness(1.05); }
   .btn s { font-weight: 400; opacity: 0.55; margin-right: 6px; font-size: 12px; }
+  .btn .p-off { display: none; }
+  .is-offer .btn .p-base { display: none; }
+  .is-offer .btn .p-off { display: inline-flex; align-items: baseline; animation: title-in 0.45s ease both; }
 
   /* stacked rows (round 1 pick) */
   .v3-row { display: flex; align-items: center; gap: 12px; border: 1px solid rgba(10,25,37,0.1); border-radius: 8px; padding: 7px 14px; }
@@ -91,7 +100,7 @@
 <body>
 <div class="page">
   <h1>Round 2 · Close-offer state: title + 20% off, 8 ways</h1>
-  <p class="page-sub">Branched from the stacked-rows pick. Every variant shows the close-nudge offer: timer pill above the title, 20% off carried in the title, and discounted prices on all three plans (Pro $16, Gold $40, Team $48). Only the title area and offer framing change. Reply with a pick to branch round 3.</p>
+  <p class="page-sub">Branched from the stacked-rows pick. Each modal opens plain (no offer, full prices). Click the close X to trigger the nudge: timer pill animates in above the title, the title swaps to the offer copy, and all three prices drop 20% (Pro $16, Gold $40, Team $48). Reply with a pick to branch round 3.</p>
   <div id="variants"></div>
 </div>
 
@@ -151,12 +160,14 @@
 
   const cr = (n) => '<span class="credits"><i class="ph-fill ph-star-four"></i>' + n + '</span>';
 
+  const price = (base, off) => '<span class="p-base">$' + base + '/mo</span><span class="p-off"><s>$' + base + '</s>$' + off + '/mo</span>';
   const TIER = `
       <div>
-        <div class="v3-row"><span class="v3-plan">Pro</span>${cr('5,000')}<span class="v3-note">credits every month</span><button class="btn"><s>$20</s>$16/mo</button></div>
-        <div class="v3-row v3-row--gold"><span class="v3-plan">Gold</span>${cr('25,000')}<span class="v3-note">credits every month <span class="badge" style="margin-left:8px">Best for you</span></span><button class="btn btn--gold"><s>$50</s>$40/mo</button></div>
-        <div class="v3-row"><span class="v3-plan">Team</span>${cr('30,000')}<span class="v3-note">credits every month <span class="badge" style="margin-left:8px">Unlimited seats</span></span><button class="btn"><s>$60</s>$48/mo</button></div>
+        <div class="v3-row"><span class="v3-plan">Pro</span>${cr('5,000')}<span class="v3-note">credits every month</span><button class="btn">${price(20, 16)}</button></div>
+        <div class="v3-row v3-row--gold"><span class="v3-plan">Gold</span>${cr('25,000')}<span class="v3-note">credits every month <span class="badge" style="margin-left:8px">Best for you</span></span><button class="btn btn--gold">${price(50, 40)}</button></div>
+        <div class="v3-row"><span class="v3-plan">Team</span>${cr('30,000')}<span class="v3-note">credits every month <span class="badge" style="margin-left:8px">Unlimited seats</span></span><button class="btn">${price(60, 48)}</button></div>
       </div>`;
+  const BASE_TITLE = 'Choose the plan that fits your work';
 
   const VARIANTS = [
     { label: '01 · Your mock: fits your work',
@@ -185,16 +196,31 @@
     const node = tpl.content.cloneNode(true);
     const root = node.querySelector('.variant');
     root.querySelector('.v-label').textContent = v.label;
-    root.querySelector('.dp-title').innerHTML = v.title;
+    const title = root.querySelector('.dp-title');
+    title.textContent = BASE_TITLE;
     root.querySelector('.dp-tier-zone').innerHTML = TIER;
+    const stack = root.querySelector('.dp-stack');
     if (v.banner) {
-      const stack = root.querySelector('.dp-stack');
       stack.classList.add('has-banner');
       const bar = document.createElement('div');
       bar.className = 'dp-banner';
       bar.textContent = v.banner;
       stack.insertBefore(bar, stack.querySelector('.dp-box'));
     }
+    // first close attempt triggers the nudge: pill + offer title + discounted prices animate in
+    const timerEl = root.querySelector('.dp-timer');
+    stack.querySelector('.dp-close').addEventListener('click', () => {
+      if (stack.classList.contains('is-offer')) return;
+      stack.classList.add('is-offer');
+      title.innerHTML = v.title;
+      title.classList.add('swap');
+      let left = 59 * 60 + 56;
+      const tick = () => {
+        timerEl.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
+        if (left-- > 0) setTimeout(tick, 1000);
+      };
+      tick();
+    });
 
     const left = root.querySelector('.dp-left');
     FEATURES.forEach((f, i) => {
@@ -252,14 +278,6 @@
 
     host.appendChild(node);
   });
-
-  let secsLeft = 59 * 60 + 56;
-  setInterval(() => {
-    secsLeft = Math.max(0, secsLeft - 1);
-    const m = String(Math.floor(secsLeft / 60)).padStart(2, '0');
-    const s = String(secsLeft % 60).padStart(2, '0');
-    document.querySelectorAll('.dp-timer').forEach((el) => { el.textContent = m + ':' + s; });
-  }, 1000);
 </script>
 
 <div id="agentation-root"></div>
