@@ -28,7 +28,8 @@
   .preview .pv-item.is-on { opacity: 1; transform: scale(1); }
   .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; display: block; }
   .avail { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 10px; padding: 8px 12px 8px 14px; border-radius: 8px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(10,25,37,0.15); font-size: 12.5px; color: #404040; }
-  .avail .tp { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 8px; margin-left: 2px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+  #avail-pills { display: inline-flex; align-items: center; gap: 8px; }
+  .avail .tp { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 8px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
   .avail .tp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .avail .tp--pro  { color: #0055ED; }
   .avail .tp--gold { color: #c9932a; }
@@ -41,8 +42,10 @@
   .tab { position: relative; flex: none; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 6px; border: 1px solid #e5e5e5; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 500; color: #404040; cursor: pointer; white-space: nowrap; overflow: hidden; transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease; }
   .tab i { font-size: 16px; color: #737373; transition: color .2s ease; }
   .tab:hover { border-color: #c9cdd2; color: #171717; transform: translateY(-1px); }
-  .tab.is-on { background: #e8f0fe; border-color: #e8f0fe; color: #0055ED; }
+  .tab.is-on { background: #fff; border-color: #cfe0ff; color: #0055ED; }
   .tab.is-on i { color: #0055ED; }
+  .tab .fill { position: absolute; inset: 0; background: #e8f0fe; transform: scaleX(0); transform-origin: left center; pointer-events: none; }
+  .tab > i, .tab > span { position: relative; z-index: 1; }
 
   .foot-l { margin: auto 0 0 -24px; width: 806px; height: 66px; border-top: 1px solid rgba(10,25,37,0.08); display: flex; align-items: center; gap: 22px; padding: 0 24px; overflow: hidden; }
   .foot-l .loved { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #404040; white-space: nowrap; flex: none; }
@@ -51,7 +54,7 @@
   @keyframes sp-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
   .sp-track { display: inline-flex; align-items: center; gap: 40px; padding-right: 40px; animation: sp-marquee 40s linear infinite; }
   .sp-wrap:hover .sp-track { animation-play-state: paused; }
-  .sp-logo-img { flex: none; height: 26px; width: auto; object-fit: contain; }
+  .sp-logo-img { flex: none; height: 34px; width: auto; max-width: 120px; object-fit: contain; }
 
   /* right */
   .pane-r { width: 370px; flex: none; background: #f5f9ff; border-left: 1px solid rgba(10,25,37,0.06); padding: 54px 20px 0; display: flex; flex-direction: column; }
@@ -162,7 +165,7 @@
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'tab';
-    b.innerHTML = '<i class="ph ' + f.icon + '"></i>' + f.label;
+    b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span>' + f.label + '</span>';
     b.addEventListener('click', () => { manual = true; go(FEATURES.indexOf(f)); });
     tabs.appendChild(b);
     return el;
@@ -172,8 +175,15 @@
   let i = -1;
   let timer = null;
   let manual = false;
+  let fillAnim = null;
+  function runFill(ms) {
+    if (fillAnim) fillAnim.cancel();
+    const fill = tabEls[i].querySelector('.fill');
+    fillAnim = fill.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' });
+  }
   function go(n) {
     clearTimeout(timer);
+    if (fillAnim) { fillAnim.cancel(); fillAnim = null; }
     if (i >= 0) {
       items[i].classList.remove('is-on');
       tabEls[i].classList.remove('is-on');
@@ -192,31 +202,35 @@
     const next = () => { manual = false; go(i + 1); };
     if (v) {
       v.onended = next;
+      const start = () => { runFill(Math.round((v.duration - v.currentTime) * 1000)); };
+      if (v.readyState >= 1 && v.duration) start(); else v.addEventListener('loadedmetadata', start, { once: true });
       const p = v.play();
       if (p && p.catch) p.catch(() => {});
       timer = setTimeout(next, VIDEO_MAX);
     } else {
+      runFill(IMG_HOLD);
       timer = setTimeout(next, IMG_HOLD);
     }
   }
   go(0);
 
   // hover pauses the show, leave resumes it
-  let pausedAt = 0;
   preview.addEventListener('mouseenter', () => {
     clearTimeout(timer);
-    pausedAt = Date.now();
     const v = items[i].querySelector('video');
     if (v) v.pause();
+    if (fillAnim) fillAnim.pause();
   });
   preview.addEventListener('mouseleave', () => {
     const v = items[i].querySelector('video');
     const next = () => { manual = false; go(i + 1); };
+    if (fillAnim) fillAnim.play();
     if (v) {
       v.play().catch(() => {});
       timer = setTimeout(next, Math.min((v.duration - v.currentTime) * 1000 + 500, VIDEO_MAX));
     } else {
-      timer = setTimeout(next, Math.max(800, IMG_HOLD / 2));
+      const left = fillAnim ? Math.max(200, IMG_HOLD - (fillAnim.currentTime || 0)) : IMG_HOLD;
+      timer = setTimeout(next, left);
     }
   });
 
