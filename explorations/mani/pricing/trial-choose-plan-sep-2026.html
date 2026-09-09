@@ -175,42 +175,66 @@
       ? '<video muted playsinline preload="auto">' + (f.mp4Only ? '' : '<source src="' + MEDIA + f.video + '.webm" type="video/webm" />') + '<source src="' + MEDIA + f.video + '.mp4" type="video/mp4" /></video>'
       : '<img src="' + MEDIA + f.img + '" alt=""' + (f.zoom ? ' style="transform:scale(' + f.zoom + ')"' : '') + ' />';
     preview.insertBefore(el, avail);
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tab';
-    b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span>' + f.label + '</span>';
-    b.addEventListener('click', () => { manual = true; go(FEATURES.indexOf(f)); });
-    tabs.appendChild(b);
     return el;
   });
-  const tabEls = Array.from(tabs.children);
+  // tab strip rendered 3 times so it can scroll forward forever (rewinds one copy width when idle)
+  const N = FEATURES.length;
+  const COPIES = 3;
+  for (let c = 0; c < COPIES; c++) {
+    FEATURES.forEach((f, idx) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tab';
+      b.dataset.idx = idx;
+      b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span>' + f.label + '</span>';
+      b.addEventListener('click', () => { manual = true; go(idx); });
+      tabs.appendChild(b);
+    });
+  }
+  const allTabs = Array.from(tabs.children);
+  const tabsFor = (idx) => allTabs.filter((t) => Number(t.dataset.idx) === idx);
+  const copyWidth = () => allTabs[N].offsetLeft - allTabs[0].offsetLeft;
+  let settleTimer = null;
+  function scrollForwardTo(idx) {
+    clearTimeout(settleTimer);
+    const cw = tabs.clientWidth;
+    const cur = tabs.scrollLeft;
+    const cands = tabsFor(idx).map((t) => t.offsetLeft - (cw - t.offsetWidth) / 2);
+    let target = cands.find((x) => x >= cur - 1);
+    if (target === undefined) target = cands[cands.length - 1];
+    tabs.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+    settleTimer = setTimeout(() => {
+      const w = copyWidth();
+      if (tabs.scrollLeft >= w) {
+        tabs.style.scrollBehavior = 'auto';
+        tabs.scrollLeft = tabs.scrollLeft - w;
+        tabs.style.scrollBehavior = '';
+      }
+    }, 700);
+  }
 
   let i = -1;
   let timer = null;
   let manual = false;
-  let fillAnim = null;
+  let fillAnims = [];
   function runFill(ms) {
-    if (fillAnim) fillAnim.cancel();
-    const fill = tabEls[i].querySelector('.fill');
-    fillAnim = fill.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' });
+    fillAnims.forEach((a) => a.cancel());
+    fillAnims = tabsFor(i).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
   }
   function go(n) {
     clearTimeout(timer);
-    if (fillAnim) { fillAnim.cancel(); fillAnim = null; }
+    fillAnims.forEach((a) => a.cancel()); fillAnims = [];
     if (i >= 0) {
       items[i].classList.remove('is-on');
-      tabEls[i].classList.remove('is-on');
-      tabEls[i].querySelector('i').className = 'ph ' + FEATURES[i].icon;
+      tabsFor(i).forEach((t) => { t.classList.remove('is-on'); t.querySelector('i').className = 'ph ' + FEATURES[i].icon; });
       const v = items[i].querySelector('video');
       if (v) { v.pause(); v.currentTime = 0; }
     }
     i = n % items.length;
     const f = FEATURES[i];
     items[i].classList.add('is-on');
-    tabEls[i].classList.add('is-on');
-    tabEls[i].querySelector('i').className = 'ph-fill ' + f.icon;
-    const t = tabEls[i];
-    tabs.scrollTo({ left: i === 0 ? 0 : Math.max(0, t.offsetLeft - (tabs.clientWidth - t.offsetWidth) / 2), behavior: 'smooth' });
+    tabsFor(i).forEach((t) => { t.classList.add('is-on'); t.querySelector('i').className = 'ph-fill ' + f.icon; });
+    scrollForwardTo(i);
     const pill = (d) => '<span class="tp tp--' + d + '">' + d.toUpperCase() + '</span>';
     pills.innerHTML = f.groups
       ? f.groups.map((g) => '<span class="tp-group">' + g.tiers.map(pill).join('') + '<span class="tp-note">' + g.note + '</span></span>').join('<span class="tp-sep"></span>')
@@ -236,17 +260,17 @@
     clearTimeout(timer);
     const v = items[i].querySelector('video');
     if (v) v.pause();
-    if (fillAnim) fillAnim.pause();
+    fillAnims.forEach((a) => a.pause());
   });
   preview.addEventListener('mouseleave', () => {
     const v = items[i].querySelector('video');
     const next = () => { manual = false; go(i + 1); };
-    if (fillAnim) fillAnim.play();
+    fillAnims.forEach((a) => a.play());
     if (v) {
       v.play().catch(() => {});
       timer = setTimeout(next, Math.min((v.duration - v.currentTime) * 1000 + 500, VIDEO_MAX));
     } else {
-      const left = fillAnim ? Math.max(200, IMG_HOLD - (fillAnim.currentTime || 0)) : IMG_HOLD;
+      const left = fillAnims[0] ? Math.max(200, IMG_HOLD - (fillAnims[0].currentTime || 0)) : IMG_HOLD;
       timer = setTimeout(next, left);
     }
   });
