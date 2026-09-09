@@ -61,11 +61,15 @@
 
   /* right */
   .pane-r { width: 370px; flex: none; background: #f5f9ff; border-left: 1px solid rgba(10,25,37,0.06); padding: 54px 20px 0; display: flex; flex-direction: column; }
-  .card { position: relative; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 16px 20px 14px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  .card { position: relative; display: flex; align-items: flex-start; gap: 12px; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 16px 18px 14px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
   .card + .card { margin-top: 12px; }
   .card.is-sel { border-color: #005eff; box-shadow: inset 0 0 0 0.5px #005eff, 0 0 0 3px rgba(0,94,255,0.08); background: #eaf2ff; }
   .card.is-sel .c-cred { background: #d6e5ff; }
   .card:hover:not(.is-sel) { border-color: #c9cdd2; transform: translateY(-1px); box-shadow: 0 4px 12px -6px rgba(10,25,37,0.2); }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #d4d4d4; background: #fff; margin-top: 3px; flex: none; transition: border .15s ease; }
+  .card:hover:not(.is-sel) .radio { border-color: #a3a3a3; }
+  .is-sel .radio { border: 5px solid #005eff; }
+  .c-main { flex: 1; min-width: 0; }
   .c-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .c-name { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
   .c-name i { font-size: 16px; }
@@ -249,21 +253,25 @@
   let plan = new URLSearchParams(location.search).get('plan') || 'pro';
   if (!PLANS.some((p) => p.key === plan)) plan = 'pro';
   cards.innerHTML = PLANS.map((p) =>
-    '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '">' +
+    '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === plan) + '" tabindex="0">' +
+      '<span class="radio"></span><div class="c-main">' +
       '<div class="c-row"><span class="c-name">' + p.name + ' <i class="ph ' + p.icon + '"></i></span>' +
       '<span class="c-price"><s>$' + p.base + '</s>$' + p.off + '/mo</span></div>' +
       '<span class="c-cred"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' +
-    '</div>'
+      '</div></div>'
   ).join('');
   const buyBtn = document.getElementById('btn-buy');
   function select(key) {
     plan = key;
-    cards.querySelectorAll('.card').forEach((c) => c.classList.toggle('is-sel', c.dataset.plan === key));
+    cards.querySelectorAll('.card').forEach((c) => { const on = c.dataset.plan === key; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
     const p = PLANS.find((x) => x.key === key);
     buyBtn.textContent = 'Buy ' + p.name + ' at 20% OFF';
     document.getElementById('plan-note').innerHTML = 'Free for 7 days, then <b>$' + p.off + '/mo</b>. Cancel anytime.';
   }
-  cards.querySelectorAll('.card').forEach((c) => c.addEventListener('click', () => select(c.dataset.plan)));
+  cards.querySelectorAll('.card').forEach((c) => {
+    c.addEventListener('click', () => select(c.dataset.plan));
+    c.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(c.dataset.plan); } });
+  });
   select(plan);
 
   document.getElementById('btn-trial').addEventListener('click', () => { location.href = 'checkout-trial-sep-2026.html?plan=' + plan; });
