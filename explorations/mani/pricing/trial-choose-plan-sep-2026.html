@@ -45,6 +45,8 @@
   .tab { position: relative; flex: none; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 6px; border: 1px solid #e5e5e5; background: #fff; font-family: inherit; font-size: 13.5px; font-weight: 500; color: #404040; cursor: pointer; white-space: nowrap; overflow: hidden; transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease; }
   .tab i { font-size: 16px; color: #737373; transition: color .2s ease; }
   .tab:hover { border-color: #c9cdd2; color: #171717; transform: translateY(-1px); }
+  .tab:focus { outline: none; }
+  .tab:focus-visible { outline: 2px solid #005eff; outline-offset: 2px; }
   .tab.is-on { background: #fff; border-color: #cfe0ff; color: #0055ED; }
   .tab.is-on i { color: #0055ED; }
   .tab .fill { position: absolute; inset: 0; background: #e8f0fe; transform: scaleX(0); transform-origin: left center; pointer-events: none; }
@@ -187,7 +189,7 @@
       b.className = 'tab';
       b.dataset.idx = idx;
       b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span>' + f.label + '</span>';
-      b.addEventListener('click', () => { manual = true; go(idx); });
+      b.addEventListener('click', () => { manual = true; go(idx, b); b.blur(); });
       tabs.appendChild(b);
     });
   }
@@ -195,13 +197,18 @@
   const tabsFor = (idx) => allTabs.filter((t) => Number(t.dataset.idx) === idx);
   const copyWidth = () => allTabs[N].offsetLeft - allTabs[0].offsetLeft;
   let settleTimer = null;
-  function scrollForwardTo(idx) {
+  function scrollForwardTo(idx, el) {
     clearTimeout(settleTimer);
     const cw = tabs.clientWidth;
     const cur = tabs.scrollLeft;
-    const cands = tabsFor(idx).map((t) => t.offsetLeft - (cw - t.offsetWidth) / 2);
-    let target = cands.find((x) => x >= cur - 1);
-    if (target === undefined) target = cands[cands.length - 1];
+    let target;
+    if (el) {
+      target = el.offsetLeft - (cw - el.offsetWidth) / 2;
+    } else {
+      const cands = tabsFor(idx).map((t) => t.offsetLeft - (cw - t.offsetWidth) / 2);
+      target = cands.find((x) => x >= cur - 1);
+      if (target === undefined) target = cands[cands.length - 1];
+    }
     tabs.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
     settleTimer = setTimeout(() => {
       const w = copyWidth();
@@ -221,7 +228,7 @@
     fillAnims.forEach((a) => a.cancel());
     fillAnims = tabsFor(i).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
   }
-  function go(n) {
+  function go(n, el) {
     clearTimeout(timer);
     fillAnims.forEach((a) => a.cancel()); fillAnims = [];
     if (i >= 0) {
@@ -234,7 +241,7 @@
     const f = FEATURES[i];
     items[i].classList.add('is-on');
     tabsFor(i).forEach((t) => { t.classList.add('is-on'); t.querySelector('i').className = 'ph-fill ' + f.icon; });
-    scrollForwardTo(i);
+    scrollForwardTo(i, el);
     const pill = (d) => '<span class="tp tp--' + d + '">' + d.toUpperCase() + '</span>';
     pills.innerHTML = f.groups
       ? f.groups.map((g) => '<span class="tp-group">' + g.tiers.map(pill).join('') + '<span class="tp-note">' + g.note + '</span></span>').join('<span class="tp-sep"></span>')
