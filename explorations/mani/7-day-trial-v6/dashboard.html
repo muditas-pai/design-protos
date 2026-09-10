@@ -109,7 +109,7 @@
     .main::-webkit-scrollbar-thumb { background: rgba(11,15,20,0.12); border-radius: 99px; border: 3px solid var(--surface); }
 
     .topbar {
-      height: 66px; display: flex; align-items: center; justify-content: flex-end;
+      height: 56px; display: flex; align-items: center; justify-content: flex-end;
       gap: 10px; padding: 0 24px; position: sticky; top: 0; z-index: 5;
       background: var(--surface);
     }
@@ -120,8 +120,11 @@
       background: var(--surface); border: 1px solid var(--line);
       border-radius: 8px; padding: 4px 4px 4px 10px; box-shadow: 0 1px 2px var(--d2);
     }
-    .trial-text { font-weight: 500; color: var(--fg); white-space: nowrap; font-size: 14px; }
-    .trial-sub { font-size: 12px; color: #525252; padding-left: 10px; white-space: nowrap; }
+    /* one slot, messages roll through it one by one */
+    .trial-roll { position: relative; height: 20px; overflow: hidden; min-width: 128px; }
+    .trial-text { position: absolute; left: 0; top: 0; font-weight: 500; color: var(--fg); white-space: nowrap; font-size: 14px; line-height: 20px; opacity: 0; transform: translateY(100%); transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
+    .trial-text.is-on { opacity: 1; transform: none; }
+    .trial-text.is-out { opacity: 0; transform: translateY(-100%); }
     .btn-upgrade {
       display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 14px;
       background: linear-gradient(90deg, #0b3fc2 0%, #005eff 55%, #2b7bff 100%); color: #fff; border: 0; border-radius: 6px;
@@ -339,12 +342,12 @@
     <!-- ── Main ────────────────────────────────────────────────────────── -->
     <main class="main">
       <header class="topbar">
-        <div class="trial-wrap">
-          <div class="trial">
-            <span class="trial-text">✨ Credits: 80 left</span>
-            <button class="btn-upgrade"><i class="ph-fill ph-rocket-launch"></i>Start free trial</button>
-          </div>
-          <span class="trial-sub">✨ Expires in 4 days</span>
+        <div class="trial">
+          <span class="trial-roll" id="trial-roll">
+            <span class="trial-text is-on">✨ Credits: 80 left</span>
+            <span class="trial-text">✨ Expires in 4 days</span>
+          </span>
+          <button class="btn-upgrade"><i class="ph-fill ph-rocket-launch"></i>Start free trial</button>
         </div>
         <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
         <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
@@ -780,7 +783,21 @@
         window.openFeaturesModal(label.indexOf('invite') !== -1 ? 'invite' : 'projects');
         return;
       }
-      // Prompt / pills (Upload, Import) / Try Pro / Upgrade badge → modal here.
+      // Topbar pill: credits and expiry roll through the same slot
+    (function () {
+      var items = document.querySelectorAll('#trial-roll .trial-text');
+      if (items.length < 2) return;
+      var cur = 0;
+      setInterval(function () {
+        var next = (cur + 1) % items.length;
+        items[cur].classList.remove('is-on'); items[cur].classList.add('is-out');
+        items[next].classList.remove('is-out'); items[next].classList.add('is-on');
+        var gone = items[cur];
+        setTimeout(function () { gone.classList.remove('is-out'); }, 500);
+        cur = next;
+      }, 3200);
+    })();
+    // Prompt / pills (Upload, Import) / Try Pro / Upgrade badge → modal here.
       var hit = ev.target.closest('.prompt, .prompt-field, .pill, .btn-upgrade, .ws .badge');
       if (hit) {
         ev.preventDefault(); ev.stopPropagation();
