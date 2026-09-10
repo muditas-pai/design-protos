@@ -81,11 +81,14 @@
 
     .topbar { height: 56px; display: flex; align-items: center; justify-content: flex-end;
       gap: 10px; padding: 0 24px; position: sticky; top: 0; z-index: 5; background: var(--surface); }
-    .trial { display: flex; align-items: center; gap: 8px; height: 36px;
-      background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 4px 4px 10px; }
-    .trial-text { font-weight: 500; color: var(--fg); white-space: nowrap; }
-    .btn-upgrade { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 14px;
-      background: var(--brand); color: #fff; border: 0; border-radius: 4px;
+    .trial { display: flex; align-items: center; gap: 10px; height: 40px;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px 4px 4px 10px; box-shadow: 0 1px 2px var(--d2); }
+    .trial-roll { position: relative; height: 20px; overflow: hidden; min-width: 128px; }
+    .trial-text { position: absolute; left: 0; top: 0; font-weight: 500; color: var(--fg); white-space: nowrap; font-size: 14px; line-height: 20px; opacity: 0; transform: translateY(100%); transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
+    .trial-text.is-on { opacity: 1; transform: none; }
+    .trial-text.is-out { opacity: 0; transform: translateY(-100%); }
+    .btn-upgrade { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 14px;
+      background: linear-gradient(90deg, #0b3fc2 0%, #005eff 55%, #2b7bff 100%); color: #fff; border: 0; border-radius: 6px;
       font: 500 14px "Inter", sans-serif; cursor: pointer; white-space: nowrap;
       transition: transform 120ms var(--ease), filter 120ms var(--ease); }
     .btn-upgrade i { font-size: 16px; }
@@ -261,8 +264,11 @@
     <main class="main">
       <header class="topbar">
         <div class="trial">
-          <span class="trial-text">🚀 Start your trial for $0</span>
-          <button class="btn-upgrade" data-upgrade><i class="ph ph-rocket-launch"></i>Try Pro</button>
+          <span class="trial-roll" id="trial-roll">
+            <span class="trial-text is-on">✨ Credits: 80 left</span>
+            <span class="trial-text">✨ Expires in 4 days</span>
+          </span>
+          <button class="btn-upgrade" data-upgrade><i class="ph-fill ph-rocket-launch"></i>Start free trial</button>
         </div>
         <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
         <button class="icon-btn" aria-label="Help"><i class="ph ph-question"></i></button>
@@ -459,9 +465,20 @@
     var cmodal = document.getElementById('cmodal');
     var cframe = document.getElementById('cmodalFrame');
     function openCheckout() {
-      cframe.src = 'checkout-trial.html?ctx=modal&plan=pro&t=' + Date.now();
+      cframe.src = 'pricing.html?embed=1&tier=1&t=' + Date.now();
       cmodal.classList.add('is-open');
     }
+    (function () {
+      var items = document.querySelectorAll('#trial-roll .trial-text'), cur = 0;
+      if (items.length < 2) return;
+      setInterval(function () {
+        var next = (cur + 1) % items.length, gone = items[cur];
+        gone.classList.remove('is-on'); gone.classList.add('is-out');
+        items[next].classList.remove('is-out'); items[next].classList.add('is-on');
+        setTimeout(function () { gone.classList.remove('is-out'); }, 500);
+        cur = next;
+      }, 3200);
+    })();
     function closeCheckout() { cmodal.classList.remove('is-open'); cframe.src = 'about:blank'; }
     document.getElementById('cmodalClose').addEventListener('click', closeCheckout);
     cmodal.addEventListener('click', function (e) { if (e.target === cmodal) closeCheckout(); });
@@ -473,7 +490,8 @@
     // checkout postMessage contract
     window.addEventListener('message', function (e) {
       var t = e.data && e.data.type;
-      if (t === 'trial-checkout-close' || t === 'trial-checkout-back') closeCheckout();
+      if (t === 'trial-plan-selected') cframe.src = (e.data.kind === 'buy' ? 'checkout-buy.html' : 'checkout-trial.html') + '?ctx=modal&' + (e.data.query || 'plan=pro') + '&t=' + Date.now();
+      if (t === 'trial-pricing-close' || t === 'trial-checkout-close' || t === 'trial-checkout-back') closeCheckout();
       if (t === 'trial-open-deck') { closeCheckout(); try { sessionStorage.setItem('v6-plan', 'pro'); } catch (e) {} if (window.parent !== window) window.parent.postMessage({ type: 'v5-open-editor' }, '*'); else location.href = 'editor.html?state=ready'; }
     });
   </script>
