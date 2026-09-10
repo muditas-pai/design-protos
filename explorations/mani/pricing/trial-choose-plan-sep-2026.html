@@ -32,12 +32,7 @@
   .eyebrow { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s cubic-bezier(.2,.8,.2,1); }
   .eyebrow.is-open { grid-template-rows: 1fr; }
   .eyebrow > div { overflow: hidden; }
-  .eb-in { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 20px 0 18px; background: linear-gradient(90deg, #0b3fc2 0%, #005eff 55%, #2b7bff 100%); color: #fff; font-size: 13px; font-weight: 400; }
-  .eb-in i { font-size: 17px; }
-  .eb-in b { font-weight: 600; }
-  .eb-in .eb-txt { flex: 1; white-space: nowrap; }
-  .eb-in .eb-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: #fff; color: #005eff; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
-  .eb-in .eb-tag i { font-size: 12px; }
+  .eb-in { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; background: #e8f0fe; color: #1c2b3a; font-size: 13px; white-space: nowrap; }
   .eyebrow.is-open .eb-in { animation: eb-pop .5s .3s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes eb-pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
   .card.is-flash { animation: c-flash .9s ease; }
@@ -54,7 +49,17 @@
 
   /* left */
   .pane-l { width: 806px; flex: none; padding: 22px 0 0 24px; display: flex; flex-direction: column; }
-  .ttl { font-size: 18px; font-weight: 500; line-height: 1.3; margin-bottom: 12px; }
+  .ttl-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; min-height: 30px; }
+  .ttl { font-size: 18px; font-weight: 500; line-height: 1.3; }
+  .ttl .off { display: none; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#0055ED 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
+  .dp-pill { position: relative; display: none; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#0055ED 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .dp-pill::before { content: ''; position: absolute; left: -3px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; background: #00225C; border-radius: 1px; transform: rotate(45deg); z-index: -1; }
+  .dp-pill .sep { opacity: 0.5; font-weight: 400; }
+  .dp-pill .t { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; opacity: 0.95; font-variant-numeric: tabular-nums; }
+  .dp-pill .t i { font-size: 13px; }
+  body.offer .ttl .off { display: inline; }
+  body.offer .dp-pill { display: inline-flex; animation: pill-in 0.5s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+  @keyframes pill-in { from { opacity: 0; transform: translateX(-10px) scale(0.9); } to { opacity: 1; transform: none; } }
 
   .preview { position: relative; width: 762px; height: 430px; border-radius: 8px; overflow: hidden; background: #0b1fbb; flex: none; box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 8px 24px -12px rgba(10,25,37,0.35); }
   .preview::after { content: ''; position: absolute; inset: 0; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); pointer-events: none; }
@@ -144,12 +149,15 @@
   <div class="dp-stack">
     <div class="dp-box">
       <div class="eyebrow" id="eyebrow" aria-live="polite"><div>
-        <div class="eb-in"><i class="ph-fill ph-gift"></i><span class="eb-txt"><b>Before you go:</b> we took 20% off every plan. The lower price shows below and carries to checkout.</span><span class="eb-tag"><i class="ph-fill ph-seal-percent"></i>20% OFF applied</span></div>
+        <div class="eb-in"><span>🎁</span><span>Before you go, a special discount, just for you for the next hour.</span></div>
       </div></div>
       <div class="dp-body">
 
       <div class="pane-l">
-        <h2 class="ttl">Choose your plan</h2>
+        <div class="ttl-row">
+          <h2 class="ttl" id="ttl">Choose your plan</h2>
+          <div class="dp-pill"><span>20% off</span><span class="sep">·</span><span class="t"><i class="ph-fill ph-clock"></i>Ends in <span id="dp-timer">59:56</span></span></div>
+        </div>
         <div class="preview" id="preview">
           <div class="avail"><span>Available on:</span><span id="avail-pills"></span></div>
         </div>
@@ -355,6 +363,14 @@
     document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
     const p = PLANS.find((x) => x.key === plan);
     buyBtn.textContent = 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
+    document.getElementById('ttl').innerHTML = offer ? 'Choose the plan that fits your work at <span class="off">20% off</span>' : 'Choose your plan';
+  }
+  let timerId = null, left = 59 * 60 + 56;
+  function startTimer() {
+    clearInterval(timerId); left = 59 * 60 + 56;
+    const el = document.getElementById('dp-timer');
+    const tick = () => { el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); if (left > 0) left--; };
+    tick(); timerId = setInterval(tick, 1000);
   }
   function select(key) {
     plan = key;
@@ -364,7 +380,7 @@
     paint();
   }
   function setTier(t) {
-    tier = t; offer = false;
+    tier = t; offer = false; clearInterval(timerId);
     document.getElementById('eyebrow').classList.remove('is-open');
     document.body.classList.remove('is-closed');
     const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
@@ -376,7 +392,7 @@
       // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
       offer = true;
       document.getElementById('eyebrow').classList.add('is-open');
-      paint();
+      paint(); startTimer();
       cards.querySelectorAll('.card').forEach((c) => { c.classList.remove('is-flash'); void c.offsetWidth; c.classList.add('is-flash'); });
       return;
     }
