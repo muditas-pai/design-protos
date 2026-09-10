@@ -16,7 +16,41 @@
   .dp-stack { position: relative; display: flex; gap: 10px; align-items: flex-start; }
   .dp-close { transition: background 0.15s ease; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 0; border-radius: 24px; cursor: pointer; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.18); color: #171717; font-size: 15px; }
   .dp-close:hover { background: #ececec; }
-  .dp-box { position: relative; width: 1176px; height: 620px; background: #fff; border-radius: 4px; overflow: hidden; flex: none; display: flex; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 40px -16px rgba(10,25,37,0.3); }
+  .dp-box { position: relative; width: 1176px; background: #fff; border-radius: 4px; overflow: hidden; flex: none; display: flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 40px -16px rgba(10,25,37,0.3); }
+  .dp-body { display: flex; height: 620px; }
+
+  /* proto switch: tier 1 (trial + 20% off) vs tier 2 (no trial, full price) */
+  .tier-bar { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 20; display: inline-flex; gap: 3px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 6px 18px -6px rgba(10,25,37,0.35); }
+  .tier-bar button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 150px; padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; font-family: inherit; color: #525252; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .tier-bar button b { font-size: 12.5px; font-weight: 600; }
+  .tier-bar button small { font-size: 10.5px; font-weight: 400; color: #8a8a8a; }
+  .tier-bar button:hover:not(.is-on) { background: #f0f2f5; }
+  .tier-bar button.is-on { background: #171717; color: #fff; }
+  .tier-bar button.is-on small { color: rgba(255,255,255,0.65); }
+
+  /* "before you go" eyebrow: slides in above the modal body when tier 2 is closed */
+  .eyebrow { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s cubic-bezier(.2,.8,.2,1); }
+  .eyebrow.is-open { grid-template-rows: 1fr; }
+  .eyebrow > div { overflow: hidden; }
+  .eb-in { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 20px 0 18px; background: linear-gradient(90deg, #0b3fc2 0%, #005eff 55%, #2b7bff 100%); color: #fff; font-size: 13px; font-weight: 400; }
+  .eb-in i { font-size: 17px; }
+  .eb-in b { font-weight: 600; }
+  .eb-in .eb-txt { flex: 1; white-space: nowrap; }
+  .eb-in .eb-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: #fff; color: #005eff; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+  .eb-in .eb-tag i { font-size: 12px; }
+  .eyebrow.is-open .eb-in { animation: eb-pop .5s .3s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes eb-pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .card.is-flash { animation: c-flash .9s ease; }
+  @keyframes c-flash { 30% { box-shadow: 0 0 0 4px rgba(0,94,255,0.25); } }
+
+  body.tier2 #btn-trial, body.tier2 #note-trial, body.tier2 .or { display: none; }
+  body.tier2 .ctas { margin-top: 24px; }
+  body.tier2:not(.offer) .c-price s { display: none; }
+
+  .closed-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff; font-size: 14px; }
+  .closed-note button { padding: 9px 18px; border: 0; border-radius: 4px; background: #fff; color: #171717; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  body.is-closed .dp-stack { display: none; }
+  body.is-closed .closed-note { display: flex; }
 
   /* left */
   .pane-l { width: 806px; flex: none; padding: 22px 0 0 24px; display: flex; flex-direction: column; }
@@ -100,9 +134,19 @@
 </head>
 <body>
 
+<div class="tier-bar" role="tablist" aria-label="Pricing tier">
+  <button type="button" data-tier="1" class="is-on"><b>Tier 1</b><small>7 day trial + 20% off</small></button>
+  <button type="button" data-tier="2"><b>Tier 2</b><small>No trial, full price</small></button>
+</div>
+
 <div class="backdrop">
+  <div class="closed-note"><span>Modal closed.</span><button type="button" id="reopen">Reopen</button></div>
   <div class="dp-stack">
     <div class="dp-box">
+      <div class="eyebrow" id="eyebrow" aria-live="polite"><div>
+        <div class="eb-in"><i class="ph-fill ph-gift"></i><span class="eb-txt"><b>Before you go:</b> we took 20% off every plan. The lower price shows below and carries to checkout.</span><span class="eb-tag"><i class="ph-fill ph-seal-percent"></i>20% OFF applied</span></div>
+      </div></div>
+      <div class="dp-body">
 
       <div class="pane-l">
         <h2 class="ttl">Choose your plan</h2>
@@ -130,6 +174,7 @@
         </div>
       </div>
 
+      </div>
     </div>
     <button type="button" class="dp-close" id="dp-close" aria-label="Close"><i class="ph ph-x"></i></button>
   </div>
@@ -299,13 +344,45 @@
       '</div></div>'
   ).join('');
   const buyBtn = document.getElementById('btn-buy');
+  // tier 1: trial + 20% off on buy. tier 2: no trial, full price until the "before you go" offer.
+  const params = new URLSearchParams(location.search);
+  let tier = params.get('tier') === '2' ? 2 : 1;
+  let offer = false; // tier 2 only: set when the user tries to close
+  const hasOff = () => tier === 1 || offer;
+  function paint() {
+    document.body.classList.toggle('tier2', tier === 2);
+    document.body.classList.toggle('offer', offer);
+    document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
+    const p = PLANS.find((x) => x.key === plan);
+    buyBtn.textContent = 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
+  }
   function select(key) {
     plan = key;
     cards.querySelectorAll('.card').forEach((c) => { const on = c.dataset.plan === key; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
     const p = PLANS.find((x) => x.key === key);
-    buyBtn.textContent = 'Buy ' + p.name + ' at 20% OFF';
     document.getElementById('note-trial').textContent = 'No discount, full price $' + p.base + '/mo after the trial';
+    paint();
   }
+  function setTier(t) {
+    tier = t; offer = false;
+    document.getElementById('eyebrow').classList.remove('is-open');
+    document.body.classList.remove('is-closed');
+    const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
+    paint();
+  }
+  document.querySelectorAll('.tier-bar button').forEach((b) => b.addEventListener('click', () => setTier(Number(b.dataset.tier))));
+  document.getElementById('dp-close').addEventListener('click', () => {
+    if (tier === 2 && !offer) {
+      // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
+      offer = true;
+      document.getElementById('eyebrow').classList.add('is-open');
+      paint();
+      cards.querySelectorAll('.card').forEach((c) => { c.classList.remove('is-flash'); void c.offsetWidth; c.classList.add('is-flash'); });
+      return;
+    }
+    document.body.classList.add('is-closed');
+  });
+  document.getElementById('reopen').addEventListener('click', () => setTier(tier));
   cards.querySelectorAll('.card').forEach((c) => {
     c.addEventListener('click', () => select(c.dataset.plan));
     c.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(c.dataset.plan); } });
@@ -313,7 +390,7 @@
   select(plan);
 
   document.getElementById('btn-trial').addEventListener('click', () => { location.href = 'checkout-trial-sep-2026.html?plan=' + plan; });
-  buyBtn.addEventListener('click', () => { location.href = 'checkout-buy-sep-2026.html?plan=' + plan; });
+  buyBtn.addEventListener('click', () => { location.href = 'checkout-buy-sep-2026.html?plan=' + plan + (tier === 2 ? '&off=' + (offer ? 20 : 0) : ''); });
 </script>
 
 <div id="agentation-root"></div>
