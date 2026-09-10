@@ -3883,6 +3883,25 @@
     #plan-frame.is-open, #co-frame.is-open { display: block; }
     #plan-frame iframe, #co-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
   </style>
+  <!-- v6: editor blocker for free users. Sits under the plan picker (z 700). -->
+  <style>
+    #editor-lock { position: fixed; inset: 0; z-index: 600; display: none; align-items: center; justify-content: center; background: rgba(20,22,28,0.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    body.editor-locked #editor-lock { display: flex; }
+    .el-card { width: 380px; padding: 28px 28px 24px; background: #fff; border-radius: 12px; text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,0.3); font-family: Inter, system-ui, sans-serif; }
+    .el-ic { width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 999px; background: #eaf2ff; color: #005eff; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    .el-t { font-size: 17px; font-weight: 600; color: #171717; margin: 0 0 6px; }
+    .el-s { font-size: 13px; color: #737373; margin: 0 0 18px; line-height: 1.45; }
+    .el-btn { width: 100%; height: 40px; border: 0; border-radius: 6px; background: #171717; color: #fff; font: 500 13.5px/1 Inter, system-ui, sans-serif; cursor: pointer; }
+    .el-btn:hover { background: #000; }
+  </style>
+  <div id="editor-lock" aria-hidden="true">
+    <div class="el-card">
+      <div class="el-ic"><i class="ph-fill ph-lock-simple"></i></div>
+      <p class="el-t">Your slides are ready</p>
+      <p class="el-s">Choose a plan to continue editing this deck. Start a 7 day free trial or buy a plan at 20% off.</p>
+      <button type="button" class="el-btn" id="editor-lock-btn">Choose a plan</button>
+    </div>
+  </div>
   <div id="plan-frame" aria-hidden="true">
     <iframe id="plan-frame-if" src="" title="Choose your plan"></iframe>
   </div>
@@ -4137,10 +4156,20 @@
       var offerClaimed = false; // tier 2: set once the user takes the 20% offer
       var pf = document.getElementById('plan-frame');
       var pfi = document.getElementById('plan-frame-if');
-      function openTrialModal() {
-        pfi.src = 'pricing.html?embed=1&tier=' + TIER + '&t=' + Date.now();
+      function openTrialModal(title) {
+        pfi.src = 'pricing.html?embed=1&tier=' + TIER + (typeof title === 'string' ? '&title=' + encodeURIComponent(title) : '') + '&t=' + Date.now();
         pf.classList.add('is-open'); pf.setAttribute('aria-hidden', 'false');
       }
+      // Free user reaches the editor (Continue to Editor, exit slideshow, deep link):
+      // block it with the plan picker. Unlocked by startTrial.
+      var LOCK_TITLE = 'Choose a plan to continue editing';
+      function lockEditor() {
+        document.body.classList.add('editor-locked');
+        if (new URLSearchParams(location.search).get('modal') !== 'checkout') openTrialModal(LOCK_TITLE);
+      }
+      var baseEnterFullEditor = enterFullEditor;
+      enterFullEditor = function () { baseEnterFullEditor(); if (!trialActive()) lockEditor(); };
+      document.getElementById('editor-lock-btn').addEventListener('click', function () { openTrialModal(LOCK_TITLE); });
       function closeTrialModal() { pf.classList.remove('is-open'); pf.setAttribute('aria-hidden', 'true'); pfi.src = 'about:blank'; maybeReturnToDeck(); }
       window.openTrialModal = openTrialModal;
       tm.querySelectorAll('[data-tm-close]').forEach(function (b) { b.addEventListener('click', closeTrialModal); });
@@ -4389,6 +4418,7 @@
       function startTrial(plan, mode) {
         trialPlan = plan;
         document.body.classList.add('trial-active');
+        document.body.classList.remove('editor-locked');
         dr.classList.remove('is-open'); // drop the deck-ready sheet if it is under us
         var p = CO_PLANS[plan];
         var buy = mode === 'buy';
