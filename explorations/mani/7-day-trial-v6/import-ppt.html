@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>7 Day Trial v6 · Import PowerPoint</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* Import from PPT: the create flow reads the file, then stops a free user at the slide limit */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #171717; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  .stage { position: relative; max-width: 900px; margin: 0 auto; min-height: 100vh; padding: 56px 32px 40px; display: flex; flex-direction: column; }
+  .close { position: fixed; top: 18px; right: 20px; width: 34px; height: 34px; border-radius: 999px; border: 0; background: #fff; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.12); cursor: pointer; font-size: 16px; color: #171717; display: grid; place-items: center; }
+  .close:hover { background: #f5f5f5; }
+
+  /* user bubble: the uploaded file */
+  .bubble { align-self: flex-end; background: #f3f4f6; border-radius: 14px; padding: 8px; animation: rise .4s cubic-bezier(.2,.8,.2,1) both; }
+  .file { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 10px; padding: 10px 14px 10px 10px; min-width: 280px; }
+  .file-ic { position: relative; width: 34px; height: 40px; border-radius: 6px; background: #f5f5f5; border: 1px solid #e5e5e5; display: grid; place-items: center; font-size: 9px; font-weight: 600; color: #737373; }
+  .file-ic .ok { position: absolute; top: -8px; left: -8px; width: 16px; height: 16px; border-radius: 999px; background: #16a34a; color: #fff; font-size: 11px; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+  .file-name { font-size: 13px; color: #171717; }
+
+  /* assistant steps */
+  .steps { margin-top: 44px; display: flex; flex-direction: column; gap: 14px; }
+  .step { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #171717; opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .3s ease; }
+  .step.is-in { opacity: 1; transform: none; }
+  .step .dot { width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; color: #fff; background: #16a34a; }
+  .step .dot.spin { background: transparent; border: 2px solid #d4d4d4; border-top-color: #171717; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* the limit card */
+  .limit { margin-top: auto; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 14px; padding: 18px 20px 6px; box-shadow: 0 12px 32px -16px rgba(10,25,37,0.25), 0 1px 2px rgba(10,25,37,0.06); opacity: 0; transform: translateY(16px); transition: opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
+  .limit.is-in { opacity: 1; transform: none; }
+  .limit-t { font-size: 15px; font-weight: 500; margin-bottom: 8px; }
+  .limit-t b { font-weight: 600; }
+  .opt { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-top: 1px solid rgba(11,15,20,0.07); cursor: pointer; background: none; border-left: 0; border-right: 0; border-bottom: 0; width: 100%; text-align: left; font-family: inherit; }
+  .opt:first-of-type { border-top: 0; }
+  .opt-ic { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(11,15,20,0.09); background: #fafafa; display: grid; place-items: center; font-size: 16px; flex-shrink: 0; }
+  .opt-l { font-size: 15px; color: #171717; }
+  .opt-s { font-size: 15px; color: #8a8a8a; }
+  .opt-s::before { content: '•'; margin: 0 8px; color: #d4d4d4; }
+  .opt-tag { margin-left: auto; padding: 3px 9px; border-radius: 999px; background: #e8f0fe; color: #0055ED; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; }
+  .opt:hover .opt-l { color: #005eff; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<button type="button" class="close" id="close" aria-label="Close"><i class="ph ph-x"></i></button>
+<div class="stage">
+  <div class="bubble">
+    <div class="file">
+      <span class="file-ic">.pptx<span class="ok"><i class="ph-bold ph-check"></i></span></span>
+      <span class="file-name" id="file-name">chetan deck.pptx</span>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step" id="s1"><span class="dot spin"></span>Uploaded your content</div>
+    <div class="step" id="s2"><span class="dot spin"></span>Read your slides</div>
+  </div>
+
+  <div class="limit" id="limit">
+    <div class="limit-t">Your PPT has <b id="n-slides">24</b> slides. Free Plan supports up to <b>15</b> slides.</div>
+    <button type="button" class="opt" data-plan="pro"><span class="opt-ic">🚀</span><span class="opt-l">Get Pro Plan</span><span class="opt-s">Up to 60 slides</span><span class="opt-tag">RECOMMENDED</span></button>
+    <button type="button" class="opt" data-plan="gold"><span class="opt-ic">🏆</span><span class="opt-l">Get Gold Plan</span><span class="opt-s">Up to 99 slides</span></button>
+    <button type="button" class="opt" data-plan="team"><span class="opt-ic">👥</span><span class="opt-l">Get Team Plan</span><span class="opt-s">Up to 99 slides, shared with your team</span></button>
+    <button type="button" class="opt" data-free><span class="opt-ic">📄</span><span class="opt-l">Continue with Free Plan</span><span class="opt-s">Use only first 15 slides</span></button>
+  </div>
+</div>
+
+<script>
+  // Steps tick in, then the limit card rises. Options hand off to the host (dashboard / index).
+  const IN_FRAME = window.parent !== window;
+  const q = new URLSearchParams(location.search);
+  if (q.get('file')) document.getElementById('file-name').textContent = q.get('file');
+  if (q.get('slides')) document.getElementById('n-slides').textContent = q.get('slides');
+  const done = (el) => { el.classList.add('is-in'); const d = el.querySelector('.dot'); d.classList.remove('spin'); d.innerHTML = '<i class="ph-bold ph-check"></i>'; };
+  const s1 = document.getElementById('s1'), s2 = document.getElementById('s2');
+  setTimeout(() => s1.classList.add('is-in'), 250);
+  setTimeout(() => done(s1), 1000);
+  setTimeout(() => s2.classList.add('is-in'), 1150);
+  setTimeout(() => done(s2), 2100);
+  setTimeout(() => document.getElementById('limit').classList.add('is-in'), 2500);
+
+  const send = (msg, fallback) => { if (IN_FRAME) window.parent.postMessage(msg, '*'); else location.href = fallback; };
+  document.querySelectorAll('.opt[data-plan]').forEach((b) => b.addEventListener('click', () => {
+    send({ type: 'v6-import-plan', plan: b.dataset.plan }, 'pricing.html?plan=' + b.dataset.plan);
+  }));
+  document.querySelector('.opt[data-free]').addEventListener('click', () => {
+    send({ type: 'v6-import-continue' }, 'editor.html');
+  });
+  document.getElementById('close').addEventListener('click', () => send({ type: 'trial-pricing-close' }, 'dashboard.html'));
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
