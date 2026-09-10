@@ -307,11 +307,12 @@
     const next = () => { manual = false; go(i + 1); };
     if (v) {
       v.onended = next;
-      const start = () => { runFill(Math.round((v.duration - v.currentTime) * 1000)); };
-      if (v.readyState >= 1 && v.duration) start(); else v.addEventListener('loadedmetadata', start, { once: true });
+      // fill + safety timer arm only once the clip is really playing, so a slow
+      // load never skips a clip or runs the bar ahead of the video
+      const start = () => { runFill(Math.round((v.duration - v.currentTime) * 1000)); timer = setTimeout(next, VIDEO_MAX); };
+      if (!v.paused && v.readyState >= 3) start(); else v.addEventListener('playing', start, { once: true });
       const p = v.play();
       if (p && p.catch) p.catch(() => {});
-      timer = setTimeout(next, VIDEO_MAX);
     } else {
       runFill(IMG_HOLD);
       timer = setTimeout(next, IMG_HOLD);
@@ -332,7 +333,7 @@
     fillAnims.forEach((a) => a.play());
     if (v) {
       v.play().catch(() => {});
-      timer = setTimeout(next, Math.min((v.duration - v.currentTime) * 1000 + 500, VIDEO_MAX));
+      timer = setTimeout(next, isFinite(v.duration) ? Math.min((v.duration - v.currentTime) * 1000 + 500, VIDEO_MAX) : VIDEO_MAX);
     } else {
       const left = fillAnims[0] ? Math.max(200, IMG_HOLD - (fillAnims[0].currentTime || 0)) : IMG_HOLD;
       timer = setTimeout(next, left);
