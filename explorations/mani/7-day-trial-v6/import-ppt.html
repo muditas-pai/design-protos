@@ -165,7 +165,7 @@
       '<div class="lim">' + p.limit + '</div>' +
       '<span class="cr"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' +
       '<div class="ok"><i class="ph-fill ph-check-circle"></i>Imports all ' + N + ' slides</div>' +
-      '<span class="price">$' + p.off + '<small>/mo</small></span><div class="yr">$' + p.yr + ' billed yearly</div>' +
+      '<span class="price">$' + p.base + '<small>/mo</small></span><div class="yr">$' + (p.base * 12) + ' billed yearly</div>' +
       '<button type="button" class="btn sm' + (p.key === 'pro' ? '' : ' ghost') + '" data-buy="' + p.key + '">Buy ' + p.name + '</button>' +
       '</div>').join('') + '</div>';
     buyBtn.style.display = 'none'; // each column buys itself
@@ -179,7 +179,7 @@
       ['<i class="ph ph-star-four"></i>Credits', (c) => '<span class="cr"><i class="ph-fill ph-star-four"></i>' + c.credits + '</span>'],
       ['<i class="ph ph-sparkle"></i>AI model', (c) => c.ai],
       ['<i class="ph ph-export"></i>Exports', (c) => '<i class="ph-fill ph-check-circle" style="color:#16a34a"></i>'],
-      ['<i class="ph ph-tag"></i>Price', (c) => '<span class="price">$' + c.off + '<small>/mo</small></span>'],
+      ['<i class="ph ph-tag"></i>Price', (c) => '<span class="price">$' + c.base + '<small>/mo</small></span>'],
     ];
     body.innerHTML = '<table><tr><th></th>' + th + '</tr>' + rows.map((r) => '<tr><td>' + r[0] + '</td>' + cols.map((c) => cell(c, r[1](c))).join('') + '</tr>').join('') + '</table>';
     body.querySelectorAll('td[data-plan]').forEach((td) => td.addEventListener('click', () => select(td.dataset.plan)));
@@ -198,7 +198,8 @@
   select(plan === 'free' && V !== 'table' ? 'pro' : plan);
 
   const send = (msg, fallback) => { if (IN_FRAME) window.parent.postMessage(msg, '*'); else location.href = fallback; };
-  const buy = (key) => send({ type: 'trial-plan-selected', kind: 'buy', plan: key, query: 'plan=' + key }, 'checkout-buy.html?plan=' + key);
+  // no offer in the import flow: checkout at full price
+  const buy = (key) => send({ type: 'trial-plan-selected', kind: 'buy', plan: key, query: 'plan=' + key + '&off=0' }, 'checkout-buy.html?plan=' + key + '&off=0');
   body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); buy(b.dataset.buy); }));
   buyBtn.addEventListener('click', () => { if (plan === 'free') send({ type: 'v6-import-continue' }, 'editor.html'); else buy(plan); });
   document.getElementById('btn-free').addEventListener('click', () => send({ type: 'v6-import-continue' }, 'editor.html'));
