@@ -1292,6 +1292,10 @@
 
     <!-- CANVAS AREA — flex-1 grey area containing slide + floater + minipropertypanel -->
     <div class="flex-1 relative">
+      <div id="lock-stage" aria-hidden="true">
+        <button type="button" id="lock-exit">Exit</button>
+        <iframe id="lock-frame" src="" title="Choose a plan to continue editing"></iframe>
+      </div>
       <!-- Slide centered in the visible canvas. Positioning (top/left/
            bottom/right) is handled in .canvas-slide-wrap CSS so the right
            offset can animate without Tailwind's inset-0 fighting in the
@@ -3883,25 +3887,19 @@
     #plan-frame.is-open, #co-frame.is-open { display: block; }
     #plan-frame iframe, #co-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
   </style>
-  <!-- v6: editor blocker for free users. Sits under the plan picker (z 700). -->
+  <!-- v6: editor blocker for free users. Chrome hidden, filmstrip stays, the
+       plan picker sits on a white canvas with an Exit button (see #lock-stage). -->
   <style>
-    #editor-lock { position: fixed; inset: 0; z-index: 600; display: none; align-items: center; justify-content: center; background: rgba(20,22,28,0.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-    body.editor-locked #editor-lock { display: flex; }
-    .el-card { width: 380px; padding: 28px 28px 24px; background: #fff; border-radius: 12px; text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,0.3); font-family: Inter, system-ui, sans-serif; }
-    .el-ic { width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 999px; background: #eaf2ff; color: #005eff; display: flex; align-items: center; justify-content: center; font-size: 22px; }
-    .el-t { font-size: 17px; font-weight: 600; color: #171717; margin: 0 0 6px; }
-    .el-s { font-size: 13px; color: #737373; margin: 0 0 18px; line-height: 1.45; }
-    .el-btn { width: 100%; height: 40px; border: 0; border-radius: 6px; background: #171717; color: #fff; font: 500 13.5px/1 Inter, system-ui, sans-serif; cursor: pointer; }
-    .el-btn:hover { background: #000; }
+    body.editor-locked #topMenuBar, body.editor-locked #chat-panel { display: none !important; }
+    body.editor-locked #editorBody { height: 100vh !important; background: #f3f4f6; }
+    body.editor-locked #thumbs { opacity: .55; pointer-events: none; }
+    body.editor-locked #editorBody > .flex-1.relative > *:not(#lock-stage) { display: none !important; }
+    #lock-stage { display: none; position: absolute; inset: 12px 12px 12px 0; background: #fff; border-radius: 8px; box-shadow: 0 0 0 1px rgba(10,25,37,0.06); overflow: hidden; }
+    body.editor-locked #lock-stage { display: block; }
+    #lock-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    #lock-exit { position: absolute; top: 16px; right: 16px; z-index: 2; height: 34px; padding: 0 16px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; color: #171717; font: 500 13px/1 Inter, system-ui, sans-serif; cursor: pointer; box-shadow: 0 1px 3px rgba(10,25,37,0.08); }
+    #lock-exit:hover { background: #f5f5f5; }
   </style>
-  <div id="editor-lock" aria-hidden="true">
-    <div class="el-card">
-      <div class="el-ic"><i class="ph-fill ph-lock-simple"></i></div>
-      <p class="el-t">Your slides are ready</p>
-      <p class="el-s">Choose a plan to continue editing this deck. Start a 7 day free trial or buy a plan at 20% off.</p>
-      <button type="button" class="el-btn" id="editor-lock-btn">Choose a plan</button>
-    </div>
-  </div>
   <div id="plan-frame" aria-hidden="true">
     <iframe id="plan-frame-if" src="" title="Choose your plan"></iframe>
   </div>
@@ -4163,13 +4161,17 @@
       // Free user reaches the editor (Continue to Editor, exit slideshow, deep link):
       // block it with the plan picker. Unlocked by startTrial.
       var LOCK_TITLE = 'Choose a plan to continue editing';
+      var lfi = document.getElementById('lock-frame');
       function lockEditor() {
         document.body.classList.add('editor-locked');
-        if (new URLSearchParams(location.search).get('modal') !== 'checkout') openTrialModal(LOCK_TITLE);
+        lfi.src = 'pricing.html?embed=1&bare=1&tier=' + TIER + '&title=' + encodeURIComponent(LOCK_TITLE) + '&t=' + Date.now();
       }
+      document.getElementById('lock-exit').addEventListener('click', function () {
+        if (window.parent !== window) window.parent.postMessage({ type: 'v5-home' }, '*');
+        else location.href = 'dashboard.html';
+      });
       var baseEnterFullEditor = enterFullEditor;
       enterFullEditor = function () { baseEnterFullEditor(); if (!trialActive()) lockEditor(); };
-      document.getElementById('editor-lock-btn').addEventListener('click', function () { openTrialModal(LOCK_TITLE); });
       function closeTrialModal() { pf.classList.remove('is-open'); pf.setAttribute('aria-hidden', 'true'); pfi.src = 'about:blank'; maybeReturnToDeck(); }
       window.openTrialModal = openTrialModal;
       tm.querySelectorAll('[data-tm-close]').forEach(function (b) { b.addEventListener('click', closeTrialModal); });
@@ -4306,10 +4308,10 @@
           var off = /off=20/.test(e.data.query || '') ? 20 : (/off=0/.test(e.data.query || '') ? 0 : null);
           if (off === 20) offerClaimed = true;
           closeTrialModalSilent();
-          returnToDeck = true; // closing the checkout brings the plan picker back
+          returnToDeck = e.source !== lfi.contentWindow; // closing the checkout brings the plan picker back (not for the lock stage, it stays)
           openCheckout(e.data.plan || 'pro', e.data.kind === 'buy' ? 'buy' : 'trial', off);
         }
-        if (e.data.type === 'trial-pricing-close') {
+        if (e.data.type === 'trial-pricing-close' && e.source !== lfi.contentWindow) {
           closeTrialModal();
           if (document.getElementById('presentation').classList.contains('is-open')) showWhatsNext();
         }
