@@ -46,19 +46,32 @@
   .fl .big { font-size: 15px; font-weight: 600; line-height: 20px; }
   .fl .big .gray { font-weight: 400; color: #525252; font-size: 13.5px; }
   .fl .x { display: inline-flex; align-items: center; margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: #e8f0fe; color: #0055ED; font-size: 12px; font-weight: 500; }
+
+  /* "before you go" eyebrow: first close on a full price checkout drops the offer above the box */
+  .dp-box { z-index: 1; }
+  .eyebrow { position: absolute; left: 20px; width: 1040px; top: -38px; height: 50px; z-index: 0; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 16px 12px; border-radius: 8px 8px 0 0; background: #e8f0fe; color: #1c2b3a; font-size: 12.5px; white-space: nowrap; transform: translateY(38px); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
+  .eyebrow.is-open { transform: none; opacity: 1; }
+  .offer-pill .sep, .offer-pill .t { display: none; }
+  body.offer .offer-pill .sep { display: inline; opacity: 0.6; margin: 0 4px; }
+  body.offer .offer-pill .t { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+  body.offer .offer-pill { animation: pill-in .5s .15s cubic-bezier(.2,.9,.3,1.25) both, pro-chip-bob 2.6s .7s ease-in-out infinite, pro-chip-glow 2.2s .7s ease-in-out infinite; }
+  @keyframes pill-in { from { opacity: 0; transform: translateX(-10px) scale(0.9); } to { opacity: 1; transform: none; } }
+  .sel-card.is-flash { animation: c-flash .9s ease; }
+  @keyframes c-flash { 0% { box-shadow: 0 0 0 0 rgba(0,94,255,0.45); } 100% { box-shadow: 0 0 0 14px rgba(0,94,255,0); } }
 </style>
 </head>
 <body>
 
 <div class="backdrop">
   <div class="dp-stack">
+    <div class="eyebrow" id="eyebrow" aria-live="polite"><span>🎁</span><span>Before you go, a special discount, just for you for the next hour.</span></div>
     <div class="dp-box">
 
       <div class="pane pane--left">
         <div class="pane-title">Upgrade to <span id="plan-title">Pro</span></div>
 
         <div style="display:flex;flex-direction:column">
-          <span class="offer-pill">20% off applied</span>
+          <span class="offer-pill">20% off applied<span class="sep">·</span><span class="t"><i class="ph-fill ph-clock"></i>Ends in <span id="dp-timer">59:56</span></span></span>
           <div class="sel-card is-sel" data-plan="pro">
             <span class="radio"></span>
             <div class="sc-main">
@@ -148,10 +161,31 @@
 <script>
   // preselect plan from ?plan= (from the choose-plan screen). ?off=0 = tier 2 without the offer: full price.
   const qs = new URLSearchParams(location.search);
-  if (qs.get('off') === '0') {
+  // Landed here without the offer: the first close keeps the checkout, drops the eyebrow, applies 20% and starts the timer.
+  let offer = false;
+  const noOff = qs.get('off') === '0';
+  if (noOff) {
     document.body.classList.add('no-off');
-    document.querySelectorAll('.sel-card .sc-price').forEach((pr) => { pr.querySelector('.off').textContent = pr.querySelector('.base').textContent; });
+    document.querySelectorAll('.sel-card .sc-price').forEach((pr) => { const o = pr.querySelector('.off'); o.dataset.off = o.textContent; o.textContent = pr.querySelector('.base').textContent; });
   }
+  let timerId = null;
+  function startTimer() {
+    let left = 59 * 60 + 56;
+    const el = document.getElementById('dp-timer');
+    const tick = () => { el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); if (left > 0) left--; };
+    clearInterval(timerId); tick(); timerId = setInterval(tick, 1000);
+  }
+  window.claimOffer = function () {
+    if (!noOff || offer) return false;
+    offer = true;
+    document.body.classList.remove('no-off');
+    document.body.classList.add('offer');
+    document.getElementById('eyebrow').classList.add('is-open');
+    document.querySelectorAll('.sel-card .sc-price .off').forEach((o) => { o.textContent = o.dataset.off; });
+    document.querySelectorAll('.sel-card').forEach((c) => { c.classList.remove('is-flash'); void c.offsetWidth; c.classList.add('is-flash'); });
+    startTimer();
+    return true;
+  };
   const want = qs.get('plan');
   if (want) {
     const target = document.querySelector('.sel-card[data-plan="' + want + '"]');
@@ -182,6 +216,15 @@
     });
   });
   syncPlan();
+  document.querySelector('.dp-close').addEventListener('click', () => {
+    if (window.claimOffer()) return;
+    if (history.length > 1) history.back(); else location.href = 'trial-choose-plan-sep-2026.html?tier=2';
+  });
+  // fit the 1080x803 box into small viewports
+  (function fitStack(){
+    const f = () => { const s = Math.min(1, (innerWidth - 32) / 1118, (innerHeight - 32) / 835); document.documentElement.style.setProperty('--fit', s.toFixed(3)); };
+    f(); addEventListener('resize', f);
+  })();
 </script>
 
 <div id="agentation-root"></div>
