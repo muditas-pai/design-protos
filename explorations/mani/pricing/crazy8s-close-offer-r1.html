@@ -78,7 +78,8 @@
   .preview .pv-item.is-on { opacity: 1; transform: scale(1); }
   .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
 
-  .tabs-wrap { position: relative; margin: 19px 0 0 -20px; width: 806px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); }
+  .tabs-row { display: flex; align-items: flex-start; margin: 19px 0 0 -20px; width: 806px; }
+  .tabs-wrap { position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); }
   .tabs { display: flex; gap: 22px; padding: 0 24px; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; scroll-behavior: smooth; touch-action: none; }
   .tabs::-webkit-scrollbar { display: none; }
   /* v2 (Mudita's comments): text tabs above the media, bottom border doubles as the progress bar */
@@ -163,7 +164,7 @@
   .eyebrow { width: auto; right: 58px; overflow: hidden; text-overflow: ellipsis; } /* 20px inset + gap + close button */
   .pane-l { width: auto; flex: 1 1 0; min-width: 0; padding-right: 24px; }
   .preview { width: 100%; height: auto; aspect-ratio: 762 / 430; }
-  .tabs-wrap, .foot-l { width: calc(100% + 44px); }
+  .tabs-row, .foot-l { width: calc(100% + 44px); }
   @media (max-width: 900px) {
     .dp-body { flex-direction: column; height: auto; }
     .pane-r { width: 100%; padding: 20px 20px 0; border-right: 0; border-bottom: 1px solid rgba(10,25,37,0.06); }
@@ -193,9 +194,18 @@
   .pv-oc { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; }
 
 
+  /* pinned offer tab: appears on close, opens the card; any feature tab hides it */
+  .tab-offer { display: none; margin-left: 20px; gap: 8px; color: #171717; }
+  .tab-offer i { color: #0B1FBB; }
+  .tab-offer .tm { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: #0B1FBB; color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tab-offer .tm i { font-size: 11px; color: #fff; }
+  body.offer .tab-offer { display: inline-flex; animation: dp-rise .4s cubic-bezier(.2,.8,.2,1) both; }
+  body.show-offer .tab-offer { color: #0B1FBB; border-bottom-color: #0B1FBB; }
+  body.show-offer .tab.is-on:not(.tab-offer) { color: #525252; border-bottom-color: #ebedf0; }
+  body.show-offer .tab.is-on:not(.tab-offer) i { color: #737373; }
   /* overlay: media keeps playing under a blur, white card on top */
-  body.offer .pv-oc2 { display: flex; }
-  body.offer .pv-item { filter: blur(6px) brightness(.55); transform: scale(1.06); }
+  body.show-offer .pv-oc2 { display: flex; }
+  body.show-offer .pv-item { filter: blur(6px) brightness(.55); transform: scale(1.06); }
   .pv-oc2 .card-w { width: 400px; padding: 30px 28px 26px; border-radius: 12px; background: #fff; box-shadow: 0 24px 48px -16px rgba(10,25,37,0.5); text-align: center; animation: dp-box-in .5s .1s cubic-bezier(.2,.8,.2,1) both; }
   .pv-oc2 .n { font-size: 72px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
   .pv-oc2 .n span { font-size: 28px; vertical-align: 0.5em; margin-left: 4px; }
@@ -218,7 +228,10 @@
       <div class="dp-body">
 
       <div class="pane-l">
-        <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
+        <div class="tabs-row">
+          <button type="button" class="tab tab-offer" id="tab-offer"><i class="ph-fill ph-gift"></i><span class="lbl">20% off</span><span class="tm"><i class="ph-fill ph-clock"></i><span class="oc-timer">59:56</span></span></button>
+          <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
+        </div>
         <div class="preview" id="preview">
           <div class="pv-oc pv-oc2"><div class="card-w"><div class="oc-kicker">Before you go</div><div class="n grad-txt">20%<span>OFF</span></div><p class="oc-sub">Applied on every plan, for the next hour.</p><div class="oc-timer-row"><i class="ph-fill ph-clock"></i>Ends in <b class="oc-timer">59:56</b></div></div></div>
         </div>
@@ -307,7 +320,7 @@
       b.tabIndex = -1;
       // v2: no "Available on" pill on the media. Tabs that are not on every paid plan say so inline.
       b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span class="lbl">' + f.label + '</span><span class="only"><i class="ph ph-lock-simple"></i><span></span></span>';
-      b.addEventListener('click', () => { manual = true; go(idx, b); b.blur(); });
+      b.addEventListener('click', () => { manual = true; document.body.classList.remove('show-offer'); go(idx, b); b.blur(); });
       tabs.appendChild(b);
     });
   }
@@ -493,7 +506,7 @@
     paint();
   }
   function setTier(t) {
-    tier = t; offer = false; clearInterval(timerId);
+    tier = t; offer = false; clearInterval(timerId); document.body.classList.remove('show-offer');
     document.getElementById('eyebrow').classList.remove('is-open');
     document.body.classList.remove('is-closed');
     const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
@@ -505,12 +518,14 @@
       // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
       offer = true;
       document.getElementById('eyebrow').classList.add('is-open');
+      document.body.classList.add('show-offer');
       paint(true); startTimer();
       return;
     }
     document.body.classList.add('is-closed');
   });
   document.getElementById('reopen').addEventListener('click', () => setTier(tier));
+  document.getElementById('tab-offer').addEventListener('click', () => { document.body.classList.add('show-offer'); });
   if (params.get('closed') === '1') document.body.classList.add('is-closed'); // back from a closed checkout
   cards.querySelectorAll('.card').forEach((c) => {
     c.addEventListener('click', () => select(c.dataset.plan));
