@@ -87,17 +87,6 @@
   .preview .pv-item { position: absolute; inset: 0; opacity: 0; transform: scale(1.02); transition: opacity .55s ease, transform .9s ease; }
   .preview .pv-item.is-on { opacity: 1; transform: scale(1); }
   .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
-  .avail { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 10px; padding: 8px 12px 8px 14px; border-radius: 8px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(10,25,37,0.15); font-size: 12.5px; color: #404040; }
-  #avail-pills { display: inline-flex; align-items: center; gap: 8px; }
-  .tp-group { display: inline-flex; align-items: center; gap: 6px; }
-  .tp-note { font-size: 11.5px; color: #737373; margin-left: 2px; white-space: nowrap; }
-  .tp-sep { width: 1px; height: 14px; background: rgba(10,25,37,0.15); margin: 0 2px; }
-  .avail .tp { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 8px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
-  .avail .tp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .avail .tp--pro  { color: #0055ED; }
-  .avail .tp--gold { color: #c9932a; }
-  .avail .tp--team { color: #171717; }
-  .avail .tp--free { color: #16a34a; }
 
   .tabs-wrap { position: relative; margin: 20px 0 20px -24px; width: 806px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); }
   .tabs { display: flex; gap: 10px; padding: 0 24px; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; scroll-behavior: smooth; touch-action: none; }
@@ -108,6 +97,15 @@
   .tab:focus, .tab:focus-visible { outline: none; }
   .tab.is-on { background: #fff; border-color: #cfe0ff; color: #0055ED; }
   .tab.is-on i { color: #0055ED; }
+  .tab.is-off { color: #a3a3a3; }
+  .tab.is-off i { color: #c4c4c4; }
+  .tab.is-off.is-on { color: #737373; border-bottom-color: #e5e5e5; }
+  .tab.is-off.is-on i { color: #737373; }
+  .tab.is-off .fill { background: #a3a3a3; }
+  .tab .only { display: none; align-items: center; gap: 4px; margin-left: 2px; padding: 2px 7px; border-radius: 999px; background: #e8f0fe; color: #005EFF; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+  .tab .only i { font-size: 11px; color: inherit; }
+  .tab.is-off .only { display: inline-flex; }
+  .tab.is-off:hover, .tab.is-off:hover i { color: #525252; }
   .tab .fill { position: absolute; inset: 0; background: #e8f0fe; transform: scaleX(0); transform-origin: left center; pointer-events: none; }
   .tab > i, .tab > span { position: relative; z-index: 1; }
 
@@ -221,7 +219,6 @@
 
       <div class="pane-l">
         <div class="preview" id="preview">
-          <div class="avail"><span>Available on:</span><span id="avail-pills"></span></div>
         </div>
         <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
         <div class="foot-l">
@@ -262,7 +259,7 @@
     { key: 'brandkit',  label: 'Brand kit',              icon: 'ph-swatches',          dots: ['pro','gold','team'], video: 'trigger_brandkit', mp4Only: true },
     { key: 'knowledge', label: 'Shared knowledge base',  icon: 'ph-book-open',         dots: ['gold','team'],       img: 'triggerprojectknowledge.jpg', zoom: 1.18 },
     { key: 'team',      label: 'Collaborations',         icon: 'ph-users-three',       dots: ['team'],              video: 'trigger_assign_invite', mp4Only: true },
-    { key: 'ultra',     label: 'Ultra/Pro AI model',     labelFor: { pro: 'Pro AI model', gold: 'Ultra AI model', team: 'Ultra AI model' }, icon: 'ph-sparkle',           dots: ['pro','gold','team'], groups: [{ note: 'Pro model', tiers: ['pro'] }, { note: 'Ultra model', tiers: ['gold','team'] }], img: 'triggeraimodels.jpg' },
+    { key: 'ultra',     label: 'Ultra/Pro AI model',     labelFor: { pro: 'Pro AI model', gold: 'Ultra AI model', team: 'Ultra AI model' }, onlyFor: { pro: 'Ultra only on Gold' }, icon: 'ph-sparkle',           dots: ['pro','gold','team'], groups: [{ note: 'Pro model', tiers: ['pro'] }, { note: 'Ultra model', tiers: ['gold','team'] }], img: 'triggeraimodels.jpg' },
     { key: 'analytics', label: 'Analytics',              icon: 'ph-chart-bar',         dots: ['pro','gold','team'], video: 'trigger_analytics' },
     { key: 'projects',  label: 'Projects',               icon: 'ph-folder',            dots: ['pro','gold','team'], img: 'triggerproject.jpg' },
     { key: 'fontpair',  label: 'Color and Font pair',    icon: 'ph-text-aa',           dots: ['pro','gold','team'], img: 'triggerfonts.jpg' },
@@ -286,8 +283,6 @@
 
   // preview items + tabs
   const preview = document.getElementById('preview');
-  const avail = preview.querySelector('.avail');
-  const pills = document.getElementById('avail-pills');
   const tabs = document.getElementById('tabs');
   const items = FEATURES.map((f) => {
     const el = document.createElement('div');
@@ -295,7 +290,7 @@
     el.innerHTML = f.video
       ? '<video muted playsinline preload="auto">' + (f.mp4Only ? '' : '<source src="' + MEDIA + f.video + '.webm" type="video/webm" />') + '<source src="' + MEDIA + f.video + '.mp4" type="video/mp4" /></video>'
       : '<img src="' + MEDIA + f.img + '" alt=""' + (f.zoom ? ' style="transform:scale(' + f.zoom + ')"' : '') + ' />';
-    preview.insertBefore(el, avail);
+    preview.appendChild(el);
     return el;
   });
   // tab strip rendered 3 times so it can scroll forward forever (rewinds one copy width when idle)
@@ -308,7 +303,7 @@
       b.className = 'tab';
       b.dataset.idx = idx;
       b.tabIndex = -1;
-      b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span class="lbl">' + f.label + '</span>';
+      b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span class="lbl">' + f.label + '</span><span class="only"><i class="ph ph-lock-simple"></i><span></span></span>';
       b.addEventListener('click', () => { manual = true; go(idx, b); b.blur(); });
       tabs.appendChild(b);
     });
@@ -366,10 +361,6 @@
     items[i].classList.add('is-on');
     tabsFor(i).forEach((t) => { t.classList.add('is-on'); t.querySelector('i').className = 'ph-fill ' + f.icon; });
     scrollForwardTo(i, el);
-    const pill = (d) => '<span class="tp tp--' + d + '">' + d.toUpperCase() + '</span>';
-    pills.innerHTML = f.groups
-      ? f.groups.map((g) => '<span class="tp-group">' + g.tiers.map(pill).join('') + '<span class="tp-note">' + g.note + '</span></span>').join('<span class="tp-sep"></span>')
-      : f.dots.map(pill).join('');
     const v = items[i].querySelector('video');
     const next = () => { manual = false; go(i + 1); };
     if (v) {
@@ -470,8 +461,17 @@
     tick(); timerId = setInterval(tick, 1000);
   }
   // tab labels that depend on the plan (the AI model tab reads Pro or Ultra)
+  // what the selected plan includes. Features outside it go quiet with an "Only on X" tag
+  const PLAN_NAME = { pro: 'Pro', gold: 'Gold', team: 'Team' };
   function paintLabels() {
-    allTabs.forEach((t) => { const f = FEATURES[Number(t.dataset.idx)]; if (f.labelFor) t.querySelector('.lbl').textContent = f.labelFor[plan]; });
+    allTabs.forEach((t) => {
+      const f = FEATURES[Number(t.dataset.idx)];
+      const has = f.dots.includes(plan);
+      const only = f.onlyFor && f.onlyFor[plan] ? f.onlyFor[plan] : (has ? '' : 'Only on ' + PLAN_NAME[f.dots[0]]);
+      t.classList.toggle('is-off', !!only);
+      t.querySelector('.lbl').textContent = f.labelFor ? f.labelFor[plan] : f.label;
+      t.querySelector('.only > span').textContent = only;
+    });
   }
   function select(key) {
     plan = key;
