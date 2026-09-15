@@ -4074,7 +4074,7 @@
       function v5Advance() {
         if (presCurrent < SLIDE_COUNT) { showPresSlide(presCurrent + 1); return; }
         // v6: the plan picker is the last slide. No close on it, no What's next screen.
-        if (!trialActive()) { document.body.classList.add('pres-picker'); openTrialModal(undefined, { noClose: true }); return; }
+        if (!trialActive()) { if (document.body.classList.contains('pres-picker')) return; document.body.classList.add('pres-picker'); openTrialModal(undefined, { noClose: true }); markPickerSlide(); return; }
         closePresentation();
       }
 
@@ -4141,6 +4141,31 @@
       }
       presNext = v5Advance;
       document.getElementById('nextBtn').onclick = v5Advance;
+      // v6: the picker counts as the last slide. Counter and progress run to N+1,
+      // Prev from the picker returns to slide N, arrow keys inside the picker come back as messages.
+      var LAST = SLIDE_COUNT + 1;
+      var baseShowPresSlide = showPresSlide;
+      showPresSlide = function (idx, opts) {
+        if (document.body.classList.contains('pres-picker')) closeTrialModalSilent();
+        baseShowPresSlide(idx, opts);
+        $counter.textContent = idx + '/' + LAST;
+        var extra = $progressTrack.querySelector('.progress-seg[data-idx="' + LAST + '"]');
+        if (!extra) { extra = document.createElement('div'); extra.className = 'progress-seg'; extra.dataset.idx = LAST; $progressTrack.appendChild(extra); }
+        extra.classList.remove('viewed', 'current');
+      };
+      function markPickerSlide() {
+        $counter.textContent = LAST + '/' + LAST;
+        $progressTrack.querySelectorAll('.progress-seg').forEach(function (seg) {
+          var i = parseInt(seg.dataset.idx);
+          seg.classList.toggle('viewed', i < LAST);
+          seg.classList.toggle('current', i === LAST);
+        });
+      }
+      presPrev = function () {
+        if (document.body.classList.contains('pres-picker')) { showPresSlide(SLIDE_COUNT); return; }
+        if (presCurrent > 1) showPresSlide(presCurrent - 1);
+      };
+      document.getElementById('prevBtn').onclick = function () { presPrev(); };
       // The base file's pframe click listener holds the ORIGINAL presNext by
       // value; it still advances slides 1..N-1 and no-ops on the last slide.
       // Only the last-slide case needs the v5 behavior, so guard on it —
@@ -4336,6 +4361,7 @@
           returnToDeck = e.source !== lfi.contentWindow; // closing the checkout brings the plan picker back (not for the lock stage, it stays)
           openCheckout(e.data.plan || 'pro', e.data.kind === 'buy' ? 'buy' : 'trial', off);
         }
+        if (e.data.type === 'trial-pres-key' && document.body.classList.contains('pres-picker')) { if (e.data.key === 'ArrowLeft') presPrev(); return; }
         if (e.data.type === 'trial-pricing-close' && e.source !== lfi.contentWindow) {
           closeTrialModal();
           if (document.getElementById('presentation').classList.contains('is-open')) showWhatsNext();
