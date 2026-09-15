@@ -3871,6 +3871,8 @@
     #deck-ready.is-loaded iframe { opacity: 1; }
     /* checkout / feature / trial modals must sit above the deck-ready sheet */
     #checkout-modal, #feature-modal, #trial-modal { z-index: 700; }
+    /* picker as the last slide: leave the slideshow toolbar clear and clickable */
+    body.pres-picker #plan-frame { bottom: 53px; }
   </style>
   <div id="deck-ready" aria-hidden="true">
     <iframe id="deck-ready-frame" src="" title="Where does this deck go next?"></iframe>
@@ -4073,7 +4075,7 @@
       function v5Advance() {
         if (presCurrent < SLIDE_COUNT) { showPresSlide(presCurrent + 1); return; }
         // v6: the plan picker is the last slide. No close on it, no What's next screen.
-        if (!trialActive()) { openTrialModal(undefined, { noClose: true }); return; }
+        if (!trialActive()) { document.body.classList.add('pres-picker'); openTrialModal(undefined, { noClose: true }); return; }
         closePresentation();
       }
 
@@ -4189,11 +4191,14 @@
         if (window.parent !== window) window.parent.postMessage({ type: 'v5-home' }, '*');
         else location.href = 'dashboard.html';
       });
+      // leaving the slideshow from the toolbar also drops the last-slide picker (the editor lock takes over)
+      var baseClosePresentation = closePresentation;
+      closePresentation = function () { if (document.body.classList.contains('pres-picker')) closeTrialModalSilent(); baseClosePresentation(); };
       var baseEnterFullEditor = enterFullEditor;
       enterFullEditor = function () { baseEnterFullEditor(); if (!trialActive()) lockEditor(); };
       // ?state=ready may have entered the full editor before this override was installed
       if (document.body.classList.contains('editor-locked') || (document.body.classList.contains('phase-full') && !trialActive())) lockEditor();
-      function closeTrialModal() { pf.classList.remove('is-open'); pf.setAttribute('aria-hidden', 'true'); pfi.src = 'about:blank'; maybeReturnToDeck(); }
+      function closeTrialModal() { document.body.classList.remove('pres-picker'); pf.classList.remove('is-open'); pf.setAttribute('aria-hidden', 'true'); pfi.src = 'about:blank'; maybeReturnToDeck(); }
       window.openTrialModal = openTrialModal;
       tm.querySelectorAll('[data-tm-close]').forEach(function (b) { b.addEventListener('click', closeTrialModal); });
 
@@ -4438,7 +4443,7 @@
           openCheckout(b.dataset.buy, 'buy');
         });
       });
-      function closeTrialModalSilent() { pf.classList.remove('is-open'); pf.setAttribute('aria-hidden', 'true'); } // no What's next chaining
+      function closeTrialModalSilent() { document.body.classList.remove('pres-picker'); pf.classList.remove('is-open'); pf.setAttribute('aria-hidden', 'true'); } // no What's next chaining
 
       // ────────────────────────────────────────────────────────────
       // TRIAL STARTED → unlock the editor
