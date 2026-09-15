@@ -36,7 +36,7 @@
   .tier-bar button.is-on small { color: rgba(255,255,255,0.65); }
 
   /* "before you go" eyebrow: slides in above the modal body when tier 2 is closed */
-  .eyebrow { position: absolute; left: 20px; width: 1136px; top: -38px; height: 50px; z-index: 0; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 16px 12px; border-radius: 8px 8px 0 0; background: #e8f0fe; color: #1c2b3a; font-size: 12.5px; white-space: nowrap; transform: translateY(38px); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
+  .eyebrow { position: absolute; left: 20px; width: 1136px; top: -38px; height: 50px; z-index: 0; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 16px 12px; border-radius: 8px 8px 0 0; background: linear-gradient(96deg,#00225C 0%,#003C9E 45%,#005EFF 100%); color: #fff; font-size: 12.5px; font-weight: 500; white-space: nowrap; transform: translateY(38px); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
   .eyebrow.is-open { transform: none; opacity: 1; }
   .dp-box { z-index: 1; }
   .card.is-flash { animation: c-flash .9s ease; }
@@ -130,7 +130,13 @@
   .c-name { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
   .c-name i { font-size: 16px; }
   .c-price { font-size: 16px; font-weight: 500; white-space: nowrap; }
-  .c-price s { color: #a3a3a3; font-weight: 400; margin-right: 5px; }
+  .c-price s { display: inline-block; color: #a3a3a3; font-weight: 400; margin-right: 5px; }
+  .c-price .c-num { display: inline-block; }
+  /* close nudge: old price slides in struck through, new price counts down and pops */
+  .c-price.is-drop s { animation: s-in .4s ease both; }
+  .c-price.is-drop .c-num { animation: num-drop .8s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes s-in { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: none; } }
+  @keyframes num-drop { 0% { transform: scale(1); } 45% { transform: scale(1.2); color: #005EFF; } 100% { transform: scale(1); } }
   .c-price small { display: block; font-size: 11px; font-weight: 400; color: #737373; text-align: right; margin-top: 2px; }
   .c-cred { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 4px 10px; border-radius: 999px; background: #e8f0fe; color: #005EFF; font-size: 12px; font-weight: 500; }
   .c-cred i { font-size: 11px; }
@@ -403,7 +409,22 @@
   let tier = params.get('tier') === '2' ? 2 : 1;
   let offer = false; // tier 2 only: set when the user tries to close
   const hasOff = () => tier === 1 || offer;
-  function paint() {
+  function paintPrice(c, cp, anim) {
+    const el = c.querySelector('.c-price');
+    if (!hasOff()) { el.innerHTML = '$' + cp.base + '/mo'; return; }
+    el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + (anim ? cp.base : cp.off) + '</span>/mo';
+    if (!anim) return;
+    el.classList.remove('is-drop'); void el.offsetWidth; el.classList.add('is-drop');
+    const num = el.querySelector('.c-num');
+    const t0 = performance.now(); const D = 700;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / D); const e = 1 - Math.pow(1 - k, 3);
+      num.textContent = '$' + Math.round(cp.base + (cp.off - cp.base) * e);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function paint(anim) {
     document.body.classList.toggle('tier2', tier === 2);
     document.body.classList.toggle('offer', offer);
     document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
@@ -411,7 +432,7 @@
     buyBtn.textContent = 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
     cards.querySelectorAll('.card').forEach((c) => {
       const cp = PLANS.find((x) => x.key === c.dataset.plan);
-      c.querySelector('.c-price').innerHTML = hasOff() ? '<s>$' + cp.base + '</s>$' + cp.off + '/mo' : '$' + cp.base + '/mo';
+      paintPrice(c, cp, anim);
     });
     paintTabs();
   }
@@ -442,7 +463,7 @@
       // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
       offer = true;
       document.getElementById('eyebrow').classList.add('is-open');
-      paint(); startTimer();
+      paint(true); startTimer();
       cards.querySelectorAll('.card').forEach((c) => { c.classList.remove('is-flash'); void c.offsetWidth; c.classList.add('is-flash'); });
       return;
     }
