@@ -231,6 +231,7 @@
   .ov-lock.is-on { display: inline-flex; }
   .ov-count { font-size: 12px; font-weight: 600; color: #737373; font-variant-numeric: tabular-nums; }
   .ov-ttl { font-size: 18px; font-weight: 500; line-height: 1.3; }
+  .ov-ttl.is-swap { animation: dp-rise .35s cubic-bezier(.2,.8,.2,1) both; }
   .ov-plans { display: flex; gap: 4px; }
   .pp { padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; background: #f0f0f0; color: #a3a3a3; }
   .pp.is-in { background: #e8f0fe; color: #005EFF; }
@@ -338,23 +339,26 @@
   .check .nav .only { font-size: 10px; }
   .check .nav .fill { left: 10px; right: 10px; }
 
-  /* 7 full bleed: media edge to edge, title and description under it */
+  /* 7 full bleed: text block on top, segmented progress on the seam, media edge to edge under it */
   body.v7 .pane-l { padding: 0; }
-  body.v7 .l-grid { gap: 0; grid-template-areas: "media" "bottom"; }
+  body.v7 .l-grid { gap: 0; grid-template-areas: "top" "media"; }
   body.v7 .l-head { display: none; }
+  body.v7 .l-top { display: block; } body.v7 .fb { display: block; }
   body.v7 .preview { border-radius: 0; box-shadow: none; }
-  body.v7 .l-bottom { display: block; } body.v7 .fb { display: flex; }
   body.v7 .foot-l { margin-left: 0; width: 100%; }
-  .fb { align-items: center; justify-content: space-between; gap: 20px; padding: 16px 24px 4px; }
-  .fb-l { min-width: 0; }
-  .fb-t { display: flex; align-items: center; gap: 10px; }
-  .fb .ov-desc { margin-top: 3px; }
+  .fb { padding: 22px 24px 0; }
+  .fb-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 32px; }
+  .fb-t { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .fb .ov-ttl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fb .ov-desc { margin-top: 4px; max-width: 600px; }
   .fb-r { display: flex; align-items: center; gap: 12px; flex: none; }
-  .bars { display: flex; gap: 5px; }
-  .bars .nav { width: 16px; height: 4px; border-radius: 2px; background: #e5e5e5; }
-  .bars .nav.is-on { background: #c9d6f0; }
-  .bars .nav.is-off { background: #f0f0f0; }
-  .bars .nav .fill { height: 100%; }
+  .fb .segs { margin: 14px -24px 0; }
+  .segs { display: flex; gap: 3px; }
+  .segs .nav { flex: 1 1 0; height: 3px; background: #e5e5e5; }
+  .segs .nav.is-on { background: #c9d6f0; }
+  .segs .nav.is-off { background: #f0f0f0; }
+  .segs .nav .fill { height: 100%; }
+  .segs .nav.is-done .fill { transform: scaleX(1); }
 
   /* 8 editorial: text column first, tall cropped media on the right */
   body.v8 .l-grid { grid-template-columns: 1fr 380px; grid-template-areas: "side media"; gap: 0 24px; align-content: stretch; }
@@ -409,6 +413,14 @@
           <div class="l-top">
             <div class="steps nav-row" data-nav="steps"></div>
             <div class="cards nav-row" data-nav="cards"></div>
+            <div class="fb">
+              <div class="fb-row">
+                <div class="fb-t"><h2 class="ov-ttl"></h2><span class="ov-lock"><i class="ph ph-lock-simple"></i><span></span></span></div>
+                <div class="fb-r"><span class="ov-count"></span><div class="tp-ctl"><button type="button" class="ctl-btn nav-prev" aria-label="Previous"><i class="ph-bold ph-caret-left"></i></button><button type="button" class="ctl-btn nav-next" aria-label="Next"><i class="ph-bold ph-caret-right"></i></button></div></div>
+              </div>
+              <p class="ov-desc"></p>
+              <div class="segs nav-row" data-nav="segs"></div>
+            </div>
           </div>
           <div class="l-media">
             <div class="preview" id="preview">
@@ -444,10 +456,6 @@
           </div>
           <div class="l-bottom">
             <div class="thumbs nav-row" data-nav="thumbs"></div>
-            <div class="fb">
-              <div class="fb-l"><div class="fb-t"><span class="ov-ttl"></span><span class="ov-lock"><i class="ph ph-lock-simple"></i><span></span></span></div><p class="ov-desc"></p></div>
-              <div class="fb-r"><span class="ov-count"></span><div class="bars nav-row" data-nav="bars"></div><div class="tp-ctl"><button type="button" class="ctl-btn nav-prev" aria-label="Previous"><i class="ph-bold ph-caret-left"></i></button><button type="button" class="ctl-btn nav-next" aria-label="Next"><i class="ph-bold ph-caret-right"></i></button></div></div>
-            </div>
           </div>
         </div>
         <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
@@ -661,7 +669,7 @@
     h.textContent = label;
     h.classList.remove('is-swap'); void h.offsetWidth; h.classList.add('is-swap');
     const only = f.onlyFor && f.onlyFor[plan] ? f.onlyFor[plan] : (f.dots.includes(plan) ? '' : 'Only on ' + PLAN_NAME[f.dots[0]]);
-    document.querySelectorAll('.ov-ttl').forEach((t) => { t.textContent = label; });
+    document.querySelectorAll('.ov-ttl').forEach((t) => { t.textContent = label; t.classList.remove('is-swap'); void t.offsetWidth; t.classList.add('is-swap'); });
     document.querySelectorAll('.ov-desc').forEach((p) => { p.textContent = f.desc; p.classList.remove('is-swap'); void p.offsetWidth; p.classList.add('is-swap'); });
     document.querySelectorAll('.ov-count').forEach((c) => { c.textContent = (i + 1) + ' / ' + FEATURES.length; });
     document.querySelectorAll('.ov-lock').forEach((l) => { l.classList.toggle('is-on', !!only); l.querySelector('span').textContent = only; });
