@@ -193,7 +193,11 @@
   .ttl-sub { display: none; margin: -6px 0 14px; font-size: 13px; line-height: 1.4; color: #525252; }
   body.offer .ttl-sub { display: block; animation: dp-rise .4s .2s cubic-bezier(.2,.8,.2,1) both; }
   .c-price s { display: inline-block; }
-  .c-price .c-num { display: inline-block; }
+  .c-price .c-num { display: inline-block; font-variant-numeric: tabular-nums; }
+  .odo { display: inline-flex; vertical-align: baseline; height: 1em; line-height: 1; overflow: hidden; }
+  .odo .dg { display: block; height: 1em; overflow: hidden; }
+  .odo .st { display: flex; flex-direction: column; transition: transform .95s cubic-bezier(.65,0,.3,1); will-change: transform; }
+  .odo .st span { display: block; height: 1em; line-height: 1; }
   .c-price.is-drop s { animation: s-in .45s 1.05s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes s-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 </style>
@@ -419,20 +423,27 @@
   let tier = params.get('tier') === '2' ? 2 : 1;
   let offer = false; // tier 2 only: set when the user tries to close
   const hasOff = () => tier === 1 || offer;
+  // odometer: one column per digit, a 0 to 9 stack twice over so a falling price can roll through 9 on the way down
+  function odo(from, to) {
+    const len = Math.max(String(from).length, String(to).length);
+    const A = String(from).padStart(len, '0'), B = String(to).padStart(len, '0');
+    const stack = '01234567890123456789'.split('').map((d) => '<span>' + d + '</span>').join('');
+    return '<span class="odo">' + A.split('').map((ch, k) => {
+      const o = Number(ch), n = Number(B[k]);
+      return '<span class="dg"><span class="st" data-from="' + (10 + o) + '" data-to="' + (n <= o ? 10 + n : n) + '">' + stack + '</span></span>';
+    }).join('') + '</span>';
+  }
   function paintPrice(c, cp, anim) {
     const el = c.querySelector('.c-price');
     if (!hasOff()) { el.innerHTML = '$' + cp.base + '/mo'; return; }
-    el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + (anim ? cp.base : cp.off) + '</span>/mo';
-    if (!anim) { el.classList.remove('is-drop'); return; }
+    if (!anim) { el.classList.remove('is-drop'); el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + cp.off + '</span>/mo'; return; }
+    el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + odo(cp.base, cp.off) + '</span>/mo';
     el.classList.remove('is-drop'); void el.offsetWidth; el.classList.add('is-drop');
-    const num = el.querySelector('.c-num');
-    const t0 = performance.now(); const D = 1000;
-    const step = (t) => {
-      const k = Math.min(1, (t - t0) / D); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-      num.textContent = '$' + Math.round(cp.base + (cp.off - cp.base) * e);
-      if (k < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
+    const cols = Array.from(el.querySelectorAll('.st'));
+    cols.forEach((st) => { st.style.transition = 'none'; st.style.transform = 'translateY(-' + st.dataset.from + 'em)'; });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      cols.forEach((st, k) => { st.style.transition = ''; st.style.transitionDelay = (k * 0.07) + 's'; st.style.transform = 'translateY(-' + st.dataset.to + 'em)'; });
+    }));
   }
   function paint(anim) {
     document.body.classList.toggle('tier2', tier === 2);
