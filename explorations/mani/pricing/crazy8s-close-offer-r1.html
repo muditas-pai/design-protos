@@ -51,7 +51,6 @@
   /* left */
   .pane-l { width: 806px; flex: none; padding: 0 0 0 20px; display: flex; flex-direction: column; }
   .ttl-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; min-height: 30px; transition: min-height .45s cubic-bezier(.2,.8,.2,1); }
-  body.offer .ttl-row { min-height: 48px; }
   .ttl.is-swap { animation: dp-rise .45s cubic-bezier(.2,.8,.2,1) both; }
   .ttl { font-size: 18px; font-weight: 500; line-height: 1.3; }
   .ttl-row .ttl { flex: 0 1 auto; min-width: 0; }
@@ -63,7 +62,7 @@
   .dp-pill .t i { font-size: 13px; }
   .dp-pill .dg { display: inline-block; width: 0.62em; text-align: center; transform-origin: center; backface-visibility: hidden; }
   body.offer .ttl .off { display: inline; }
-  body.offer .dp-pill { display: inline-flex; animation: pill-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both, pill-bob 2s 0.8s ease-in-out infinite, pill-ripple 2.4s 0.8s ease-in-out infinite; }
+  body.offer .dp-pill { display: none; animation: pill-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both, pill-bob 2s 0.8s ease-in-out infinite, pill-ripple 2.4s 0.8s ease-in-out infinite; }
   @keyframes pill-bob { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-3px); } }
   @keyframes pill-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
   @keyframes pill-ripple {
@@ -161,7 +160,7 @@
   .backdrop { overflow-y: auto; padding: 16px; align-items: flex-start; }
   .dp-stack { margin: auto; max-width: 100%; }
   .dp-box { width: min(1176px, calc(100vw - 70px)); }
-  .eyebrow { width: auto; right: 58px; overflow: hidden; text-overflow: ellipsis; } /* 20px inset + gap + close button */
+  .eyebrow { width: auto; left: 10px; right: 48px; overflow: hidden; text-overflow: ellipsis; } /* 10px inset each side of the box, 38px for gap + close button */
   .pane-l { width: auto; flex: 1 1 0; min-width: 0; padding-right: 24px; }
   .preview { width: 100%; height: auto; aspect-ratio: 762 / 430; }
   .tabs-row, .foot-l { width: calc(100% + 44px); }
@@ -193,7 +192,7 @@
   /* pinned offer tab: appears on close, opens the card; any feature tab hides it */
   .tab-offer { display: none; margin-left: 20px; gap: 8px; color: #171717; }
   .tab-offer i { color: #0B1FBB; }
-  .tab-offer .tm { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: #0B1FBB; color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tab-offer .tm { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#005EFF 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .tab-offer .tm i { font-size: 11px; color: #fff; }
   body.offer .tab-offer { display: inline-flex; animation: dp-rise .4s cubic-bezier(.2,.8,.2,1) both; }
   .tab-offer.is-on { color: #0B1FBB; border-bottom-color: #c9d0f0; }
@@ -238,7 +237,7 @@
       <div class="pane-r">
         <div class="ttl-row">
           <h2 class="ttl" id="ttl">Choose your plan</h2>
-          <div class="dp-pill"><span class="t"><i class="ph-fill ph-clock"></i>Ends in <span id="dp-timer">59:56</span></span></div>
+          <div class="dp-pill" hidden><span class="t"><i class="ph-fill ph-clock"></i>Ends in <span id="dp-timer">59:56</span></span></div>
         </div>
         <div id="cards"></div>
         <div class="ctas">
@@ -357,6 +356,7 @@
     fillAnims.forEach((a) => a.cancel());
     fillAnims = tabsFor(i).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
   }
+  let offer = false; // tier 2 only: set when the user tries to close
   // offer turn: the 20% off tab takes one slot in the loop, at the front, once the modal was closed once
   const offerTab = document.getElementById('tab-offer');
   function leaveCurrent() {
@@ -368,7 +368,7 @@
       items[i].classList.remove('is-on');
       tabsFor(i).forEach((t) => { t.classList.remove('is-on'); t.querySelector('i').className = 'ph ' + FEATURES[i].icon; });
       const v = items[i].querySelector('video');
-      if (v) { v.pause(); v.currentTime = 0; }
+      if (v) { v.onplaying = null; v.onended = null; v.pause(); v.currentTime = 0; }
     }
   }
   function goOffer() {
@@ -394,7 +394,7 @@
       // fill + safety timer arm only once the clip is really playing, so a slow
       // load never skips a clip or runs the bar ahead of the video
       const start = () => { runFill(Math.round((v.duration - v.currentTime) * 1000)); timer = setTimeout(next, VIDEO_MAX); };
-      if (!v.paused && v.readyState >= 3) start(); else v.addEventListener('playing', start, { once: true });
+      if (!v.paused && v.readyState >= 3) start(); else v.onplaying = () => { v.onplaying = null; start(); };
       const p = v.play();
       if (p && p.catch) p.catch(() => {});
     } else {
@@ -452,7 +452,6 @@
   // tier 1: trial + 20% off on buy. tier 2: no trial, full price until the "before you go" offer.
   const params = new URLSearchParams(location.search);
   let tier = params.get('tier') === '2' ? 2 : 1;
-  let offer = false; // tier 2 only: set when the user tries to close
   const hasOff = () => tier === 1 || offer;
   function paintPrice(c, cp, anim) {
     const el = c.querySelector('.c-price');
@@ -476,7 +475,7 @@
     const p = PLANS.find((x) => x.key === plan);
     buyBtn.textContent = 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
     const ttl = document.getElementById('ttl');
-    const html = offer ? 'Choose your plan, <span class="off">20% off</span>' : 'Choose your plan';
+    const html = 'Choose your plan';
     if (ttl.innerHTML !== html) { ttl.innerHTML = html; ttl.classList.remove('is-swap'); void ttl.offsetWidth; ttl.classList.add('is-swap'); }
     cards.querySelectorAll('.card').forEach((c) => {
       const cp = PLANS.find((x) => x.key === c.dataset.plan);
