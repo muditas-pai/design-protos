@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>crazy8s · Close offer card · Round 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* Figma FilrWEhw4GFBJqKUpKabCa node 1178-21215 ("free trail", modal frame 1176x620) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #dfe3e8; color: #171717; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  .backdrop { position: fixed; inset: 0; background: rgba(10,25,37,0.45); display: flex; align-items: center; justify-content: center; }
+
+  .dp-stack { position: relative; display: flex; gap: 10px; align-items: flex-start; }
+
+  /* entrance: scrim fades, the box rises and settles, close follows */
+  @keyframes dp-bd-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes dp-box-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+  .backdrop { animation: dp-bd-in .25s ease backwards; }
+  .dp-box { animation: dp-box-in .45s cubic-bezier(.2,.8,.2,1) backwards; }
+  .dp-close { animation: dp-bd-in .3s .15s ease backwards; }
+  .dp-close { transition: background 0.15s ease; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 0; border-radius: 24px; cursor: pointer; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.18); color: #171717; font-size: 15px; }
+  .dp-close:hover { background: #ececec; }
+  .dp-box { position: relative; width: 1176px; background: #fff; border-radius: 4px; overflow: hidden; flex: none; display: flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 40px -16px rgba(10,25,37,0.3); }
+  .dp-body { display: flex; height: 620px; }
+
+  /* proto switch: tier 1 (trial + 20% off) vs tier 2 (no trial, full price) */
+  .tier-bar { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 20; display: inline-flex; gap: 3px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 6px 18px -6px rgba(10,25,37,0.35); }
+  .tier-bar button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 150px; padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; font-family: inherit; color: #525252; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .tier-bar button b { font-size: 12.5px; font-weight: 600; }
+  .tier-bar button small { font-size: 10.5px; font-weight: 400; color: #8a8a8a; }
+  .tier-bar button:hover:not(.is-on) { background: #f0f2f5; }
+  .tier-bar button.is-on { background: #171717; color: #fff; }
+  .tier-bar button.is-on small { color: rgba(255,255,255,0.65); }
+
+  /* "before you go" eyebrow: slides in above the modal body when tier 2 is closed */
+  .eyebrow { position: absolute; left: 20px; width: 1136px; top: -38px; height: 50px; z-index: 0; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 16px 12px; border-radius: 8px 8px 0 0; background: #0B1FBB; color: #fff; font-size: 13px; font-weight: 500; letter-spacing: 0.01em; white-space: nowrap; transform: translateY(38px); opacity: 0; transition: transform .6s cubic-bezier(.2,.8,.2,1), opacity .4s ease; }
+  .eyebrow.is-open { transform: none; opacity: 1; }
+  .dp-box { z-index: 1; }
+  .card.is-flash { animation: c-flash .9s ease; }
+  @keyframes c-flash { 30% { box-shadow: 0 0 0 4px rgba(0,94,255,0.25); } }
+
+  body.tier2 #btn-trial, body.tier2 #note-trial, body.tier2 .or { display: none; }
+  body.tier2 .ctas { margin-top: 24px; }
+
+  .closed-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff; font-size: 14px; }
+  .closed-note button { padding: 9px 18px; border: 0; border-radius: 4px; background: #fff; color: #171717; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  body.is-closed .dp-stack { display: none; }
+  body.is-closed .closed-note { display: flex; }
+
+  /* left */
+  .pane-l { width: 806px; flex: none; padding: 0 0 0 20px; display: flex; flex-direction: column; }
+  .ttl-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; min-height: 30px; transition: min-height .45s cubic-bezier(.2,.8,.2,1); }
+  body.offer .ttl-row { min-height: 48px; }
+  .ttl.is-swap { animation: dp-rise .45s cubic-bezier(.2,.8,.2,1) both; }
+  .ttl { font-size: 18px; font-weight: 500; line-height: 1.3; }
+  .ttl-row .ttl { flex: 0 1 auto; min-width: 0; }
+  .ttl .off { display: none; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#005EFF 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
+  .dp-pill { position: relative; isolation: isolate; display: none; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#005EFF 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .dp-pill::before { content: ''; position: absolute; left: -3px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; background: #00225C; border-radius: 1px; transform: rotate(45deg); z-index: -1; }
+  .dp-pill .sep { opacity: 0.5; font-weight: 400; }
+  .dp-pill .t { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; opacity: 0.95; font-variant-numeric: tabular-nums; }
+  .dp-pill .t i { font-size: 13px; }
+  .dp-pill .dg { display: inline-block; width: 0.62em; text-align: center; transform-origin: center; backface-visibility: hidden; }
+  body.offer .ttl .off { display: inline; }
+  body.offer .dp-pill { display: inline-flex; animation: pill-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both, pill-bob 2s 0.8s ease-in-out infinite, pill-ripple 2.4s 0.8s ease-in-out infinite; }
+  @keyframes pill-bob { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-3px); } }
+  @keyframes pill-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+  @keyframes pill-ripple {
+    0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.14), 0 0 0 0 rgba(0,85,237,0.55); }
+    70%      { box-shadow: 0 4px 14px rgba(0,0,0,0.14), 0 0 0 10px rgba(0,85,237,0); }
+    100%     { box-shadow: 0 4px 14px rgba(0,0,0,0.14), 0 0 0 0 rgba(0,85,237,0); }
+  }
+
+  .preview { position: relative; margin: auto 0; width: 762px; height: 430px; border-radius: 6px; overflow: hidden; background: #0b1fbb; flex: none; box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 8px 24px -12px rgba(10,25,37,0.35); }
+  .preview::after { content: ''; position: absolute; inset: 0; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); pointer-events: none; }
+  .preview .pv-item { position: absolute; inset: 0; opacity: 0; transform: scale(1.02); transition: opacity .55s ease, transform .9s ease; }
+  .preview .pv-item.is-on { opacity: 1; transform: scale(1); }
+  .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
+
+  .tabs-wrap { position: relative; margin: 19px 0 0 -20px; width: 806px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); }
+  .tabs { display: flex; gap: 22px; padding: 0 24px; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; scroll-behavior: smooth; touch-action: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  /* v2 (Mudita's comments): text tabs above the media, bottom border doubles as the progress bar */
+  .tab { position: relative; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 2px; border: 0; border-bottom: 2px solid #ebedf0; border-radius: 0; background: transparent; font-family: inherit; font-size: 13.5px; font-weight: 500; color: #525252; cursor: pointer; white-space: nowrap; transition: color .2s ease, border-color .2s ease; }
+  .tab i { font-size: 16px; color: #737373; transition: color .2s ease; }
+  .tab:hover { color: #171717; border-bottom-color: #d4d4d4; }
+  .tab:focus, .tab:focus-visible { outline: none; }
+  .tab.is-on { color: #005EFF; border-bottom-color: #cfe0ff; }
+  .tab.is-on i { color: #005EFF; }
+  .tab .fill { position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: #005EFF; transform: scaleX(0); transform-origin: left center; pointer-events: none; }
+  .tab > i, .tab > span { position: relative; z-index: 1; }
+  /* v2: features the selected plan does not include go quiet and say which plan has them */
+  .tab.is-off { color: #a3a3a3; }
+  .tab.is-off i { color: #c4c4c4; }
+  .tab.is-off.is-on { color: #737373; border-bottom-color: #e5e5e5; }
+  .tab.is-off.is-on i { color: #737373; }
+  .tab.is-off .fill { background: #a3a3a3; }
+  .tab .only { display: none; align-items: center; gap: 4px; margin-left: 2px; padding: 2px 7px; border-radius: 999px; background: #f0f0f0; color: #737373; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .tab .only i { font-size: 11px; color: inherit; }
+  .tab.is-off .only { display: inline-flex; }
+  .tab.is-off:hover, .tab.is-off:hover i { color: #525252; }
+  /* v2: the pill strip on the media only appears when a feature is not on every paid plan */
+
+  .foot-l { margin: 0 0 0 -20px; width: 806px; height: 66px; display: flex; align-items: center; gap: 22px; padding: 0 24px; overflow: hidden; }
+  .foot-l .loved { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #404040; white-space: nowrap; flex: none; }
+  .foot-l .loved img { height: 16px; width: auto; }
+  .sp-wrap { flex: 1; min-width: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%); }
+  @keyframes sp-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  .sp-track { display: inline-flex; align-items: center; gap: 26px; padding-right: 26px; animation: sp-marquee 40s linear infinite; }
+  .sp-wrap:hover .sp-track { animation-play-state: paused; }
+  .sp-logo-img { flex: none; height: 34px; width: auto; max-width: 120px; object-fit: contain; }
+
+  /* right */
+  .pane-r { order: -1; width: 370px; flex: none; background: #f5f9ff; border-right: 1px solid rgba(10,25,37,0.06); padding: 22px 20px 0; display: flex; flex-direction: column; }
+  .card { position: relative; display: flex; align-items: flex-start; gap: 12px; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 16px 18px 14px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  .card + .card { margin-top: 12px; }
+  @keyframes dp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .card, .ctas, .foot-r { animation: dp-rise .4s cubic-bezier(.2,.8,.2,1) backwards; }
+  .card:nth-child(1) { animation-delay: .12s; } .card:nth-child(2) { animation-delay: .18s; } .card:nth-child(3) { animation-delay: .24s; } .ctas { animation-delay: .3s; } .foot-r { animation-delay: .36s; }
+  .card:active { transform: scale(0.99); }
+  .card.is-sel { border-color: #005eff; box-shadow: inset 0 0 0 0.5px #005eff, 0 0 0 3px rgba(0,94,255,0.08); background: #eaf2ff; }
+  .card.is-sel .c-cred { background: #d6e5ff; }
+  .card:hover:not(.is-sel) { border-color: #c9cdd2; transform: translateY(-1px); box-shadow: 0 4px 12px -6px rgba(10,25,37,0.2); }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #d4d4d4; background: #fff; margin-top: 3px; flex: none; transition: border .15s ease; }
+  .card:hover:not(.is-sel) .radio { border-color: #a3a3a3; }
+  .is-sel .radio { border: 5px solid #005eff; }
+  .c-main { flex: 1; min-width: 0; }
+  .c-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .c-name { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+  .c-name i { font-size: 16px; }
+  .c-price { font-size: 16px; font-weight: 500; white-space: nowrap; }
+  .c-price s { display: inline-block; color: #a3a3a3; font-weight: 400; margin-right: 5px; }
+  .c-price .c-num { display: inline-block; }
+  /* close nudge: old price slides in struck through, new price counts down */
+  .c-price.is-drop s { animation: s-in .5s .85s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes s-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+  .c-price small { display: block; font-size: 11px; font-weight: 400; color: #737373; text-align: right; margin-top: 2px; }
+  .c-cred { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 4px 10px; border-radius: 999px; background: #e8f0fe; color: #005EFF; font-size: 12px; font-weight: 500; }
+  .c-cred i { font-size: 11px; }
+
+  .ctas { margin-top: 20px; }
+  .note { margin-top: 7px; text-align: center; font-size: 11.5px; line-height: 1.45; color: #737373; white-space: nowrap; }
+  .note b { font-weight: 500; color: #404040; }
+  .note .blue { font-weight: 500; color: #005eff; }
+  .btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 44px; border-radius: 4px; font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, background .15s ease; }
+  .btn:active { transform: translateY(0); }
+  .btn--trial { background: #fff; border: 1.5px solid #0A1925; color: #0A1925; }
+  .btn--trial:hover { background: #f4f6f8; color: #23303B; border-color: #23303B; }
+  .or { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: #a3a3a3; font-size: 10.5px; font-weight: 500; letter-spacing: 0.04em; }
+  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: rgba(10,25,37,0.1); }
+  .btn--buy { background: #005eff; border: 0; color: #fff; }
+  .btn--buy:hover { background: #0052e0; box-shadow: 0 2px 8px rgba(0,94,255,0.3); transform: translateY(-1px); }
+
+  .foot-r { margin-top: auto; height: 66px; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 12px; font-weight: 500; color: #525252; white-space: nowrap; }
+  .foot-r span { display: inline-flex; align-items: center; gap: 6px; }
+  .foot-r img { height: 18px; width: auto; }
+
+  /* responsive: fluid widths, panes stack under 900px, page scrolls when the box is taller than the window */
+  .backdrop { overflow-y: auto; padding: 16px; align-items: flex-start; }
+  .dp-stack { margin: auto; max-width: 100%; }
+  .dp-box { width: min(1176px, calc(100vw - 70px)); }
+  .eyebrow { width: auto; right: 58px; overflow: hidden; text-overflow: ellipsis; } /* 20px inset + gap + close button */
+  .pane-l { width: auto; flex: 1 1 0; min-width: 0; padding-right: 24px; }
+  .preview { width: 100%; height: auto; aspect-ratio: 762 / 430; }
+  .tabs-wrap, .foot-l { width: calc(100% + 44px); }
+  @media (max-width: 900px) {
+    .dp-body { flex-direction: column; height: auto; }
+    .pane-r { width: 100%; padding: 20px 20px 0; border-right: 0; border-bottom: 1px solid rgba(10,25,37,0.06); }
+    .foot-r { height: 56px; }
+    .tier-bar button { min-width: 120px; padding: 5px 12px; }
+  }
+  @media (max-width: 520px) {
+    .dp-box { width: calc(100vw - 32px); }
+    .dp-stack { flex-direction: column-reverse; align-items: flex-end; gap: 8px; }
+    .ttl-row { flex-wrap: wrap; }
+    .eyebrow { right: 20px; white-space: normal; height: auto; padding-top: 8px; text-align: center; }
+    .note { white-space: normal; }
+  }
+
+
+  /* crazy8s: variant bar, sits under the tier bar */
+  .var-bar { position: fixed; top: 74px; left: 50%; transform: translateX(-50%); z-index: 20; display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 6px 18px -6px rgba(10,25,37,0.35); }
+  .var-bar button { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 70px; padding: 5px 10px; border: 0; border-radius: 999px; background: transparent; font-family: inherit; color: #525252; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .var-bar button b { font-size: 12px; font-weight: 600; }
+  .var-bar button small { font-size: 10px; color: #8a8a8a; }
+  .var-bar button:hover:not(.is-on) { background: #f0f2f5; }
+  .var-bar button.is-on { background: #005EFF; color: #fff; }
+  .var-bar button.is-on small { color: rgba(255,255,255,0.75); }
+
+  /* eyebrow pointer: a small tab tip pointing at the plan title once the offer is open */
+  .ey-point { position: absolute; top: 0; left: 150px; z-index: 3; width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 9px solid #0B1FBB; opacity: 0; transform: translateY(-9px); transition: opacity .3s .35s ease, transform .5s .35s cubic-bezier(.2,.8,.2,1); }
+  body.offer .ey-point { opacity: 1; transform: none; }
+
+  /* offer cards on the media side. Only show once the modal was closed once (body.offer) */
+  .pane-l { position: relative; }
+  .oc { display: none; flex: 1 1 auto; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0; animation: dp-rise .5s cubic-bezier(.2,.8,.2,1) both; }
+  .oc-kicker { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #005EFF; }
+  .oc-sub { font-size: 15px; color: #525252; margin-top: 10px; max-width: 420px; line-height: 1.5; }
+  .oc-timer-row { display: inline-flex; align-items: center; gap: 7px; margin-top: 22px; padding: 8px 16px; border-radius: 999px; background: #0B1FBB; color: #fff; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .oc-timer-row b { font-weight: 600; }
+  .grad-txt { background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#005EFF 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .pv-oc { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; }
+
+  /* 1 big number: the media side becomes one huge 20% OFF */
+  body.offer.v1 .oc1 { display: flex; }
+  body.offer.v1 .tabs-wrap, body.offer.v1 .preview { display: none; }
+  .oc-big { margin-top: 14px; font-size: 132px; font-weight: 700; letter-spacing: -0.05em; line-height: 0.95; }
+  .oc-big span { font-size: 52px; letter-spacing: -0.02em; vertical-align: 0.42em; margin-left: 6px; }
+
+  /* 2 overlay: media keeps playing under a blur, white card on top */
+  body.offer.v2 .pv-oc2 { display: flex; }
+  body.offer.v2 .pv-item { filter: blur(6px) brightness(.55); transform: scale(1.06); }
+  .pv-oc2 .card-w { width: 400px; padding: 30px 28px 26px; border-radius: 12px; background: #fff; box-shadow: 0 24px 48px -16px rgba(10,25,37,0.5); text-align: center; animation: dp-box-in .5s .1s cubic-bezier(.2,.8,.2,1) both; }
+  .pv-oc2 .n { font-size: 72px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
+  .pv-oc2 .n span { font-size: 28px; vertical-align: 0.5em; margin-left: 4px; }
+
+  /* 3 split: banner above a smaller media */
+  body.offer.v3 .oc3 { display: flex; }
+  body.offer.v3 .preview { max-width: 560px; margin: auto; }
+  body.offer.v3 .tabs-wrap { display: none; }
+  .oc3 { flex: none; flex-direction: row; justify-content: space-between; text-align: left; gap: 20px; margin: 0 0 18px; padding: 22px 26px; border-radius: 10px; background: #0B1FBB; color: #fff; }
+  .oc3 .l h3 { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+  .oc3 .l p { margin-top: 6px; font-size: 13.5px; opacity: 0.8; }
+  .oc3 .r { text-align: right; }
+  .oc3 .r small { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+  .oc3 .r .oc-timer { font-size: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.1; }
+
+  /* 4 coupon: a ticket with a code */
+  body.offer.v4 .oc4 { display: flex; }
+  body.offer.v4 .tabs-wrap, body.offer.v4 .preview { display: none; }
+  .ticket { position: relative; display: flex; width: 520px; border-radius: 14px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.1), 0 20px 40px -20px rgba(10,25,37,0.35); overflow: hidden; }
+  .ticket::before, .ticket::after { content: ''; position: absolute; top: 50%; width: 26px; height: 26px; margin-top: -13px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px rgba(10,25,37,0.1); }
+  .ticket::before { left: -13px; } .ticket::after { right: -13px; }
+  .ticket .tl { flex: 1; padding: 30px 26px; text-align: left; border-right: 2px dashed #e5e5e5; }
+  .ticket .tl .n { font-size: 60px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
+  .ticket .tl .n span { font-size: 22px; vertical-align: 0.6em; margin-left: 4px; }
+  .ticket .tl p { margin-top: 10px; font-size: 13.5px; color: #525252; }
+  .ticket .tr { width: 190px; padding: 30px 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: #f5f9ff; }
+  .ticket .tr small { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #737373; }
+  .ticket .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 20px; font-weight: 700; letter-spacing: 0.12em; padding: 8px 14px; border-radius: 6px; background: #fff; box-shadow: inset 0 0 0 1px #d6e5ff; color: #0B1FBB; }
+  .ticket .tr .oc-timer { font-size: 13px; color: #404040; font-variant-numeric: tabular-nums; }
+
+  /* 5 price compare: the selected plan's old and new price, big */
+  body.offer.v5 .oc5 { display: flex; }
+  body.offer.v5 .tabs-wrap, body.offer.v5 .preview { display: none; }
+  .oc5 .pn { font-size: 20px; font-weight: 500; color: #404040; }
+  .oc5 .pr { display: flex; align-items: baseline; gap: 18px; margin-top: 8px; }
+  .oc5 .pr s { font-size: 44px; font-weight: 500; color: #a3a3a3; }
+  .oc5 .pr b { font-size: 112px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; }
+  .oc5 .pr b small { font-size: 26px; font-weight: 500; letter-spacing: 0; color: #525252; margin-left: 2px; }
+  .oc5 .save { margin-top: 10px; display: inline-flex; padding: 5px 12px; border-radius: 999px; background: #e8f0fe; color: #005EFF; font-size: 13px; font-weight: 600; }
+
+  /* 6 gift: a present, warm copy */
+  body.offer.v6 .oc6 { display: flex; }
+  body.offer.v6 .tabs-wrap, body.offer.v6 .preview { display: none; }
+  .oc6 .gift { font-size: 96px; line-height: 1; animation: gift-pop .7s cubic-bezier(.2,.9,.3,1.3) both; }
+  @keyframes gift-pop { from { transform: scale(.4) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .oc6 h3 { margin-top: 16px; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+
+  /* 7 countdown hero: the timer is the picture */
+  body.offer.v7 .oc7 { display: flex; }
+  body.offer.v7 .tabs-wrap, body.offer.v7 .preview { display: none; }
+  .oc7 .big-t { margin-top: 8px; font-size: 120px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .oc7 .lbl { font-size: 18px; color: #404040; margin-top: 8px; }
+  .oc7 .lbl b { color: #005EFF; }
+
+  /* 8 sticker: media stays, a sale sticker lands on it */
+  body.offer.v8 .pv-oc8 { display: block; }
+  .sticker { position: absolute; top: 18px; right: 18px; width: 132px; height: 132px; border-radius: 50%; background: #0B1FBB; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; transform: rotate(-12deg); box-shadow: 0 10px 24px -8px rgba(0,0,0,0.5), 0 0 0 4px #fff; animation: stick-in .6s cubic-bezier(.2,.9,.3,1.35) both; }
+  .sticker .n { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; }
+  .sticker .w { font-size: 14px; font-weight: 700; letter-spacing: 0.12em; margin-top: 4px; }
+  .sticker .t { font-size: 10px; margin-top: 8px; opacity: 0.8; font-variant-numeric: tabular-nums; }
+  @keyframes stick-in { from { transform: rotate(20deg) scale(1.8); opacity: 0; } to { transform: rotate(-12deg) scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="var-bar" role="tablist" aria-label="Offer card option">
+  <button type="button" data-v="1"><b>1</b><small>Big number</small></button>
+  <button type="button" data-v="2"><b>2</b><small>Overlay</small></button>
+  <button type="button" data-v="3"><b>3</b><small>Split</small></button>
+  <button type="button" data-v="4"><b>4</b><small>Coupon</small></button>
+  <button type="button" data-v="5"><b>5</b><small>Price</small></button>
+  <button type="button" data-v="6"><b>6</b><small>Gift</small></button>
+  <button type="button" data-v="7"><b>7</b><small>Countdown</small></button>
+  <button type="button" data-v="8"><b>8</b><small>Sticker</small></button>
+</div>
+<div class="tier-bar" role="tablist" aria-label="Pricing tier">
+  <button type="button" data-tier="1" class="is-on"><b>Tier 1</b><small>7 day trial + 20% off</small></button>
+  <button type="button" data-tier="2"><b>Tier 2</b><small>No trial, full price</small></button>
+</div>
+
+<div class="backdrop">
+  <div class="closed-note"><span>Modal closed.</span><button type="button" id="reopen">Reopen</button></div>
+  <div class="dp-stack">
+    <div class="eyebrow" id="eyebrow" aria-live="polite"><span>🎁</span><span>Before you go, a special discount, just for you for the next hour.</span></div>
+    <div class="dp-box">
+      <div class="dp-body">
+
+      <div class="pane-l">
+        <span class="ey-point" aria-hidden="true"></span>
+        <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
+        <div class="oc oc3"><div class="l"><h3>20% off every plan</h3><p>A one hour price, just for you.</p></div><div class="r"><small>Ends in</small><div class="oc-timer">59:56</div></div></div>
+        <div class="preview" id="preview">
+          <div class="pv-oc pv-oc2"><div class="card-w"><div class="oc-kicker">Before you go</div><div class="n grad-txt">20%<span>OFF</span></div><p class="oc-sub">Applied on every plan, for the next hour.</p><div class="oc-timer-row"><i class="ph-fill ph-clock"></i>Ends in <b class="oc-timer">59:56</b></div></div></div>
+          <div class="pv-oc pv-oc8"><div class="sticker"><div class="n">20%</div><div class="w">OFF</div><div class="t">ends in <span class="oc-timer">59:56</span></div></div></div>
+        </div>
+        <div class="oc oc1"><div class="oc-kicker">Special offer</div><div class="oc-big grad-txt">20%<span>OFF</span></div><p class="oc-sub">On every plan, for the next hour.</p><div class="oc-timer-row"><i class="ph-fill ph-clock"></i>Ends in <b class="oc-timer">59:56</b></div></div>
+        <div class="oc oc4"><div class="ticket"><div class="tl"><div class="n grad-txt">20%<span>OFF</span></div><p>Applied on every plan. Yours for the next hour.</p></div><div class="tr"><small>Your code</small><div class="code">SAVE20</div><div class="oc-timer">59:56</div></div></div></div>
+        <div class="oc oc5"><div class="pn"><span class="oc5-name">Pro</span> plan</div><div class="pr"><s>$<span class="oc5-base">20</span></s><b class="grad-txt">$<span class="oc5-off">16</span><small>/mo</small></b></div><div class="save">You save $<span class="oc5-save">4</span> every month</div><div class="oc-timer-row"><i class="ph-fill ph-clock"></i>Ends in <b class="oc-timer">59:56</b></div></div>
+        <div class="oc oc6"><div class="gift">🎁</div><h3>A gift for you</h3><p class="oc-sub">20% off every plan for the next hour. No code needed, it is already applied.</p><div class="oc-timer-row"><i class="ph-fill ph-clock"></i>Ends in <b class="oc-timer">59:56</b></div></div>
+        <div class="oc oc7"><div class="oc-kicker">Offer ends in</div><div class="big-t grad-txt oc-timer">59:56</div><p class="lbl"><b>20% off</b> on every plan, applied</p></div>
+        <div class="foot-l">
+          <span class="loved"><img src="assets/checkout/badge-heart.svg" alt="" />Loved by 12M+ Presenters at</span>
+          <span class="sp-wrap"><span class="sp-track" id="sp-track"></span></span>
+        </div>
+      </div>
+
+      <div class="pane-r">
+        <div class="ttl-row">
+          <h2 class="ttl" id="ttl">Choose your plan</h2>
+          <div class="dp-pill"><span class="t"><i class="ph-fill ph-clock"></i>Ends in <span id="dp-timer">59:56</span></span></div>
+        </div>
+        <div id="cards"></div>
+        <div class="ctas">
+          <button type="button" class="btn btn--trial" id="btn-trial">Start your 7 day free trial</button>
+          <p class="note" id="note-trial"></p>
+          <div class="or">OR</div>
+          <button type="button" class="btn btn--buy" id="btn-buy">Buy Pro at 20% OFF</button>
+        </div>
+        <div class="foot-r">
+          <span><img src="assets/checkout/badge-gdpr.svg" alt="" />GDPR compliant</span>
+          <span><img src="assets/checkout/badge-soc2.svg" alt="" />SOC 2 Type II</span>
+        </div>
+      </div>
+
+      </div>
+    </div>
+    <button type="button" class="dp-close" id="dp-close" aria-label="Close"><i class="ph ph-x"></i></button>
+  </div>
+</div>
+
+<script>
+  // Same feature list and media as the feature modal. Plays through on its own, one by one.
+  const FEATURES = [
+    { key: 'export',    label: 'Export presentations',   icon: 'ph-export',            dots: ['pro','gold','team'], video: 'trigger_export' },
+    { key: 'brandkit',  label: 'Brand kit',              icon: 'ph-swatches',          dots: ['pro','gold','team'], video: 'trigger_brandkit', mp4Only: true },
+    { key: 'knowledge', label: 'Shared knowledge base',  icon: 'ph-book-open',         dots: ['gold','team'],       img: 'triggerprojectknowledge.jpg', zoom: 1.18 },
+    { key: 'team',      label: 'Collaborations',         icon: 'ph-users-three',       dots: ['team'],              video: 'trigger_assign_invite', mp4Only: true },
+    { key: 'ultra',     label: 'Ultra/Pro AI model',     icon: 'ph-sparkle',           dots: ['pro','gold','team'], groups: [{ note: 'Pro model', tiers: ['pro'] }, { note: 'Ultra model', tiers: ['gold','team'] }], img: 'triggeraimodels.jpg', labelFor: { pro: 'Pro AI model', gold: 'Ultra AI model', team: 'Ultra AI model' }, onlyFor: { pro: 'Ultra only on Gold' } },
+    { key: 'analytics', label: 'Analytics',              icon: 'ph-chart-bar',         dots: ['pro','gold','team'], video: 'trigger_analytics' },
+    { key: 'projects',  label: 'Projects',               icon: 'ph-folder',            dots: ['pro','gold','team'], img: 'triggerproject.jpg' },
+    { key: 'fontpair',  label: 'Color and Font pair',    icon: 'ph-text-aa',           dots: ['pro','gold','team'], img: 'triggerfonts.jpg' },
+    { key: 'present',   label: 'Meet and present',       icon: 'ph-projector-screen',  dots: ['pro','gold','team'], img: 'triggercolorsmeetandpresent.jpg' },
+    { key: 'meetedit',  label: 'Meet and edit',          icon: 'ph-pencil-simple',     dots: ['pro','gold','team'], img: 'triggermeetandedit.jpg' },
+  ];
+  const PLANS = [
+    { key: 'pro',  name: 'Pro',  icon: 'ph-rocket-launch', credits: '5,000',  base: 20, off: 16 },
+    { key: 'gold', name: 'Gold', icon: 'ph-sketch-logo',       credits: '25,000', base: 50, off: 40 },
+    { key: 'team', name: 'Team', icon: 'ph-users-three',   credits: '30,000', base: 60, off: 50 },
+  ];
+  const LOGOS = ['microsoftlogo','googlelogo','adobelogo','facebooklogo','mckinseylogo','amazonlogo','notionlogo','eylogo','bcglogo'];
+  let plan = new URLSearchParams(location.search).get('plan') || 'pro';
+  if (!PLANS.some((p) => p.key === plan)) plan = 'pro';
+  const IMG_HOLD = 3500;
+  const VIDEO_MAX = 25000; // safety cap only, videos advance on 'ended'
+  const MEDIA = 'assets/feature-modal/';
+
+  // logos marquee
+  document.getElementById('sp-track').innerHTML = LOGOS.concat(LOGOS).map((l, i) =>
+    '<img class="sp-logo-img" src="assets/export-ppt/logos/' + l + '.svg" alt="' + (i < LOGOS.length ? l.replace('logo','') : '') + '" ' + (i >= LOGOS.length ? 'aria-hidden="true"' : '') + ' />'
+  ).join('');
+
+  // preview items + tabs
+  const preview = document.getElementById('preview');
+  const tabs = document.getElementById('tabs');
+  const items = FEATURES.map((f) => {
+    const el = document.createElement('div');
+    el.className = 'pv-item';
+    el.innerHTML = f.video
+      ? '<video muted playsinline preload="auto">' + (f.mp4Only ? '' : '<source src="' + MEDIA + f.video + '.webm" type="video/webm" />') + '<source src="' + MEDIA + f.video + '.mp4" type="video/mp4" /></video>'
+      : '<img src="' + MEDIA + f.img + '" alt=""' + (f.zoom ? ' style="transform:scale(' + f.zoom + ')"' : '') + ' />';
+    preview.appendChild(el);
+    return el;
+  });
+  // tab strip rendered 3 times so it can scroll forward forever (rewinds one copy width when idle)
+  const N = FEATURES.length;
+  const COPIES = 3;
+  for (let c = 0; c < COPIES; c++) {
+    FEATURES.forEach((f, idx) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tab';
+      b.dataset.idx = idx;
+      b.tabIndex = -1;
+      // v2: no "Available on" pill on the media. Tabs that are not on every paid plan say so inline.
+      b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span class="lbl">' + f.label + '</span><span class="only"><i class="ph ph-lock-simple"></i><span></span></span>';
+      b.addEventListener('click', () => { manual = true; go(idx, b); b.blur(); });
+      tabs.appendChild(b);
+    });
+  }
+  const allTabs = Array.from(tabs.children);
+  // strip moves only on its own: no wheel, trackpad, drag or arrow-key scrolling
+  tabs.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+  tabs.addEventListener('keydown', (e) => { if (e.key.startsWith('Arrow')) e.preventDefault(); });
+  tabs.tabIndex = -1;
+  const tabsFor = (idx) => allTabs.filter((t) => Number(t.dataset.idx) === idx);
+  const copyWidth = () => allTabs[N].offsetLeft - allTabs[0].offsetLeft;
+  let settleTimer = null;
+  function scrollForwardTo(idx, el) {
+    clearTimeout(settleTimer);
+    const cw = tabs.clientWidth;
+    const cur = tabs.scrollLeft;
+    let target;
+    if (el) {
+      target = el.offsetLeft - (cw - el.offsetWidth) / 2;
+    } else {
+      const cands = tabsFor(idx).map((t) => Math.max(0, t.offsetLeft - (cw - t.offsetWidth) / 2));
+      target = cands.find((x) => x >= cur - 1);
+      if (target === undefined) target = cands[cands.length - 1];
+    }
+    tabs.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+    settleTimer = setTimeout(() => {
+      const w = copyWidth();
+      if (tabs.scrollLeft >= w) {
+        tabs.style.scrollBehavior = 'auto';
+        tabs.scrollLeft = tabs.scrollLeft - w;
+        tabs.style.scrollBehavior = '';
+      }
+    }, 700);
+  }
+
+  let i = -1;
+  let timer = null;
+  let manual = false;
+  let fillAnims = [];
+  function runFill(ms) {
+    fillAnims.forEach((a) => a.cancel());
+    fillAnims = tabsFor(i).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
+  }
+  function go(n, el) {
+    clearTimeout(timer);
+    fillAnims.forEach((a) => a.cancel()); fillAnims = [];
+    if (i >= 0) {
+      items[i].classList.remove('is-on');
+      tabsFor(i).forEach((t) => { t.classList.remove('is-on'); t.querySelector('i').className = 'ph ' + FEATURES[i].icon; });
+      const v = items[i].querySelector('video');
+      if (v) { v.pause(); v.currentTime = 0; }
+    }
+    i = n % items.length;
+    const f = FEATURES[i];
+    items[i].classList.add('is-on');
+    tabsFor(i).forEach((t) => { t.classList.add('is-on'); t.querySelector('i').className = 'ph-fill ' + f.icon; });
+    scrollForwardTo(i, el);
+    const v = items[i].querySelector('video');
+    const next = () => { manual = false; go(i + 1); };
+    if (v) {
+      v.onended = next;
+      // fill + safety timer arm only once the clip is really playing, so a slow
+      // load never skips a clip or runs the bar ahead of the video
+      const start = () => { runFill(Math.round((v.duration - v.currentTime) * 1000)); timer = setTimeout(next, VIDEO_MAX); };
+      if (!v.paused && v.readyState >= 3) start(); else v.addEventListener('playing', start, { once: true });
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    } else {
+      runFill(IMG_HOLD);
+      timer = setTimeout(next, IMG_HOLD);
+    }
+  }
+  // v2: what the selected plan includes. Features outside it go quiet with an "Only on X" tag,
+  // and the media strip repeats it while one of those is on screen.
+  const PLAN_NAME = { pro: 'Pro', gold: 'Gold', team: 'Team' };
+  function paintTabs() {
+    FEATURES.forEach((f, idx) => {
+      const has = f.dots.includes(plan);
+      const only = f.onlyFor && f.onlyFor[plan] ? f.onlyFor[plan] : (has ? '' : 'Only on ' + PLAN_NAME[f.dots[0]]);
+      tabsFor(idx).forEach((t) => {
+        t.classList.toggle('is-off', !!only);
+        t.querySelector('.lbl').textContent = f.labelFor ? f.labelFor[plan] : f.label;
+        t.querySelector('.only > span').textContent = only;
+      });
+    });
+  }
+  go(0);
+
+  // hover pauses the show, leave resumes it
+  preview.addEventListener('mouseenter', () => {
+    clearTimeout(timer);
+    const v = items[i].querySelector('video');
+    if (v) v.pause();
+    fillAnims.forEach((a) => a.pause());
+  });
+  preview.addEventListener('mouseleave', () => {
+    const v = items[i].querySelector('video');
+    const next = () => { manual = false; go(i + 1); };
+    fillAnims.forEach((a) => a.play());
+    if (v) {
+      v.play().catch(() => {});
+      timer = setTimeout(next, isFinite(v.duration) ? Math.min((v.duration - v.currentTime) * 1000 + 500, VIDEO_MAX) : VIDEO_MAX);
+    } else {
+      const left = fillAnims[0] ? Math.max(200, IMG_HOLD - (fillAnims[0].currentTime || 0)) : IMG_HOLD;
+      timer = setTimeout(next, left);
+    }
+  });
+
+  // plan cards
+  const cards = document.getElementById('cards');
+  cards.innerHTML = PLANS.map((p) =>
+    '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === plan) + '" tabindex="0">' +
+      '<span class="radio"></span><div class="c-main">' +
+      '<div class="c-row"><span class="c-name">' + p.name + ' <i class="ph ' + p.icon + '"></i></span>' +
+      '<span class="c-price"><s>$' + p.base + '</s>$' + p.off + '/mo</span></div>' +
+      '<span class="c-cred"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' +
+      '</div></div>'
+  ).join('');
+  const buyBtn = document.getElementById('btn-buy');
+  // tier 1: trial + 20% off on buy. tier 2: no trial, full price until the "before you go" offer.
+  const params = new URLSearchParams(location.search);
+  let tier = params.get('tier') === '2' ? 2 : 1;
+  let offer = false; // tier 2 only: set when the user tries to close
+  const hasOff = () => tier === 1 || offer;
+  function paintPrice(c, cp, anim) {
+    const el = c.querySelector('.c-price');
+    if (!hasOff()) { el.innerHTML = '$' + cp.base + '/mo'; return; }
+    el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + (anim ? cp.base : cp.off) + '</span>/mo';
+    if (!anim) return;
+    el.classList.remove('is-drop'); void el.offsetWidth; el.classList.add('is-drop');
+    const num = el.querySelector('.c-num');
+    const t0 = performance.now(); const D = 900;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / D); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      num.textContent = '$' + Math.round(cp.base + (cp.off - cp.base) * e);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function paint(anim) {
+    document.body.classList.toggle('tier2', tier === 2);
+    document.body.classList.toggle('offer', offer);
+    document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
+    const p = PLANS.find((x) => x.key === plan);
+    buyBtn.textContent = 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
+    document.querySelector('.oc5-name').textContent = p.name;
+    document.querySelector('.oc5-base').textContent = p.base;
+    document.querySelector('.oc5-off').textContent = p.off;
+    document.querySelector('.oc5-save').textContent = p.base - p.off;
+    const ttl = document.getElementById('ttl');
+    const html = offer ? 'Choose your plan, <span class="off">20% off</span>' : 'Choose your plan';
+    if (ttl.innerHTML !== html) { ttl.innerHTML = html; ttl.classList.remove('is-swap'); void ttl.offsetWidth; ttl.classList.add('is-swap'); }
+    cards.querySelectorAll('.card').forEach((c) => {
+      const cp = PLANS.find((x) => x.key === c.dataset.plan);
+      paintPrice(c, cp, anim);
+    });
+    paintTabs();
+  }
+  let timerId = null, left = 59 * 60 + 56;
+  function startTimer() {
+    clearInterval(timerId); left = 59 * 60 + 56;
+    const el = document.getElementById('dp-timer');
+    // each digit is its own span and flips over when it changes
+    const dgs = [];
+    el.innerHTML = '';
+    'mm:ss'.split('').forEach((ch) => {
+      if (ch === ':') { el.appendChild(document.createTextNode(':')); return; }
+      const d = document.createElement('span'); d.className = 'dg'; el.appendChild(d); dgs.push(d);
+    });
+    const tick = () => {
+      const str = String(Math.floor(left / 60)).padStart(2, '0') + String(left % 60).padStart(2, '0');
+      dgs.forEach((d, k) => {
+        if (d.textContent === str[k]) return;
+        if (d.textContent === '') { d.textContent = str[k]; return; }
+        d.animate([{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(-90deg)', offset: 0.5 }, { transform: 'rotateX(0deg)' }], { duration: 420, easing: 'ease-in-out' });
+        setTimeout(() => { d.textContent = str[k]; }, 210);
+      });
+      document.querySelectorAll('.oc-timer').forEach((t) => { t.textContent = str.slice(0, 2) + ':' + str.slice(2); });
+      if (left > 0) left--;
+    };
+    tick(); timerId = setInterval(tick, 1000);
+  }
+  function select(key) {
+    plan = key;
+    cards.querySelectorAll('.card').forEach((c) => { const on = c.dataset.plan === key; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
+    const p = PLANS.find((x) => x.key === key);
+    document.getElementById('note-trial').textContent = 'No discount, full price $' + p.base + '/mo after the trial';
+    paint();
+  }
+  function setTier(t) {
+    tier = t; offer = false; clearInterval(timerId);
+    document.getElementById('eyebrow').classList.remove('is-open');
+    document.body.classList.remove('is-closed');
+    const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
+    paint();
+  }
+  document.querySelectorAll('.tier-bar button').forEach((b) => b.addEventListener('click', () => setTier(Number(b.dataset.tier))));
+  document.getElementById('dp-close').addEventListener('click', () => {
+    if (tier === 2 && !offer) {
+      // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
+      offer = true;
+      document.getElementById('eyebrow').classList.add('is-open');
+      paint(true); startTimer();
+      cards.querySelectorAll('.card').forEach((c) => { c.classList.remove('is-flash'); void c.offsetWidth; c.classList.add('is-flash'); });
+      return;
+    }
+    document.body.classList.add('is-closed');
+  });
+  document.getElementById('reopen').addEventListener('click', () => setTier(tier));
+  if (params.get('closed') === '1') document.body.classList.add('is-closed'); // back from a closed checkout
+  cards.querySelectorAll('.card').forEach((c) => {
+    c.addEventListener('click', () => select(c.dataset.plan));
+    c.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(c.dataset.plan); } });
+  });
+  select(plan);
+  // crazy8s: which offer card is on. ?v=1..8, number keys switch
+  let variant = Number(params.get('v')) || 1;
+  function setVariant(v) {
+    variant = Math.min(8, Math.max(1, v));
+    document.body.className = document.body.className.replace(/\bv\d\b/g, '').trim();
+    document.body.classList.add('v' + variant);
+    document.querySelectorAll('.var-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.v) === variant));
+    const u = new URL(location.href); u.searchParams.set('v', variant); history.replaceState(null, '', u);
+  }
+  document.querySelectorAll('.var-bar button').forEach((b) => b.addEventListener('click', () => setVariant(Number(b.dataset.v))));
+  document.addEventListener('keydown', (e) => { if (e.key >= '1' && e.key <= '8' && !e.metaKey && !e.ctrlKey) setVariant(Number(e.key)); });
+  setVariant(variant);
+  // ?offer=1 lands straight on the closed-once state (tier 2)
+  if (params.get('offer') === '1') { if (tier !== 2) setTier(2); setTimeout(() => document.getElementById('dp-close').click(), 350); }
+
+  document.getElementById('btn-trial').addEventListener('click', () => { location.href = 'checkout-trial-sep-2026.html?plan=' + plan; });
+  buyBtn.addEventListener('click', () => { location.href = 'checkout-buy-sep-2026.html?plan=' + plan + (tier === 2 ? '&off=' + (offer ? 20 : 0) : ''); });
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
