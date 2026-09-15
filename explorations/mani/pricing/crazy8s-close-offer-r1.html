@@ -196,9 +196,8 @@
   .tab-offer .tm { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: #0B1FBB; color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .tab-offer .tm i { font-size: 11px; color: #fff; }
   body.offer .tab-offer { display: inline-flex; animation: dp-rise .4s cubic-bezier(.2,.8,.2,1) both; }
-  body.show-offer .tab-offer { color: #0B1FBB; border-bottom-color: #0B1FBB; }
-  body.show-offer .tab.is-on:not(.tab-offer) { color: #525252; border-bottom-color: #ebedf0; }
-  body.show-offer .tab.is-on:not(.tab-offer) i { color: #737373; }
+  .tab-offer.is-on { color: #0B1FBB; border-bottom-color: #c9d0f0; }
+  .tab-offer .fill { background: #0B1FBB; }
   /* overlay: the offer artwork fills the media box, white card on top */
   body.show-offer .pv-oc2 { display: flex; background: #020a3a url(assets/checkout/offer-bg.jpg) center / cover no-repeat; }
   body.show-offer .pv-item { visibility: hidden; }
@@ -224,7 +223,7 @@
 
       <div class="pane-l">
         <div class="tabs-row">
-          <button type="button" class="tab tab-offer" id="tab-offer"><i class="ph-fill ph-gift"></i><span class="lbl">20% off</span><span class="tm"><i class="ph-fill ph-clock"></i><span class="oc-timer">59:56</span></span></button>
+          <button type="button" class="tab tab-offer" id="tab-offer"><span class="fill"></span><i class="ph-fill ph-gift"></i><span class="lbl">20% off</span><span class="tm"><i class="ph-fill ph-clock"></i><span class="oc-timer">59:56</span></span></button>
           <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
         </div>
         <div class="preview" id="preview">
@@ -315,7 +314,7 @@
       b.tabIndex = -1;
       // v2: no "Available on" pill on the media. Tabs that are not on every paid plan say so inline.
       b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span class="lbl">' + f.label + '</span><span class="only"><i class="ph ph-lock-simple"></i><span></span></span>';
-      b.addEventListener('click', () => { manual = true; document.body.classList.remove('show-offer'); go(idx, b); b.blur(); });
+      b.addEventListener('click', () => { manual = true; go(idx, b); b.blur(); });
       tabs.appendChild(b);
     });
   }
@@ -358,15 +357,31 @@
     fillAnims.forEach((a) => a.cancel());
     fillAnims = tabsFor(i).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
   }
-  function go(n, el) {
+  // offer turn: the 20% off tab takes one slot in the loop, at the front, once the modal was closed once
+  const offerTab = document.getElementById('tab-offer');
+  function leaveCurrent() {
     clearTimeout(timer);
     fillAnims.forEach((a) => a.cancel()); fillAnims = [];
+    offerTab.classList.remove('is-on');
+    document.body.classList.remove('show-offer');
     if (i >= 0) {
       items[i].classList.remove('is-on');
       tabsFor(i).forEach((t) => { t.classList.remove('is-on'); t.querySelector('i').className = 'ph ' + FEATURES[i].icon; });
       const v = items[i].querySelector('video');
       if (v) { v.pause(); v.currentTime = 0; }
     }
+  }
+  function goOffer() {
+    leaveCurrent();
+    i = -1;
+    offerTab.classList.add('is-on');
+    document.body.classList.add('show-offer');
+    fillAnims = [offerTab.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: IMG_HOLD, easing: 'linear', fill: 'forwards' })];
+    timer = setTimeout(() => { manual = false; go(0); }, IMG_HOLD);
+  }
+  function go(n, el) {
+    if (offer && !manual && n >= items.length) { goOffer(); return; }
+    leaveCurrent();
     i = n % items.length;
     const f = FEATURES[i];
     items[i].classList.add('is-on');
@@ -406,12 +421,12 @@
   // hover pauses the show, leave resumes it
   preview.addEventListener('mouseenter', () => {
     clearTimeout(timer);
-    const v = items[i].querySelector('video');
+    const v = i >= 0 ? items[i].querySelector('video') : null;
     if (v) v.pause();
     fillAnims.forEach((a) => a.pause());
   });
   preview.addEventListener('mouseleave', () => {
-    const v = items[i].querySelector('video');
+    const v = i >= 0 ? items[i].querySelector('video') : null;
     const next = () => { manual = false; go(i + 1); };
     fillAnims.forEach((a) => a.play());
     if (v) {
@@ -501,7 +516,7 @@
     paint();
   }
   function setTier(t) {
-    tier = t; offer = false; clearInterval(timerId); document.body.classList.remove('show-offer');
+    tier = t; offer = false; clearInterval(timerId); if (i < 0) go(0);
     document.getElementById('eyebrow').classList.remove('is-open');
     document.body.classList.remove('is-closed');
     const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
@@ -513,14 +528,14 @@
       // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
       offer = true;
       document.getElementById('eyebrow').classList.add('is-open');
-      document.body.classList.add('show-offer');
       paint(true); startTimer();
+      goOffer();
       return;
     }
     document.body.classList.add('is-closed');
   });
   document.getElementById('reopen').addEventListener('click', () => setTier(tier));
-  document.getElementById('tab-offer').addEventListener('click', () => { document.body.classList.add('show-offer'); });
+  offerTab.addEventListener('click', () => { manual = true; goOffer(); offerTab.blur(); });
   if (params.get('closed') === '1') document.body.classList.add('is-closed'); // back from a closed checkout
   cards.querySelectorAll('.card').forEach((c) => {
     c.addEventListener('click', () => select(c.dataset.plan));
