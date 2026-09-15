@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>crazy8s · Pane layout · Round 3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* Figma FilrWEhw4GFBJqKUpKabCa node 1178-21215 ("free trail", modal frame 1176x620) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #dfe3e8; color: #171717; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  .backdrop { position: fixed; inset: 0; background: rgba(10,25,37,0.45); display: flex; align-items: center; justify-content: center; }
+
+  .dp-stack { position: relative; display: flex; gap: 10px; align-items: flex-start; }
+
+  /* entrance: scrim fades, the box rises and settles, close follows */
+  @keyframes dp-bd-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes dp-box-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+  .backdrop { animation: dp-bd-in .25s ease backwards; }
+  .dp-box { animation: dp-box-in .45s cubic-bezier(.2,.8,.2,1) backwards; }
+  .dp-close { animation: dp-bd-in .3s .15s ease backwards; }
+  .dp-close { transition: background 0.15s ease; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 0; border-radius: 24px; cursor: pointer; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.18); color: #171717; font-size: 15px; }
+  .dp-close:hover { background: #ececec; }
+  .dp-box { position: relative; width: 1176px; background: #fff; border-radius: 4px; overflow: hidden; flex: none; display: flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 40px -16px rgba(10,25,37,0.3); }
+  .dp-body { display: flex; min-height: 620px; }
+
+  /* proto switch: tier 1 (trial + 20% off) vs tier 2 (no trial, full price) */
+  .tier-bar { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 20; display: inline-flex; gap: 3px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 6px 18px -6px rgba(10,25,37,0.35); }
+  .tier-bar button { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 150px; padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; font-family: inherit; color: #525252; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .tier-bar button b { font-size: 12.5px; font-weight: 600; }
+  .tier-bar button small { font-size: 10.5px; font-weight: 400; color: #8a8a8a; }
+  .tier-bar button:hover:not(.is-on) { background: #f0f2f5; }
+  .tier-bar button.is-on { background: #171717; color: #fff; }
+  .tier-bar button.is-on small { color: rgba(255,255,255,0.65); }
+
+  /* "before you go" eyebrow: slides in above the modal body when tier 2 is closed */
+  .eyebrow { position: absolute; left: 20px; width: 1136px; top: -38px; height: 50px; z-index: 0; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 16px 12px; border-radius: 8px 8px 0 0; background: #e8f0fe; color: #1c2b3a; font-size: 12.5px; white-space: nowrap; transform: translateY(38px); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .3s ease; }
+  .eyebrow.is-open { transform: none; opacity: 1; }
+  .dp-box { z-index: 1; }
+  .card.is-flash { animation: c-flash .9s ease; }
+  @keyframes c-flash { 30% { box-shadow: 0 0 0 4px rgba(0,94,255,0.25); } }
+
+  body.tier2 #btn-trial, body.tier2 #note-trial, body.tier2 .or { display: none; }
+  body.tier2 .ctas { margin-top: 24px; }
+
+  .closed-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff; font-size: 14px; }
+  .closed-note button { padding: 9px 18px; border: 0; border-radius: 4px; background: #fff; color: #171717; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  body.is-closed .dp-stack { display: none; }
+  body.is-closed .closed-note { display: flex; }
+
+  /* left */
+  .pane-l { width: 806px; flex: none; padding: 22px 0 0 24px; display: flex; flex-direction: column; }
+  .ttl-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; min-height: 30px; }
+  .ttl { font-size: 18px; font-weight: 500; line-height: 1.3; }
+  .pv-ttl-row { min-height: 30px; margin-bottom: 12px; display: flex; align-items: center; }
+  .pv-ttl { display: block; }
+  .pv-ttl.is-swap { animation: dp-rise .35s cubic-bezier(.2,.8,.2,1) both; }
+  .ttl-sub { display: none; margin: -8px 0 14px; font-size: 13px; color: #404040; }
+  body.offer .ttl-sub { display: block; animation: dp-rise .35s cubic-bezier(.2,.8,.2,1) both; }
+  .ttl .off, .ttl-sub .off { display: none; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#005EFF 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
+  .dp-pill { position: relative; display: none; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#005EFF 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .dp-pill::before { content: ''; position: absolute; left: -3px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; background: #00225C; border-radius: 1px; transform: rotate(45deg); z-index: -1; }
+  .dp-pill .sep { opacity: 0.5; font-weight: 400; }
+  .dp-pill .t { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; opacity: 0.95; font-variant-numeric: tabular-nums; }
+  .dp-pill .t i { font-size: 13px; }
+  body.offer .ttl .off, body.offer .ttl-sub .off { display: inline; }
+  body.offer .dp-pill { display: inline-flex; animation: pill-in 0.5s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.25) both, pill-bob 1.6s 0.7s ease-in-out infinite, pill-ripple 2.2s 0.7s ease-in-out infinite; }
+  @keyframes pill-bob { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-3px); } }
+  .dp-pill::before { display: none; }
+  @keyframes pill-in { from { opacity: 0; transform: translateX(-10px) scale(0.9); } to { opacity: 1; transform: none; } }
+  @keyframes pill-ripple {
+    0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.14), 0 0 0 0 rgba(0,85,237,0.55); }
+    70%      { box-shadow: 0 4px 14px rgba(0,0,0,0.14), 0 0 0 10px rgba(0,85,237,0); }
+    100%     { box-shadow: 0 4px 14px rgba(0,0,0,0.14), 0 0 0 0 rgba(0,85,237,0); }
+  }
+
+  .preview { position: relative; width: 762px; height: 430px; border-radius: 8px; overflow: hidden; background: #0b1fbb; flex: none; box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 8px 24px -12px rgba(10,25,37,0.35); }
+  .preview::after { content: ''; position: absolute; inset: 0; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); pointer-events: none; }
+  .preview .pv-item { position: absolute; inset: 0; opacity: 0; transform: scale(1.02); transition: opacity .55s ease, transform .9s ease; }
+  .preview .pv-item.is-on { opacity: 1; transform: scale(1); }
+  .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
+  .avail > span:first-child { display: inline-flex; align-items: center; gap: 5px; }
+  .avail > span:first-child i { font-size: 13px; color: #737373; }
+  .avail { position: absolute; left: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 10px; padding: 8px 12px 8px 14px; border-radius: 8px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(10,25,37,0.15); font-size: 12.5px; color: #404040; }
+  #avail-pills { display: inline-flex; align-items: center; gap: 8px; }
+  .tp-group { display: inline-flex; align-items: center; gap: 6px; }
+  .tp-note { font-size: 11.5px; color: #737373; margin-left: 2px; white-space: nowrap; }
+  .tp-sep { width: 1px; height: 14px; background: rgba(10,25,37,0.15); margin: 0 2px; }
+  .avail .tp { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 8px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+  .avail .tp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .avail .tp--pro  { color: #005EFF; }
+  .avail .tp--gold { color: #c9932a; }
+  .avail .tp--team { color: #171717; }
+  .avail .tp--free { color: #16a34a; }
+
+  .tabs-wrap { position: relative; margin: 0 0 14px -24px; width: 806px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); }
+  .tabs { display: flex; gap: 22px; padding: 0 24px; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; scroll-behavior: smooth; touch-action: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  /* v2 (Mudita's comments): text tabs above the media, bottom border doubles as the progress bar */
+  .tab { position: relative; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 2px; border: 0; border-bottom: 2px solid #ebedf0; border-radius: 0; background: transparent; font-family: inherit; font-size: 13.5px; font-weight: 500; color: #525252; cursor: pointer; white-space: nowrap; transition: color .2s ease, border-color .2s ease; }
+  .tab i { font-size: 16px; color: #737373; transition: color .2s ease; }
+  .tab:hover { color: #171717; border-bottom-color: #d4d4d4; }
+  .tab:focus, .tab:focus-visible { outline: none; }
+  .tab.is-on { color: #005EFF; border-bottom-color: #cfe0ff; }
+  .tab.is-on i { color: #005EFF; }
+  .tab .fill { position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: #005EFF; transform: scaleX(0); transform-origin: left center; pointer-events: none; }
+  .tab > i, .tab > span { position: relative; z-index: 1; }
+  /* v2: features the selected plan does not include go quiet and say which plan has them */
+  .tab.is-off { color: #a3a3a3; }
+  .tab.is-off i { color: #c4c4c4; }
+  .tab.is-off.is-on { color: #737373; border-bottom-color: #e5e5e5; }
+  .tab.is-off.is-on i { color: #737373; }
+  .tab.is-off .fill { background: #a3a3a3; }
+  .tab .only { display: none; align-items: center; gap: 4px; margin-left: 2px; padding: 2px 7px; border-radius: 999px; background: #f0f0f0; color: #737373; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .tab .only i { font-size: 11px; color: inherit; }
+  .tab.is-off .only { display: inline-flex; }
+  .tab.is-off:hover, .tab.is-off:hover i { color: #525252; }
+  /* v2: the pill strip on the media only appears when a feature is not on every paid plan */
+  .avail { display: none; }
+  .avail.is-on { display: inline-flex; animation: dp-rise .35s cubic-bezier(.2,.8,.2,1) both; }
+
+  .foot-l { margin: auto 0 0 -24px; width: 806px; height: 66px; border-top: 1px solid rgba(10,25,37,0.08); display: flex; align-items: center; gap: 22px; padding: 0 24px; overflow: hidden; }
+  .foot-l .loved { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #404040; white-space: nowrap; flex: none; }
+  .foot-l .loved img { height: 16px; width: auto; }
+  .sp-wrap { flex: 1; min-width: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%); }
+  @keyframes sp-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  .sp-track { display: inline-flex; align-items: center; gap: 26px; padding-right: 26px; animation: sp-marquee 40s linear infinite; }
+  .sp-wrap:hover .sp-track { animation-play-state: paused; }
+  .sp-logo-img { flex: none; height: 34px; width: auto; max-width: 120px; object-fit: contain; }
+
+  /* right */
+  .pane-r { width: 370px; flex: none; background: #f5f9ff; border-left: 1px solid rgba(10,25,37,0.06); padding: 22px 20px 0; display: flex; flex-direction: column; }
+  .card { position: relative; display: flex; align-items: flex-start; gap: 12px; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 16px 18px 14px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  .card + .card { margin-top: 12px; }
+  @keyframes dp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .card, .ctas, .foot-r { animation: dp-rise .4s cubic-bezier(.2,.8,.2,1) backwards; }
+  .card:nth-child(1) { animation-delay: .12s; } .card:nth-child(2) { animation-delay: .18s; } .card:nth-child(3) { animation-delay: .24s; } .ctas { animation-delay: .3s; } .foot-r { animation-delay: .36s; }
+  .card:active { transform: scale(0.99); }
+  .card.is-sel { border-color: #005eff; box-shadow: inset 0 0 0 0.5px #005eff, 0 0 0 3px rgba(0,94,255,0.08); background: #eaf2ff; }
+  .card.is-sel .c-cred { background: #d6e5ff; }
+  .card:hover:not(.is-sel) { border-color: #c9cdd2; transform: translateY(-1px); box-shadow: 0 4px 12px -6px rgba(10,25,37,0.2); }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #d4d4d4; background: #fff; margin-top: 3px; flex: none; transition: border .15s ease; }
+  .card:hover:not(.is-sel) .radio { border-color: #a3a3a3; }
+  .is-sel .radio { border: 5px solid #005eff; }
+  .c-main { flex: 1; min-width: 0; }
+  .c-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .c-name { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+  .c-name i { font-size: 16px; }
+  .c-price { font-size: 16px; font-weight: 500; white-space: nowrap; }
+  .c-price s { color: #a3a3a3; font-weight: 400; margin-right: 5px; }
+  .c-price small { display: block; font-size: 11px; font-weight: 400; color: #737373; text-align: right; margin-top: 2px; }
+  .c-cred { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 4px 10px; border-radius: 999px; background: #e8f0fe; color: #005EFF; font-size: 12px; font-weight: 500; }
+  .c-cred i { font-size: 11px; }
+
+  .ctas { margin-top: 20px; }
+  .note { margin-top: 7px; text-align: center; font-size: 11.5px; line-height: 1.45; color: #737373; white-space: nowrap; }
+  .note b { font-weight: 500; color: #404040; }
+  .note .blue { font-weight: 500; color: #005eff; }
+  .btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 44px; border-radius: 4px; font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, background .15s ease; }
+  .btn:active { transform: translateY(0); }
+  .btn--trial { background: #fff; border: 1.5px solid #005EFF; color: #005EFF; }
+  .btn--trial:hover { background: #eaf2ff; color: #0052e0; border-color: #0052e0; }
+  .or { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: #a3a3a3; font-size: 10.5px; font-weight: 500; letter-spacing: 0.04em; }
+  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: rgba(10,25,37,0.1); }
+  .btn--buy { background: #005eff; border: 0; color: #fff; }
+  .btn--buy:hover { background: #0052e0; box-shadow: 0 2px 8px rgba(0,94,255,0.3); transform: translateY(-1px); }
+
+  .foot-r { margin-top: auto; height: 66px; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 12px; font-weight: 500; color: #525252; white-space: nowrap; }
+  .foot-r span { display: inline-flex; align-items: center; gap: 6px; }
+  .foot-r img { height: 18px; width: auto; }
+
+  /* crazy8s: variant bar, sits under the tier bar */
+  .var-bar { position: fixed; top: 74px; left: 50%; transform: translateX(-50%); z-index: 20; display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 6px 18px -6px rgba(10,25,37,0.35); }
+  .var-bar button { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 70px; padding: 5px 10px; border: 0; border-radius: 999px; background: transparent; font-family: inherit; color: #525252; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .var-bar button b { font-size: 12px; font-weight: 600; }
+  .var-bar button small { font-size: 10px; color: #8a8a8a; }
+  .var-bar button:hover:not(.is-on) { background: #f0f2f5; }
+  .var-bar button.is-on { background: #005EFF; color: #fff; }
+  .var-bar button.is-on small { color: rgba(255,255,255,0.75); }
+
+  /* shared left side pieces */
+  .l-head { margin-bottom: 12px; }
+  .pv-ttl-row { gap: 10px; margin-bottom: 0; }
+  .l-body { display: flex; gap: 18px; align-items: flex-start; }
+  .pv-col { flex: 1 1 0; min-width: 0; }
+  .nav { cursor: pointer; }
+  .nav .only { display: none; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; background: #f0f0f0; color: #737373; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+  .nav .only i { font-size: 11px; }
+  .nav.is-off .only { display: inline-flex; }
+
+
+  /* responsive: fluid widths, panes stack under 900px, page scrolls when the box is taller than the window */
+  .backdrop { overflow-y: auto; padding: 16px; align-items: flex-start; }
+  .dp-stack { margin: auto; max-width: 100%; }
+  .dp-box { width: min(1176px, calc(100vw - 70px)); }
+  .eyebrow { width: auto; right: 58px; overflow: hidden; text-overflow: ellipsis; } /* 20px inset + gap + close button */
+  .pane-l { width: auto; flex: 1 1 0; min-width: 0; padding-right: 20px; }
+  .preview { width: 100%; height: auto; aspect-ratio: 762 / 430; }
+  .tabs-wrap, .foot-l { width: calc(100% + 44px); }
+  @media (max-width: 900px) {
+    .dp-body { flex-direction: column; height: auto; }
+    .pane-r { width: 100%; padding: 20px 20px 0; border-left: 0; border-top: 1px solid rgba(10,25,37,0.06); }
+    .foot-r { height: 56px; }
+    .tier-bar button { min-width: 120px; padding: 5px 12px; }
+  }
+  @media (max-width: 520px) {
+    .dp-box { width: calc(100vw - 32px); }
+    .dp-stack { flex-direction: column-reverse; align-items: flex-end; gap: 8px; }
+    .ttl-row { flex-wrap: wrap; }
+    .eyebrow { right: 20px; white-space: normal; height: auto; padding-top: 8px; text-align: center; }
+    .note { white-space: normal; }
+  }
+
+  /* crazy8s r3: eight pane layouts. Media, text and nav move around the pane. */
+  .tabs-wrap, .avail, .avail.is-on { display: none; }
+  .l-grid { flex: 1 1 auto; min-height: 0; display: grid; gap: 14px 18px; align-content: start; grid-template-areas: "head" "media"; }
+  .l-head { grid-area: head; margin: 0; }
+  .l-media { grid-area: media; min-width: 0; }
+  .l-side { grid-area: side; min-width: 0; display: none; }
+  .l-top { grid-area: top; display: none; }
+  .l-bottom { grid-area: bottom; display: none; }
+  .l-side > *, .l-top > *, .l-bottom > * { display: none; }
+  .ov-desc { font-size: 13px; line-height: 1.5; color: #525252; max-width: 560px; }
+  .ov-desc.is-swap { animation: dp-rise .35s cubic-bezier(.2,.8,.2,1) both; }
+  .l-desc { display: none; margin-top: 4px; }
+  .m-desc { display: none; margin-top: 12px; }
+  .ov-lock { display: none; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #f0f0f0; color: #737373; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .ov-lock i { font-size: 12px; }
+  .ov-lock.is-on { display: inline-flex; }
+  .ov-count { font-size: 12px; font-weight: 600; color: #737373; font-variant-numeric: tabular-nums; }
+  .ov-ttl { font-size: 18px; font-weight: 500; line-height: 1.3; }
+  .ov-plans { display: flex; gap: 4px; }
+  .pp { padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; background: #f0f0f0; color: #a3a3a3; }
+  .pp.is-in { background: #e8f0fe; color: #005EFF; }
+  .pp.is-cur { box-shadow: 0 0 0 1.5px #005EFF; }
+  .tp-ctl { display: flex; gap: 6px; }
+  .ctl-btn { width: 32px; height: 32px; border: 1px solid #e5e5e5; border-radius: 50%; background: #fff; color: #171717; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s ease; }
+  .ctl-btn:hover { background: #f5f5f5; }
+  .l-grid .nav { position: relative; border: 0; background: transparent; font-family: inherit; color: #404040; overflow: hidden; cursor: pointer; }
+  .l-grid .nav .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #005EFF; transform: scaleX(0); transform-origin: left center; }
+  .l-grid .nav.is-off { color: #a3a3a3; }
+  .l-grid .nav.is-off .fill { background: #a3a3a3; }
+  .pv-arrow { display: flex; position: absolute; top: 50%; width: 36px; height: 36px; margin-top: -18px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.92); color: #171717; font-size: 18px; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(10,25,37,0.25); opacity: 0; transition: opacity .2s ease, transform .2s ease; z-index: 2; }
+  .pv-arrow--l { left: 14px; transform: translateX(-6px); }
+  .pv-arrow--r { right: 14px; transform: translateX(6px); }
+  .pv-arrow:hover { background: #fff; }
+  .preview:hover .pv-arrow { opacity: 1; transform: none; }
+
+  /* 1 list: feature list down the left, media right, description under the media */
+  body.v1 .l-grid { grid-template-columns: 224px 1fr; grid-template-areas: "head head" "side media"; }
+  body.v1 .l-side { display: block; } body.v1 .list { display: flex; } body.v1 .m-desc { display: block; }
+  .list { flex-direction: column; gap: 2px; }
+  .list .nav { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; text-align: left; transition: background .15s ease, color .15s ease; }
+  .list .nav i.ic { font-size: 16px; flex: none; }
+  .list .nav .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list .nav:hover { background: #f5f5f5; }
+  .list .nav.is-on { background: #eaf2ff; color: #005EFF; }
+  .list .nav.is-off.is-on { background: #f5f5f5; color: #737373; }
+  .list .nav .only { padding: 0; background: transparent; color: inherit; }
+  .list .nav .only > span { display: none; }
+  .list .nav .fill { left: 10px; right: 10px; }
+
+  /* 2 panel: media left, text panel right with count, arrows and what plays next */
+  body.v2 .l-grid { grid-template-columns: 1fr 250px; grid-template-areas: "head head" "media side"; }
+  body.v2 .l-side { display: block; } body.v2 .tpanel { display: flex; } body.v2 .l-lock { display: none; }
+  .tpanel { flex-direction: column; align-items: flex-start; gap: 10px; height: 100%; }
+  .tpanel .ov-count { font-size: 26px; font-weight: 600; color: #171717; line-height: 1; }
+  .tpanel .ov-desc { font-size: 13.5px; }
+  .upnext { width: 100%; margin-top: auto; border-top: 1px solid rgba(10,25,37,0.08); padding-top: 10px; }
+  .upnext-h { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; color: #a3a3a3; margin-bottom: 4px; padding: 0 8px; }
+  .upnext .nav { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 6px; font-size: 12.5px; font-weight: 500; text-align: left; }
+  .upnext .nav:hover { background: #f5f5f5; }
+  .upnext .nav i { font-size: 14px; flex: none; }
+  .upnext .nav .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .upnext .nav .fill { display: none; }
+
+  /* 3 steps: numbered stepper across the top, played steps stay filled */
+  body.v3 .l-grid { grid-template-areas: "head" "top" "media"; }
+  body.v3 .l-top { display: block; } body.v3 .steps { display: flex; } body.v3 .l-desc { display: block; } body.v3 .l-media { max-width: 690px; }
+  .steps { position: relative; padding-top: 2px; }
+  .steps::before { content: ''; position: absolute; left: 5%; right: 5%; top: 14px; height: 2px; background: #ebedf0; }
+  .steps .nav { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 7px; overflow: visible; font-size: 11px; font-weight: 500; text-align: center; line-height: 1.25; padding: 0 3px; }
+  .steps .num { position: relative; z-index: 1; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid #d4d4d4; color: #737373; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: background .2s ease, border-color .2s ease, color .2s ease; }
+  .steps .nav.is-on .num { border-color: #005EFF; background: #005EFF; color: #fff; }
+  .steps .nav.is-done .num { border-color: #005EFF; color: #005EFF; }
+  .steps .nav.is-off .num { border-style: dashed; }
+  .steps .nav.is-on { color: #005EFF; }
+  .steps .nav .only { display: none !important; }
+  .steps .nav .fill { left: 50%; right: -50%; top: 13px; bottom: auto; height: 2px; }
+  .steps .nav.is-done .fill { transform: scaleX(1); }
+  .steps .nav:last-child .fill { display: none; }
+
+  /* 4 filmstrip: thumbnails of every feature under the media */
+  body.v4 .l-grid { grid-template-areas: "head" "media" "bottom"; }
+  body.v4 .l-bottom { display: block; } body.v4 .thumbs { display: flex; } body.v4 .l-desc { display: block; } body.v4 .l-media { max-width: 640px; }
+  .thumbs { gap: 8px; }
+  .thumbs .nav { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 5px; overflow: visible; font-size: 11px; font-weight: 500; color: #525252; text-align: left; }
+  .thumbs .th { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 5px; overflow: hidden; background: #0b1fbb; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); transition: box-shadow .2s ease; }
+  .thumbs .th img, .thumbs .th video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumbs .nav:hover .th { box-shadow: 0 0 0 1px #c9cdd2; }
+  .thumbs .nav.is-on .th { box-shadow: 0 0 0 2px #005EFF; }
+  .thumbs .nav.is-on { color: #005EFF; }
+  .thumbs .nav.is-off { opacity: 0.55; }
+  .thumbs .nav .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thumbs .th .fill { height: 3px; }
+
+  /* 5 cards: two rows of feature cards above a smaller media */
+  body.v5 .l-grid { grid-template-areas: "head" "top" "media"; }
+  body.v5 .l-top { display: block; } body.v5 .cards { display: grid; } body.v5 .l-desc { display: block; } body.v5 .l-media { max-width: 500px; }
+  .cards { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .cards .nav { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px; border-radius: 8px; background: #fff; box-shadow: inset 0 0 0 1px #e5e5e5; font-size: 12.5px; font-weight: 500; text-align: left; transition: box-shadow .15s ease, background .15s ease; }
+  .cards .nav i.ic { font-size: 18px; color: #005EFF; }
+  .cards .nav.is-off i.ic { color: #c4c4c4; }
+  .cards .nav:hover { box-shadow: inset 0 0 0 1px #c9cdd2; }
+  .cards .nav.is-on { background: #eaf2ff; box-shadow: inset 0 0 0 1.5px #005EFF; color: #171717; }
+  .cards .nav.is-off.is-on { background: #f5f5f5; box-shadow: inset 0 0 0 1.5px #c4c4c4; }
+  .cards .nav .lbl { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cards .nav .only { font-size: 10px; padding: 1px 6px; }
+  .cards .nav .fill { height: 3px; }
+
+  /* 6 checklist: media left, plan checklist right. Answers "what do I get on this plan" directly */
+  body.v6 .l-grid { grid-template-columns: 1fr 268px; grid-template-areas: "head head" "media side"; }
+  body.v6 .l-side { display: block; } body.v6 .check { display: block; } body.v6 .m-desc { display: block; }
+  .check-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 10px 8px; font-size: 12px; color: #737373; }
+  .check-h b { color: #171717; font-weight: 600; }
+  .check .nav-row { display: flex; flex-direction: column; gap: 1px; }
+  .check .nav { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 6px; font-size: 13px; text-align: left; transition: background .15s ease; }
+  .check .nav:hover { background: #f5f5f5; }
+  .check .nav.is-on { background: #eaf2ff; }
+  .ck { width: 18px; height: 18px; border-radius: 50%; background: #e6f4ea; color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .ck .lk { display: none; }
+  .nav.is-off .ck { background: #f0f0f0; color: #a3a3a3; }
+  .nav.is-off .ck .chk { display: none; }
+  .nav.is-off .ck .lk { display: inline; }
+  .check .nav .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .check .nav .only { font-size: 10px; }
+  .check .nav .fill { left: 10px; right: 10px; }
+
+  /* 7 full bleed: media edge to edge, title and description under it */
+  body.v7 .pane-l { padding: 0; }
+  body.v7 .l-grid { gap: 0; grid-template-areas: "media" "bottom"; }
+  body.v7 .l-head { display: none; }
+  body.v7 .preview { border-radius: 0; box-shadow: none; }
+  body.v7 .l-bottom { display: block; } body.v7 .fb { display: flex; }
+  body.v7 .foot-l { margin-left: 0; width: 100%; }
+  .fb { align-items: center; justify-content: space-between; gap: 20px; padding: 16px 24px 4px; }
+  .fb-l { min-width: 0; }
+  .fb-t { display: flex; align-items: center; gap: 10px; }
+  .fb .ov-desc { margin-top: 3px; }
+  .fb-r { display: flex; align-items: center; gap: 12px; flex: none; }
+  .bars { display: flex; gap: 5px; }
+  .bars .nav { width: 16px; height: 4px; border-radius: 2px; background: #e5e5e5; }
+  .bars .nav.is-on { background: #c9d6f0; }
+  .bars .nav.is-off { background: #f0f0f0; }
+  .bars .nav .fill { height: 100%; }
+
+  /* 8 editorial: text column first, tall cropped media on the right */
+  body.v8 .l-grid { grid-template-columns: 1fr 380px; grid-template-areas: "side media"; gap: 0 24px; align-content: stretch; }
+  body.v8 .l-head { display: none; }
+  body.v8 .l-side { display: block; } body.v8 .edit { display: flex; }
+  body.v8 .l-media { display: flex; }
+  body.v8 .preview { aspect-ratio: auto; height: 100%; min-height: 380px; }
+  .edit { flex-direction: column; align-items: flex-start; gap: 12px; height: 100%; padding-top: 6px; }
+  .edit .ov-count { letter-spacing: 0.06em; }
+  .edit .ov-ttl { font-size: 26px; font-weight: 500; line-height: 1.2; letter-spacing: -0.01em; }
+  .edit .ov-desc { font-size: 14px; max-width: 360px; }
+  .edit-list { width: 100%; margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+  .edit-list .nav { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 5px; font-size: 12.5px; text-align: left; }
+  .edit-list .nav:hover { background: #f5f5f5; }
+  .edit-list .nav.is-on { color: #005EFF; background: #eaf2ff; }
+  .edit-list .nav .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .edit-list .nav .only { padding: 0; background: transparent; color: inherit; }
+  .edit-list .nav .only > span { display: none; }
+  .edit-list .nav .fill { left: 8px; right: 8px; }
+</style>
+</head>
+<body>
+
+<div class="var-bar" role="tablist" aria-label="Layout option">
+  <button type="button" data-v="1"><b>1</b><small>List</small></button>
+  <button type="button" data-v="2"><b>2</b><small>Panel</small></button>
+  <button type="button" data-v="3"><b>3</b><small>Steps</small></button>
+  <button type="button" data-v="4"><b>4</b><small>Filmstrip</small></button>
+  <button type="button" data-v="5"><b>5</b><small>Cards</small></button>
+  <button type="button" data-v="6"><b>6</b><small>Checklist</small></button>
+  <button type="button" data-v="7"><b>7</b><small>Full bleed</small></button>
+  <button type="button" data-v="8"><b>8</b><small>Editorial</small></button>
+</div>
+<div class="tier-bar" role="tablist" aria-label="Pricing tier">
+  <button type="button" data-tier="1" class="is-on"><b>Tier 1</b><small>7 day trial + 20% off</small></button>
+  <button type="button" data-tier="2"><b>Tier 2</b><small>No trial, full price</small></button>
+</div>
+
+<div class="backdrop">
+  <div class="closed-note"><span>Modal closed.</span><button type="button" id="reopen">Reopen</button></div>
+  <div class="dp-stack">
+    <div class="eyebrow" id="eyebrow" aria-live="polite"><span>🎁</span><span>Before you go, a special discount, just for you for the next hour.</span></div>
+    <div class="dp-box">
+      <div class="dp-body">
+
+      <div class="pane-l">
+        <div class="l-grid">
+          <div class="l-head">
+            <div class="pv-ttl-row"><h2 class="ttl pv-ttl" id="pv-ttl"></h2><span class="ov-lock l-lock"><i class="ph ph-lock-simple"></i><span></span></span></div>
+            <p class="ov-desc l-desc"></p>
+          </div>
+          <div class="l-top">
+            <div class="steps nav-row" data-nav="steps"></div>
+            <div class="cards nav-row" data-nav="cards"></div>
+          </div>
+          <div class="l-media">
+            <div class="preview" id="preview">
+              <div class="avail"><span><i class="ph ph-lock-simple"></i>Not in <span id="avail-plan">Pro</span>. Only on:</span><span id="avail-pills"></span></div>
+              <button type="button" class="pv-arrow pv-arrow--l nav-prev" aria-label="Previous"><i class="ph-bold ph-caret-left"></i></button>
+              <button type="button" class="pv-arrow pv-arrow--r nav-next" aria-label="Next"><i class="ph-bold ph-caret-right"></i></button>
+            </div>
+            <p class="ov-desc m-desc"></p>
+          </div>
+          <div class="l-side">
+            <div class="list nav-row" data-nav="list"></div>
+            <div class="tpanel">
+              <span class="ov-count"></span>
+              <span class="ov-lock"><i class="ph ph-lock-simple"></i><span></span></span>
+              <p class="ov-desc"></p>
+              <div class="ov-plans"></div>
+              <div class="tp-ctl"><button type="button" class="ctl-btn nav-prev" aria-label="Previous"><i class="ph-bold ph-caret-left"></i></button><button type="button" class="ctl-btn nav-next" aria-label="Next"><i class="ph-bold ph-caret-right"></i></button></div>
+              <div class="upnext"><div class="upnext-h">UP NEXT</div><div class="upnext-l"></div></div>
+            </div>
+            <div class="check">
+              <div class="check-h"><span>Included in <b class="ov-plan"></b></span><span class="ov-inc"></span></div>
+              <div class="nav-row" data-nav="check"></div>
+            </div>
+            <div class="edit">
+              <span class="ov-count"></span>
+              <h2 class="ov-ttl"></h2>
+              <span class="ov-lock"><i class="ph ph-lock-simple"></i><span></span></span>
+              <p class="ov-desc"></p>
+              <div class="ov-plans"></div>
+              <div class="edit-list nav-row" data-nav="edit"></div>
+              <div class="tp-ctl"><button type="button" class="ctl-btn nav-prev" aria-label="Previous"><i class="ph-bold ph-caret-left"></i></button><button type="button" class="ctl-btn nav-next" aria-label="Next"><i class="ph-bold ph-caret-right"></i></button></div>
+            </div>
+          </div>
+          <div class="l-bottom">
+            <div class="thumbs nav-row" data-nav="thumbs"></div>
+            <div class="fb">
+              <div class="fb-l"><div class="fb-t"><span class="ov-ttl"></span><span class="ov-lock"><i class="ph ph-lock-simple"></i><span></span></span></div><p class="ov-desc"></p></div>
+              <div class="fb-r"><span class="ov-count"></span><div class="bars nav-row" data-nav="bars"></div><div class="tp-ctl"><button type="button" class="ctl-btn nav-prev" aria-label="Previous"><i class="ph-bold ph-caret-left"></i></button><button type="button" class="ctl-btn nav-next" aria-label="Next"><i class="ph-bold ph-caret-right"></i></button></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
+        <div class="foot-l">
+          <span class="loved"><img src="assets/checkout/badge-heart.svg" alt="" />Loved by 12M+ Presenters at</span>
+          <span class="sp-wrap"><span class="sp-track" id="sp-track"></span></span>
+        </div>
+      </div>
+
+      <div class="pane-r">
+        <div class="ttl-row">
+          <h2 class="ttl" id="ttl">Choose your plan</h2>
+          <div class="dp-pill"><span class="t"><i class="ph-fill ph-clock"></i>Ends in <span id="dp-timer">59:56</span></span></div>
+        </div>
+        <p class="ttl-sub" id="ttl-sub"><span class="off">20% off</span> applied on every plan</p>
+        <div id="cards"></div>
+        <div class="ctas">
+          <button type="button" class="btn btn--trial" id="btn-trial">Start your 7 day free trial</button>
+          <p class="note" id="note-trial"></p>
+          <div class="or">OR</div>
+          <button type="button" class="btn btn--buy" id="btn-buy">Buy Pro at 20% OFF</button>
+        </div>
+        <div class="foot-r">
+          <span><img src="assets/checkout/badge-gdpr.svg" alt="" />GDPR compliant</span>
+          <span><img src="assets/checkout/badge-soc2.svg" alt="" />SOC 2 Type II</span>
+        </div>
+      </div>
+
+      </div>
+    </div>
+    <button type="button" class="dp-close" id="dp-close" aria-label="Close"><i class="ph ph-x"></i></button>
+  </div>
+</div>
+
+<script>
+  // Same feature list and media as the feature modal. Plays through on its own, one by one.
+  const FEATURES = [
+    { key: 'export',    label: 'Export presentations',   icon: 'ph-export',            dots: ['pro','gold','team'], video: 'trigger_export', desc: 'Download as PowerPoint, PDF or Google Slides with the layout intact.' },
+    { key: 'brandkit',  label: 'Brand kit',              icon: 'ph-swatches',          dots: ['pro','gold','team'], video: 'trigger_brandkit', mp4Only: true, desc: 'Your logo, colors and fonts applied to every deck automatically.' },
+    { key: 'knowledge', label: 'Shared knowledge base',  icon: 'ph-book-open',         dots: ['gold','team'],       img: 'triggerprojectknowledge.jpg', zoom: 1.18, desc: 'Give the AI your team docs so every deck starts informed.' },
+    { key: 'team',      label: 'Collaborations',         icon: 'ph-users-three',       dots: ['team'],              video: 'trigger_assign_invite', mp4Only: true, desc: 'Invite teammates, assign slides and build decks together.' },
+    { key: 'ultra',     label: 'Ultra/Pro AI model',     icon: 'ph-sparkle',           dots: ['pro','gold','team'], groups: [{ note: 'Pro model', tiers: ['pro'] }, { note: 'Ultra model', tiers: ['gold','team'] }], img: 'triggeraimodels.jpg', labelFor: { pro: 'Pro AI model', gold: 'Ultra AI model', team: 'Ultra AI model' }, onlyFor: { pro: 'Ultra only on Gold' }, desc: 'Our strongest model for better structure, copy and visuals.' },
+    { key: 'analytics', label: 'Analytics',              icon: 'ph-chart-bar',         dots: ['pro','gold','team'], video: 'trigger_analytics', desc: 'See who opened your deck and which slides held attention.' },
+    { key: 'projects',  label: 'Projects',               icon: 'ph-folder',            dots: ['pro','gold','team'], img: 'triggerproject.jpg', desc: 'Keep related decks, files and knowledge in one place.' },
+    { key: 'fontpair',  label: 'Color and Font pair',    icon: 'ph-text-aa',           dots: ['pro','gold','team'], img: 'triggerfonts.jpg', desc: 'Curated color and font pairings that stay on brand.' },
+    { key: 'present',   label: 'Meet and present',       icon: 'ph-projector-screen',  dots: ['pro','gold','team'], img: 'triggercolorsmeetandpresent.jpg', desc: 'Present live in a meeting, right from the browser.' },
+    { key: 'meetedit',  label: 'Meet and edit',          icon: 'ph-pencil-simple',     dots: ['pro','gold','team'], img: 'triggermeetandedit.jpg', desc: 'Edit together in the meeting while everyone watches.' },
+  ];
+  const PLANS = [
+    { key: 'pro',  name: 'Pro',  icon: 'ph-rocket-launch', credits: '5,000',  base: 20, off: 16 },
+    { key: 'gold', name: 'Gold', icon: 'ph-sketch-logo',       credits: '25,000', base: 50, off: 40 },
+    { key: 'team', name: 'Team', icon: 'ph-users-three',   credits: '30,000', base: 60, off: 50 },
+  ];
+  const LOGOS = ['microsoftlogo','googlelogo','adobelogo','facebooklogo','mckinseylogo','amazonlogo','notionlogo','eylogo','bcglogo'];
+  let plan = new URLSearchParams(location.search).get('plan') || 'pro';
+  if (!PLANS.some((p) => p.key === plan)) plan = 'pro';
+  const IMG_HOLD = 3500;
+  const VIDEO_MAX = 25000; // safety cap only, videos advance on 'ended'
+  const MEDIA = 'assets/feature-modal/';
+
+  // logos marquee
+  document.getElementById('sp-track').innerHTML = LOGOS.concat(LOGOS).map((l, i) =>
+    '<img class="sp-logo-img" src="assets/export-ppt/logos/' + l + '.svg" alt="' + (i < LOGOS.length ? l.replace('logo','') : '') + '" ' + (i >= LOGOS.length ? 'aria-hidden="true"' : '') + ' />'
+  ).join('');
+
+  // preview items + tabs
+  const preview = document.getElementById('preview');
+  const avail = preview.querySelector('.avail');
+  const pills = document.getElementById('avail-pills');
+  const tabs = document.getElementById('tabs');
+  const items = FEATURES.map((f) => {
+    const el = document.createElement('div');
+    el.className = 'pv-item';
+    el.innerHTML = f.video
+      ? '<video muted playsinline preload="auto">' + (f.mp4Only ? '' : '<source src="' + MEDIA + f.video + '.webm" type="video/webm" />') + '<source src="' + MEDIA + f.video + '.mp4" type="video/mp4" /></video>'
+      : '<img src="' + MEDIA + f.img + '" alt=""' + (f.zoom ? ' style="transform:scale(' + f.zoom + ')"' : '') + ' />';
+    preview.insertBefore(el, avail);
+    return el;
+  });
+  // tab strip rendered 3 times so it can scroll forward forever (rewinds one copy width when idle)
+  const N = FEATURES.length;
+  const COPIES = 3;
+  for (let c = 0; c < COPIES; c++) {
+    FEATURES.forEach((f, idx) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tab nav';
+      b.dataset.idx = idx;
+      b.tabIndex = -1;
+      // v2: no "Available on" pill on the media. Tabs that are not on every paid plan say so inline.
+      b.innerHTML = '<span class="fill"></span><i class="ph ic ' + f.icon + '"></i><span class="lbl">' + f.label + '</span><span class="only"><i class="ph ph-lock-simple"></i><span></span></span>';
+      b.addEventListener('click', () => { manual = true; go(idx, b); b.blur(); });
+      tabs.appendChild(b);
+    });
+  }
+  const allTabs = Array.from(tabs.children);
+  // every overlay nav row shares the nav contract with the tabs: .nav[data-idx] with a .fill
+  const navRow = (idx, inner, attrs) => '<button type="button" class="nav" data-idx="' + idx + '"' + (attrs || '') + '>' + inner + '</button>';
+  const onlyTag = '<span class="only"><i class="ph ph-lock-simple"></i><span></span></span>';
+  function bindNav(b) { b.addEventListener('click', () => { manual = true; go(Number(b.dataset.idx)); b.blur(); }); }
+  const ICON = (f) => '<i class="ph ic ' + f.icon + '"></i>';
+  const FILL = '<span class="fill"></span>';
+  const LBL = (f) => '<span class="lbl">' + f.label + '</span>';
+  document.querySelectorAll('.nav-row').forEach((row) => {
+    const kind = row.dataset.nav;
+    row.innerHTML = FEATURES.map((f, idx) => {
+      if (kind === 'list' || kind === 'cards') return navRow(idx, FILL + ICON(f) + LBL(f) + onlyTag);
+      if (kind === 'steps') return navRow(idx, FILL + '<span class="num">' + (idx + 1) + '</span>' + LBL(f));
+      if (kind === 'thumbs') return navRow(idx, '<span class="th">' + (f.video ? '<video muted playsinline preload="auto" src="' + MEDIA + f.video + '.mp4"></video>' : '<img src="' + MEDIA + f.img + '" alt="" />') + FILL + '</span>' + LBL(f), ' title="' + f.label + '"');
+      if (kind === 'check') return navRow(idx, FILL + '<span class="ck"><i class="ph-bold ph-check chk"></i><i class="ph-bold ph-lock-simple lk"></i></span>' + LBL(f) + onlyTag);
+      if (kind === 'edit') return navRow(idx, FILL + LBL(f) + onlyTag);
+      return navRow(idx, FILL);
+    }).join('');
+    row.querySelectorAll('.nav').forEach(bindNav);
+  });
+  document.querySelectorAll('.nav-prev').forEach((b) => b.addEventListener('click', () => { manual = true; go((i - 1 + FEATURES.length) % FEATURES.length); }));
+  document.querySelectorAll('.nav-next').forEach((b) => b.addEventListener('click', () => { manual = true; go(i + 1); }));
+  const navsFor = (idx) => Array.from(document.querySelectorAll('.nav[data-idx="' + idx + '"]'));
+  // strip moves only on its own: no wheel, trackpad, drag or arrow-key scrolling
+  tabs.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+  tabs.addEventListener('keydown', (e) => { if (e.key.startsWith('Arrow')) e.preventDefault(); });
+  tabs.tabIndex = -1;
+  const tabsFor = (idx) => allTabs.filter((t) => Number(t.dataset.idx) === idx);
+  const copyWidth = () => allTabs[N].offsetLeft - allTabs[0].offsetLeft;
+  let settleTimer = null;
+  function scrollForwardTo(idx, el) {
+    clearTimeout(settleTimer);
+    const cw = tabs.clientWidth;
+    const cur = tabs.scrollLeft;
+    let target;
+    if (el) {
+      target = el.offsetLeft - (cw - el.offsetWidth) / 2;
+    } else {
+      const cands = tabsFor(idx).map((t) => Math.max(0, t.offsetLeft - (cw - t.offsetWidth) / 2));
+      target = cands.find((x) => x >= cur - 1);
+      if (target === undefined) target = cands[cands.length - 1];
+    }
+    tabs.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+    settleTimer = setTimeout(() => {
+      const w = copyWidth();
+      if (tabs.scrollLeft >= w) {
+        tabs.style.scrollBehavior = 'auto';
+        tabs.scrollLeft = tabs.scrollLeft - w;
+        tabs.style.scrollBehavior = '';
+      }
+    }, 700);
+  }
+
+  let i = -1;
+  let timer = null;
+  let manual = false;
+  let fillAnims = [];
+  function runFill(ms) {
+    fillAnims.forEach((a) => a.cancel());
+    fillAnims = navsFor(i).filter((t) => t.querySelector('.fill')).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
+  }
+  function go(n, el) {
+    clearTimeout(timer);
+    fillAnims.forEach((a) => a.cancel()); fillAnims = [];
+    if (i >= 0) {
+      items[i].classList.remove('is-on');
+      navsFor(i).forEach((t) => { t.classList.remove('is-on'); const ic = t.querySelector('i.ic'); if (ic) ic.className = 'ph ic ' + FEATURES[i].icon; });
+      const v = items[i].querySelector('video');
+      if (v) { v.pause(); v.currentTime = 0; }
+    }
+    i = n % items.length;
+    const f = FEATURES[i];
+    items[i].classList.add('is-on');
+    navsFor(i).forEach((t) => { t.classList.add('is-on'); const ic = t.querySelector('i.ic'); if (ic) ic.className = 'ph-fill ic ' + f.icon; });
+    document.querySelectorAll('.l-grid .nav').forEach((t) => t.classList.toggle('is-done', Number(t.dataset.idx) < i));
+    scrollForwardTo(i, el);
+    paintAvail();
+    paintTitle();
+    const v = items[i].querySelector('video');
+    const next = () => { manual = false; go(i + 1); };
+    if (v) {
+      v.onended = next;
+      // fill + safety timer arm only once the clip is really playing, so a slow
+      // load never skips a clip or runs the bar ahead of the video
+      const start = () => { runFill(Math.round((v.duration - v.currentTime) * 1000)); timer = setTimeout(next, VIDEO_MAX); };
+      if (!v.paused && v.readyState >= 3) start(); else v.addEventListener('playing', start, { once: true });
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    } else {
+      runFill(IMG_HOLD);
+      timer = setTimeout(next, IMG_HOLD);
+    }
+  }
+  // v2: what the selected plan includes. Features outside it go quiet with an "Only on X" tag,
+  // and the media strip repeats it while one of those is on screen.
+  const PLAN_NAME = { pro: 'Pro', gold: 'Gold', team: 'Team' };
+  function paintTabs() {
+    FEATURES.forEach((f, idx) => {
+      const has = f.dots.includes(plan);
+      const only = f.onlyFor && f.onlyFor[plan] ? f.onlyFor[plan] : (has ? '' : 'Only on ' + PLAN_NAME[f.dots[0]]);
+      navsFor(idx).forEach((t) => {
+        t.classList.toggle('is-off', !!only);
+        const l = t.querySelector('.lbl'); if (l) l.textContent = f.labelFor ? f.labelFor[plan] : f.label;
+        if (t.hasAttribute('title')) t.title = f.labelFor ? f.labelFor[plan] : f.label;
+        const o = t.querySelector('.only > span'); if (o) o.textContent = only;
+      });
+    });
+    paintAvail();
+    paintTitle();
+  }
+  function paintTitle() {
+    if (i < 0) return;
+    const f = FEATURES[i];
+    const h = document.getElementById('pv-ttl');
+    const label = f.labelFor ? f.labelFor[plan] : f.label;
+    h.textContent = label;
+    h.classList.remove('is-swap'); void h.offsetWidth; h.classList.add('is-swap');
+    const only = f.onlyFor && f.onlyFor[plan] ? f.onlyFor[plan] : (f.dots.includes(plan) ? '' : 'Only on ' + PLAN_NAME[f.dots[0]]);
+    document.querySelectorAll('.ov-ttl').forEach((t) => { t.textContent = label; });
+    document.querySelectorAll('.ov-desc').forEach((p) => { p.textContent = f.desc; p.classList.remove('is-swap'); void p.offsetWidth; p.classList.add('is-swap'); });
+    document.querySelectorAll('.ov-count').forEach((c) => { c.textContent = (i + 1) + ' / ' + FEATURES.length; });
+    document.querySelectorAll('.ov-lock').forEach((l) => { l.classList.toggle('is-on', !!only); l.querySelector('span').textContent = only; });
+    document.querySelectorAll('.ov-plans').forEach((el) => { el.innerHTML = ['pro', 'gold', 'team'].map((d) => '<span class="pp' + (f.dots.includes(d) ? ' is-in' : '') + (d === plan ? ' is-cur' : '') + '">' + d.toUpperCase() + '</span>').join(''); });
+    document.querySelectorAll('.ov-plan').forEach((el) => { el.textContent = PLAN_NAME[plan]; });
+    const inc = FEATURES.filter((x) => x.dots.includes(plan)).length;
+    document.querySelectorAll('.ov-inc').forEach((el) => { el.textContent = inc + ' of ' + FEATURES.length; });
+    // panel layout: the three features that play next
+    const up = document.querySelector('.upnext-l');
+    up.innerHTML = [1, 2, 3].map((k) => {
+      const idx = (i + k) % FEATURES.length; const g = FEATURES[idx];
+      const off = !g.dots.includes(plan) || (g.onlyFor && g.onlyFor[plan]);
+      return '<button type="button" class="nav' + (off ? ' is-off' : '') + '" data-idx="' + idx + '"><i class="ph ' + g.icon + '"></i><span class="lbl">' + (g.labelFor ? g.labelFor[plan] : g.label) + '</span>' + (off ? '<i class="ph ph-lock-simple"></i>' : '') + '</button>';
+    }).join('');
+    up.querySelectorAll('.nav').forEach(bindNav);
+  }
+  function paintAvail() {
+    if (i < 0) return;
+    const f = FEATURES[i];
+    const has = f.dots.includes(plan);
+    const pill = (d) => '<span class="tp tp--' + d + '">' + d.toUpperCase() + '</span>';
+    avail.classList.toggle('is-on', !has);
+    document.getElementById('avail-plan').textContent = PLAN_NAME[plan];
+    if (!has) pills.innerHTML = f.dots.map(pill).join('');
+  }
+  go(0);
+
+  // hover pauses the show, leave resumes it
+  preview.addEventListener('mouseenter', () => {
+    clearTimeout(timer);
+    const v = items[i].querySelector('video');
+    if (v) v.pause();
+    fillAnims.forEach((a) => a.pause());
+  });
+  preview.addEventListener('mouseleave', () => {
+    const v = items[i].querySelector('video');
+    const next = () => { manual = false; go(i + 1); };
+    fillAnims.forEach((a) => a.play());
+    if (v) {
+      v.play().catch(() => {});
+      timer = setTimeout(next, isFinite(v.duration) ? Math.min((v.duration - v.currentTime) * 1000 + 500, VIDEO_MAX) : VIDEO_MAX);
+    } else {
+      const left = fillAnims[0] ? Math.max(200, IMG_HOLD - (fillAnims[0].currentTime || 0)) : IMG_HOLD;
+      timer = setTimeout(next, left);
+    }
+  });
+
+  // plan cards
+  const cards = document.getElementById('cards');
+  cards.innerHTML = PLANS.map((p) =>
+    '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === plan) + '" tabindex="0">' +
+      '<span class="radio"></span><div class="c-main">' +
+      '<div class="c-row"><span class="c-name">' + p.name + ' <i class="ph ' + p.icon + '"></i></span>' +
+      '<span class="c-price"><s>$' + p.base + '</s>$' + p.off + '/mo</span></div>' +
+      '<span class="c-cred"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' +
+      '</div></div>'
+  ).join('');
+  const buyBtn = document.getElementById('btn-buy');
+  // tier 1: trial + 20% off on buy. tier 2: no trial, full price until the "before you go" offer.
+  const params = new URLSearchParams(location.search);
+  let tier = params.get('tier') === '2' ? 2 : 1;
+  let offer = false; // tier 2 only: set when the user tries to close
+  const hasOff = () => tier === 1 || offer;
+  function paint() {
+    document.body.classList.toggle('tier2', tier === 2);
+    document.body.classList.toggle('offer', offer);
+    document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
+    const p = PLANS.find((x) => x.key === plan);
+    buyBtn.textContent = 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
+    cards.querySelectorAll('.card').forEach((c) => {
+      const cp = PLANS.find((x) => x.key === c.dataset.plan);
+      c.querySelector('.c-price').innerHTML = hasOff() ? '<s>$' + cp.base + '</s>$' + cp.off + '/mo' : '$' + cp.base + '/mo';
+    });
+    paintTabs();
+  }
+  let timerId = null, left = 59 * 60 + 56;
+  function startTimer() {
+    clearInterval(timerId); left = 59 * 60 + 56;
+    const el = document.getElementById('dp-timer');
+    const tick = () => { el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); if (left > 0) left--; };
+    tick(); timerId = setInterval(tick, 1000);
+  }
+  function select(key) {
+    plan = key;
+    cards.querySelectorAll('.card').forEach((c) => { const on = c.dataset.plan === key; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
+    const p = PLANS.find((x) => x.key === key);
+    document.getElementById('note-trial').textContent = 'No discount, full price $' + p.base + '/mo after the trial';
+    paint();
+  }
+  function setTier(t) {
+    tier = t; offer = false; clearInterval(timerId);
+    document.getElementById('eyebrow').classList.remove('is-open');
+    document.body.classList.remove('is-closed');
+    const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
+    paint();
+  }
+  document.querySelectorAll('.tier-bar button').forEach((b) => b.addEventListener('click', () => setTier(Number(b.dataset.tier))));
+  document.getElementById('dp-close').addEventListener('click', () => {
+    if (tier === 2 && !offer) {
+      // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
+      offer = true;
+      document.getElementById('eyebrow').classList.add('is-open');
+      paint(); startTimer();
+      cards.querySelectorAll('.card').forEach((c) => { c.classList.remove('is-flash'); void c.offsetWidth; c.classList.add('is-flash'); });
+      return;
+    }
+    document.body.classList.add('is-closed');
+  });
+  document.getElementById('reopen').addEventListener('click', () => setTier(tier));
+  // crazy8s: which pane layout is on. ?v=1..8, number keys switch
+  let variant = Number(params.get('v')) || 1;
+  function setVariant(v) {
+    variant = Math.min(8, Math.max(1, v));
+    document.body.className = document.body.className.replace(/\bv\d\b/g, '').trim();
+    document.body.classList.add('v' + variant);
+    document.querySelectorAll('.var-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.v) === variant));
+    const u = new URL(location.href); u.searchParams.set('v', variant); history.replaceState(null, '', u);
+  }
+  document.querySelectorAll('.var-bar button').forEach((b) => b.addEventListener('click', () => setVariant(Number(b.dataset.v))));
+  document.addEventListener('keydown', (e) => { if (e.key >= '1' && e.key <= '8' && !e.metaKey && !e.ctrlKey) setVariant(Number(e.key)); });
+  setVariant(variant);
+  if (params.get('closed') === '1') document.body.classList.add('is-closed'); // back from a closed checkout
+  cards.querySelectorAll('.card').forEach((c) => {
+    c.addEventListener('click', () => select(c.dataset.plan));
+    c.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(c.dataset.plan); } });
+  });
+  select(plan);
+
+  document.getElementById('btn-trial').addEventListener('click', () => { location.href = 'checkout-trial-sep-2026.html?plan=' + plan; });
+  buyBtn.addEventListener('click', () => { location.href = 'checkout-buy-sep-2026.html?plan=' + plan + (tier === 2 ? '&off=' + (offer ? 20 : 0) : ''); });
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
