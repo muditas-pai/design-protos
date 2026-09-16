@@ -103,6 +103,13 @@
   .preview .pv-item { position: absolute; inset: 0; opacity: 0; transform: scale(1.02); transition: opacity .55s ease, transform .9s ease; }
   .preview .pv-item.is-on { opacity: 1; transform: scale(1); }
   .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
+  .avail { position: absolute; left: 14px; bottom: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 10px; padding: 8px 12px 8px 14px; border-radius: 8px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(10,25,37,0.15); font-size: 12.5px; color: #404040; }
+  #avail-pills { display: inline-flex; align-items: center; gap: 8px; }
+  .avail .tp { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 8px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+  .avail .tp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .avail .tp--pro  { color: #005EFF; }
+  .avail .tp--gold { color: #c9932a; }
+  .avail .tp--team { color: #171717; }
 
   .tabs-wrap { position: relative; margin: 20px 0 20px -24px; width: 806px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 40px), transparent 100%); }
   .tabs { display: flex; gap: 10px; padding: 0 24px; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; scroll-behavior: smooth; touch-action: none; }
@@ -157,6 +164,13 @@
   .c-price small { display: block; font-size: 11px; font-weight: 400; color: #737373; text-align: right; margin-top: 2px; }
   .c-cred { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 4px 10px; border-radius: 999px; background: #e8f0fe; color: #0055ED; font-size: 12px; font-weight: 500; }
   .c-cred i { font-size: 11px; }
+  /* the plan column is a fixed height flex column: stop it squashing the header
+     when an open feature list makes the content taller, and let it scroll instead */
+  .pane-r > * { flex: none; }
+  .pane-r { overflow-y: auto; scrollbar-width: none; }
+  .pane-r::-webkit-scrollbar { width: 0; height: 0; }
+  .pane-r .foot-r { position: sticky; bottom: 0; background: #f5f9ff; }
+  .pane-r .ctas { position: sticky; bottom: 66px; background: #f5f9ff; padding-bottom: 4px; }
   .c-cred-note { display: inline-flex; align-items: center; margin: 10px 0 0 6px; padding: 4px 9px; border-radius: 999px; background: #eef2ff; color: #4f46e5; font-size: 11.5px; font-weight: 600; }
   /* v5.1: the selected plan opens its feature list */
   .c-feats { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease, margin .35s cubic-bezier(.2,.8,.2,1); }
@@ -213,13 +227,7 @@
   }
 
   /* close: the video side folds away and the plan column becomes a small offer card */
-  /* close, iris: a circle closes over the video side to a point while it dims, then box and column narrow */
-  body.offer .dp-box { width: 460px; }
-  body.offer .pane-l { padding: 0; overflow: hidden; pointer-events: none; clip-path: circle(0% at 50% 50%); filter: brightness(.6); }
-  body.offer .pane-l .tabs-wrap, body.offer .pane-l .foot-l { width: 806px; }
-  body.offer .pane-l .preview { width: 762px; height: 430px; aspect-ratio: auto; }
-  body.offer .pane-l .sp-track { animation-play-state: paused; }
-  body.offer .pane-r { width: 460px; padding: 22px 28px 0; border-left-color: transparent; }
+  /* v5.1 close nudge: the modal keeps its size, the plan column scrolls behind pinned buttons */
   .pane-l { clip-path: circle(75% at 50% 50%); transition: clip-path .6s cubic-bezier(.6,0,.2,1), filter .5s ease, padding .6s cubic-bezier(.65,0,.35,1) .55s; }
   .dp-box { transition: width .6s cubic-bezier(.65,0,.35,1) .55s; }
   .pane-r { transition: width .6s cubic-bezier(.65,0,.35,1) .55s, padding .6s cubic-bezier(.65,0,.35,1) .55s, border-color .25s ease .75s; }
@@ -255,6 +263,7 @@
 
       <div class="pane-l">
         <div class="preview" id="preview">
+          <div class="avail"><span>Available on:</span><span id="avail-pills"></span></div>
         </div>
         <div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
         <div class="foot-l">
@@ -341,6 +350,7 @@
 
   // preview items + tabs
   const preview = document.getElementById('preview');
+  const availPills = document.getElementById('avail-pills');
   const tabs = document.getElementById('tabs');
   const items = FEATURES.map((f) => {
     const el = document.createElement('div');
@@ -361,7 +371,7 @@
       b.className = 'tab';
       b.dataset.idx = idx;
       b.tabIndex = -1;
-      b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span class="lbl">' + f.label + '</span><span class="only"><i class="ph ph-lock-simple"></i><span></span></span>';
+      b.innerHTML = '<span class="fill"></span><i class="ph ' + f.icon + '"></i><span class="lbl">' + f.label + '</span>';
       b.addEventListener('click', () => { manual = true; go(idx, b); b.blur(); });
       tabs.appendChild(b);
     });
@@ -422,6 +432,7 @@
     items[i].classList.add('is-on');
     tabsFor(i).forEach((t) => { t.classList.add('is-on'); t.querySelector('i').className = 'ph-fill ' + f.icon; });
     scrollForwardTo(i, el);
+    availPills.innerHTML = f.dots.map((d) => '<span class="tp tp--' + d + '">' + d.toUpperCase() + '</span>').join('');
     const v = items[i].querySelector('video');
     const next = () => { manual = false; go(i + 1); };
     if (v) {
@@ -549,17 +560,8 @@
     allTabs.forEach((t) => {
       const f = FEATURES[Number(t.dataset.idx)];
       t.classList.toggle('is-prem', !f.dots.includes('pro'));
-      if (studentsMode) {
-        t.classList.remove('is-off');
-        t.querySelector('.lbl').textContent = f.label;
-        t.querySelector('.only > span').textContent = '';
-        return;
-      }
-      // the tag describes the feature, not the current pick, so it stays put while switching plans
-      const only = f.dots.length >= 3 ? '' : 'Only on ' + f.dots.map((d) => PLAN_NAME[d]).join(', ');
-      t.classList.toggle('is-off', !!only);
+      // v5.1: no lock or tag on the tabs, the media strip carries availability
       t.querySelector('.lbl').textContent = f.label;
-      t.querySelector('.only > span').textContent = only;
     });
   }
   function select(key) {
