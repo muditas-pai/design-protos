@@ -201,7 +201,7 @@
   .dp-box { transition: width .6s cubic-bezier(.65,0,.35,1) .55s; }
   .pane-r { transition: width .6s cubic-bezier(.65,0,.35,1) .55s, padding .6s cubic-bezier(.65,0,.35,1) .55s, border-color .25s ease .75s; }
   .ttl-sub { display: none; margin: -6px 0 14px; font-size: 13px; line-height: 1.4; color: #525252; }
-  body.offer .ttl-sub { display: block; animation: dp-rise .45s .5s cubic-bezier(.2,.8,.2,1) both; }
+  body.offer .ttl-sub:not(.sub-export) { display: block; animation: dp-rise .45s .5s cubic-bezier(.2,.8,.2,1) both; }
   .sub-export { display: none; }
   body.two-up .sub-export { display: block; }
   body.two-up .ttl-row { margin-bottom: 8px; }
@@ -293,7 +293,7 @@
   ];
   // students tab: a single annual plan, no trial and no discount
   const STUDENT_PLANS = [
-    { key: 'student', name: 'Student Plan', icon: 'ph-student', credits: '1,500', base: 12, off: 12, desc: 'For classes, projects and presentations' },
+    { key: 'student', name: 'Student Plan', icon: 'ph-student', credits: '1,500', base: 12, off: 9.6, desc: 'For classes, projects and presentations' },
   ];
   // students + export tab: the plan leads, the one time export sits under it
   const EXPORT_PLANS = [
@@ -469,9 +469,16 @@
   }
   function paintPrice(c, cp, anim) {
     const el = c.querySelector('.c-price');
-    if (!hasOff()) { el.innerHTML = '$' + cp.base + (cp.unit || '/mo'); return; }
-    if (!anim) { el.classList.remove('is-drop'); el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + cp.off + '</span>/mo'; return; }
-    el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + odo(cp.base, cp.off) + '</span>/mo';
+    const unit = cp.unit || '/mo';
+    const money = (n) => '$' + (Number.isInteger(n) ? n : n.toFixed(2));
+    if (!hasOff()) { el.innerHTML = money(cp.base) + unit; return; }
+    if (!anim || !Number.isInteger(cp.base) || !Number.isInteger(cp.off)) {
+      el.classList.remove('is-drop');
+      el.innerHTML = '<s>' + money(cp.base) + '</s><span class="c-num">' + money(cp.off) + '</span>' + unit;
+      if (anim) { void el.offsetWidth; el.classList.add('is-drop'); }
+      return;
+    }
+    el.innerHTML = '<s>' + money(cp.base) + '</s><span class="c-num">$' + odo(cp.base, cp.off) + '</span>' + unit;
     el.classList.remove('is-drop'); void el.offsetWidth; el.classList.add('is-drop');
     const cols = Array.from(el.querySelectorAll('.st'));
     cols.forEach((st) => { st.style.transition = 'none'; st.style.transform = 'translateY(-' + st.dataset.from + 'em)'; });
@@ -544,8 +551,8 @@
   }
   document.querySelectorAll('.tier-bar button').forEach((b) => b.addEventListener('click', () => setTier(Number(b.dataset.tier))));
   document.getElementById('dp-close').addEventListener('click', () => {
-    if (tier === 2 && !offer) {
-      // first close on tier 2: keep the modal, drop the offer eyebrow, apply 20% to the cards
+    if ((tier === 2 || tier === 3) && !offer) {
+      // first close on tier 2 or students: keep the modal, show the offer, apply 20% to the cards
       offer = true;
       document.getElementById('eyebrow').classList.add('is-open');
       pauseShow();
