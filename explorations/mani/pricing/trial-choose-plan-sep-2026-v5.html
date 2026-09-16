@@ -52,8 +52,8 @@
   body.tier2 #btn-trial, body.tier2 #note-trial, body.tier2 .or { display: none; }
   body.tier2 .ctas { margin-top: 24px; }
   .c-desc { font-size: 13px; line-height: 1.45; color: #525252; margin-top: 4px; max-width: 210px; }
-  body.students .card .radio { display: none; }
-  body.students .card { cursor: default; }
+  #cards.one-plan .card .radio { display: none; }
+  #cards.one-plan .card { cursor: default; }
   .c-tag { position: absolute; top: -9px; left: 16px; padding: 2px 8px; border-radius: 999px; background: #005EFF; color: #fff; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; }
   body.two-up #cards { margin-top: 14px; }
   .ex-alt { display: none; }
@@ -302,6 +302,7 @@
   // students tab: a single annual plan, no trial and no discount
   const STUDENT_PLANS = [
     { key: 'student', name: 'Student Plan', icon: 'ph-student', credits: '1,500', base: 12, off: 9.6, desc: 'For classes, projects and presentations' },
+    { key: 'pro', name: 'Pro', icon: 'ph-rocket-launch', credits: '5,000', base: 20, off: 16, desc: 'Everything you need for pro presentations' },
   ];
   // students + export tab: the plan leads, the one time export sits under it
   const EXPORT_PLANS = [
@@ -444,6 +445,7 @@
   if (!PLANS.some((p) => p.key === plan)) plan = 'pro';
   function curPlans() { return tier === 4 ? EXPORT_PLANS : tier === 3 ? STUDENT_PLANS : PLANS; }
   function renderCards() {
+    cards.classList.toggle('one-plan', curPlans().length === 1);
     cards.innerHTML = curPlans().map((p) =>
       '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === plan) + '" tabindex="0">' +
         (p.tag ? '<span class="c-tag">' + p.tag + '</span>' : '') +
@@ -502,7 +504,7 @@
     document.body.classList.toggle('offer', offer);
     document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
     const p = curPlans().find((x) => x.key === plan) || curPlans()[0];
-    buyBtn.textContent = tier === 3 || tier === 4 ? 'Choose Student Plan' : 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
+    buyBtn.textContent = tier === 4 || (tier === 3 && plan === 'student') ? 'Choose Student Plan' : 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
     cards.querySelectorAll('.card').forEach((c) => {
       const cp = curPlans().find((x) => x.key === c.dataset.plan);
       paintPrice(c, cp, anim);
@@ -571,7 +573,8 @@
   });
   document.getElementById('reopen').addEventListener('click', () => setTier(tier));
   if (params.get('closed') === '1') document.body.classList.add('is-closed'); // back from a closed checkout
-  if (!curPlans().some((x) => x.key === plan)) plan = curPlans()[0].key;
+  // without an explicit ?plan the first card of the tab leads
+  if (!params.get('plan') || !curPlans().some((x) => x.key === plan)) plan = curPlans()[0].key;
   renderCards();
   select(plan);
   // run the opening cascade once, so switching tabs later does not replay it
