@@ -51,9 +51,10 @@
 
   body.tier2 #btn-trial, body.tier2 #note-trial, body.tier2 .or { display: none; }
   body.tier2 .ctas { margin-top: 24px; }
-  .c-desc { font-size: 13px; line-height: 1.45; color: #525252; margin-top: 4px; }
+  .c-desc { font-size: 13px; line-height: 1.45; color: #525252; margin-top: 4px; max-width: 210px; }
   body.students .card .radio { display: none; }
   body.students .card { cursor: default; }
+  body.students .tab.is-prem { display: none; }
 
   .closed-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff; font-size: 14px; }
   .closed-note button { padding: 9px 18px; border: 0; border-radius: 4px; background: #fff; color: #171717; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
@@ -351,6 +352,8 @@
     fillAnims.forEach((a) => a.cancel());
     fillAnims = tabsFor(i).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
   }
+  var studentsMode = false;
+  const shown = (idx) => !studentsMode || FEATURES[idx].dots.includes('pro');
   function go(n, el) {
     clearTimeout(timer);
     fillAnims.forEach((a) => a.cancel()); fillAnims = [];
@@ -361,6 +364,7 @@
       if (v) { v.pause(); v.currentTime = 0; }
     }
     i = n % items.length;
+    for (let guard = 0; !shown(i) && guard < items.length; guard++) i = (i + 1) % items.length;
     const f = FEATURES[i];
     items[i].classList.add('is-on');
     tabsFor(i).forEach((t) => { t.classList.add('is-on'); t.querySelector('i').className = 'ph-fill ' + f.icon; });
@@ -452,6 +456,7 @@
     }));
   }
   function paint(anim) {
+    studentsMode = tier === 3;
     document.body.classList.toggle('tier2', true);
     document.body.classList.toggle('students', tier === 3);
     document.body.classList.toggle('offer', offer);
@@ -479,6 +484,13 @@
   function paintLabels() {
     allTabs.forEach((t) => {
       const f = FEATURES[Number(t.dataset.idx)];
+      t.classList.toggle('is-prem', !f.dots.includes('pro'));
+      if (studentsMode) {
+        t.classList.remove('is-off');
+        t.querySelector('.lbl').textContent = f.label;
+        t.querySelector('.only > span').textContent = '';
+        return;
+      }
       const has = f.dots.includes(plan);
       const only = has ? '' : 'Only on ' + f.dots.map((d) => PLAN_NAME[d]).join(', ');
       t.classList.toggle('is-off', !!only);
@@ -488,6 +500,7 @@
   }
   function select(key) {
     plan = key;
+    studentsMode = tier === 3;
     paintLabels();
     cards.querySelectorAll('.card').forEach((c) => { const on = c.dataset.plan === key; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
     const p = curPlans().find((x) => x.key === key) || curPlans()[0];
@@ -501,7 +514,8 @@
     document.getElementById('eyebrow').classList.remove('is-open');
     document.body.classList.remove('is-closed');
     const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
-    paint();
+    select(plan);
+    if (!shown(i)) { manual = false; go(i + 1); }
   }
   document.querySelectorAll('.tier-bar button').forEach((b) => b.addEventListener('click', () => setTier(Number(b.dataset.tier))));
   document.getElementById('dp-close').addEventListener('click', () => {
