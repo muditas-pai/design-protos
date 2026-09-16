@@ -54,6 +54,8 @@
   .c-desc { font-size: 13px; line-height: 1.45; color: #525252; margin-top: 4px; max-width: 210px; }
   body.students .card .radio { display: none; }
   body.students .card { cursor: default; }
+  body.two-up .card .radio { display: block; }
+  body.two-up .card { cursor: pointer; }
   body.students .tab.is-prem { display: none; }
 
   .closed-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff; font-size: 14px; }
@@ -208,6 +210,7 @@
 <div class="tier-bar" role="tablist" aria-label="Pricing tier">
   <button type="button" data-tier="2" class="is-on"><b>Tier 2</b><small>No trial, full price</small></button>
   <button type="button" data-tier="3"><b>Students</b><small>One plan, billed annually</small></button>
+  <button type="button" data-tier="4"><b>Student + export</b><small>One time or monthly</small></button>
 </div>
 
 <div class="backdrop">
@@ -275,6 +278,11 @@
   // students tab: a single annual plan, no trial and no discount
   const STUDENT_PLANS = [
     { key: 'student', name: 'Student Plan', icon: 'ph-student', credits: '1,500', base: 12, off: 12, desc: 'For classes, projects and presentations' },
+  ];
+  // students + export tab: pay once for this deck, or keep the monthly plan
+  const EXPORT_PLANS = [
+    { key: 'single', name: 'Single PowerPoint Export', icon: 'ph-microsoft-powerpoint-logo', base: 75, off: 75, unit: ' one time', desc: 'Just this presentation, editable PowerPoint. No subscription.' },
+    { key: 'student', name: 'Student Plan', icon: 'ph-student', credits: '1,500', base: 12, off: 12, desc: 'Keep creating with advanced AI, unlimited exports' },
   ];
   const LOGOS = ['microsoftlogo','googlelogo','adobelogo','facebooklogo','mckinseylogo','amazonlogo','notionlogo','eylogo','bcglogo'];
   const IMG_HOLD = 3500;
@@ -411,7 +419,7 @@
   const cards = document.getElementById('cards');
   let plan = new URLSearchParams(location.search).get('plan') || 'pro';
   if (!PLANS.some((p) => p.key === plan)) plan = 'pro';
-  function curPlans() { return tier === 3 ? STUDENT_PLANS : PLANS; }
+  function curPlans() { return tier === 4 ? EXPORT_PLANS : tier === 3 ? STUDENT_PLANS : PLANS; }
   function renderCards() {
     cards.innerHTML = curPlans().map((p) =>
       '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === plan) + '" tabindex="0">' +
@@ -419,7 +427,7 @@
         '<div class="c-row"><span class="c-name">' + p.name + ' <i class="ph ' + p.icon + '"></i></span>' +
         '<span class="c-price"><s>$' + p.base + '</s>$' + p.off + '/mo</span></div>' +
         (p.desc ? '<div class="c-desc">' + p.desc + '</div>' : '') +
-        '<span class="c-cred"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' +
+        (p.credits ? '<span class="c-cred"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' : '') +
         '</div></div>'
     ).join('');
     cards.querySelectorAll('.card').forEach((c) => {
@@ -430,7 +438,7 @@
   const buyBtn = document.getElementById('btn-buy');
   // tier 1: trial + 20% off on buy. tier 2: no trial, full price until the "before you go" offer.
   const params = new URLSearchParams(location.search);
-  let tier = params.get('tier') === '3' ? 3 : 2;
+  let tier = params.get('tier') === '3' ? 3 : params.get('tier') === '4' ? 4 : 2;
   let offer = false; // tier 2 only: set when the user tries to close
   const hasOff = () => tier === 1 || offer;
   // odometer: one column per digit, a 0 to 9 stack twice over so a falling price can roll through 9 on the way down
@@ -445,7 +453,7 @@
   }
   function paintPrice(c, cp, anim) {
     const el = c.querySelector('.c-price');
-    if (!hasOff()) { el.innerHTML = '$' + cp.base + '/mo'; return; }
+    if (!hasOff()) { el.innerHTML = '$' + cp.base + (cp.unit || '/mo'); return; }
     if (!anim) { el.classList.remove('is-drop'); el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + cp.off + '</span>/mo'; return; }
     el.innerHTML = '<s>$' + cp.base + '</s><span class="c-num">$' + odo(cp.base, cp.off) + '</span>/mo';
     el.classList.remove('is-drop'); void el.offsetWidth; el.classList.add('is-drop');
@@ -456,13 +464,14 @@
     }));
   }
   function paint(anim) {
-    studentsMode = tier === 3;
+    studentsMode = tier === 3 || tier === 4;
     document.body.classList.toggle('tier2', true);
-    document.body.classList.toggle('students', tier === 3);
+    document.body.classList.toggle('students', studentsMode);
+    document.body.classList.toggle('two-up', tier === 4);
     document.body.classList.toggle('offer', offer);
     document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
     const p = curPlans().find((x) => x.key === plan) || curPlans()[0];
-    buyBtn.textContent = tier === 3 ? 'Choose Student Plan' : 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
+    buyBtn.textContent = tier === 3 ? 'Choose Student Plan' : tier === 4 ? (plan === 'single' ? 'Buy Now' : 'Choose Student Plan') : 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
     cards.querySelectorAll('.card').forEach((c) => {
       const cp = curPlans().find((x) => x.key === c.dataset.plan);
       paintPrice(c, cp, anim);
@@ -500,7 +509,7 @@
   }
   function select(key) {
     plan = key;
-    studentsMode = tier === 3;
+    studentsMode = tier === 3 || tier === 4;
     paintLabels();
     cards.querySelectorAll('.card').forEach((c) => { const on = c.dataset.plan === key; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
     const p = curPlans().find((x) => x.key === key) || curPlans()[0];
