@@ -51,6 +51,10 @@
 
   body.tier2 #btn-trial, body.tier2 #note-trial, body.tier2 .or { display: none; }
   body.tier2 .ctas { margin-top: 24px; }
+  .c-desc { font-size: 13px; line-height: 1.45; color: #525252; margin-top: 4px; }
+  .c-billed { font-size: 11.5px; color: #737373; text-align: right; margin-top: 2px; }
+  body.students .card .radio { display: none; }
+  body.students .card { cursor: default; }
 
   .closed-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff; font-size: 14px; }
   .closed-note button { padding: 9px 18px; border: 0; border-radius: 4px; background: #fff; color: #171717; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
@@ -202,8 +206,8 @@
 <body>
 
 <div class="tier-bar" role="tablist" aria-label="Pricing tier">
-  <button type="button" data-tier="1" class="is-on"><b>Tier 1</b><small>7 day trial + 20% off</small></button>
-  <button type="button" data-tier="2"><b>Tier 2</b><small>No trial, full price</small></button>
+  <button type="button" data-tier="2" class="is-on"><b>Tier 2</b><small>No trial, full price</small></button>
+  <button type="button" data-tier="3"><b>Students</b><small>One plan, billed annually</small></button>
 </div>
 
 <div class="backdrop">
@@ -267,6 +271,10 @@
     { key: 'pro',  name: 'Pro',  icon: 'ph-rocket-launch', credits: '5,000',  base: 20, off: 16 },
     { key: 'gold', name: 'Gold', icon: 'ph-sketch-logo',       credits: '25,000', base: 50, off: 40 },
     { key: 'team', name: 'Team', icon: 'ph-users-three',   credits: '30,000', base: 60, off: 50 },
+  ];
+  // students tab: a single annual plan, no trial and no discount
+  const STUDENT_PLANS = [
+    { key: 'student', name: 'Student Plan', icon: 'ph-student', credits: '1,500', base: 12, off: 12, desc: 'For classes, projects and presentations', billed: 'per month, billed annually' },
   ];
   const LOGOS = ['microsoftlogo','googlelogo','adobelogo','facebooklogo','mckinseylogo','amazonlogo','notionlogo','eylogo','bcglogo'];
   const IMG_HOLD = 3500;
@@ -400,18 +408,27 @@
   const cards = document.getElementById('cards');
   let plan = new URLSearchParams(location.search).get('plan') || 'pro';
   if (!PLANS.some((p) => p.key === plan)) plan = 'pro';
-  cards.innerHTML = PLANS.map((p) =>
-    '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === plan) + '" tabindex="0">' +
-      '<span class="radio"></span><div class="c-main">' +
-      '<div class="c-row"><span class="c-name">' + p.name + ' <i class="ph ' + p.icon + '"></i></span>' +
-      '<span class="c-price"><s>$' + p.base + '</s>$' + p.off + '/mo</span></div>' +
-      '<span class="c-cred"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' +
-      '</div></div>'
-  ).join('');
+  function curPlans() { return tier === 3 ? STUDENT_PLANS : PLANS; }
+  function renderCards() {
+    cards.innerHTML = curPlans().map((p) =>
+      '<div class="card' + (p.key === plan ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === plan) + '" tabindex="0">' +
+        '<span class="radio"></span><div class="c-main">' +
+        '<div class="c-row"><span class="c-name">' + p.name + ' <i class="ph ' + p.icon + '"></i></span>' +
+        '<span class="c-price"><s>$' + p.base + '</s>$' + p.off + '/mo</span></div>' +
+        (p.billed ? '<div class="c-billed">' + p.billed + '</div>' : '') +
+        (p.desc ? '<div class="c-desc">' + p.desc + '</div>' : '') +
+        '<span class="c-cred"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>' +
+        '</div></div>'
+    ).join('');
+    cards.querySelectorAll('.card').forEach((c) => {
+      c.addEventListener('click', () => select(c.dataset.plan));
+      c.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(c.dataset.plan); } });
+    });
+  }
   const buyBtn = document.getElementById('btn-buy');
   // tier 1: trial + 20% off on buy. tier 2: no trial, full price until the "before you go" offer.
   const params = new URLSearchParams(location.search);
-  let tier = params.get('tier') === '2' ? 2 : 1;
+  let tier = params.get('tier') === '3' ? 3 : 2;
   let offer = false; // tier 2 only: set when the user tries to close
   const hasOff = () => tier === 1 || offer;
   // odometer: one column per digit, a 0 to 9 stack twice over so a falling price can roll through 9 on the way down
@@ -437,13 +454,14 @@
     }));
   }
   function paint(anim) {
-    document.body.classList.toggle('tier2', tier === 2);
+    document.body.classList.toggle('tier2', true);
+    document.body.classList.toggle('students', tier === 3);
     document.body.classList.toggle('offer', offer);
     document.querySelectorAll('.tier-bar button').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.tier) === tier));
-    const p = PLANS.find((x) => x.key === plan);
-    buyBtn.textContent = 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
+    const p = curPlans().find((x) => x.key === plan) || curPlans()[0];
+    buyBtn.textContent = tier === 3 ? 'Choose Student Plan' : 'Buy ' + p.name + (hasOff() ? ' at 20% OFF' : '');
     cards.querySelectorAll('.card').forEach((c) => {
-      const cp = PLANS.find((x) => x.key === c.dataset.plan);
+      const cp = curPlans().find((x) => x.key === c.dataset.plan);
       paintPrice(c, cp, anim);
     });
     const ttl = document.getElementById('ttl');
@@ -474,12 +492,14 @@
     plan = key;
     paintLabels();
     cards.querySelectorAll('.card').forEach((c) => { const on = c.dataset.plan === key; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
-    const p = PLANS.find((x) => x.key === key);
+    const p = curPlans().find((x) => x.key === key) || curPlans()[0];
     document.getElementById('note-trial').textContent = 'No discount, full price $' + p.base + '/mo after the trial';
     paint();
   }
   function setTier(t) {
     tier = t; offer = false; clearInterval(timerId);
+    plan = curPlans()[0].key;
+    renderCards();
     document.getElementById('eyebrow').classList.remove('is-open');
     document.body.classList.remove('is-closed');
     const u = new URL(location.href); u.searchParams.set('tier', t); history.replaceState(null, '', u);
@@ -499,10 +519,8 @@
   });
   document.getElementById('reopen').addEventListener('click', () => setTier(tier));
   if (params.get('closed') === '1') document.body.classList.add('is-closed'); // back from a closed checkout
-  cards.querySelectorAll('.card').forEach((c) => {
-    c.addEventListener('click', () => select(c.dataset.plan));
-    c.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(c.dataset.plan); } });
-  });
+  if (!curPlans().some((x) => x.key === plan)) plan = curPlans()[0].key;
+  renderCards();
   select(plan);
 
   document.getElementById('btn-trial').addEventListener('click', () => { location.href = 'checkout-trial-sep-2026.html?plan=' + plan; });
