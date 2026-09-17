@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Import PowerPoint, comparison table</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* Import from PPT: the create flow reads the file, then stops a free user at the slide limit with a plan comparison */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #171717; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  .stage { position: relative; max-width: 900px; margin: 0 auto; min-height: 100vh; padding: 56px 32px 40px; display: flex; flex-direction: column; }
+  .close { position: fixed; top: 18px; right: 20px; width: 34px; height: 34px; border-radius: 999px; border: 0; background: #fff; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.12); cursor: pointer; font-size: 16px; color: #171717; display: grid; place-items: center; }
+  .close:hover { background: #f5f5f5; }
+
+  /* user bubble: the uploaded file */
+  .bubble { align-self: flex-end; background: #f3f4f6; border-radius: 14px; padding: 8px; animation: rise .4s cubic-bezier(.2,.8,.2,1) both; }
+  .file { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 10px; padding: 10px 14px 10px 10px; min-width: 280px; }
+  .file-ic { position: relative; width: 34px; height: 40px; border-radius: 6px; background: #f5f5f5; border: 1px solid #e5e5e5; display: grid; place-items: center; font-size: 9px; font-weight: 600; color: #737373; }
+  .file-ic .ok { position: absolute; top: -8px; left: -8px; width: 16px; height: 16px; border-radius: 999px; background: #16a34a; color: #fff; font-size: 11px; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+  .file-name { font-size: 13px; color: #171717; }
+
+  /* assistant steps */
+  .steps { margin-top: 44px; display: flex; flex-direction: column; gap: 14px; }
+  .step { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #171717; opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .3s ease; }
+  .step.is-in { opacity: 1; transform: none; }
+  .step .dot { width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; color: #fff; background: #16a34a; }
+  .step .dot.spin { background: transparent; border: 2px solid #d4d4d4; border-top-color: #171717; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* the limit card */
+  .limit { margin-top: auto; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 14px; padding: 20px 22px 16px; box-shadow: 0 12px 32px -16px rgba(10,25,37,0.25), 0 1px 2px rgba(10,25,37,0.06); opacity: 0; transform: translateY(16px); transition: opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
+  .limit.is-in { opacity: 1; transform: none; }
+  .limit-t { font-size: 15px; font-weight: 500; }
+  .limit-t b { font-weight: 600; }
+  .limit-s { font-size: 13px; color: #737373; margin: 3px 0 16px; }
+
+  .cr { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: #e8f0fe; color: #0055ED; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+  .cr i { font-size: 10px; }
+  .cr-note { display: block; margin-top: 3px; font-size: 11px; color: #737373; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 40px; margin-top: 16px; border-radius: 4px; border: 0; background: #005EFF; color: #fff; font: 500 13.5px 'Inter', sans-serif; cursor: pointer; transition: background .15s ease, transform .12s ease; }
+  .btn:hover { background: #0055ED; }
+  .btn:active { transform: scale(0.98); }
+  .free { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding-top: 12px; border: 0; border-top: 1px solid rgba(11,15,20,0.07); background: none; width: 100%; font-family: inherit; font-size: 13px; color: #525252; cursor: pointer; }
+  .free:hover { color: #005eff; }
+  .free .sub { color: #a3a3a3; }
+
+  /* comparison table: Free is shown for reference, the three paid columns are selectable */
+  table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  col.c-label { width: 24%; }
+  th, td { padding: 9px 12px; text-align: left; vertical-align: middle; border-bottom: 1px solid rgba(11,15,20,0.07); transition: background .15s ease; }
+  tr:last-child td { border-bottom: 0; }
+  td.lbl { color: #525252; padding-left: 0; cursor: default; }
+  td.lbl i { margin-right: 7px; font-size: 14px; vertical-align: -2px; color: #8a8a8a; }
+  th.lbl { padding-left: 0; }
+  th { position: relative; padding-top: 14px; padding-bottom: 12px; font-weight: 400; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+  th .nm { display: block; font-size: 14px; font-weight: 600; color: #171717; }
+  th .pr { display: block; margin-top: 2px; font-size: 12.5px; color: #525252; }
+  th .pr b { font-size: 15px; font-weight: 500; color: #171717; }
+  th.free-col .nm, th.free-col .pr b { color: #737373; }
+  td.free-col { color: #737373; }
+
+  [data-plan] { cursor: pointer; }
+  [data-plan].is-hover:not(.is-sel) { background: #f7f9fc; }
+  th[data-plan]:focus-visible { outline: 2px solid #005eff; outline-offset: -2px; }
+  th.is-sel, td.is-sel { position: relative; z-index: 1; background: #eaf2ff; }
+  /* selected column: solid blue outline drawn with shadows, cell by cell */
+  th.is-sel { box-shadow: -1.5px 0 0 #005eff, 1.5px 0 0 #005eff, 0 -1.5px 0 #005eff, -1.5px -1.5px 0 #005eff, 1.5px -1.5px 0 #005eff; }
+  td.is-sel { box-shadow: -1.5px 0 0 #005eff, 1.5px 0 0 #005eff; border-bottom-color: #d6e5ff; }
+  tr:last-child td.is-sel { box-shadow: -1.5px 0 0 #005eff, 1.5px 0 0 #005eff, 0 1.5px 0 #005eff, -1.5px 1.5px 0 #005eff, 1.5px 1.5px 0 #005eff; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+
+  .yes { color: #16a34a; font-size: 15px; vertical-align: -2px; }
+  .no { color: #c9cdd2; font-size: 14px; vertical-align: -2px; }
+  .all { display: inline-flex; align-items: center; gap: 5px; color: #16a34a; font-weight: 500; }
+  .cut { color: #b45309; font-weight: 500; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 640px) {
+    .stage { padding: 56px 16px 32px; }
+    .limit { padding: 16px 14px 14px; }
+    th, td { padding-left: 6px; padding-right: 6px; font-size: 12px; }
+    col.c-label { width: 30%; }
+    .free-col { display: none; }
+  }
+</style>
+</head>
+<body>
+<button type="button" class="close" id="close" aria-label="Close"><i class="ph ph-x"></i></button>
+<div class="stage">
+  <div class="bubble">
+    <div class="file">
+      <span class="file-ic">.pptx<span class="ok"><i class="ph ph-check"></i></span></span>
+      <span class="file-name" id="file-name">chetan deck.pptx</span>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step" id="s1"><span class="dot spin"></span>Uploaded your content</div>
+    <div class="step" id="s2"><span class="dot spin"></span>Read your slides</div>
+  </div>
+
+  <div class="limit" id="limit">
+    <div class="limit-t">Your PPT has <b class="n-slides">24</b> slides. Free Plan supports up to <b>15</b> slides.</div>
+    <div class="limit-s">Compare the plans and pick one to import every slide.</div>
+    <div id="body"></div>
+    <button type="button" class="btn" id="btn-buy">Buy Pro</button>
+    <button type="button" class="free" id="btn-free"><i class="ph ph-file-text"></i>Continue with Free Plan<span class="sub">Use only first 15 slides</span></button>
+  </div>
+</div>
+
+<script>
+  // Standalone copy of the 7 day trial import screen, table only. ?file= ?slides= ?plan=pro|gold|team
+  const q = new URLSearchParams(location.search);
+  if (q.get('file')) document.getElementById('file-name').textContent = q.get('file');
+  const N = Math.max(16, Number(q.get('slides')) || 24);
+  document.querySelectorAll('.n-slides').forEach((el) => { el.textContent = N; });
+
+  // steps tick in, then the limit card rises
+  const done = (el) => { el.classList.add('is-in'); const d = el.querySelector('.dot'); d.classList.remove('spin'); d.innerHTML = '<i class="ph ph-check"></i>'; };
+  const s1 = document.getElementById('s1'), s2 = document.getElementById('s2');
+  setTimeout(() => s1.classList.add('is-in'), 250);
+  setTimeout(() => done(s1), 1000);
+  setTimeout(() => s2.classList.add('is-in'), 1150);
+  setTimeout(() => done(s2), 2100);
+  setTimeout(() => document.getElementById('limit').classList.add('is-in'), 2500);
+
+  // same plan numbers as the v6 picker
+  const FREE = { key: 'free', name: 'Free', base: 0, slides: 15 };
+  const PLANS = [
+    { key: 'pro',  name: 'Pro',  credits: '5,000',  base: 20, slides: 60, ai: 'Pro' },
+    { key: 'gold', name: 'Gold', credits: '15,000', creditNote: '3x Pro', base: 50, slides: 99, ai: 'Frontier' },
+    { key: 'team', name: 'Team', credits: '20,000', base: 60, slides: 99, ai: 'Frontier and agents' },
+  ];
+  const COLS = [FREE].concat(PLANS);
+  const YES = '<i class="ph-fill ph-check-circle yes" aria-label="Included"></i>';
+  const NO = '<i class="ph ph-minus no" aria-label="Not included"></i>';
+  const has = (keys) => (c) => keys.includes(c.key) ? YES : NO;
+
+  // [label, cell(col)]
+  const ROWS = [
+    ['<i class="ph ph-presentation"></i>This deck', (c) => c.key === 'free' ? '<span class="cut">First 15 of ' + N + '</span>' : '<span class="all"><i class="ph-fill ph-check-circle"></i>All ' + N + ' slides</span>'],
+    ['<i class="ph ph-stack"></i>Slides per import', (c) => 'Up to ' + c.slides],
+    ['<i class="ph ph-star-four"></i>Credits', (c) => c.credits ? '<span class="cr"><i class="ph-fill ph-star-four"></i>' + c.credits + '</span>' + (c.creditNote ? '<span class="cr-note">' + c.creditNote + '</span>' : '') : NO],
+    ['<i class="ph ph-sparkle"></i>AI model', (c) => c.ai || NO],
+    ['<i class="ph ph-export"></i>Export presentations', has(['pro', 'gold', 'team'])],
+    ['<i class="ph ph-swatches"></i>Brand kit', has(['pro', 'gold', 'team'])],
+    ['<i class="ph ph-book-open"></i>Shared knowledge base', has(['gold', 'team'])],
+    ['<i class="ph ph-users-three"></i>Collaborations', has(['team'])],
+  ];
+
+  const body = document.getElementById('body');
+  const colAttr = (c) => c.key === 'free' ? ' class="free-col"' : ' data-plan="' + c.key + '"';
+  const head = '<tr><th class="lbl"></th>' + COLS.map((c) =>
+    '<th' + colAttr(c) + (c.key === 'free' ? '' : ' role="radio" tabindex="0" aria-checked="false"') + '>' +
+    '<span class="nm">' + c.name + '</span><span class="pr"><b>$' + c.base + '</b>/mo</span></th>').join('') + '</tr>';
+  const rows = ROWS.map((r) =>
+    '<tr><td class="lbl">' + r[0] + '</td>' + COLS.map((c) => '<td' + colAttr(c) + '>' + r[1](c) + '</td>').join('') + '</tr>').join('');
+  body.innerHTML = '<table role="radiogroup" aria-label="Plans"><colgroup><col class="c-label" />' + COLS.map(() => '<col />').join('') + '</colgroup>' + head + rows + '</table>';
+
+  const cells = (key) => body.querySelectorAll('[data-plan="' + key + '"]');
+  body.querySelectorAll('[data-plan]').forEach((el) => {
+    el.addEventListener('click', () => select(el.dataset.plan));
+    el.addEventListener('mouseenter', () => cells(el.dataset.plan).forEach((x) => x.classList.add('is-hover')));
+    el.addEventListener('mouseleave', () => cells(el.dataset.plan).forEach((x) => x.classList.remove('is-hover')));
+  });
+  body.querySelectorAll('th[data-plan]').forEach((th) => th.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(th.dataset.plan); }
+  }));
+
+  const buyBtn = document.getElementById('btn-buy');
+  let plan = PLANS.some((p) => p.key === q.get('plan')) ? q.get('plan') : 'pro';
+  function select(key) {
+    plan = key;
+    body.querySelectorAll('[data-plan]').forEach((el) => el.classList.toggle('is-sel', el.dataset.plan === key));
+    body.querySelectorAll('th[data-plan]').forEach((th) => th.setAttribute('aria-checked', th.dataset.plan === key));
+    const p = PLANS.find((x) => x.key === key);
+    buyBtn.textContent = 'Buy ' + p.name + ' at $' + p.base + '/mo';
+  }
+  select(plan);
+
+  // no offer in the import flow: checkout at full price. Free and close replay the flow in this standalone page.
+  buyBtn.addEventListener('click', () => { location.href = '../checkout-buy-sep-2026.html?plan=' + plan + '&off=0'; });
+  document.getElementById('btn-free').addEventListener('click', () => location.reload());
+  document.getElementById('close').addEventListener('click', () => location.reload());
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
