@@ -58,6 +58,8 @@
   body.offer .offer-pill .t { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
   body.offer .offer-pill { animation: pill-in .5s .15s cubic-bezier(.2,.9,.3,1.25) both, pro-chip-bob 2.6s .7s ease-in-out infinite, pro-chip-glow 2.2s .7s ease-in-out infinite; }
   @keyframes pill-in { from { opacity: 0; transform: translateX(-10px) scale(0.9); } to { opacity: 1; transform: none; } }
+  /* framed by another page (import-ppt): the host draws the page behind, close hands back instead of navigating */
+  body.embed { background: transparent; }
 </style>
 </head>
 <body>
@@ -161,6 +163,8 @@
 <script>
   // preselect plan from ?plan= (from the choose-plan screen). ?off=0 = tier 2 without the offer: full price.
   const qs = new URLSearchParams(location.search);
+  const EMBEDDED = window.parent !== window;
+  if (EMBEDDED) document.body.classList.add('embed');
   // Landed here without the offer: the first close keeps the checkout, drops the eyebrow, applies 20% and starts the timer.
   let offer = false;
   const noOff = qs.get('off') === '0';
@@ -217,6 +221,7 @@
   syncPlan();
   document.querySelector('.dp-close').addEventListener('click', () => {
     if (window.claimOffer()) return;
+    if (EMBEDDED) { window.parent.postMessage({ type: 'checkout-close' }, '*'); return; }
     // second close: leave the checkout with the modal closed, like closing the picker
     // back to the picker that opened this checkout, not always the first one
     const back = qs.get('from') || 'trial-choose-plan-sep-2026.html';

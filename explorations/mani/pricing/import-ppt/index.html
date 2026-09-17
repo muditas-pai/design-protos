@@ -78,6 +78,10 @@
   .all { display: inline-flex; align-items: center; gap: 8px; color: #16a34a; font-weight: 500; }
   .all i { font-size: 16px; }
 
+  /* checkout opens over this screen in a frame, no page change */
+  .co { position: fixed; inset: 0; z-index: 50; display: none; }
+  .co.is-open { display: block; }
+  .co iframe { width: 100%; height: 100%; border: 0; background: transparent; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (max-width: 640px) {
     .stage { padding: 56px 16px 32px; }
@@ -111,6 +115,8 @@
     <button type="button" class="free" id="btn-free"><i class="ph ph-file-text"></i>Continue with Free Plan<span class="sub">Use only first 15 slides</span></button>
   </div>
 </div>
+
+<div class="co" id="co"><iframe id="co-frame" title="Checkout"></iframe></div>
 
 <script>
   // Standalone copy of the 7 day trial import screen, table only. ?file= ?slides= ?plan=pro|gold|team
@@ -183,7 +189,12 @@
   select(plan);
 
   // 20% off every plan, carried into checkout. Free and close replay the flow in this standalone page.
-  buyBtn.addEventListener('click', () => { location.href = '../checkout-buy-sep-2026.html?plan=' + plan + '&off=20'; });
+  const co = document.getElementById('co'), coFrame = document.getElementById('co-frame');
+  const openCheckout = (key) => { coFrame.src = '../checkout-buy-sep-2026.html?plan=' + key + '&off=20'; co.classList.add('is-open'); };
+  addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'checkout-close') { co.classList.remove('is-open'); coFrame.src = 'about:blank'; }
+  });
+  buyBtn.addEventListener('click', () => openCheckout(plan));
   document.getElementById('btn-free').addEventListener('click', () => location.reload());
   document.getElementById('close').addEventListener('click', () => location.reload());
 </script>
