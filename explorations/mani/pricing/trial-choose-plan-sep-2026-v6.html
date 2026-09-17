@@ -100,6 +100,7 @@
   .preview .pv-item.is-on { opacity: 1; z-index: 1; }
   .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
   .avail { position: absolute; left: 18px; bottom: 18px; z-index: 2; display: inline-flex; align-items: center; gap: 10px; padding: 8px 12px 8px 14px; border-radius: 8px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(10,25,37,0.15); font-size: 12.5px; color: #404040; }
+  .avail[hidden] { display: none; }
   #avail-pills { display: inline-flex; align-items: center; gap: 8px; }
   .avail .tp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
   .avail .tp { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 8px; border-radius: 999px; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
@@ -440,8 +441,9 @@
     fillAnims = tabsFor(i).map((t) => t.querySelector('.fill').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(200, ms), easing: 'linear', fill: 'forwards' }));
   }
   var studentsMode = false;
-  // every plan that includes the feature, on every tab
-  const pillsFor = (f) => f.dots.map((d) => '<span class="tp tp--' + d + '">' + d.toUpperCase() + '</span>').join('');
+  // tags only for the plans on the current tab's cards (set in paint); the strip hides when none apply
+  var tabDots = [];
+  const pillsFor = (f) => f.dots.filter((d) => tabDots.includes(d)).map((d) => '<span class="tp tp--' + d + '">' + d.toUpperCase() + '</span>').join('');
   const shown = (idx) => !studentsMode || FEATURES[idx].dots.includes('pro');
   function go(n, el) {
     clearTimeout(timer);
@@ -459,6 +461,7 @@
     tabsFor(i).forEach((t) => { t.classList.add('is-on'); t.querySelector('i').className = 'ph-fill ' + f.icon; });
     scrollForwardTo(i, el);
     availPills.innerHTML = pillsFor(f);
+    availPills.closest('.avail').hidden = !availPills.innerHTML;
     const v = items[i].querySelector('video');
     const next = () => { manual = false; go(i + 1); };
     if (v) {
@@ -558,6 +561,9 @@
   }
   function paint(anim) {
     studentsMode = tier === 3 || tier === 4;
+    tabDots = curPlans().map((x) => x.key === 'student' ? 'students' : x.key);
+    availPills.innerHTML = pillsFor(FEATURES[i]);
+    availPills.closest('.avail').hidden = !availPills.innerHTML;
     document.body.classList.toggle('tier2', tier !== 1);
     document.body.classList.toggle('students', studentsMode);
     document.body.classList.toggle('two-up', tier === 4);
