@@ -32,10 +32,13 @@
   .sub { font-size: 13px; color: #737373; margin: 4px 0 14px; }
 
   /* the slides being dropped, shown not described */
-  .strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid #f0f0f0; }
-  .sl { width: 46px; height: 30px; border-radius: 4px; border: 1px solid #e5e5e5; background: #fafafa; flex: none; display: grid; place-items: center; font-size: 10px; color: #a3a3a3; }
-  .sl.cut { background: #fef2f2; border-color: #fecaca; color: #dc2626; position: relative; }
-  .sl.cut::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(220,38,38,.12) 4px, rgba(220,38,38,.12) 8px); border-radius: 3px; }
+  /* one bar, same size for any deck: kept part vs removed part, no thumbnails to scroll */
+  .fit { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid #f0f0f0; }
+  .fit-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #f0f0f0; }
+  .fit-bar .keep { background: #d4d4d4; }
+  .fit-bar .cut { background: repeating-linear-gradient(45deg, #fecaca, #fecaca 4px, #fee2e2 4px, #fee2e2 8px); }
+  .fit-l { display: flex; justify-content: space-between; gap: 12px; margin-top: 7px; font-size: 12px; color: #737373; }
+  .fit-l .c { color: #dc2626; }
 
   .plan { display: flex; align-items: center; gap: 12px; border: 1.5px solid #0055ED; background: #f5f9ff; border-radius: 10px; padding: 12px 14px; }
   .plan .ic { width: 30px; height: 30px; border-radius: 8px; background: #0055ED; color: #fff; display: grid; place-items: center; font-size: 15px; flex: none; }
@@ -109,23 +112,18 @@
   </div>
 
   <div class="card" id="card">
-    <div class="head"><span class="lose">9 of your 24 slides will be removed</span> on the Free plan.</div>
+    <div class="head"><span class="lose" id="lose">9 of your 24 slides will be removed</span> on the Free plan.</div>
     <div class="sub">Free imports the first 15. Pro imports every slide.</div>
 
-    <div class="strip" aria-label="Slides 16 to 24 will be removed">
-      <div class="sl">1</div><div class="sl">2</div><div class="sl">3</div><div class="sl">4</div>
-      <div class="sl">5</div><div class="sl">6</div><div class="sl">7</div><div class="sl">8</div>
-      <div class="sl">9</div><div class="sl">10</div><div class="sl">11</div><div class="sl">12</div>
-      <div class="sl">13</div><div class="sl">14</div><div class="sl">15</div>
-      <div class="sl cut">16</div><div class="sl cut">17</div><div class="sl cut">18</div>
-      <div class="sl cut">19</div><div class="sl cut">20</div><div class="sl cut">21</div>
-      <div class="sl cut">22</div><div class="sl cut">23</div><div class="sl cut">24</div>
+    <div class="fit">
+      <div class="fit-bar" role="img" id="fit-bar"><span class="keep" id="fit-keep"></span><span class="cut" id="fit-cut"></span></div>
+      <div class="fit-l"><span id="fit-kl">Slides 1 to 15 import</span><span class="c" id="fit-cl">Slides 16 to 24 removed</span></div>
     </div>
 
     <div class="plan">
       <span class="ic"><i class="ph-fill ph-rocket-launch"></i></span>
       <div class="body">
-        <div class="name">Pro <span class="tag">Imports all 24 slides</span></div>
+        <div class="name">Pro <span class="tag" id="all">Imports all 24 slides</span></div>
         <div class="meta">5,000 credits, up to 60 slides per import</div>
       </div>
       <div class="price">
@@ -159,12 +157,17 @@
     .render(React.createElement(Agentation));
 </script>
 <script>
+  // ?slides= sizes the bar for any deck, 24 by default; Free keeps the first 15
+  const N = Math.max(16, Number(new URLSearchParams(location.search).get('slides')) || 24), FREE = 15;
+  document.getElementById('lose').textContent = (N - FREE) + ' of your ' + N + ' slides will be removed';
+  document.getElementById('all').textContent = 'Imports all ' + N + ' slides';
+  document.getElementById('fit-keep').style.width = (FREE / N * 100) + '%';
+  document.getElementById('fit-cut').style.width = ((N - FREE) / N * 100) + '%';
+  document.getElementById('fit-kl').textContent = 'Slides 1 to ' + FREE + ' import';
+  document.getElementById('fit-cl').textContent = 'Slides ' + (FREE + 1) + ' to ' + N + ' removed';
+  document.getElementById('fit-bar').setAttribute('aria-label', 'Slides ' + (FREE + 1) + ' to ' + N + ' will be removed');
 requestAnimationFrame(() => requestAnimationFrame(() => {
   document.getElementById('card').classList.add('is-in');
-  // keep the removed slides in view: that is the whole point of the strip
-  const strip = document.querySelector('.strip');
-  const firstCut = strip && strip.querySelector('.sl.cut');
-  if (strip && firstCut) strip.scrollLeft = Math.max(0, firstCut.offsetLeft - strip.clientWidth * 0.35);
 }));
 </script>
 </body>
