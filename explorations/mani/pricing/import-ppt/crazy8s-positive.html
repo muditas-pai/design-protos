@@ -80,16 +80,20 @@
 
   /* plans, v8 style */
   .plans { display: flex; flex-direction: column; gap: 8px; }
-  .plan { display: flex; align-items: center; gap: 12px; border: 1px solid #e5e5e5; background: #fff; border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: border-color .2s ease, background-color .2s ease; }
-  .plan:hover:not(.is-sel) { border-color: #c9cdd2; }
-  .plan.is-sel { border-color: #0055ED; background: #f5f9ff; box-shadow: inset 0 0 0 .5px #0055ED; }
+  .plan { display: flex; align-items: center; gap: 12px; border: 1px solid #e5e5e5; background: #fff; border-radius: 10px; padding: 12px 14px; transition: border-color .2s ease; }
+  .plan:hover { border-color: #c9cdd2; }
   .plan .ic { width: 30px; height: 30px; border-radius: 8px; background: #f0f2f5; color: #404040; display: grid; place-items: center; font-size: 15px; flex: none; transition: background-color .2s, color .2s; }
-  .plan.is-sel .ic { background: #0055ED; color: #fff; }
   .plan .body { flex: 1; min-width: 0; }
   .plan .name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .gtag { font-size: 11px; font-weight: 500; color: #16a34a; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
   .plan .meta { font-size: 12.5px; color: #525252; margin-top: 2px; }
   .plan .price { text-align: right; white-space: nowrap; }
+  /* buy in the row, same as v6.1: one size, Pro leads solid, Gold outlined */
+  .buy { width: 120px; height: 36px; flex: none; border: 0; border-radius: 4px; background: #005EFF; color: #fff; font: 500 13px 'Inter', sans-serif; cursor: pointer; }
+  .buy:hover { background: #0055ED; }
+  .buy.out { background: #fff; border: 1px solid #0A1925; color: #0A1925; }
+  .buy.out:hover { background: #f4f6f8; }
+  .plans + .sec { margin-top: 14px; }
   .plan .now { font-size: 16px; font-weight: 500; }
   .plan .per { font-size: 12.5px; color: #737373; }
   .plan .bill { font-size: 11.5px; color: #737373; display: block; margin-top: 1px; }
@@ -124,11 +128,12 @@
   const AT = (FREE / N * 100).toFixed(2) + '%';
   const head = '<div class="head">Import <span class="win">all ' + N + ' slides</span> with Pro or Gold.</div><div class="sub">Free imports the first ' + FREE + '. Pro and Gold import every slide.</div>';
   const plans = '<div class="plans">' + K.map((k) => { const p = PLANS[k];
-    return '<div class="plan" data-k="' + k + '"><span class="ic"><i class="ph ' + p.icon + '"></i></span><div class="body">' +
+    return '<div class="plan"><span class="ic"><i class="ph ' + p.icon + '"></i></span><div class="body">' +
       '<div class="name">' + p.name + ' <span class="gtag">Imports all ' + N + ' slides</span></div>' +
       '<div class="meta">' + p.credits + ' credits, up to ' + p.cap + ' slides per import</div></div>' +
-      '<div class="price"><span class="now">$' + p.price + '</span><span class="per">/mo</span></div></div>'; }).join('') + '</div>';
-  const end = '<button class="cta" data-cta>Get Pro</button><button class="sec"><i class="ph ph-paper-plane-tilt"></i>Continue with Free Plan<span class="m">Use first ' + FREE + ' slides</span></button>';
+      '<div class="price"><span class="now">$' + p.price + '</span><span class="per">/mo</span></div>' +
+      '<button class="buy' + (k === 'pro' ? '' : ' out') + '">Buy ' + p.name + '</button></div>'; }).join('') + '</div>';
+  const end = '<button class="sec"><i class="ph ph-paper-plane-tilt"></i>Continue with Free Plan<span class="m">Use first ' + FREE + ' slides</span></button>';
   const card = (meter) => head + '<div class="meter">' + meter + '</div>' + plans + end;
   const bar = (a, b, cls) => '<div class="bar ' + (cls || '') + '"><span class="' + a + '" style="flex:' + FREE + '"></span><span class="' + b + '" style="flex:' + MORE + '"></span></div>';
   const scale = (mid) => '<div class="scale"><span>1</span><span class="m" style="left:' + Math.min(80, Math.max(20, FREE / N * 100)) + '%">' + mid + '</span><span class="r">' + N + '</span></div>';
@@ -165,16 +170,6 @@
   grid.innerHTML = V.map((v, i) => '<div class="cell"><div class="lbl"><span class="n">' + (i + 1) + '</span><b>' + v.t + '</b><span class="from">' + v.f + '</span><span>· ' + v.d + '</span></div><div class="card">' + v.html() + '</div></div>').join('');
   // 8: blue for the free blocks so the tall row matches #1
   grid.querySelectorAll('.segs.tall i:not(.pg)').forEach((i) => { i.style.background = '#005eff'; });
-
-  // pick a plan, the button follows it
-  grid.querySelectorAll('.card').forEach((card) => {
-    const pick = (k) => {
-      card.querySelectorAll('[data-k]').forEach((el) => el.classList.toggle('is-sel', el.dataset.k === k));
-      card.querySelector('[data-cta]').textContent = 'Get ' + PLANS[k].name;
-    };
-    card.querySelectorAll('[data-k]').forEach((el) => el.addEventListener('click', () => pick(el.dataset.k)));
-    pick('pro');
-  });
 
   // 7: light the extra blocks one by one
   grid.querySelectorAll('.segs.light').forEach((row) => {
