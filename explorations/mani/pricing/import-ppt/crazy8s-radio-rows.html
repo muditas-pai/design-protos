@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Radio Rows Crazy 8s</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* 8 takes on the v3 import limit card: radio rows where the selected row expands with its plan points */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #e9ecf0; color: #171717; -webkit-font-smoothing: antialiased; padding: 32px 28px 60px; }
+  h1 { font-size: 20px; font-weight: 600; }
+  .sub { font-size: 13px; color: #525252; margin: 4px 0 22px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 1500px; }
+  .cell { background: #f7f8fa; border-radius: 14px; padding: 18px 18px 22px; box-shadow: 0 0 0 1px rgba(10,25,37,0.06); }
+  .lbl { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .lbl b { font-size: 13px; font-weight: 600; }
+  .lbl span { font-size: 12px; color: #737373; }
+  .lbl .n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: #171717; color: #fff; font-size: 11px; font-weight: 600; flex: none; }
+
+  /* shared card chrome, same as v3 */
+  .card { background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 14px; padding: 20px 22px 16px; box-shadow: 0 12px 32px -16px rgba(10,25,37,0.25), 0 1px 2px rgba(10,25,37,0.06); }
+  .t { font-size: 15px; font-weight: 500; }
+  .t b { font-weight: 600; }
+  .s { font-size: 13px; color: #737373; margin: 3px 0 16px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 40px; margin-top: 20px; border-radius: 4px; border: 0; background: #005EFF; color: #fff; font: 500 13.5px 'Inter', sans-serif; cursor: pointer; }
+  .btn:hover { background: #0055ED; }
+  .free { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; font-size: 13px; color: #525252; }
+  .free .m { color: #a3a3a3; }
+  .cr { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: #e8f0fe; color: #0055ED; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+  .cr i { font-size: 10px; }
+  .tag { padding: 2px 8px; border-radius: 999px; background: #005eff; color: #fff; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; white-space: nowrap; }
+  .radio { width: 16px; height: 16px; border-radius: 999px; border: 1.5px solid #c9cdd2; background: #fff; flex: none; transition: border .15s ease; }
+  .is-sel > .hd .radio, .is-sel > .radio { border: 5px solid #005eff; }
+  .nm { display: inline-flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; }
+  .nm i { font-size: 16px; }
+  .lim { font-size: 13px; color: #737373; white-space: nowrap; }
+  .pr { font-size: 12.5px; color: #525252; white-space: nowrap; }
+  .pr s { margin-right: 5px; font-size: 13px; color: #a3a3a3; }
+  .pr b { font-size: 16px; font-weight: 500; color: #171717; }
+
+  /* rows: header line plus a body that opens when selected */
+  .rows { display: flex; flex-direction: column; gap: 8px; }
+  .row { border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+  .row:hover:not(.is-sel) { border-color: #c9cdd2; }
+  .row.is-sel { border-color: #005eff; background: #eaf2ff; box-shadow: inset 0 0 0 .5px #005eff; }
+  .hd { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+  .hd .push { margin-left: auto; }
+  .bd { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .26s cubic-bezier(.4,0,1,1), opacity .14s ease; }
+  .bd > div { overflow: hidden; min-height: 0; }
+  .is-sel > .bd { grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .5s cubic-bezier(.22,1,.36,1) .06s, opacity .34s ease .1s; }
+  .pts { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; padding: 0 16px 12px 44px; }
+  .pts li { display: flex; align-items: center; gap: 11px; font-size: 13px; line-height: 1.5; color: #404040; padding: 5px 0; }
+  .pts li i { font-size: 16px; flex: none; }
+  .pts li.f-lead { grid-column: 1 / -1; font-weight: 500; color: #171717; }
+  .is-sel .pts li { animation: feat-in .42s cubic-bezier(.22,1,.36,1) backwards; }
+  .is-sel .pts li:nth-child(2) { animation-delay: .06s; }
+  .is-sel .pts li:nth-child(3) { animation-delay: .12s; }
+  .is-sel .pts li:nth-child(4) { animation-delay: .18s; }
+  .is-sel .pts li:nth-child(5) { animation-delay: .24s; }
+  .is-sel .pts li:nth-child(6) { animation-delay: .30s; }
+  .is-sel .pts li:nth-child(7) { animation-delay: .36s; }
+  @keyframes feat-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* 2 ticks: one column of green ticks, price stacked with yearly saving */
+  .v2 .pts { grid-template-columns: 1fr; }
+  .v2 .pts li i { color: #16a34a; }
+  .v2 .pr { text-align: right; }
+  .v2 .pr small { display: block; font-size: 11px; color: #16a34a; font-weight: 500; }
+
+  /* 3 chips: points as soft pills, rows stay short */
+  .v3 .pts { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 14px 44px; }
+  .v3 .pts li { padding: 4px 10px; border-radius: 999px; background: #fff; border: 1px solid #d6e5ff; font-size: 12.5px; gap: 6px; }
+  .v3 .pts li i { font-size: 14px; color: #005eff; }
+  .v3 .pts li.f-lead { background: none; border: 0; padding: 4px 0; flex-basis: 100%; }
+
+  /* 4 dark head: the selected row turns into a dark header with a white body */
+  .v4 .row.is-sel { background: #fff; border-color: #0A1925; box-shadow: none; overflow: hidden; }
+  .v4 .row.is-sel > .hd { background: #0A1925; color: #fff; }
+  .v4 .row.is-sel > .hd .lim, .v4 .row.is-sel > .hd .pr { color: rgba(255,255,255,0.7); }
+  .v4 .row.is-sel > .hd .pr b { color: #fff; }
+  .v4 .row.is-sel > .hd .pr s { color: rgba(255,255,255,0.45); }
+  .v4 .row.is-sel > .hd .radio { border-color: #fff; background: #0A1925; }
+  .v4 .row.is-sel .pts { padding-top: 10px; }
+  .v4 .btn { background: #0A1925; }
+
+  /* 5 slide fit: every row says it imports the whole deck, the open row shows the deck strip */
+  .ok { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: #16a34a; white-space: nowrap; }
+  .ok i { font-size: 15px; }
+  .strip { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; margin: 0 16px 10px 44px; }
+  .strip i { height: 12px; border-radius: 2px; background: #005eff; opacity: .85; }
+  .strip i.x { background: #93b8ff; }
+  .strip-l { display: flex; justify-content: space-between; margin: 0 16px 8px 44px; font-size: 12px; color: #525252; }
+
+  /* 6 icon tile: bigger plan icon, points as one inline line */
+  .tile { width: 36px; height: 36px; border-radius: 8px; background: #f0f2f5; display: grid; place-items: center; font-size: 18px; color: #404040; flex: none; }
+  .is-sel .tile { background: #005eff; color: #fff; }
+  .v6 .hd { gap: 14px; }
+  .v6 .hd .meta { display: flex; flex-direction: column; gap: 3px; }
+  .v6 .hd .meta .lim { font-size: 12.5px; }
+  .v6 .line { padding: 0 16px 14px 66px; font-size: 13px; color: #404040; line-height: 1.7; }
+  .v6 .line b { font-weight: 500; color: #171717; }
+  .v6 .line span + span::before { content: '·'; margin: 0 8px; color: #a3a3a3; }
+
+  /* 7 buy inside: no bottom CTA, the open row holds its own button */
+  .v7 .bd .btn { margin: 4px 16px 14px 44px; width: auto; }
+
+  /* 8 segmented: plans as a switch, one detail panel below */
+  .seg { display: flex; padding: 4px; border-radius: 8px; background: #f0f2f5; }
+  .seg div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; border-radius: 6px; font-size: 13.5px; font-weight: 600; color: #525252; cursor: pointer; }
+  .seg div small { font-size: 11.5px; font-weight: 400; color: #8a8a8a; }
+  .seg div.is-sel { background: #fff; color: #171717; box-shadow: 0 1px 3px rgba(10,25,37,0.12); }
+  .panel { margin-top: 10px; border: 1px solid #005eff; border-radius: 6px; background: #eaf2ff; box-shadow: inset 0 0 0 .5px #005eff; }
+  .panel .hd { padding-bottom: 6px; }
+  .panel .pts { padding-left: 16px; }
+  .panel .pts li { animation: feat-in .42s cubic-bezier(.22,1,.36,1) backwards; }
+
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) {
+    body { padding: 20px 16px 40px; }
+    .card { padding: 16px 14px 14px; }
+    .hd { flex-wrap: wrap; row-gap: 6px; }
+    .hd .lim, .hd .tag { display: none; }
+    .pts { grid-template-columns: 1fr; padding-left: 16px; }
+    .v6 .line, .v7 .bd .btn, .strip, .strip-l { margin-left: 16px; padding-left: 0; }
+    .v6 .line { padding-left: 16px; margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<h1>Radio rows: 8 directions</h1>
+<p class="sub">Free user imported a 24-slide PPT, Free covers 15. Selected row expands with its v6 plan points. Click any row to switch.</p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+  // same plans and points as the v6 picker and import v3
+  const PLANS = [
+    { key: 'pro',  name: 'Pro',  icon: 'ph-rocket-launch', credits: '5,000',  base: 20, off: 16, slides: 60,
+      feats: [['ph-sparkle', 'Advanced AI models'], ['ph-paint-brush-broad', 'Brand Kit'], ['ph-strategy', 'Research and planning'], ['ph-chart-bar', 'Analytics']] },
+    { key: 'gold', name: 'Gold', icon: 'ph-sketch-logo',   credits: '15,000', base: 50, off: 40, slides: 99, lead: 'Everything in Pro, plus',
+      feats: [['ph-sparkle', 'Frontier AI models'], ['ph-paint-brush-broad', 'Advanced brand controls'], ['ph-book-open', 'Shared project knowledge'], ['ph-gauge', 'Priority AI generation']] },
+    { key: 'team', name: 'Team', icon: 'ph-users-three',   credits: '20,000', base: 60, off: 48, slides: 99, lead: 'Everything in Gold, plus',
+      feats: [['ph-users-three', 'Unlimited collaborators'], ['ph-paint-brush-broad', 'Shared Brand Kit'], ['ph-book-open', 'Shared project knowledge'], ['ph-sparkle', 'Frontier AI models and agents'], ['ph-chart-bar', 'Team analytics'], ['ph-headset', 'Priority support']] },
+  ];
+  const N = 24;
+  const nm = (p) => '<span class="nm">' + p.name + '<i class="ph ' + p.icon + '"></i></span>';
+  const cr = (p) => '<span class="cr"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>';
+  const pr = (p, extra) => '<span class="pr push"><s>$' + p.base + '</s><b>$' + p.off + '</b>/mo' + (extra || '') + '</span>';
+  const rec = (p) => p.key === 'pro' ? '<span class="tag">RECOMMENDED</span>' : '';
+  const pts = (p, ic) => '<ul class="pts">' + (p.lead ? '<li class="f-lead">' + p.lead + '</li>' : '') +
+    p.feats.map((f) => '<li><i class="ph' + (ic ? '-fill ' + ic : ' ' + f[0]) + '"></i>' + f[1] + '</li>').join('') + '</ul>';
+  const top = (sub) => '<div class="t">Your PPT has <b>' + N + '</b> slides. Free Plan supports up to <b>15</b> slides.</div><div class="s">' + (sub || 'Pick a plan to import every slide.') + '</div>';
+  const free = '<div class="free"><i class="ph ph-file-text"></i>Continue with Free Plan<span class="m">Use only first 15 slides</span></div>';
+  const cta = '<button class="btn" data-cta>Buy Pro at 20% OFF</button>';
+  const rows = (head, body) => '<div class="rows">' + PLANS.map((p) =>
+    '<div class="row" data-plan="' + p.key + '"><div class="hd">' + head(p) + '</div><div class="bd"><div>' + body(p) + '</div></div></div>').join('') + '</div>';
+
+  const V = [
+    { t: 'Baseline, v3 today', d: 'one line per plan, open row lists points in two columns',
+      html: () => top() + rows((p) => '<span class="radio"></span>' + nm(p) + cr(p) + '<span class="lim">Up to ' + p.slides + ' slides per import</span>' + '<span class="push"></span>' + rec(p) + pr(p).replace(' push', ''), (p) => pts(p)) + cta + free },
+    { t: 'Green ticks, yearly saving', d: 'one column of ticks, price shows what you save a year',
+      html: () => top() + rows((p) => '<span class="radio"></span>' + nm(p) + cr(p) + rec(p) + pr(p, '<small>Save $' + (p.base - p.off) * 12 + ' a year</small>'), (p) => pts(p, 'ph-check-circle')) + cta + free },
+    { t: 'Feature chips', d: 'points as small pills, open row stays short',
+      html: () => top() + rows((p) => '<span class="radio"></span>' + nm(p) + cr(p) + '<span class="lim">Up to ' + p.slides + ' slides</span>' + '<span class="push"></span>' + rec(p) + pr(p).replace(' push', ''), (p) => pts(p)) + cta + free },
+    { t: 'Dark header', d: 'selected plan becomes a dark banner, points on white below',
+      html: () => top() + rows((p) => '<span class="radio"></span>' + nm(p) + cr(p) + '<span class="lim">Up to ' + p.slides + ' slides</span>' + pr(p), (p) => pts(p)) + cta + free },
+    { t: 'Slide fit first', d: 'every row says "imports all 24", open row shows the deck landing',
+      html: () => top('Every plan imports all ' + N + ' slides.') + rows((p) => '<span class="radio"></span>' + nm(p) + '<span class="ok"><i class="ph-fill ph-check-circle"></i>Imports all ' + N + '</span>' + cr(p) + pr(p),
+        (p) => '<div class="strip-l"><span>' + N + ' of ' + N + ' slides import</span><span>' + (p.slides - N) + ' more to spare</span></div><div class="strip">' + Array.from({ length: N }, (_, i) => '<i' + (i >= 15 ? ' class="x"' : '') + '></i>').join('') + '</div>' + pts(p)) + cta + free },
+    { t: 'Icon tile, one line of points', d: 'plan icon leads, points read as a sentence',
+      html: () => top() + rows((p) => '<span class="radio"></span><span class="tile"><i class="ph ' + p.icon + '"></i></span><span class="meta">' + '<span class="nm">' + p.name + '</span>' + '<span class="lim">' + p.credits + ' Credits, up to ' + p.slides + ' slides</span></span>' + pr(p),
+        (p) => '<div class="line">' + (p.lead ? '<b>' + p.lead + ' </b>' : '') + p.feats.map((f) => '<span>' + f[1] + '</span>').join('') + '</div>') + free },
+    { t: 'Buy inside the row', d: 'no bottom button, the open row carries its own CTA',
+      html: () => top() + rows((p) => '<span class="radio"></span>' + nm(p) + cr(p) + '<span class="lim">Up to ' + p.slides + ' slides</span>' + '<span class="push"></span>' + rec(p) + pr(p).replace(' push', ''),
+        (p) => pts(p) + '<button class="btn">Buy ' + p.name + ' at 20% OFF</button>') + free },
+    { t: 'Segmented switch', d: 'plans as a switch on top, one detail panel below',
+      html: () => top() + '<div class="seg">' + PLANS.map((p) => '<div data-seg="' + p.key + '">' + p.name + '<small>$' + p.off + '/mo</small></div>').join('') + '</div><div class="panel"></div>' + cta + free },
+  ];
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = V.map((v, i) => '<div class="cell v' + (i + 1) + '"><div class="lbl"><span class="n">' + (i + 1) + '</span><b>' + v.t + '</b><span>· ' + v.d + '</span></div><div class="card">' + v.html() + '</div></div>').join('');
+
+  // each card keeps its own selection; the CTA follows it
+  grid.querySelectorAll('.card').forEach((card) => {
+    const set = (key) => {
+      const p = PLANS.find((x) => x.key === key);
+      card.querySelectorAll('.row').forEach((r) => r.classList.toggle('is-sel', r.dataset.plan === key));
+      card.querySelectorAll('[data-seg]').forEach((s) => s.classList.toggle('is-sel', s.dataset.seg === key));
+      const panel = card.querySelector('.panel');
+      if (panel) panel.innerHTML = '<div class="hd">' + nm(p) + cr(p) + '<span class="lim">Up to ' + p.slides + ' slides per import</span>' + pr(p) + '</div>' + pts(p);
+      const b = card.querySelector('[data-cta]');
+      if (b) b.textContent = 'Buy ' + p.name + ' at 20% OFF';
+    };
+    card.querySelectorAll('.row .hd').forEach((h) => h.addEventListener('click', () => set(h.parentNode.dataset.plan)));
+    card.querySelectorAll('[data-seg]').forEach((s) => s.addEventListener('click', () => set(s.dataset.seg)));
+    set('pro');
+  });
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
