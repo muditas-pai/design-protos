@@ -48,7 +48,7 @@
 
   /* radio rows, tightened: pick one plan, one CTA buys it. Price and limit line up across rows */
   .rows { display: flex; flex-direction: column; gap: 8px; }
-  .row { display: grid; grid-template-columns: 16px 88px 112px 1fr auto auto; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; cursor: pointer; text-align: left; font-family: inherit; color: inherit; transition: border-color .15s ease, background .15s ease; }
+  .row { display: grid; grid-template-columns: 16px 88px 112px 1fr auto auto; align-items: center; gap: 0 12px; padding: 12px 16px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; cursor: pointer; text-align: left; font-family: inherit; color: inherit; transition: border-color .15s ease, background .15s ease; }
   .row:hover:not(.is-sel) { border-color: #c9cdd2; }
   .row.is-sel { border-color: #005eff; background: #eaf2ff; box-shadow: inset 0 0 0 .5px #005eff; }
   .radio { width: 16px; height: 16px; border-radius: 999px; border: 1.5px solid #c9cdd2; background: #fff; transition: border .15s ease; }
@@ -59,6 +59,21 @@
   .row .lim { font-size: 13px; color: #737373; white-space: nowrap; }
   .tag { padding: 2px 8px; border-radius: 999px; background: #005eff; color: #fff; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; white-space: nowrap; }
   .tag.is-empty { visibility: hidden; }
+  /* the selected row expands to show its plan points (content and motion from the v6 picker) */
+  .c-feats { grid-column: 2 / -1; display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .26s cubic-bezier(.4,0,1,1), opacity .14s ease, margin .26s cubic-bezier(.4,0,1,1); }
+  .c-feats > ul { list-style: none; margin: 0; padding: 0; overflow: hidden; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+  .row.is-sel .c-feats { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; transition: grid-template-rows .5s cubic-bezier(.22,1,.36,1) .06s, opacity .34s ease .1s, margin .5s cubic-bezier(.22,1,.36,1) .06s; }
+  .c-feats li { display: flex; align-items: center; gap: 11px; font-size: 13px; line-height: 1.5; color: #404040; padding: 5px 0; }
+  .c-feats li i { font-size: 16px; color: inherit; flex: none; }
+  .c-feats li.f-lead { grid-column: 1 / -1; font-weight: 500; color: #171717; }
+  .row.is-sel .c-feats li { animation: feat-in .42s cubic-bezier(.22,1,.36,1) backwards; }
+  .row.is-sel .c-feats li:nth-child(2) { animation-delay: .06s; }
+  .row.is-sel .c-feats li:nth-child(3) { animation-delay: .12s; }
+  .row.is-sel .c-feats li:nth-child(4) { animation-delay: .18s; }
+  .row.is-sel .c-feats li:nth-child(5) { animation-delay: .24s; }
+  .row.is-sel .c-feats li:nth-child(6) { animation-delay: .30s; }
+  .row.is-sel .c-feats li:nth-child(7) { animation-delay: .36s; }
+  @keyframes feat-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   .row .pr { min-width: 104px; text-align: right; font-size: 12.5px; color: #525252; white-space: nowrap; }
   .row .pr s { margin-right: 5px; font-size: 13px; color: #a3a3a3; }
   .row .pr b { font-size: 16px; font-weight: 500; color: #171717; }
@@ -86,6 +101,9 @@
     .row .cr, .row .lim { grid-column: 2 / 4; }
     .row .tag { display: none; }
     .row .pr { grid-column: 3; grid-row: 1; min-width: 0; }
+    .c-feats { grid-column: 2 / 4; margin-top: -6px; }
+    .row.is-sel .c-feats { margin-top: 4px; }
+    .c-feats > ul { grid-template-columns: 1fr; }
   }
 
 </style>
@@ -140,31 +158,39 @@
 
   // same plan numbers as the v6 picker
   const PLANS = [
-    { key: 'pro',  name: 'Pro',  icon: 'ph-rocket-launch', credits: '5,000',  base: 20, slides: 60 },
-    { key: 'gold', name: 'Gold', icon: 'ph-sketch-logo',   credits: '15,000', base: 50, slides: 99 },
-    { key: 'team', name: 'Team', icon: 'ph-users-three',   credits: '20,000', base: 60, slides: 99 },
+    { key: 'pro',  name: 'Pro',  icon: 'ph-rocket-launch', credits: '5,000',  base: 20, slides: 60,
+      feats: [['ph-sparkle', 'Advanced AI models'], ['ph-paint-brush-broad', 'Brand Kit'], ['ph-strategy', 'Research and planning'], ['ph-chart-bar', 'Analytics']] },
+    { key: 'gold', name: 'Gold', icon: 'ph-sketch-logo',   credits: '15,000', base: 50, slides: 99, lead: 'Everything in Pro, plus',
+      feats: [['ph-sparkle', 'Frontier AI models'], ['ph-paint-brush-broad', 'Advanced brand controls'], ['ph-book-open', 'Shared project knowledge'], ['ph-gauge', 'Priority AI generation']] },
+    { key: 'team', name: 'Team', icon: 'ph-users-three',   credits: '20,000', base: 60, slides: 99, lead: 'Everything in Gold, plus',
+      feats: [['ph-users-three', 'Unlimited collaborators'], ['ph-paint-brush-broad', 'Shared Brand Kit'], ['ph-book-open', 'Shared project knowledge'], ['ph-sparkle', 'Frontier AI models and agents'], ['ph-chart-bar', 'Team analytics'], ['ph-headset', 'Priority support']] },
   ];
   const off = (c) => { const n = c.base * 0.8; return Number.isInteger(n) ? n : n.toFixed(2); };
 
   const body = document.getElementById('body');
   let sel = PLANS.some((p) => p.key === q.get('plan')) ? q.get('plan') : 'pro';
-  body.innerHTML = '<div class="rows">' + PLANS.map((c) =>
-    '<button type="button" class="row" data-plan="' + c.key + '" aria-pressed="false">' +
+  body.innerHTML = '<div class="rows" role="radiogroup" aria-label="Plan">' + PLANS.map((c) =>
+    '<div class="row" role="radio" tabindex="0" data-plan="' + c.key + '" aria-checked="false">' +
     '<span class="radio"></span>' +
     '<span class="nm">' + c.name + '<i class="ph ' + c.icon + '"></i></span>' +
     '<span class="cr"><i class="ph-fill ph-star-four"></i>' + c.credits + ' Credits</span>' +
     '<span class="lim">Up to ' + c.slides + ' slides per import</span>' +
     '<span class="tag' + (c.key === 'pro' ? '' : ' is-empty') + '">RECOMMENDED</span>' +
     '<span class="pr"><s>$' + c.base + '</s><b>$' + off(c) + '</b>/mo</span>' +
-    '</button>').join('') + '</div>' +
+    '<div class="c-feats"><ul>' + (c.lead ? '<li class="f-lead">' + c.lead + '</li>' : '') + c.feats.map((f) => '<li><i class="ph ' + f[0] + '"></i>' + f[1] + '</li>').join('') + '</ul></div>' +
+    '</div>').join('') + '</div>' +
     '<button type="button" class="btn" id="btn-buy"></button>';
 
   const buy = document.getElementById('btn-buy');
   const paint = () => {
-    body.querySelectorAll('.row').forEach((r) => { const on = r.dataset.plan === sel; r.classList.toggle('is-sel', on); r.setAttribute('aria-pressed', on); });
+    body.querySelectorAll('.row').forEach((r) => { const on = r.dataset.plan === sel; r.classList.toggle('is-sel', on); r.setAttribute('aria-checked', on); });
     buy.textContent = 'Buy ' + PLANS.find((p) => p.key === sel).name + ' at 20% OFF';
   };
-  body.querySelectorAll('.row').forEach((r) => r.addEventListener('click', () => { sel = r.dataset.plan; paint(); }));
+  body.querySelectorAll('.row').forEach((r) => {
+    const pick = () => { sel = r.dataset.plan; paint(); };
+    r.addEventListener('click', pick);
+    r.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
   paint();
 
   // 20% off every plan, carried into checkout. Free and close replay the flow in this standalone page.
