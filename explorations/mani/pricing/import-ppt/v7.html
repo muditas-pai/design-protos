@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Import PowerPoint, import first</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* v7 skeleton: import the whole deck, then upsell. No blocking, no truncation. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #171717; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  .stage { position: relative; max-width: 900px; margin: 0 auto; min-height: 100vh; padding: 56px 32px 40px; display: flex; flex-direction: column; }
+  .close { position: fixed; top: 18px; right: 20px; width: 34px; height: 34px; border-radius: 999px; border: 0; background: #fff; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.12); cursor: pointer; font-size: 16px; color: #171717; display: grid; place-items: center; }
+
+  .bubble { align-self: flex-end; background: #f3f4f6; border-radius: 14px; padding: 8px; }
+  .file { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 10px; padding: 10px 14px 10px 10px; min-width: 280px; }
+  .file-ic { position: relative; width: 34px; height: 40px; border-radius: 6px; background: #f5f5f5; border: 1px solid #e5e5e5; display: grid; place-items: center; font-size: 9px; font-weight: 600; color: #737373; }
+  .file-ic .ok { position: absolute; top: -8px; left: -8px; width: 16px; height: 16px; border-radius: 999px; background: #16a34a; color: #fff; font-size: 11px; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+  .file-name { font-size: 13px; }
+
+  .steps { margin-top: 44px; display: flex; flex-direction: column; gap: 14px; }
+  .step { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+  .step .dot { width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; color: #fff; background: #16a34a; }
+
+  /* the card: confirmation first, offer second */
+  .card { margin-top: auto; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 14px; box-shadow: 0 12px 32px -16px rgba(10,25,37,0.25), 0 1px 2px rgba(10,25,37,0.06); overflow: hidden; opacity: 0; transform: translateY(16px); transition: opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
+  .card.is-in { opacity: 1; transform: none; }
+
+  .done { display: flex; align-items: center; gap: 10px; padding: 18px 22px; background: #f0fdf4; border-bottom: 1px solid #dcfce7; }
+  .done .tick { width: 20px; height: 20px; border-radius: 999px; background: #16a34a; color: #fff; display: grid; place-items: center; font-size: 12px; flex: none; }
+  .done b { font-weight: 600; }
+  .done-t { font-size: 14.5px; }
+
+  .offer { padding: 18px 22px 16px; }
+  .offer-t { font-size: 14.5px; font-weight: 500; }
+  .offer-s { font-size: 13px; color: #737373; margin: 3px 0 14px; }
+
+  .plan { display: flex; align-items: center; gap: 12px; border: 1.5px solid #0055ED; background: #f5f9ff; border-radius: 10px; padding: 12px 14px; }
+  .plan .ic { width: 30px; height: 30px; border-radius: 8px; background: #0055ED; color: #fff; display: grid; place-items: center; font-size: 15px; flex: none; }
+  .plan .body { flex: 1; min-width: 0; }
+  .plan .name { font-size: 14px; font-weight: 600; }
+  .plan .meta { font-size: 12.5px; color: #525252; margin-top: 2px; }
+  .plan .price { text-align: right; white-space: nowrap; }
+  .plan .was { font-size: 12.5px; color: #a3a3a3; text-decoration: line-through; margin-right: 4px; }
+  .plan .now { font-size: 16px; font-weight: 600; }
+  .plan .per { font-size: 12px; color: #737373; }
+  .plan .bill { font-size: 11.5px; color: #737373; display: block; margin-top: 1px; }
+
+  .cta { display: block; width: 100%; margin-top: 14px; padding: 12px; border: 0; border-radius: 10px; background: #0055ED; color: #fff; font-family: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+  /* continue to edit: secondary button under the buy CTA, no trial in this flow */
+  .sec { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 8px; padding: 11px; border: 1px solid #d4d4d4; border-radius: 10px; background: #fff; color: #171717; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .sec:hover { background: #f5f5f5; }
+  .sec .m { color: #8a8a8a; font-weight: 400; font-size: 13px; }
+
+  .note { max-width: 900px; margin: 22px auto 0; padding: 0 32px 40px; font-size: 12.5px; color: #737373; line-height: 1.6; }
+  .note b { color: #171717; }
+.ver-bar { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 20; display: inline-flex; gap: 3px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.10); }
+  .ver-bar a { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 120px; padding: 6px 16px; border-radius: 999px; color: #525252; text-decoration: none; }
+  .ver-bar a b { font-size: 12.5px; font-weight: 600; }
+  .ver-bar a small { font-size: 10.5px; color: #8a8a8a; }
+  .ver-bar a:hover:not(.is-on) { background: #f0f2f5; }
+  .ver-bar a.is-on { background: #171717; color: #fff; }
+  .ver-bar a.is-on small { color: rgba(255,255,255,0.65); }
+  .stage { padding-top: 88px; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 640px) {
+    .stage { padding: 80px 16px 32px; }
+    .ver-bar a { min-width: 0; padding: 5px 12px; }
+    .ver-bar a small { display: none; }
+    .limit { padding: 16px 14px 14px; }
+    .hd { flex-wrap: wrap; row-gap: 6px; padding: 12px; }
+    .hd .lim { display: none; }
+    .meta .lim { display: block; }
+    .pts { grid-template-columns: 1fr; margin: 0 12px; }
+    .line { padding: 0 12px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<button class="close" aria-label="Close"><i class="ph ph-x"></i></button>
+
+<nav class="ver-bar" aria-label="Version">
+  <a href="./"><b>v1</b><small>Comparison table</small></a>
+  <a href="v2.html"><b>v2</b><small>Three columns</small></a>
+  <a href="v3.html"><b>v3</b><small>Radio rows</small></a>
+  <a href="v4.html"><b>v4</b><small>Green ticks</small></a>
+  <a href="v5.html"><b>v5</b><small>Icon tile</small></a>
+  <a href="v6.html"><b>v6</b><small>Simple rows</small></a>
+  <a href="v7.html" class="is-on" aria-current="page"><b>v7</b><small>Import first</small></a>
+  <a href="v8.html"><b>v8</b><small>Loss framed</small></a>
+</nav>
+
+<div class="stage">
+
+  <div class="bubble">
+    <div class="file">
+      <div class="file-ic">.pptx<span class="ok"><i class="ph-fill ph-check"></i></span></div>
+      <div class="file-name">chetan deck.pptx</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><span class="dot"><i class="ph ph-check"></i></span>Uploaded your content</div>
+    <div class="step"><span class="dot"><i class="ph ph-check"></i></span>Read your slides</div>
+    <div class="step"><span class="dot"><i class="ph ph-check"></i></span>Imported all 24 slides</div>
+  </div>
+
+  <div class="card" id="card">
+
+    <div class="done">
+      <span class="tick"><i class="ph-fill ph-check"></i></span>
+      <div class="done-t">All <b>24 slides</b> are in your deck. Nothing was removed.</div>
+    </div>
+
+    <div class="offer">
+      <div class="offer-t">Want to export it to PowerPoint?</div>
+      <div class="offer-s">Exporting, brand kit and the advanced AI models come with Pro.</div>
+
+      <div class="plan">
+        <span class="ic"><i class="ph-fill ph-rocket-launch"></i></span>
+        <div class="body">
+          <div class="name">Pro</div>
+          <div class="meta">5,000 credits, unlimited exports, brand kit</div>
+        </div>
+        <div class="price">
+          <span class="was">$20</span><span class="now">$16</span><span class="per">/mo</span>
+          <span class="bill">billed annually</span>
+        </div>
+      </div>
+
+      <button class="cta">Get Pro at 20% OFF</button>
+
+      <button class="sec"><i class="ph ph-paper-plane-tilt"></i>Continue to edit</button>
+
+    </div>
+
+  </div>
+</div>
+
+<div class="note">
+  <b>v7, import first.</b> The deck imports in full, so the user never loses slides and never sees a wall before the product has done anything.
+  The paid moment moves to export, where intent is already proven.
+  Cap raised to cover p75 of real imports (34 slides) instead of 12 or 15.
+  Gold and Team removed here: at 24 slides they add a decision with no value.
+  Billing term stated, free path is a "Continue to edit" secondary button because nothing is being given up.
+  <br /><br />
+  <b>Events this screen needs:</b> <code>import_completed</code>, <code>upsell_shown</code>, <code>upsell_clicked</code> (with plan), <code>upsell_dismissed</code>.
+</div>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+<script>requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('card').classList.add('is-in')));</script>
+</body>
+</html>
