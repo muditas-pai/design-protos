@@ -31,7 +31,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* the limit card */
-  .limit { margin-top: auto; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 14px; padding: 20px 22px 16px; box-shadow: 0 12px 32px -16px rgba(10,25,37,0.25), 0 1px 2px rgba(10,25,37,0.06); opacity: 0; transform: translateY(16px); transition: opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
+  .limit { --px: 22px; --pt: 20px; margin-top: auto; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 14px; padding: 20px 22px 16px; box-shadow: 0 12px 32px -16px rgba(10,25,37,0.25), 0 1px 2px rgba(10,25,37,0.06); opacity: 0; transform: translateY(16px); transition: opacity .4s ease, transform .5s cubic-bezier(.2,.8,.2,1); }
   .limit.is-in { opacity: 1; transform: none; }
   .limit-t { font-size: 15px; font-weight: 500; }
   .limit-t b { font-weight: 600; }
@@ -122,7 +122,7 @@
   .limit-t .win { color: #0055ED; }
   /* no subtitle and no card around the meter: the bar reads as part of the title line, with the split labels under it */
   .limit-t { margin-bottom: 10px; }
-  .meter { margin-bottom: 18px; }
+  .meter { margin-bottom: 0; }
   .legend { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 12.5px; color: #525252; }
   .legend span { display: inline-flex; align-items: center; gap: 7px; }
   .legend b { font-weight: 600; color: #171717; font-variant-numeric: tabular-nums; }
@@ -164,8 +164,8 @@
   .fx { display: inline-flex; align-items: center; gap: 5px; color: #8a8a8a; font-size: 12.5px; cursor: default; }
   .fx i { font-size: 14px; }
   .fx:hover { color: #525252; }
-  /* a rule between the meter and the plans, even air on both sides */
-  .rule { height: 1px; background: #ececec; margin: 16px 0; }
+  /* title and meter sit on a tint that bleeds to the card edges, so the line under them runs end to end */
+  .top { margin: calc(var(--pt) * -1) calc(var(--px) * -1) 16px; padding: var(--pt) var(--px) 14px; background: #fafbfc; border-bottom: 1px solid #ececec; border-radius: 13px 13px 0 0; }  /* 13, not 14: it sits inside the card's 1px border */
   /* plan line reads: name, dot, credits in brand blue; features sit under it behind the info icon */
   .nm .sep { margin: 0; color: #c9cdd2; font-weight: 400; }  /* .nm is a flex row with an 8px gap, so the dot needs no margin of its own */
   .nm .cred { color: #0055ED; font-weight: 500; font-size: 13.5px; }
@@ -197,7 +197,7 @@
     .stage { padding: 80px 16px 32px; }
     .ver-bar a { min-width: 0; padding: 5px 12px; }
     .ver-bar a small { display: none; }
-    .limit { padding: 16px 14px 14px; }
+    .limit { padding: 16px 14px 14px; --px: 14px; --pt: 16px; }
     .hd { flex-wrap: wrap; row-gap: 6px; padding: 12px; }
     .hd .lim { display: none; }
     .meta .lim { display: block; }
@@ -230,7 +230,10 @@
   </div>
 
   <div class="limit" id="limit">
-    <div class="limit-t" id="limit-t"></div>
+    <div class="top">
+      <div class="limit-t" id="limit-t"></div>
+      <div id="meter"></div>
+    </div>
     <div id="body"></div>
     <button type="button" class="btn sec free" id="btn-free">Continue with Free Plan<span class="m">Use only first 12 slides</span></button>
   </div>
@@ -296,11 +299,10 @@
   const FREE = 12, MORE = N - FREE, R = FREE / N;
   const AT = (R * 100).toFixed(2) + '%';
   const bar = (cls) => '<div class="bar ' + cls + '"><span class="c-free" style="flex:' + FREE + '"></span><span class="c-plan" style="flex:' + MORE + '"></span></div>';
-  body.innerHTML = '<div class="meter">' +
+  document.getElementById('meter').innerHTML = '<div class="meter">' +
     '<div class="split" style="--at:' + AT + '">' + bar('thick') + '</div>' +
-    '<div class="under"><span><b>' + FREE + ' slides</b>on Free</span><span class="pb"><b>+' + MORE + ' slides</b>with ' + names + '</span></div>' + '</div>' +
-    '<div class="rule"></div>' +
-    '<div class="rows">' + FITS.map((c) =>
+    '<div class="under"><span><b>' + FREE + ' slides</b>on Free</span><span class="pb"><b>+' + MORE + ' slides</b>with ' + names + '</span></div>' + '</div>';
+  body.innerHTML = '<div class="rows">' + FITS.map((c) =>
     '<div class="row" data-plan="' + c.key + '"><div class="hd">' +
     '<span class="tile"><i class="ph ' + c.icon + '"></i></span><span class="meta"><span class="nm">' + c.name + '<span class="sep">\u00b7</span><span class="cred">' + c.credits + ' credits</span></span><span class="lim">' + fx(c) + '</span></span>' + tip(c) + pr(c) +
     '<button type="button" class="btn row-buy' + (c.key === lead ? ' is-lead' : '') + '" data-buy="' + c.key + '">Buy ' + c.name + '</button>' +
