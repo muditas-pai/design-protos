@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Import PowerPoint, close nudge</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* Import from PPT, v11: the limit arrives as a modal over the create flow, in the pricing close nudge style.
+     Frozen from the crazy 8s gallery (02 Close nudge): narrow tinted card, big title, plans that open to their points. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #171717; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+
+  /* the create flow, behind the modal */
+  .flow { position: relative; max-width: 900px; margin: 0 auto; min-height: 100vh; padding: 88px 32px 40px; display: flex; flex-direction: column; }
+  .bubble { align-self: flex-end; background: #f3f4f6; border-radius: 14px; padding: 8px; }
+  .file { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid rgba(11,15,20,0.09); border-radius: 10px; padding: 10px 14px 10px 10px; min-width: 280px; }
+  .file-ic { position: relative; width: 34px; height: 40px; border-radius: 6px; background: #f5f5f5; border: 1px solid #e5e5e5; display: grid; place-items: center; font-size: 9px; font-weight: 600; color: #737373; }
+  .file-ic .ok { position: absolute; top: -8px; left: -8px; width: 16px; height: 16px; border-radius: 999px; background: #16a34a; color: #fff; font-size: 11px; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+  .file-name { font-size: 13px; color: #171717; }
+  .steps { margin-top: 44px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; }
+  .steps div { display: flex; align-items: center; gap: 10px; }
+  .steps i { width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; color: #fff; background: #16a34a; }
+
+  /* the modal: scrim fades, the card rises and settles */
+  .scrim { position: fixed; inset: 0; z-index: 30; background: rgba(10,25,37,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; animation: sc-in .25s ease backwards; }
+  @keyframes sc-in { from { opacity: 0; } }
+  @keyframes card-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
+  .wrap { position: relative; animation: card-in .45s cubic-bezier(.2,.8,.2,1) backwards; }
+  .modal { position: relative; width: 460px; background: #f5f9ff; border-radius: 6px; padding: 24px 28px 0; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 40px -16px rgba(10,25,37,0.3); }
+  /* close sits outside the card, top right */
+  .x { position: absolute; top: 0; left: calc(100% + 10px); width: 28px; height: 28px; border: 0; border-radius: 999px; background: #fafafa; color: #171717; font-size: 14px; display: grid; place-items: center; cursor: pointer; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.12); animation: sc-in .3s .15s ease backwards; }
+  .x:hover { background: #ececec; }
+
+  .ttl { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; margin-bottom: 6px; }
+  .win { background: linear-gradient(96deg, #00225C 0%, #003C9E 24%, #0055ED 50%, #1C6BF3 78%, #5990FC 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .tsub { font-size: 14px; line-height: 1.5; color: #525252; margin-bottom: 18px; }
+
+  .cr { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #e8f0fe; color: #0055ED; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+  .cr i { font-size: 10px; }
+  .price { font-size: 12.5px; color: #525252; white-space: nowrap; }
+  .price b { font-size: 16px; font-weight: 500; }
+
+  /* plan cards, picker v6 spec: 6px radius, selected inset + halo, the pick opens to its points */
+  .rc { position: relative; display: flex; align-items: flex-start; gap: 12px; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 16px 18px 14px; cursor: pointer; transition: border-color .25s ease, box-shadow .25s ease; }
+  .rc + .rc { margin-top: 8px; }
+  .rc:hover:not(.is-sel) { border-color: #c9cdd2; }
+  .rc:focus-visible { outline: 2px solid #005eff; outline-offset: 2px; }
+  .rc.is-sel { border-color: #005eff; box-shadow: inset 0 0 0 .5px #005eff, 0 0 0 3px #e6efff; }
+  .rc .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #d4d4d4; background: #fff; margin-top: 3px; flex: none; transition: border-width .2s ease, border-color .2s ease; }
+  .rc.is-sel .radio { border: 5px solid #005eff; }
+  .rc .main { flex: 1; min-width: 0; }
+  .rc .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .rc .nm { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; }
+  .rc .sub { margin-top: 6px; font-size: 12.5px; color: #737373; }
+  /* quick close, slower open, points rise in one by one: the same motion as the new pricing page */
+  .rc .open { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .26s cubic-bezier(.4,0,1,1), opacity .14s ease, margin .26s cubic-bezier(.4,0,1,1); }
+  .rc .open > div { overflow: hidden; min-height: 0; }
+  .rc.is-sel .open { grid-template-rows: 1fr; opacity: 1; margin-top: 14px; transition: grid-template-rows .5s cubic-bezier(.22,1,.36,1) .06s, opacity .34s ease .1s, margin .5s cubic-bezier(.22,1,.36,1) .06s; }
+  .feats { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .feats li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #404040; }
+  .feats li i { font-size: 16px; color: #525252; flex: none; }
+  .feats .lead { font-weight: 500; color: #171717; }
+  .rc.is-sel .open .feats li { animation: feat-in .42s cubic-bezier(.22,1,.36,1) backwards; }
+  .rc.is-sel .open .feats li:nth-child(1) { animation-delay: .16s; }
+  .rc.is-sel .open .feats li:nth-child(2) { animation-delay: .22s; }
+  .rc.is-sel .open .feats li:nth-child(3) { animation-delay: .28s; }
+  .rc.is-sel .open .feats li:nth-child(4) { animation-delay: .34s; }
+  .rc.is-sel .open .feats li:nth-child(5) { animation-delay: .40s; }
+  @keyframes feat-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .ctas { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 40px; border-radius: 4px; border: 0; background: #005EFF; color: #fff; font: 500 13.5px 'Inter', sans-serif; cursor: pointer; transition: background .15s ease, transform .12s ease; }
+  .btn:hover { background: #0052e0; }
+  .btn:active { transform: scale(0.98); }
+  /* the way out: plain centred text, underlined, no arrow and no hover effects */
+  .fc { display: flex; align-items: center; justify-content: center; width: 100%; height: 36px; padding: 0; border: 0; background: none; font: 500 13.5px 'Inter', sans-serif; color: #171717; cursor: pointer; }
+  .fc b { font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+
+  .badges { height: 56px; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 12px; font-weight: 500; color: #525252; }
+  .badges span { display: inline-flex; align-items: center; gap: 6px; }
+  .badges img { height: 18px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scrim, .wrap, .x { animation: none; }
+    .rc .open, .rc.is-sel .open { transition: none; }
+    .rc.is-sel .open .feats li { animation: none; }
+  }
+
+  /* checkout opens over this screen in a frame, no page change */
+  .co { position: fixed; inset: 0; z-index: 50; display: none; }
+  .co.is-open { display: block; }
+  .co iframe { width: 100%; height: 100%; border: 0; background: transparent; }
+
+  /* proto switch */
+  .ver-bar { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 40; display: inline-flex; gap: 3px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.10); }
+  .ver-bar a { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 120px; padding: 6px 16px; border-radius: 999px; color: #525252; text-decoration: none; }
+  .ver-bar a b { font-size: 12.5px; font-weight: 600; }
+  .ver-bar a small { font-size: 10.5px; color: #8a8a8a; }
+  .ver-bar a:hover:not(.is-on) { background: #f0f2f5; }
+  .ver-bar a.is-on { background: #171717; color: #fff; }
+  .ver-bar a.is-on small { color: rgba(255,255,255,0.65); }
+
+  @media (max-width: 640px) {
+    .flow { padding: 80px 16px 32px; }
+    .ver-bar a { min-width: 0; padding: 5px 12px; }
+    .ver-bar a small { display: none; }
+    .modal { width: 100%; padding: 20px 18px 0; }
+    .x { left: auto; right: 0; top: -38px; }
+  }
+</style>
+</head>
+<body>
+<nav class="ver-bar" aria-label="Version">
+  <a href="v2.html"><b>v2</b><small>Three columns</small></a>
+  <a href="v3.html"><b>v3</b><small>Radio rows</small></a>
+  <a href="v6-1.html"><b>v6.1</b><small>Buy in row</small></a>
+  <a href="v10.html"><b>v10</b><small>Labels under</small></a>
+  <a href="v10-1.html"><b>v10.1</b><small>Big deck</small></a>
+  <a href="v11.html" class="is-on" aria-current="page"><b>v11</b><small>Close nudge</small></a>
+</nav>
+
+<div class="flow">
+  <div class="bubble">
+    <div class="file">
+      <span class="file-ic">.pptx<span class="ok"><i class="ph ph-check"></i></span></span>
+      <span class="file-name" id="file-name">chetan deck.pptx</span>
+    </div>
+  </div>
+  <div class="steps">
+    <div><i class="ph ph-check"></i>Uploaded your content</div>
+    <div><i class="ph ph-check"></i>Read your slides</div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim">
+  <div class="wrap">
+    <div class="modal">
+      <div id="head"></div>
+      <div id="plans"></div>
+      <div class="ctas">
+        <button type="button" class="btn" id="cta">Buy Pro</button>
+        <button type="button" class="fc" id="free"><b>Continue without upgrading</b></button>
+      </div>
+      <div class="badges">
+        <span><img src="../assets/checkout/badge-gdpr.svg" alt="" />GDPR compliant</span>
+        <span><img src="../assets/checkout/badge-soc2.svg" alt="" />SOC 2 Type II</span>
+      </div>
+    </div>
+    <button type="button" class="x" id="close" aria-label="Close"><i class="ph ph-x"></i></button>
+  </div>
+</div>
+
+<div class="co" id="co"><iframe id="co-frame" title="Checkout"></iframe></div>
+
+<script>
+  // Standalone copy of the import limit as a modal, close nudge style (v11). ?file= ?slides= ?plan=pro|gold
+  const q = new URLSearchParams(location.search);
+  document.querySelectorAll('.ver-bar a').forEach((a) => { a.href = a.getAttribute('href') + location.search; });
+  if (q.get('file')) document.getElementById('file-name').textContent = q.get('file');
+  const N = Math.max(13, Number(q.get('slides')) || 32), FREE = 12;
+
+  // same plan numbers and points as the tier 2 picker
+  const PLANS = [
+    { key: 'pro',  name: 'Pro',  credits: '5,000',  price: 20, slides: 60,
+      feats: [['ph-sparkle', 'Advanced AI models'], ['ph-paint-brush-broad', 'Brand Kit'], ['ph-strategy', 'Research and planning'], ['ph-chart-bar', 'Analytics']] },
+    { key: 'gold', name: 'Gold', credits: '25,000', price: 50, slides: 99, lead: 'Everything in Pro, plus',
+      feats: [['ph-sparkle', 'Frontier AI models'], ['ph-paint-brush-broad', 'Advanced brand controls'], ['ph-book-open', 'Shared project knowledge'], ['ph-gauge', 'Priority AI generation']] },
+  ];
+
+  // title and subtitle: option B from the crazy 8s, the one the gallery marks Recommended
+  document.getElementById('head').innerHTML =
+    '<div class="ttl">Your deck has <span class="win">' + N + ' slides</span>.</div>' +
+    '<div class="tsub">Free imports ' + FREE + '. Pro and Gold import all ' + N + '.</div>';
+
+  const cr = (p) => '<span class="cr"><i class="ph-fill ph-star-four"></i>' + p.credits + ' Credits</span>';
+  const feats = (p) => '<ul class="feats">' + (p.lead ? '<li class="lead">' + p.lead + '</li>' : '') +
+    p.feats.map((f) => '<li><i class="ph ' + f[0] + '"></i>' + f[1] + '</li>').join('') + '</ul>';
+  const plans = document.getElementById('plans');
+  let sel = PLANS.some((p) => p.key === q.get('plan')) ? q.get('plan') : 'pro';
+  plans.innerHTML = PLANS.map((p) =>
+    '<div class="rc' + (p.key === sel ? ' is-sel' : '') + '" data-plan="' + p.key + '" role="radio" aria-checked="' + (p.key === sel) + '" tabindex="0">' +
+    '<span class="radio"></span><div class="main">' +
+    '<div class="top"><span class="nm">' + p.name + cr(p) + '</span><span class="price"><b>$' + p.price + '</b>/mo</span></div>' +
+    '<div class="sub">Up to ' + p.slides + ' slides per import</div>' +
+    '<div class="open"><div>' + feats(p) + '</div></div>' +
+    '</div></div>').join('');
+
+  // the pick moves, the CTA follows it
+  const cta = document.getElementById('cta');
+  const pick = (el) => {
+    sel = el.dataset.plan;
+    plans.querySelectorAll('.rc').forEach((c) => { const on = c === el; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
+    cta.textContent = 'Buy ' + PLANS.find((p) => p.key === sel).name;
+  };
+  plans.querySelectorAll('.rc').forEach((c) => {
+    c.addEventListener('click', () => pick(c));
+    c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(c); } });
+  });
+  cta.textContent = 'Buy ' + PLANS.find((p) => p.key === sel).name;
+
+  // full price, no discount; checkout opens with off=0. Free and close replay the flow in this standalone page.
+  const co = document.getElementById('co'), coFrame = document.getElementById('co-frame');
+  cta.addEventListener('click', () => { coFrame.src = '../checkout-buy-sep-2026.html?plan=' + sel + '&off=0'; co.classList.add('is-open'); });
+  addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'checkout-close') { co.classList.remove('is-open'); coFrame.src = 'about:blank'; }
+  });
+  document.getElementById('free').addEventListener('click', () => location.reload());
+  document.getElementById('close').addEventListener('click', () => location.reload());
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
