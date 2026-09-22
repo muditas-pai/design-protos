@@ -80,8 +80,12 @@
   .fc { display: flex; align-items: center; justify-content: center; width: 100%; height: 36px; padding: 0; border: 0; background: none; font: 500 13.5px 'Inter', sans-serif; color: #171717; cursor: pointer; }
   .fc b { font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 
-  /* air between the way out and the trust badges, and the card closes with the same 24px it opens with */
-  .badges { height: 56px; margin-top: 10px; padding-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 12px; font-weight: 500; color: #525252; }
+  /* Gold opens one line taller than Pro. That line is paid for here, under the way out, so the card
+     is the same height whichever plan is picked; the space closes as Gold opens. */
+  .pad { height: 27px; transition: height .42s cubic-bezier(.32,.72,0,1); }
+  body.gold .pad { height: 0; }
+  .badges { height: 56px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 12px; font-weight: 500; color: #525252; }
+  @media (prefers-reduced-motion: reduce) { .pad { transition: none; } }
   .badges span { display: inline-flex; align-items: center; gap: 6px; }
   .badges img { height: 18px; }
 
@@ -146,6 +150,7 @@
         <button type="button" class="btn" id="cta">Buy Pro</button>
         <button type="button" class="fc" id="free"><b>Continue without upgrading</b></button>
       </div>
+      <div class="pad" id="pad" aria-hidden="true"></div>
       <div class="badges">
         <span><img src="../assets/checkout/badge-gdpr.svg" alt="" />GDPR compliant</span>
         <span><img src="../assets/checkout/badge-soc2.svg" alt="" />SOC 2 Type II</span>
@@ -166,7 +171,7 @@
 
   // same plan numbers and points as the tier 2 picker
   const PLANS = [
-    { key: 'pro',  name: 'Pro',  credits: '5,000',  price: 20, slides: 60, lead: 'Everything in Free, plus',
+    { key: 'pro',  name: 'Pro',  credits: '5,000',  price: 20, slides: 60,
       feats: [['ph-sparkle', 'Advanced AI models'], ['ph-paint-brush-broad', 'Brand Kit'], ['ph-strategy', 'Research and planning'], ['ph-chart-bar', 'Analytics']] },
     { key: 'gold', name: 'Gold', credits: '25,000', price: 50, slides: 99, lead: 'Everything in Pro, plus',
       feats: [['ph-sparkle', 'Frontier AI models'], ['ph-paint-brush-broad', 'Advanced brand controls'], ['ph-book-open', 'Shared project knowledge'], ['ph-gauge', 'Priority AI generation']] },
@@ -196,12 +201,14 @@
     sel = el.dataset.plan;
     plans.querySelectorAll('.rc').forEach((c) => { const on = c === el; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
     cta.textContent = 'Buy ' + PLANS.find((p) => p.key === sel).name;
+    document.body.classList.toggle('gold', sel === 'gold');
   };
   plans.querySelectorAll('.rc').forEach((c) => {
     c.addEventListener('click', () => pick(c));
     c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(c); } });
   });
   cta.textContent = 'Buy ' + PLANS.find((p) => p.key === sel).name;
+  document.body.classList.toggle('gold', sel === 'gold');
 
   // full price, no discount; checkout opens with off=0. Free and close replay the flow in this standalone page.
   const co = document.getElementById('co'), coFrame = document.getElementById('co-frame');
