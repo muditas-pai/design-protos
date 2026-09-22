@@ -79,11 +79,15 @@
 
   /* Scenario zones: one visible plan set per demo tab */
   .plan-zone { display: none; }
+  body.sc-free #zone-free,
   body.sc-silver #zone-silver,
   body.sc-gold #zone-gold,
   body.sc-teams #zone-teams,
   body.sc-teambuy #zone-teambuy { display: block; }
   body.sc-teambuy.state-low .meter-fill { width: 8.6%; }
+  /* free: 432 left of the 1,000 monthly credits; no early renewal, so no tip and no carry forward line */
+  body.sc-free.state-low .meter-fill { width: 43.2%; }
+  body.sc-free .info-tip--title, body.sc-free .stack-math { display: none; }
   #zone-gold .big-cred { margin-top: 4px; }
   #zone-gold .radio { display: none; }
   .switch-team {
@@ -440,6 +444,7 @@
 
   <div class="demo-bar">
     <div class="demo-seg" id="scenario-seg" role="tablist" aria-label="Plan scenario">
+      <button type="button" data-sc="free">Free</button>
       <button type="button" class="is-active" data-sc="silver">Silver</button>
       <button type="button" data-sc="gold">Gold</button>
       <button type="button" data-sc="teambuy">Buy Team</button>
@@ -522,6 +527,47 @@
           </label>
         </div>
         <button type="button" class="switch-team" id="switch-team-silver">Managing a team? Switch to a Team plan</button>
+        </div>
+
+        <!-- Scenario: Free plan, out of credits, buys a plan at full price -->
+        <div class="plan-zone" id="zone-free">
+        <div class="plan-card">
+          <label class="plan-row is-selected" data-plan="freeSilver">
+            <input type="radio" name="plan-f" value="freeSilver" checked />
+            <span class="radio"></span>
+            <div class="plan-body">
+              <div class="plan-line">
+                <span class="plan-name">Get Silver</span>
+                <span class="plan-price"><span class="price">$240</span><span class="per">/year</span></span>
+              </div>
+              <div class="big-cred"><span class="num">5,000</span><span class="lbl">Credits</span></div>
+            </div>
+          </label>
+        </div>
+
+        <div class="plan-card plan-card--gold">
+          <label class="plan-row" data-plan="freeGold">
+            <input type="radio" name="plan-f" value="freeGold" />
+            <span class="radio"></span>
+            <div class="plan-body">
+              <div class="plan-line">
+                <span class="plan-name">Get Gold</span>
+                <span class="plan-price"><span class="price">$1,200</span><span class="per">/year</span></span>
+              </div>
+              <div class="big-cred">
+                <span class="num">50,000</span><span class="lbl">Credits</span><span class="xbadge">10x Silver</span>
+              </div>
+              <div class="plan-split"></div>
+              <ul class="gold-points">
+                <li><i class="ph ph-sparkle"></i>Ultra AI model, our most powerful</li>
+                <li><i class="ph ph-swatches"></i>Custom brand kit and moods, built for you</li>
+                <li><i class="ph ph-book-open"></i>Projects with a shared knowledge base</li>
+                <li><i class="ph ph-headset"></i>Priority support, with direct access to our Head of Product</li>
+              </ul>
+            </div>
+          </label>
+        </div>
+        <button type="button" class="switch-team" id="switch-team-free">Managing a team? Switch to a Team plan</button>
         </div>
 
         <!-- Scenario: already on Gold, early repurchase -->
@@ -847,6 +893,14 @@
               ppTitle: 'Upgrade to Gold', ppPlan: 'Gold Plan', off: true,
               strike: 'US$1,200', amount: 'US$600', ppCredits: 'Full plan credits unlock (50,000)',
               due: 'US$600', renew: 'US$1,200/year' },
+      freeSilver: { label: 'Silver', credits: '5,000 credits', total: '$240',
+              ppTitle: 'Get Silver', ppPlan: 'Silver Plan', off: false,
+              strike: '', amount: 'US$240', ppCredits: 'Full plan credits unlock (5,000)',
+              due: 'US$240', renew: 'US$240/year' },
+      freeGold: { label: 'Gold', credits: '50,000 credits', total: '$1,200',
+              ppTitle: 'Get Gold', ppPlan: 'Gold Plan', off: false,
+              strike: '', amount: 'US$1,200', ppCredits: 'Full plan credits unlock (50,000)',
+              due: 'US$1,200', renew: 'US$1,200/year' },
       goldRenew: { label: 'Gold renewal', credits: '50,000 credits', total: '$1,200',
               ppTitle: 'Renew Gold', ppPlan: 'Gold Plan', off: false,
               strike: '', amount: 'US$1,200', ppCredits: 'Full plan credits unlock (50,000)',
@@ -972,10 +1026,12 @@
     const goTo = sc => document.querySelector('#scenario-seg button[data-sc="' + sc + '"]').click();
     document.getElementById('switch-team').addEventListener('click', () => goTo('teambuy'));
     document.getElementById('switch-team-silver').addEventListener('click', () => goTo('teambuy'));
+    document.getElementById('switch-team-free').addEventListener('click', () => goTo('teambuy'));
     document.getElementById('switch-back-buy').addEventListener('click', () => goTo(lastIndividual));
 
     // Scenario tabs: Silver (default) / Gold repurchase / Teams
     const SCEN = {
+      free:   { cap: '1,000',  def: 'freeSilver' },
       silver: { cap: '5,000',  def: 'pro' },
       gold:   { cap: '50,000', def: 'goldRenew' },
       teams:  { cap: '15,000', def: 'teamPro' },
@@ -986,7 +1042,8 @@
       btn.addEventListener('click', () => {
         scSeg.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
         const sc = btn.dataset.sc;
-        if (sc === 'silver' || sc === 'gold') lastIndividual = sc;
+        if (sc === 'free' || sc === 'silver' || sc === 'gold') lastIndividual = sc;
+        document.body.classList.toggle('sc-free', sc === 'free');
         document.body.classList.toggle('sc-silver', sc === 'silver');
         document.body.classList.toggle('sc-gold', sc === 'gold');
         document.body.classList.toggle('sc-teams', sc === 'teams');
@@ -1000,6 +1057,7 @@
           r.querySelector('input').checked = sel;
         });
         applyPlan(SCEN[sc].def);
+        curSc = sc; render();
       });
     });
 
@@ -1060,6 +1118,14 @@
     pmOv.addEventListener('click', e => { if (e.target === pmOv) closePayMethod(); });
 
     // Demo toggles: credit state (zero/low) and copy version (v1/v2)
+    const COPY_FREE = {
+      zero: { head: "You're out of credits",
+              sub: 'Pick a plan and fresh credits land today.',
+              combined: "You're out of credits. Pick a plan to get more" },
+      low:  { head: 'Running low on credits',
+              sub: 'Pick a plan and new credits land today.',
+              combined: 'Running low on credits. Pick a plan to get more' }
+    };
     const COPY = {
       zero: { head: "You're out of credits",
               sub: "You've used all your credits. Renew early and fresh credits land today.",
@@ -1072,7 +1138,7 @@
     const meterNum = document.getElementById('meter-num');
     const headline = document.getElementById('headline');
     const subline = document.getElementById('subline');
-    let curState = 'zero', curVer = '2';
+    let curState = 'zero', curVer = '2', curSc = 'silver';
 
     function render() {
       const low = curState === 'low';
@@ -1080,7 +1146,7 @@
       document.body.classList.toggle('state-zero', !low);
       document.body.classList.toggle('ver-2', curVer === '2');
       meterNum.textContent = low ? '432' : '0';
-      const c = COPY[curState];
+      const c = (curSc === 'free' ? COPY_FREE : COPY)[curState];
       headline.textContent = curVer === '2' ? c.combined : c.head;
       subline.textContent = c.sub;
     }
