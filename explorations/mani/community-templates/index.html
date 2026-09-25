@@ -466,7 +466,7 @@ function vals(mode) {
   const out = {};
   for (const m of MASK_META) {
     const st = S.mask[m.key];
-    const useRep = mode !== 'orig' && st.on;
+    const useRep = mode !== 'orig' && st.on && !S.maskSkipped;
     const text = useRep ? (st.rep || ' ') : ORIG[m.key];
     let cls = '';
     if (mode === 'review') cls = st.on ? 'masked' : 'hl';
@@ -567,7 +567,7 @@ function renderShare() {
         <div style="font-weight:600;display:flex;align-items:center;gap:6px">“${esc(S.tpl.title)}” is on Community <span class="badge badge-green"><i class="ph-fill ph-circle" style="font-size:6px"></i>Live</span></div>
         <div style="color:var(--t3);font-size:12px;margin-top:4px">${S.uses} uses · ${S.events.filter(e => e.type === 'signup').length} sign ups · ${creditsEarned()} credits earned</div>
       </div>
-      <button class="btn btn-outline btn-sm" data-go="profile">View</button>
+      <div style="display:flex;gap:6px"><button class="btn btn-outline btn-sm" data-go="profile">View</button><button class="btn btn-primary btn-sm" id="publish-again">Publish again</button></div>
     </div>` : `
     <div class="comm-card">
       <div>
@@ -627,6 +627,8 @@ function renderShare() {
   $('#copy-live').onclick = () => toast('Live link copied');
   $$('[data-tog]').forEach(b => b.onclick = () => b.classList.toggle('on'));
   $('#adv-tog').onclick = () => { const b = $('#adv-body'); const h = b.style.display === 'none'; b.style.display = h ? 'flex' : 'none'; $('#adv-tog i').className = h ? 'ph ph-caret-up' : 'ph ph-caret-down'; };
+  const pa = $('#publish-again');
+  if (pa) pa.onclick = () => { S._firstTime = false; go('mask'); };
   const pn = $('#publish-now');
   if (pn) pn.onclick = () => {
     S._firstTime = !S.profile;
@@ -641,7 +643,11 @@ const TOPICS = ['Business', 'Reports', 'Marketing', 'Finance', 'Sales', 'Startup
 let handleTimer = null, handleOK = true;
 
 function renderProfileSetup(editMode = false) {
-  const d = editMode ? { ...S.profile } : S.draft;
+  if (!editMode && S.profile) S.draft = JSON.parse(JSON.stringify(S.profile));
+  const d = editMode ? JSON.parse(JSON.stringify(S.profile)) : S.draft;
+  const TAKEN = ['joe', 'joethomas', 'admin', 'team', 'presentations'];
+  clearTimeout(handleTimer);
+  handleOK = d.handle.length >= 3 && !TAKEN.includes(d.handle);
   S._edit = editMode ? d : null;
   const back = editMode ? null : 'share';
   const closeEdit = () => { if (ROUTE === 'profile' || ROUTE === 'template') { closeModal(); renderPage(); } else go(ROUTE); };
@@ -663,7 +669,7 @@ function renderProfileSetup(editMode = false) {
         <div class="two">
           <div class="field"><label class="label">Display name</label><input class="input" id="f-name" value="${esc(d.name)}" maxlength="40"></div>
           <div class="field">
-            <label class="label">Profile link <span class="handle-status ok" id="h-status"><i class="ph-bold ph-check"></i>Available</span></label>
+            <label class="label">Profile link ${editMode || handleOK ? '<span class="handle-status ok" id="h-status"><i class="ph-bold ph-check"></i>Available</span>' : `<span class="handle-status bad" id="h-status"><i class="ph-bold ph-x"></i>${d.handle.length < 3 ? 'At least 3 characters' : 'Taken'}</span>`}</label>
             <div class="input-group"><span class="prefix">presentations.ai/@</span><input id="f-handle" value="${esc(d.handle)}" maxlength="24" ${editMode ? 'disabled style="color:var(--t3)"' : ''}></div>
           </div>
         </div>
@@ -731,7 +737,8 @@ function renderProfileSetup(editMode = false) {
     st.className = 'handle-status wait'; st.innerHTML = 'Checking…';
     upd();
     handleTimer = setTimeout(() => {
-      const taken = ['joe', 'joethomas', 'admin', 'team', 'presentations'].includes(clean);
+      if (!$('#pcard')) return;
+      const taken = TAKEN.includes(clean);
       handleOK = !taken;
       st.className = 'handle-status ' + (taken ? 'bad' : 'ok');
       st.innerHTML = taken ? `<i class="ph-bold ph-x"></i>Taken. Try ${clean}-${Math.floor(Math.random() * 90 + 10)}` : '<i class="ph-bold ph-check"></i>Available';
@@ -748,7 +755,18 @@ function renderProfileSetup(editMode = false) {
   });
   $('#ps-photo').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
-    const r = new FileReader(); r.onload = () => { d.photo = r.result; upd(); save(); }; r.readAsDataURL(f);
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); const k = 240; c.width = c.height = k;
+        const m = Math.min(img.width, img.height);
+        c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, k, k);
+        d.photo = c.toDataURL('image/jpeg', 0.85); upd(); save();
+      };
+      img.src = r.result;
+    };
+    r.readAsDataURL(f);
   };
   $('#ps-photo-rm').onclick = () => { d.photo = null; upd(); save(); };
   if (editMode) $('#ps-cancel').onclick = closeEdit;
@@ -756,6 +774,7 @@ function renderProfileSetup(editMode = false) {
     const b = $('#ps-save');
     b.innerHTML = '<span class="spin"></span>Saving'; b.disabled = true;
     setTimeout(() => {
+      if (!$('#ps-save')) return;
       if (editMode) { S.profile = { ...d }; save(); closeEdit(); toast('Profile updated'); }
       else { S.profile = JSON.parse(JSON.stringify(d)); save(); toast(`Profile live at presentations.ai/@${esc(d.handle)}`); go('mask'); }
     }, 600);
@@ -785,7 +804,7 @@ function renderMask() {
     <div class="m-foot">
       <span class="note" id="mask-count"></span>
       <button class="btn btn-ghost" id="mask-skip">Skip</button>
-      <button class="btn btn-primary" data-go="details">Continue</button>
+      <button class="btn btn-primary" id="mask-continue">Continue</button>
     </div>`, { height: 600 });
 
   const drawList = () => {
@@ -832,9 +851,10 @@ function renderMask() {
     });
   };
   drawList(); drawPreview();
+  $('#mask-continue').onclick = () => { S.maskSkipped = false; save(); go('details'); };
   $('#mask-skip').onclick = () => {
-    const pending = MASK_META.filter(m => S.mask[m.key].on).length;
-    if (pending) { MASK_META.forEach(m => S.mask[m.key].on = false); save(); toast('Publishing without masking. Everything stays as is.', 'ph ph-warning'); }
+    S.maskSkipped = true; save();
+    toast('Skipped masking. Slides go out as they are.', 'ph ph-warning');
     go('details');
   };
 }
@@ -872,7 +892,7 @@ function renderDetails() {
     </div>
     <div class="m-foot">
       <span class="note"><i class="ph ph-lock-simple"></i>Your deck and its live link stay private</span>
-      <button class="btn btn-primary" id="d-publish" style="min-width:96px">Publish</button>
+      <button class="btn btn-primary" id="d-publish" style="min-width:96px" ${t.title.trim() ? '' : 'disabled'}>Publish</button>
     </div>`, { height: 620 });
 
   const drawTags = () => {
@@ -893,7 +913,7 @@ function renderDetails() {
   $('#d-publish').onclick = () => {
     const b = $('#d-publish');
     b.innerHTML = '<span class="spin"></span>Publishing'; b.disabled = true;
-    setTimeout(() => { S.published = true; S.publishedAt = Date.now(); save(); go('live'); }, 1200);
+    setTimeout(() => { if (!$('#d-publish')) return; S.published = true; S.publishedAt = Date.now(); S.maskSkipped = false; save(); go('live'); }, 1200);
   };
 }
 
@@ -902,7 +922,7 @@ function renderDetails() {
    ═══════════════════════════════════════════════════════════ */
 function tplUrl() { return `presentations.ai/@${P().handle}/${S.tpl.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`; }
 function renderLive() {
-  const post = `I've published one of my decks as a free template on Presentations.AI.\n\n${S.tpl.title}: the ${12} slides my team uses to review the month and keep the numbers in one place.\n\nStart from my link and you get 2x free credits :)\n\n${tplUrl()}`;
+  const post = `I've published one of my decks as a ${S.tpl.access === 'free' ? 'free ' : ''}template on Presentations.AI.\n\n${S.tpl.title}: the ${12} slides my team uses to review the month and keep the numbers in one place.\n\nStart from my link and you get 2x free credits :)\n\n${tplUrl()}`;
   openModal(760, `
     <div class="live">
       <div style="display:flex;flex-direction:column">
@@ -948,7 +968,7 @@ function renderLive() {
 function cNav(active, asVisitor) {
   return `<div class="c-nav">
     <a class="brand" href="#" data-go="${asVisitor ? 'template' : 'profile'}"><span class="mk">P</span>Presentations.AI <small>Community</small></a>
-    <nav><a href="#" class="${active === 'explore' ? 'on' : ''}" onclick="return false">Explore</a><a href="#" class="${active === 'templates' ? 'on' : ''}" onclick="return false">Templates</a><a href="#" class="${active === 'creators' ? 'on' : ''}" data-go="profile">Creators</a></nav>
+    <nav><a href="#" class="${active === 'explore' ? 'on' : ''}" onclick="return false">Explore</a><a href="#" class="${active === 'templates' ? 'on' : ''}" onclick="return false">Templates</a><a href="#" class="${active === 'creators' ? 'on' : ''}" data-go="profile" ${asVisitor ? 'data-visitor' : ''}>Creators</a></nav>
     <div class="sp"></div>
     <div class="search"><i class="ph ph-magnifying-glass"></i>Search templates</div>
     ${asVisitor
@@ -1087,7 +1107,7 @@ function renderTemplate() {
           <div class="vstrip">${SLIDE_NOS.map((n, k) => `<button class="${k === i ? 'on' : ''}" data-v="${k}">${slideHTML(n, 'masked')}</button>`).join('')}</div>
           <div style="margin-top:32px">
             <div style="font-weight:600;margin-bottom:12px">More from ${esc(p.name)}</div>
-            <div class="empty" style="padding:22px"><span>${esc(p.name.split(' ')[0])} has 1 template so far. <a class="link" href="#" data-go="profile">Visit profile</a></span></div>
+            <div class="empty" style="padding:22px"><span>${esc(p.name.split(' ')[0])} has 1 template so far. <a class="link" href="#" data-go="profile" data-visitor>Visit profile</a></span></div>
           </div>
         </div>
         <div class="tp-side">
@@ -1095,7 +1115,7 @@ function renderTemplate() {
             <h1>${esc(t.title)}</h1>
             <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${t.tags.map(g => `<span class="chip" style="height:22px;font-size:11.5px">${esc(g)}</span>`).join('')}</div>
           </div>
-          <div class="creator">${avatar(36, p)}<div class="w"><b>${esc(p.name)}</b><span>${esc(p.headline || '@' + p.handle)}</span></div><button class="btn btn-outline btn-sm" data-go="profile">Profile</button></div>
+          <div class="creator">${avatar(36, p)}<div class="w"><b>${esc(p.name)}</b><span>${esc(p.headline || '@' + p.handle)}</span></div><button class="btn btn-outline btn-sm" data-go="profile" data-visitor>Profile</button></div>
           <button class="btn btn-primary btn-lg" id="use-tpl" style="width:100%"><i class="ph ph-copy-simple"></i>Use this template</button>
           <div class="gift"><i class="ph-fill ph-gift"></i><span><b>New here?</b> Sign up from ${esc(p.name.split(' ')[0])}'s template and get <b>2x free credits</b> to make it your own.</span></div>
           <div class="facts">
@@ -1146,8 +1166,8 @@ function openSignup() {
           <i class="ph ph-flask" style="font-size:14px"></i><span>Proto: this sign up was credited to ${esc(p.name)}. Switch back to see the reward land.</span>
         </div>
         <button class="btn btn-outline" style="width:100%" id="su-back">See ${esc(p.name.split(' ')[0])}'s rewards</button>
-      </div>`, { onClose: () => { closeModal(); renderTemplate(); } });
-    $('#su-open').onclick = () => { closeModal(); toast('Opening your copy (proto)', 'ph ph-arrow-square-out'); renderTemplate(); };
+      </div>`, { onClose: () => { closeModal(); renderPage(); } });
+    $('#su-open').onclick = () => { closeModal(); toast('Opening your copy (proto)', 'ph ph-arrow-square-out'); renderPage(); };
     $('#su-back').onclick = () => {
       S.profileTab = 'rewards'; S.visitorView = false; save(); go('profile');
       setTimeout(() => toast(`${esc(who)} signed up from ${esc(S.tpl.title)}. +200 credits`), 250);
@@ -1177,7 +1197,7 @@ function ensurePrereqs(r) {
   // deep links: fill in what earlier steps would have produced
   const idx = ROUTES.findIndex(x => x[0] === r);
   if (idx >= 3 && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
-  if (idx >= 6 && !S.published) { S.published = true; S.publishedAt = Date.now(); }
+  if (idx >= 5 && !S.published) { S.published = true; S.publishedAt = Date.now(); }
   if (r === 'profile-setup') S._firstTime = true;
 }
 
@@ -1233,8 +1253,7 @@ document.addEventListener('click', e => {
   if (!el) return;
   e.preventDefault();
   const r = el.dataset.go;
-  if (r === 'profile') { S.profileTab = 'templates'; S.visitorView = false; }
-  if (r === 'share' && ROUTE === 'profile') { /* from "publish another deck" */ }
+  if (r === 'profile') { S.profileTab = 'templates'; S.visitorView = el.hasAttribute('data-visitor'); }
   go(r);
 });
 document.addEventListener('keydown', e => {
