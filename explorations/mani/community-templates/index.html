@@ -936,8 +936,8 @@ function bindProfileFields(d, editMode, upd) {
         const c = document.createElement('canvas'); const k = 240; c.width = c.height = k;
         const m = Math.min(im.width, im.height);
         c.getContext('2d').drawImage(im, (im.width - m) / 2, (im.height - m) / 2, m, m, 0, 0, k, k);
-        d.photo = c.toDataURL('image/jpeg', 0.85);
-        if ($('#ps-av')) { upd(); save(); }
+        if (!$('#ps-av')) return;
+        d.photo = c.toDataURL('image/jpeg', 0.85); upd(); save();
       };
       im.src = r.result;
     };
@@ -950,8 +950,8 @@ function refreshPhotoRow(d) {
   $('#ps-photo-rm').style.display = d.photo ? '' : 'none';
 }
 function startDraft(editMode) {
-  if (!editMode && S.profile) S.draft = JSON.parse(JSON.stringify(S.profile));
-  const d = editMode ? JSON.parse(JSON.stringify(S.profile)) : S.draft;
+  // Always work on a copy, so Cancel or closing throws edits away. Saves write it back.
+  const d = JSON.parse(JSON.stringify(editMode ? S.profile : (S.profile || S.draft)));
   clearTimeout(handleTimer);
   handleOK = d.handle.length >= 3 && !TAKEN.includes(d.handle);
   return d;
@@ -1008,7 +1008,7 @@ function renderProfileSetup(editMode = false) {
     later(() => {
       if (!$('#ps-save')) return;
       if (editMode) { S.profile = { ...d }; save(); closeEdit(); toast('Profile updated'); }
-      else { S.profile = JSON.parse(JSON.stringify(d)); save(); toast(`Profile live at presentations.ai/@${esc(d.handle)}`); go('mask'); }
+      else { S.profile = JSON.parse(JSON.stringify(d)); S.draft = JSON.parse(JSON.stringify(d)); save(); toast(`Profile live at presentations.ai/@${esc(d.handle)}`); go('mask'); }
     }, 600);
   };
 }
@@ -1169,7 +1169,7 @@ function renderCreatePage() {
     b.innerHTML = '<span class="spin"></span>Saving'; b.disabled = true;
     later(() => {
       if (!$('#cp-save')) return;
-      S.profile = JSON.parse(JSON.stringify(d)); save();
+      S.profile = JSON.parse(JSON.stringify(d)); S.draft = JSON.parse(JSON.stringify(d)); save();
       toast(editMode ? 'Page updated' : `Your page is live at presentations.ai/@${esc(d.handle)}`);
       go('community');
     }, 700);
@@ -1387,7 +1387,7 @@ function renderProfile() {
         </div>
       </div>
       <div class="sec-h"><h3>Templates</h3>${v ? '' : '<button class="btn btn-outline" data-go="share"><i class="ph ph-plus"></i>New Template</button>'}</div>
-      <div class="tgrid">${list.map(tcard).join('')}${v ? '' : '<div class="tcard add" data-go="share"><i class="ph ph-plus" style="font-size:20px"></i><span>Publish another deck</span></div>'}</div>
+      ${!list.length && v ? '<div class="empty" style="margin-bottom:60px"><i class="ph ph-squares-four" style="font-size:24px"></i>No templates yet</div>' : `<div class="tgrid">${list.map(tcard).join('')}${v ? '' : `<div class="tcard add" data-go="editor"><i class="ph ph-plus" style="font-size:20px"></i><span>${list.length ? 'Publish another deck' : 'Publish your first deck'}</span><small style="font-size:12px">Open a deck, then Share</small></div>`}</div>`}
     </div></div>`;
   $('#pv-share').onclick = () => toast(`Copied presentations.ai/@${esc(p.handle)}`);
   $('#pv-edit') && ($('#pv-edit').onclick = () => renderProfileSetup(true));
@@ -1669,10 +1669,10 @@ let ROUTE = 'editor';
 
 function ensurePrereqs(r) {
   const idx = FLAT.indexOf(r);
-  if (r === 'profile-setup') S._firstTime = true;
+  if (r === 'profile-setup') { S._firstTime = true; S.profile = null; }
   const visitor = idx >= FLAT.indexOf('template') && idx <= FLAT.indexOf('visitor-editor');
   const needsProfile = (idx >= FLAT.indexOf('mask') && idx <= FLAT.indexOf('profile')) || visitor;
-  const needsPublish = (idx >= FLAT.indexOf('live') && idx <= FLAT.indexOf('profile')) || visitor;
+  const needsPublish = r === 'live' || visitor;
   if (r === 'my-page' && !S.profile) S.profile = JSON.parse(JSON.stringify(S.draft));
   if (needsProfile && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
   if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
