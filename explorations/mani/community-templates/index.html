@@ -402,14 +402,13 @@
   .present .btn { height: 30px; font-size: 13px; }
 
   /* Credits popup */
-  .credits { position: absolute; right: 12px; bottom: 12px; width: 320px; border-radius: 8px; overflow: hidden; box-shadow: var(--e3), 0 30px 60px rgba(0,0,0,.18); background: url(assets/confetti.jpg) center/cover; padding: 12px; animation: pop .5s var(--ease); z-index: 6; }
+  .credits { position: absolute; right: 12px; bottom: 12px; width: 320px; border-radius: 8px; box-shadow: var(--e3), 0 30px 60px rgba(0,0,0,.18); background: url(assets/confetti.jpg) center/cover; padding: 12px; animation: pop .5s var(--ease); z-index: 6; }
   .credits .hero { height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-shadow: 0 1px 12px rgba(0,30,120,.35); }
   .credits .hero b { font-size: 44px; font-weight: 300; line-height: 1; }
   .credits .hero span { font-size: 18px; margin-top: 6px; }
   .credits .body { background: #fff; border-radius: 4px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
   .credits .body .t { color: var(--t2); }
   .credits .x-float { position: absolute; right: 12px; bottom: calc(100% + 8px); }
-  .credits-wrap { position: absolute; right: 0; bottom: 0; }
   .ref-row { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 12px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--line); }
   .ref-row span { flex: 1; color: var(--t4); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .share-ic { display: flex; gap: 10px; }
@@ -508,11 +507,11 @@ const DECK = ['ed-slide-1', 'ed-slide-2', 'ed-slide-3', 'ed-canvas', 'ed-slide-5
 const FACES = [A + 'person-1.jpg', A + 'person-3.jpg'];
 
 const MASK_META = [
-  { key: 'client',  label: 'Client name',       slideLabel: 8,  slide: 0, orig: 'Northwind Logistics' },
-  { key: 'logo',    label: 'Client logo',       slideLabel: 8,  slide: 0, orig: 'Northwind Logo' },
-  { key: 'revenue', label: 'Revenue',           slideLabel: 9,  slide: 6, orig: '$1.4M ARR' },
-  { key: 'team',    label: 'Team names',        slideLabel: 10, slide: 4, orig: 'Priya Raman, Tom Beck' },
-  { key: 'quote',   label: 'Quote attribution', slideLabel: 11, slide: 5, orig: 'Head of Ops, Northwind' },
+  { key: 'client',  label: 'Client name',       slide: 0, orig: 'Northwind Logistics' },
+  { key: 'logo',    label: 'Client logo',       slide: 0, orig: 'Northwind Logo' },
+  { key: 'revenue', label: 'Revenue',           slide: 6, orig: '$1.4M ARR' },
+  { key: 'team',    label: 'Team names',        slide: 4, orig: 'Priya Raman, Tom Beck' },
+  { key: 'quote',   label: 'Quote attribution', slide: 5, orig: 'Head of Ops, Northwind' },
 ];
 
 const EXISTING_TEMPLATES = [
@@ -576,7 +575,7 @@ const DEFAULT_STATE = () => ({
   uses: 0,
   signups: [],          // visitor sign ups from the KPI template
   visitorView: false,
-  later: true,          // rewards state: "few weeks later" (Figma) vs "just published"
+  later: false,         // rewards state: "few weeks later" (Figma) vs "just published"
   maskSel: 'client',
   tplSlide: 0,
   role: null,
@@ -689,7 +688,7 @@ function renderShare() {
       <div class="l" style="width:auto;flex-direction:row;align-items:center;gap:14px;justify-content:flex-start;border-right:0">
         <img src="${KPI[0].src}" alt="" style="width:92px;border-radius:3px;box-shadow:0 0 0 1px var(--line)">
         <div><h4 style="font-size:15px">“${esc(S.tpl.title)}” is on Community</h4>
-        <div style="font-size:12px;color:var(--t2);margin-top:4px">${S.uses} uses · ${S.signups.length} sign ups · ${S.signups.length * 200} credits earned</div></div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px">${S.uses} uses · ${S.signups.length} sign ups · ${S.signups.length * 200} credits from this template</div></div>
       </div>
       <div class="r" style="flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;padding:24px">
         <button class="btn btn-outline btn-sm" data-go="rewards">Rewards</button>
@@ -901,7 +900,7 @@ function renderProfileSetup(editMode = false) {
   $('#ps-save').onclick = () => {
     const b = $('#ps-save');
     b.innerHTML = '<span class="spin"></span>Saving'; b.disabled = true;
-    setTimeout(() => {
+    later(() => {
       if (!$('#ps-save')) return;
       if (editMode) { S.profile = { ...d }; save(); closeEdit(); toast('Profile updated'); }
       else { S.profile = JSON.parse(JSON.stringify(d)); save(); toast(`Profile live at presentations.ai/@${esc(d.handle)}`); go('mask'); }
@@ -937,7 +936,7 @@ function renderMask() {
       return `<div class="mrow ${S.maskSel === m.key ? 'on' : ''}" data-k="${m.key}">
         <span class="check ${st.on ? 'on' : ''}" data-chk="${m.key}"></span>
         <div style="flex:1;min-width:0">
-          <div class="t">${m.label} <span>• Slide ${m.slideLabel}</span></div>
+          <div class="t">${m.label} <span>• Slide ${m.slide + 1}</span></div>
           <div class="swap">${st.on
             ? `<s>${esc(m.orig)}</s><i class="ph ph-arrow-right"></i><input class="rep" data-rep="${m.key}" value="${esc(st.rep)}">`
             : `<span>${esc(m.orig)}</span>`}</div>
@@ -1017,7 +1016,7 @@ function renderDetails() {
   $('#d-publish').onclick = () => {
     const b = $('#d-publish');
     b.innerHTML = '<span class="spin"></span>Publishing'; b.disabled = true;
-    setTimeout(() => { if (!$('#d-publish')) return; S.published = true; S.publishedAt = Date.now(); save(); go('live'); }, 1200);
+    later(() => { if (!$('#d-publish')) return; S.published = true; S.publishedAt = Date.now(); save(); go('live'); }, 1200);
   };
 }
 
@@ -1025,7 +1024,7 @@ function renderDetails() {
    P5 · "IS LIVE" + SHARE WITH COMMUNITY
    ═══════════════════════════════════════════════════════════ */
 function renderLive() {
-  const post = `I've published one of my decks as a free template on Presentations.AI.\n\n${S.tpl.title} - the slides my team uses to maintain sharp focus.\n\nStart from my link and you get 2x free credits :)`;
+  const post = `I've published one of my decks as a free template on Presentations.AI.\n\n${S.tpl.title}: the slides my team uses to maintain sharp focus.\n\nStart from my link and you get 200 extra credits :)`;
   openModal(`
     <div class="live">
       <div style="display:flex;flex-direction:column;padding-bottom:24px">
@@ -1076,6 +1075,7 @@ function myTemplates() {
   const kpi = S.published ? [{ title: S.tpl.title, img: KPI[0].src, signups: S.signups.length, uses: S.uses, status: 'live', kpi: true }] : [];
   return kpi.concat(S.later ? EXISTING_TEMPLATES : []);
 }
+function creditsTotal() { return (S.later ? 4200 : 0) + S.signups.length * 200; }
 function statusPill(s) { return { live: '<span class="pill green">Live</span>', review: '<span class="pill amber">In review</span>', archived: '<span class="pill gray">Archived</span>' }[s] || ''; }
 function tcard(t) {
   return `<div class="tcard" ${t.kpi ? 'data-go="template" data-visitor' : ''}>
@@ -1090,8 +1090,8 @@ function tcard(t) {
 function renderProfile() {
   const p = S.profile, v = S.visitorView;
   const list = myTemplates().filter(t => !v || t.status === 'live');
-  const totalSignups = myTemplates().reduce((a, t) => a + t.signups, 0);
-  const totalUses = myTemplates().reduce((a, t) => a + t.uses, 0);
+  const totalSignups = list.reduce((a, t) => a + t.signups, 0);
+  const totalUses = list.reduce((a, t) => a + t.uses, 0);
   const link = (icon, txt, fill) => txt ? `<a href="#" onclick="return false"><i class="${fill ? 'ph-fill' : 'ph'} ${icon}"></i>${esc(txt)}</a>` : '';
   $('#screen').innerHTML = `<div class="page">
     ${cNav(v)}
@@ -1115,7 +1115,7 @@ function renderProfile() {
           <div><b>${list.length}</b><span>Templates</span></div>
           <div><b>${totalUses.toLocaleString()}</b><span>Uses</span></div>
           <div><b>${totalSignups.toLocaleString()}</b><span>Sign ups</span></div>
-          <div><b>${v ? '48' : (S.later ? '4,200' : (S.signups.length * 200).toLocaleString())}</b><span>${v ? 'Followers' : 'Credits earned'}</span></div>
+          <div><b>${v ? '48' : creditsTotal().toLocaleString()}</b><span>${v ? 'Followers' : 'Credits earned'}</span></div>
         </div>
       </div>
       <div class="sec-h"><h3>Templates</h3>${v ? '' : '<button class="btn btn-outline" data-go="share"><i class="ph ph-plus"></i>New Template</button>'}</div>
@@ -1169,7 +1169,7 @@ function renderLogin() {
       <img class="logo" src="${A}pai-logo.svg" alt="presentations.ai">
       <div class="mid">
         <h1>${esc(first())} has invited you.<br>You get <em>200 extra credits!</em></h1>
-        <div class="sub">Sign up to get started -</div>
+        <div class="sub">Sign up to get started</div>
         <div class="auth">
           <button class="google" data-auth="Google"><img src="${A}icon-google.svg" alt="">Continue with Google</button>
           <button id="auth-email"><img src="${A}icon-mail.svg" alt="">Continue with Email</button>
@@ -1342,13 +1342,13 @@ function renderVisitorEditor() {
 function renderRewards() {
   const mine = myTemplates();
   const newCredits = S.signups.length * 200;
-  const credits = (S.later ? 4200 : 0) + newCredits;
+  const credits = creditsTotal();
   const cash = S.later ? 68 : 0;
   const statusCell = r => {
     const map = { capped: 'soft-gray', available: 'soft-green', pending: 'soft-amber' };
     return `<span class="pill ${map[r.status]}">${r.status}</span>${r.note ? `<small>${r.note}</small>` : ''}`;
   };
-  const newRows = S.signups.map(s => ({ ev: 'Sign Up', src: S.tpl.title, via: 'Community', date: 'Today', status: 'available', credits: '+ 200', cash: '-', fresh: Date.now() - s.at < 8000 }));
+  const newRows = S.signups.map(s => ({ ev: 'Sign Up', src: S.tpl.title + ' (Community)', via: s.via, date: 'Today', status: 'available', credits: '+ 200', cash: '-', fresh: Date.now() - s.at < 8000 }));
   const rows = newRows.concat(S.later ? FIGMA_BREAKDOWN : []);
   const nav = (icon, label, on, extra = '') => `<a href="#" onclick="return false" class="${on ? 'on' : ''}"><i class="ph ${icon}"></i>${label}${extra}</a>`;
 
@@ -1366,7 +1366,7 @@ function renderRewards() {
         <span style="flex:1"></span>
         <div class="trial">🔥Trial: 4 days left<button class="btn btn-brand"><i class="ph ph-rocket-launch"></i>Upgrade</button></div>
         <i class="ph ph-magnifying-glass"></i><i class="ph ph-question"></i><i class="ph ph-bell"></i>
-        <button data-go="profile" title="Community profile">${S.profile && S.profile.photo ? avatar(32) : `<img src="${A}person-4.jpg" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover">`}</button>
+        <button data-go="profile" title="Community profile">${avatar(32)}</button>
       </div>
       <div class="rwrap">
         <h2>Rewards</h2>
@@ -1419,9 +1419,12 @@ let ROUTE = 'editor';
 function ensurePrereqs(r) {
   const idx = FLAT.indexOf(r);
   if (r === 'profile-setup') S._firstTime = true;
-  if (idx >= FLAT.indexOf('mask') && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
-  if (idx >= FLAT.indexOf('live') && !S.published) { S.published = true; S.publishedAt = Date.now(); }
-  if (r === 'template' || r === 'login') S._credited = false;   // a new visitor journey starts
+  const visitor = idx >= FLAT.indexOf('template') && idx <= FLAT.indexOf('visitor-editor');
+  const needsProfile = (idx >= FLAT.indexOf('mask') && idx <= FLAT.indexOf('profile')) || visitor;
+  const needsPublish = (idx >= FLAT.indexOf('live') && idx <= FLAT.indexOf('profile')) || visitor;
+  if (needsProfile && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
+  if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
+  if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
 }
 
 function renderRoute() {
@@ -1459,7 +1462,11 @@ function renderFlow() {
     ${ROUTES.map(([g, list]) => `<span class="sep"></span><span class="grp">${g}</span>${list.map(([k, l]) => `<button class="${k === ROUTE ? 'on' : ''}" data-flow="${k}"><span class="n">${++n}</span>${l}</button>`).join('')}`).join('')}
     <span class="sep"></span>
     <button id="flow-reset" title="Start over as a first time publisher"><i class="ph ph-arrow-counter-clockwise"></i>Reset</button>`;
-  $$('[data-flow]').forEach(b => b.onclick = () => { if (b.dataset.flow === 'profile') S.visitorView = false; go(b.dataset.flow); });
+  $$('[data-flow]').forEach(b => b.onclick = () => {
+    if (b.dataset.flow === 'profile') S.visitorView = false;
+    if (b.dataset.flow === 'rewards') S.later = true;   // jump straight to the Figma state
+    go(b.dataset.flow);
+  });
   $('#flow-tog').onclick = () => { $('#flow').classList.toggle('min'); renderFlow(); };
   $('#flow-reset').onclick = () => { S = DEFAULT_STATE(); save(); go('editor'); toast('Reset. You are a first time publisher again.', 'ph ph-arrow-counter-clockwise'); };
 }
@@ -1472,7 +1479,11 @@ document.addEventListener('click', e => {
   if (r === 'profile') S.visitorView = el.hasAttribute('data-visitor');
   go(r);
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal-root').innerHTML) $('.x-out')?.click(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#modal-root').innerHTML) $('.x-out')?.click();
+  else $('#credits')?.remove();
+});
 
 (function boot() {
   const q = new URLSearchParams(location.search);
