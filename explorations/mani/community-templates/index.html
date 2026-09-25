@@ -541,13 +541,25 @@
   @keyframes tin { from { opacity: 0; transform: translateY(-8px); } }
 
   /* ── Flow bar (proto navigation, not product UI) ───────── */
-  #flow { position: fixed; left: 12px; bottom: 12px; z-index: 90; background: rgba(23,23,23,.94); color: #fff; border-radius: 10px; padding: 6px; display: flex; align-items: center; gap: 2px; font-size: 11.5px; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: calc(100vw - 100px); overflow-x: auto; }
-  #flow button { height: 26px; padding: 0 8px; border-radius: 6px; color: rgba(255,255,255,.7); white-space: nowrap; display: flex; align-items: center; gap: 5px; font-size: 11.5px; }
-  #flow button:hover { background: rgba(255,255,255,.1); color: #fff; }
-  #flow button.on { background: #fff; color: var(--t1); }
-  #flow .n { opacity: .55; font-variant-numeric: tabular-nums; }
-  #flow .grp { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.4); padding: 0 4px 0 8px; white-space: nowrap; }
-  #flow .sep { width: 1px; height: 16px; background: rgba(255,255,255,.18); margin: 0 4px; flex: none; }
+  #flow { position: fixed; left: 12px; bottom: 12px; z-index: 90; background: rgba(23,23,23,.94); color: #fff; border-radius: 12px; padding: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: calc(100vw - 100px); }
+  #flow button { color: rgba(255,255,255,.7); font-size: 12px; }
+  #flow .tog { height: 28px; padding: 0 6px; border-radius: 6px; display: flex; align-items: center; gap: 5px; }
+  #flow .tog:hover { background: rgba(255,255,255,.1); color: #fff; }
+  #flow .jr { display: flex; background: rgba(255,255,255,.08); border-radius: 8px; padding: 2px; }
+  #flow .jr button { height: 26px; padding: 0 10px; border-radius: 6px; white-space: nowrap; }
+  #flow .jr button:hover { color: #fff; }
+  #flow .jr button.on { background: #fff; color: var(--t1); font-weight: 500; }
+  #flow .stepper { display: flex; align-items: center; gap: 4px; padding-right: 6px; }
+  #flow .arr { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fff; }
+  #flow .arr:hover:not([disabled]) { background: rgba(255,255,255,.12); }
+  #flow .arr[disabled] { opacity: .3; cursor: default; }
+  #flow .now { min-width: 150px; text-align: center; color: #fff; font-weight: 500; white-space: nowrap; }
+  #flow .now .ct { color: rgba(255,255,255,.45); font-weight: 400; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  #flow .dots { display: flex; gap: 4px; margin-left: 6px; }
+  #flow .dots button { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.22); padding: 0; transition: transform .15s, background .15s; }
+  #flow .dots button.past { background: rgba(255,255,255,.55); }
+  #flow .dots button.on { background: #fff; transform: scale(1.3); }
+  #flow .dots button:hover { transform: scale(1.4); }
   #flow.min > :not(.tog) { display: none; }
 </style>
 </head>
@@ -650,6 +662,7 @@ const DEFAULT_STATE = () => ({
   tplSlide: 0,
   role: null,
   ctx: '',
+  journey: null,
 });
 let S = DEFAULT_STATE();
 try { const saved = sessionStorage.getItem('ct2-state'); if (saved) S = Object.assign(DEFAULT_STATE(), JSON.parse(saved)); } catch (e) {}
@@ -1707,24 +1720,51 @@ function go(r) {
   const pg = $('.page, .dmain'); if (pg) pg.scrollTop = 0;
 }
 
+/* Flow bar: pick a journey, then step through it. Proto navigation only. */
+const JOURNEYS = [
+  { id: 'a', label: 'Page first', hint: 'Create the page from the dashboard, publish later', fresh: true,
+    steps: ['dashboard', 'community', 'create-page', 'my-page', 'editor', 'share', 'mask', 'details', 'live', 'profile'] },
+  { id: 'b', label: 'No page yet', hint: 'Publish from Share, create the page on the way', fresh: true,
+    steps: ['editor', 'share', 'profile-setup', 'mask', 'details', 'live', 'profile'] },
+  { id: 'v', label: 'Visitor', hint: 'Someone opens the template link and signs up',
+    steps: ['template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
+  { id: 'r', label: 'Rewards', hint: 'Credits and cash from sign ups', steps: ['rewards'] },
+];
+const LABEL = Object.fromEntries(ROUTES.flatMap(g => g[1]));
+LABEL.community = 'Community tab'; LABEL['my-page'] = 'Your page';
+function currentJourney() {
+  const j = JOURNEYS.find(x => x.id === S.journey);
+  if (j && j.steps.includes(ROUTE)) return j;
+  const found = JOURNEYS.find(x => x.steps.includes(ROUTE)) || JOURNEYS[0];
+  S.journey = found.id; save();
+  return found;
+}
 function renderFlow() {
   const min = $('#flow').classList.contains('min');
-  let n = 0;
+  const j = currentJourney();
+  const i = Math.max(0, j.steps.indexOf(ROUTE));
   $('#flow').innerHTML = `
-    <button class="tog" title="Hide or show the flow bar" id="flow-tog"><i class="ph ${min ? 'ph-list' : 'ph-caret-left'}"></i>${min ? 'Flow' : ''}</button>
-    <span class="sep"></span>
-    <button id="sc-a" title="Start over: user creates the page from the dashboard first"><i class="ph-fill ph-play"></i>Page first</button>
-    <button id="sc-b" title="Start over: user has no page and publishes from Share"><i class="ph-fill ph-play"></i>No page yet</button>
-    ${ROUTES.map(([g, list]) => `<span class="sep"></span><span class="grp">${g}</span>${list.map(([k, l]) => `<button class="${k === ROUTE ? 'on' : ''}" data-flow="${k}"><span class="n">${++n}</span>${l}</button>`).join('')}`).join('')}
-`;
-  $$('[data-flow]').forEach(b => b.onclick = () => {
-    if (b.dataset.flow === 'profile') S.visitorView = false;
-    if (b.dataset.flow === 'rewards') S.later = true;   // jump straight to the Figma state
-    go(b.dataset.flow);
+    <button class="tog" title="${min ? 'Show' : 'Hide'} flow bar" id="flow-tog"><i class="ph ${min ? 'ph-path' : 'ph-caret-left'}"></i>${min ? 'Flow' : ''}</button>
+    <div class="jr">${JOURNEYS.map(x => `<button class="${x.id === j.id ? 'on' : ''}" data-j="${x.id}" title="${x.hint}">${x.label}</button>`).join('')}</div>
+    ${j.steps.length > 1 ? `
+    <div class="stepper">
+      <button class="arr" id="fl-prev" ${i === 0 ? 'disabled' : ''} aria-label="Previous step"><i class="ph ph-caret-left"></i></button>
+      <span class="now"><span class="ct">${i + 1}/${j.steps.length}</span>${LABEL[ROUTE] || ''}</span>
+      <button class="arr" id="fl-next" ${i === j.steps.length - 1 ? 'disabled' : ''} aria-label="Next step"><i class="ph ph-caret-right"></i></button>
+      <span class="dots">${j.steps.map((k, n) => `<button class="${n === i ? 'on' : n < i ? 'past' : ''}" data-step="${k}" title="${n + 1}. ${LABEL[k]}"></button>`).join('')}</span>
+    </div>` : ''}`;
+  const step = k => { if (k === 'profile') S.visitorView = false; if (k === 'rewards' && !S.published) S.later = true; go(k); };
+  $$('[data-j]').forEach(b => b.onclick = () => {
+    const x = JOURNEYS.find(y => y.id === b.dataset.j);
+    if (x.fresh) { S = DEFAULT_STATE(); }
+    S.journey = x.id; save();
+    step(x.steps[0]);
+    toast(x.hint, 'ph ph-path');
   });
+  $$('[data-step]').forEach(b => b.onclick = () => step(b.dataset.step));
+  $('#fl-prev') && ($('#fl-prev').onclick = () => step(j.steps[i - 1]));
+  $('#fl-next') && ($('#fl-next').onclick = () => step(j.steps[i + 1]));
   $('#flow-tog').onclick = () => { $('#flow').classList.toggle('min'); renderFlow(); };
-  $('#sc-a').onclick = () => { S = DEFAULT_STATE(); save(); go('dashboard'); toast('Scenario A: create the page first, publish later', 'ph ph-play'); };
-  $('#sc-b').onclick = () => { S = DEFAULT_STATE(); save(); go('editor'); toast('Scenario B: no page yet, publish from Share', 'ph ph-play'); };
 }
 
 document.addEventListener('click', e => {
@@ -1744,7 +1784,7 @@ document.addEventListener('keydown', e => {
 (function boot() {
   const q = new URLSearchParams(location.search);
   if (q.has('reset')) { S = DEFAULT_STATE(); save(); }
-  go(q.get('s') || 'editor');
+  go(q.get('s') || 'dashboard');
 })();
 </script>
 
