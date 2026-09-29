@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sharing Rules v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<style>
+  :root {
+    --bg: #f4f4f4; --ink: #1f1f1f; --muted: #666; --line: #6e6e6e;
+    --priv-bg: #fbe0c6; --priv-bd: #f5a55a;
+    --pub-bg: #d3f2d0; --pub-bd: #7dd87a;
+    --card-bg: #cfe3fb; --card-bd: #5aa5f5;
+    --ppl-bg: #ece4fb; --ppl-bd: #a78bfa;
+    --modal-bg: #0f1a33; --red: #d93a3a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 36px 16px 90px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
+    h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #777; margin: 56px 0 18px; }
+  .prop { display: inline-block; background: #7c3aed; color: #fff; font: 700 9px Inter; letter-spacing: .06em; padding: 2px 6px; border-radius: 3px; vertical-align: 2px; margin-left: 4px; text-transform: uppercase; }
+
+  /* ---------- Diagram ---------- */
+  .dots { background-image: radial-gradient(#cfcfcf 1.2px, transparent 1.2px); background-size: 22px 22px; border-radius: 12px; padding: 28px 20px; }
+  .ws { text-align: center; }
+  .box { display: inline-block; border: 3px solid var(--line); background: #fff; border-radius: 6px; padding: 12px 22px; font-size: 18px; font-weight: 600; }
+  .stem { width: 3px; height: 28px; background: var(--line); margin: 0 auto; }
+  .rail { height: 3px; background: var(--line); margin: 0 calc(100% / 6); }
+  .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .three > div { display: flex; flex-direction: column; align-items: center; }
+  .three .stem { height: 24px; }
+  .node { width: 100%; max-width: 300px; border: 3px solid; border-radius: 6px; padding: 12px 14px; text-align: center; font-size: 17px; font-weight: 600; }
+  .pub { background: var(--pub-bg); border-color: var(--pub-bd); }
+  .priv { background: var(--priv-bg); border-color: var(--priv-bd); }
+  .rules { width: 100%; max-width: 300px; background: var(--card-bg); border: 3px solid var(--card-bd); border-radius: 6px; padding: 12px 14px 14px; font-size: 13px; line-height: 1.5; }
+  .rules b.h { display: block; font-weight: 400; margin-bottom: 4px; }
+  .rules ul { margin: 0; padding-left: 18px; }
+  .rules li { font-weight: 600; margin-bottom: 3px; }
+  .rules li.no { color: #8a2b2b; }
+  .rules li.chg { background: #fff7c2; border-radius: 4px; padding: 2px 4px; margin-left: -4px; }
+  .upd { display: inline-block; background: #d97706; color: #fff; font: 700 9px Inter; letter-spacing: .06em; padding: 2px 6px; border-radius: 3px; vertical-align: 2px; margin-left: 4px; text-transform: uppercase; }
+  .people { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 34px; }
+  .person { background: var(--ppl-bg); border: 3px solid var(--ppl-bd); border-radius: 6px; padding: 12px 12px 14px; font-size: 13px; line-height: 1.45; }
+  .person h4 { margin: 0 0 6px; font-size: 15px; }
+  .person ul { margin: 0; padding-left: 16px; }
+  .person li { margin-bottom: 2px; }
+  .ways { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 14px; }
+  .way { background: #fff; border: 2px dashed var(--line); border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.45; }
+  .way h4 { margin: 0 0 4px; font-size: 14px; }
+  .guestnote { margin: 12px 0 0; font-size: 13px; background: var(--ppl-bg); border: 2px dashed var(--ppl-bd); border-radius: 6px; padding: 10px 12px; }
+  .label { font: 700 12px Inter; color: #777; text-transform: uppercase; letter-spacing: .06em; margin: 30px 0 0; }
+
+  .eh { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #777; margin: 44px 0 14px; }
+  .edge { background: #fff; border: 1px solid #e3e3e3; border-radius: 10px; overflow-x: auto; }
+  .edge table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.45; }
+  .edge th { text-align: left; background: #fafafa; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid #e3e3e3; }
+  .edge td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .edge tr.grp td { background: #f3f0ff; color: #5b21b6; font: 700 11px Inter; letter-spacing: .06em; text-transform: uppercase; padding: 8px 14px; }
+  .edge td:first-child { font-weight: 600; width: 38%; }
+  .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 22px; }
+  .plan { border: 3px solid; border-radius: 6px; padding: 12px 14px; font-size: 13px; line-height: 1.5; background: #fff; }
+  .plan.solo { border-color: #bdbdbd; }
+  .plan.team { border-color: var(--pub-bd); background: var(--pub-bg); }
+  .plan h4 { margin: 0 0 6px; font-size: 15px; }
+  .plan small { font-weight: 500; color: #666; margin-left: 4px; }
+  .plan ul { margin: 0; padding-left: 4px; list-style: none; }
+  .plan li.no { color: #8a2b2b; }
+  .publink { background: #e6f4ff; border: 3px solid #3b9eff; border-radius: 6px; padding: 12px 14px; font-size: 13px; line-height: 1.5; margin-top: 10px; }
+  .publink h4 { margin: 0 0 6px; font-size: 15px; }
+  .publink ul { margin: 0; padding-left: 18px; columns: 2; column-gap: 28px; }
+  @media (max-width: 900px) { .publink ul { columns: 1; } }
+  @media (max-width: 900px) {
+    .three, .people, .ways, .plans { grid-template-columns: 1fr; }
+    .rail { display: none; }
+  }
+
+  .ver { display: inline-block; background: #111; color: #fff; font: 700 13px Inter; border-radius: 6px; padding: 3px 9px; vertical-align: 5px; margin-left: 6px; }
+  .three-plans { grid-template-columns: repeat(3, 1fr); }
+  .plan.free { border-color: #3b9eff; background: #e6f4ff; }
+  .levels { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+  .lv { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .lv span { font-size: 12px; color: #666; }
+  .arrow { font-size: 26px; color: var(--line); font-weight: 700; }
+  .grid-t td:first-child { width: 20%; }
+  .warnbox { margin-top: 12px; background: #fff7e0; border: 2px solid #e2c73a; border-radius: 6px; padding: 10px 14px; font-size: 13px; line-height: 1.5; }
+  .three { margin-top: 6px; }
+  .three .node { margin-top: 0; }
+  .shr { background: var(--card-bg); border-color: var(--card-bd); }
+  .people.p5 { grid-template-columns: repeat(5, 1fr); }
+  .person.ext { background: #fff4e5; border-color: #f0a050; }
+  .person li.no { color: #8a2b2b; }
+  .rules li.no { color: #8a2b2b; }
+  .story { margin-top: 10px; background: #fff; border: 1px solid #e3e3e3; border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.5; }
+  @media (max-width: 900px) { .three-plans, .people.p5 { grid-template-columns: 1fr; } .arrow { transform: rotate(90deg); } }
+
+  .modes { position: fixed; top: 14px; right: 16px; z-index: 50; display: flex; background: #fff; border: 1.5px solid #ddd; border-radius: 999px; padding: 3px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+  .modes button { border: 0; background: transparent; font: 600 13px Inter, sans-serif; padding: 7px 12px; border-radius: 999px; cursor: pointer; color: #333; }
+  .modes button.on { background: #111; color: #fff; }
+  .kid { max-width: 900px; margin: 0 auto; padding: 60px 16px 90px; font-size: 17px; line-height: 1.55; }
+  .kid h1 { font-size: 32px; margin: 0 0 6px; font-weight: 800; }
+  .k-lead { color: #5f5f5f; font-size: 18px; margin: 0 0 10px; }
+  .kid section { margin-top: 40px; }
+  .kid h2 { font-size: 22px; font-weight: 800; margin: 0 0 12px; letter-spacing: 0; text-transform: none; color: #1c1c1c; }
+  .k-house { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; background: #fff; border: 2px solid #e6e3dc; border-radius: 16px; padding: 18px; text-align: center; }
+  .k-house div span { font-size: 38px; display: block; }
+  .k-house div i { display: block; font-size: 14px; color: #666; font-style: normal; }
+  .k-arr { font-size: 26px; color: #b5b0a5; font-weight: 800; }
+  .k-note { color: #444; margin: 12px 0 0; }
+  .k-grid { display: grid; gap: 12px; }
+  .k4 { grid-template-columns: repeat(4, 1fr); } .k3 { grid-template-columns: repeat(3, 1fr); }
+  .k-card { background: #fff; border: 2px solid #e6e3dc; border-radius: 16px; padding: 16px; }
+  .k-card > span { font-size: 32px; }
+  .k-card h3 { margin: 6px 0 4px; font-size: 18px; }
+  .k-card p { margin: 0; font-size: 15px; color: #333; }
+  .kid .blue { background: #e9f1ff; border-color: #c9dcff; } .kid .orange { background: #fff1e3; border-color: #f6d3ae; }
+  .kid .green { background: #e7f7ee; border-color: #bfe8cf; } .kid .purple { background: #f1ebff; border-color: #dccdfd; }
+  .k-rule { border: 2px solid #e6e3dc; border-radius: 14px; padding: 14px 16px; margin-top: 10px; }
+  .k-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .k-steps div { background: linear-gradient(135deg, #e9f1ff, #f1ebff); border-radius: 12px; padding: 12px; text-align: center; font-size: 15px; }
+  .k-list { margin: 14px 0 0; padding-left: 0; list-style: none; }
+  .k-list li { background: #fff; border: 2px solid #e6e3dc; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 15px; }
+  .k-g { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: #7c3aed; margin: 22px 0 8px; }
+  .k-qgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .k-q { background: #fff; border: 2px solid #e6e3dc; border-radius: 12px; padding: 12px 14px; font-size: 15px; }
+  .k-q b { display: block; margin-bottom: 4px; }
+  @media (max-width: 760px) { .k4, .k3, .k-steps, .k-qgrid { grid-template-columns: 1fr; } .k-arr { transform: rotate(90deg); } .modes { top: 8px; right: 8px; } }
+</style>
+</head>
+<body>
+<div class="modes" role="group" aria-label="Version">
+  <button type="button" data-mode="full" class="on">📘 Full</button>
+  <button type="button" data-mode="kid">🧒 Kid version</button>
+</div>
+<main id="full">
+  <h1>Share, Invite and Collaboration <span class="ver">v2</span></h1>
+  <p class="sub">Example: Mani creates the workspace <b>Formula One</b>, so Mani is the Owner. Everything is set at the workspace level.</p>
+
+  <!-- PLANS -->
+  <p class="label" style="margin-top:0">Plans</p>
+  <div class="plans three-plans">
+    <div class="plan free">
+      <h4>🆓 Free workspace</h4>
+      <ul>
+        <li>✅ <b>One free workspace per person.</b> Any extra workspace must be paid <span class="upd">updated</span></li>
+        <li>✅ Invite Members and Viewers at every level</li>
+        <li>✅ <b>+200 credits</b> when an invited Member creates a new account <b>and joins the workspace</b>, after verifying their email <span class="upd">updated</span></li>
+        <li>✅ <b>No member limit.</b> Only the invite bonus is capped, at <b>1,000 credits</b> total</li>
+        <li>✅ Widget link</li>
+        <li class="no">❌ Can't buy credits. Pool empty → "Upgrade to buy more credits" <span class="upd">updated</span></li>
+        <li>⬆️ <b>Upgrading:</b> just the Owner in the workspace → Basic, Pro, Gold or Team. Anyone else added (Member or Viewer) → <b>Team only</b> <span class="upd">updated</span></li>
+      </ul>
+    </div>
+    <div class="plan solo">
+      <h4>👤 Basic · Pro · Gold <small>single user</small></h4>
+      <ul>
+        <li>✅ Widget link</li>
+        <li class="no">❌ Any invite (Member or Viewer) → "Upgrade to Team"</li>
+        <li class="no">❌ No invite bonus</li>
+      </ul>
+    </div>
+    <div class="plan team">
+      <h4>👥 Team <small>unlimited licences</small></h4>
+      <ul>
+        <li>✅ Everything on this page</li>
+        <li>✅ One shared credit pool</li>
+        <li class="no">❌ No invite bonus</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- LEVELS DIAGRAM -->
+  <div class="dots">
+    <p class="label" style="margin-top:0">Levels you can invite at</p>
+    <div class="levels">
+      <div class="lv"><div class="box">🏢 Workspace</div><span>Formula One</span></div>
+      <div class="arrow">→</div>
+      <div class="lv"><div class="box">📁 Project / Folder</div><span>Sales, with folders inside folders</span></div>
+      <div class="arrow">→</div>
+      <div class="lv"><div class="box">📄 File</div><span>Q4 Pitch</span></div>
+    </div>
+
+    <div class="warnbox" style="background:#eef6ff;border-color:#9cc7ff">📁 <b>Folders inside folders, as deep as you like <span class="upd">updated</span></b> Every level has its own permissions. Access flows down to everything inside. An inner folder or file can be <b>more open</b> (add people, or make it public), but <b>never more private</b> than the level above. To hide it, move it out.</div>
+
+    <p class="label">What an invite gives</p>
+    <div class="edge grid-t">
+      <table>
+        <tr><th>Invited as</th><th>At workspace level</th><th>At project, folder or file level</th></tr>
+        <tr><td>👤 <b>Member</b></td><td>Workspace member</td><td><b>Also becomes a workspace member</b>, and can edit that item</td></tr>
+        <tr><td>👁 <b>Viewer</b></td><td>Workspace viewer: sees every public item, read-only</td><td><b>Only that item</b>, read-only</td></tr>
+      </table>
+    </div>
+    <div class="warnbox">⚠️ <b>Share modal warning</b> when choosing Member on a folder or file: <i>"Bala will join Formula One and see all public projects. To share only this folder, choose Viewer."</i></div>
+
+    <p class="label">3 kinds of project, folder or file</p>
+    <div class="three">
+      <div>
+        <div class="node priv">🔒 Private</div>
+        <div class="stem"></div>
+        <div class="rules"><ul>
+          <li>Only the creator</li>
+          <li class="no">Not even the workspace Owner or an Admin</li>
+          <li>Stays private until the creator shares it</li>
+          <li>Exception: a widget turned on earlier keeps working <span class="upd">updated</span></li>
+        </ul></div>
+      </div>
+      <div>
+        <div class="node shr">👥 Shared with a few people</div>
+        <div class="stem"></div>
+        <div class="rules"><ul>
+          <li>Creator + the people added (e.g. Madhu and Sumanth)</li>
+          <li>Folder access covers every doc and sub-folder inside, including new ones</li><li>One doc inside can be more open, e.g. public for the team. The team then sees only that doc <span class="upd">updated</span></li>
+          <li>Anything moved out loses that access</li>
+        </ul></div>
+      </div>
+      <div>
+        <div class="node pub">🌎 Public</div>
+        <div class="stem"></div>
+        <div class="rules"><ul>
+          <li>Every workspace Member (edit) and workspace Viewer (read-only)</li>
+          <li>New joiners see it too</li>
+          <li class="no">Folder or file Viewers don't see it</li>
+        </ul></div>
+      </div>
+    </div>
+
+    <p class="label">People</p>
+    <div class="people p5">
+      <div class="person"><h4>👑 Owner</h4><ul><li>Created the workspace</li><li>Must transfer ownership to an Admin before leaving <span class="upd">updated</span></li><li>Everything an Admin can do</li><li>Can't see others' private items</li></ul></div>
+      <div class="person"><h4>🛠 Admin</h4><ul><li>Manages members, billing and removals</li><li>Makes other Admins. Can remove members and Admins, never the Owner <span class="upd">updated</span></li><li>Deletes whole projects and folders <span class="upd">updated</span></li><li>Owns shared docs of people who leave (the Owner does if there are no Admins) <span class="upd">updated</span></li><li>Can't see others' private items</li></ul></div>
+      <div class="person"><h4>👤 Member</h4><ul><li>Sees and edits every public item</li><li>Creates new docs</li><li>Deletes any doc they can edit (30-day restore). Deletes a whole project or folder only if they created it (they're its owner) <span class="upd">updated</span></li><li>Moves docs between public projects. Only the creator makes a doc private <span class="upd">updated</span></li><li>Turns the widget on or off <span class="upd">updated</span></li><li>Invites Members and Viewers</li><li>Download, export, duplicate</li><li>Uses the shared credit pool</li><li>Buys credits and Hire an expert on the workspace card <span class="upd">updated</span></li></ul></div>
+      <div class="person"><h4>👁 Workspace Viewer</h4><ul><li>Sees every public item, read-only</li><li>Can comment and present <span class="upd">updated</span></li><li>Can copy a widget link that's already on <span class="upd">updated</span></li><li class="no">Can't create, edit, invite, download, export, duplicate or turn the widget on</li><li>No credits</li></ul></div>
+      <div class="person ext"><h4>👁 Folder or file Viewer</h4><ul><li>Only that project, folder or file, read-only</li><li>Can comment and present <span class="upd">updated</span></li><li class="no">Can't create, edit, invite, download, export or duplicate</li><li>Can copy a widget link that's already on <span class="upd">updated</span></li><li>Shows in Settings → Members with an "Only: Sales folder" tag</li></ul></div>
+    </div>
+  </div>
+
+  <!-- WIDGET -->
+  <p class="label">Widget link (public link)</p>
+  <div class="publink">
+    <h4>🌍 Widget, like a YouTube link</h4>
+    <ul>
+      <li>On every plan</li>
+      <li>Anyone with the link watches and presents, with no sign up</li>
+      <li>Post it anywhere: Twitter, LinkedIn, a website</li>
+      <li><b>"Export as PowerPoint"</b> is always there. The viewer signs up and pays. The owner pays nothing</li>
+      <li>What the viewer pays depends on their country <span class="upd">updated</span>: 🇺🇸 USA sees <b>plans only</b> (unlimited exports). 🌍 Other countries see <b>both</b>: a one-time export per file (buy as often as they like) or a plan</li>
+      <li>The owner can't turn export off</li>
+      <li>Anyone with edit access (Members) turns it on or off. Viewers can only copy a link that's already on <span class="upd">updated</span></li>
+      <li>Making the doc private keeps the widget live. Deleting the doc kills it, and restoring doesn't turn it back on <span class="upd">updated</span></li>
+      <li>Turning the widget on warns: "Anyone with this link can view it and buy a PowerPoint copy"</li>
+    </ul>
+  </div>
+  <div class="story">📖 Mani posts the Q4 Pitch widget on Twitter. Michael in the USA watches it, clicks Export as PowerPoint, creates an account, pays, and downloads the file.</div>
+
+  <!-- OTHER RULES -->
+  <p class="label">Other rules</p>
+  <div class="ways">
+    <div class="way"><h4>🔀 Moving</h4>Access follows the folder. Warn on every move that changes access: private → public, public → private, and out of a shared folder ("Priya will lose access").</div>
+    <div class="way"><h4>⬆️ Viewer → Member</h4>The Owner or any Member upgrades in one click. No 200 credits, because the account already exists.</div>
+    <div class="way"><h4>⚖️ Two roles on one item</h4>The higher role wins.</div>
+    <div class="way"><h4>⚡ Removing access</h4>Applies right away, even if the doc is open. <span class="upd">updated</span></div>
+  </div>
+  <div class="ways" style="margin-top:14px">
+    <div class="way"><h4>🚪 Member leaves</h4>Public and shared docs stay, and an Admin becomes the owner (the Owner, if there are no Admins). Private docs are deleted: hidden 30 days, back only if the same person rejoins, then gone. Nobody else can open them.</div>
+    <div class="way"><h4>🗑 Delete</h4>Members delete any doc they can edit. Kept 30 days. The owner gets "Sara deleted Q4 Pitch. Restore?" and the trash shows "Deleted by Sara". <span class="upd">updated</span></div>
+    <div class="way"><h4>🪙 Credits</h4>One shared pool per workspace. Free workspaces also get the invite bonus.</div>
+  </div>
+
+  <div class="ways" style="margin-top:14px">
+    <div class="way"><h4>🗂 Projects and folders</h4>Only the creator or an Admin deletes a whole project or folder. Others can "Leave" a shared one. Public projects can't be left. <span class="upd">updated</span></div>
+    <div class="way"><h4>📄 Duplicates</h4>Copy goes next to the original if you can edit there, else your private space. Only slides are copied: no invites, comments or widget. <span class="upd">updated</span></div>
+    <div class="way"><h4>📥 Exports and Hire an expert</h4>Only the person who exported or ordered sees the file. Hire an expert sends the expert a copy, never workspace access. <span class="upd">updated</span></div>
+  </div>
+  <div class="ways" style="margin-top:14px">
+    <div class="way"><h4>💳 Purchases</h4>On paid plans, any Member buys credits and Hire an expert on the workspace card. No limit. Free workspaces can't buy. <span class="upd">updated</span></div>
+    <div class="way"><h4>🪫 Credit pool</h4>No per-person limit. The Owner is alerted when the pool is 80% used. <span class="upd">updated</span></div>
+    <div class="way"><h4>↩️ Refunds and payment</h4>Refunds by email to support, back to the card that paid, unspent credits only. Paid plan payment fails: read-only right away. No downgrade from Team. <span class="upd">updated</span></div>
+    <div class="way"><h4>⬆️ Upgrading to Team</h4>Members, files and roles carry over. Unused bonus credits stay. The invite bonus stops. <span class="upd">updated</span></div>
+  </div>
+  <div class="ways" style="margin-top:14px">
+    <div class="way"><h4>👤 Member → Viewer</h4>The Owner or an Admin can do it. Bonus credits already earned stay. <span class="upd">updated</span></div>
+    <div class="way"><h4>👑 Owner transfer</h4>To an Admin. For a free workspace, blocked if that person already owns one. Owner unreachable: contact support. <span class="upd">updated</span></div>
+    <div class="way"><h4>🏷 Team settings</h4>Auto-join by company email (the Admin picks: join as Member or Viewer) and Block outside sharing. Both off by default. <span class="upd">updated</span></div>
+    <div class="way"><h4>✉️ Invites</h4>Expire after 14 days. Resend restarts the clock. Revoke anytime. <span class="upd">updated</span></div>
+  </div>
+
+  <div class="ways" style="margin-top:14px">
+    <div class="way"><h4>📥 Shared with me</h4>A sidebar tab listing every folder and file shared with you, and who shared it. <span class="upd">updated</span></div>
+    <div class="way"><h4>🔔 Emails</h4>On share and on @mention. Everything else is in-app. Plus the "Deleted by" alert. <span class="upd">updated</span></div>
+    <div class="way"><h4>👯 Editing together</h4>Live co-editing. Everyone sees each other's cursors. <span class="upd">updated</span></div>
+    <div class="way"><h4>🕘 Version history</h4>Coming later. <span class="upd">updated</span></div>
+  </div>
+  <div class="ways" style="margin-top:14px">
+    <div class="way"><h4>👤 File owner</h4>Whoever creates a file owns it for good. No handing over. Only exception: when someone leaves, an Admin (or the Owner) takes their shared docs. <span class="upd">updated</span></div>
+    <div class="way"><h4>✏️ Renaming</h4>Only the creator or an Admin renames a project or folder. <span class="upd">updated</span></div>
+    <div class="way"><h4>🔁 Many workspaces</h4>Fully separate: own files, members and credits. Switch from the top. Files can't move between workspaces. <span class="upd">updated</span></div>
+    <div class="way"><h4>💥 Deleting the workspace</h4>Only the Owner, after typing its name. Paid plan cancelled, everyone emailed, kept 30 days, then gone. <span class="upd">updated</span></div>
+  </div>
+
+  <!-- USE CASES -->
+  <h2 class="eh">Every use case</h2>
+  <div class="edge">
+    <table>
+      <tr><th>Situation</th><th>What happens</th></tr>
+      <tr class="grp"><td colspan="2">Inviting</td></tr>
+      <tr><td>Mani invites Bala as a workspace Member</td><td>Bala sees and edits every public item, and can create docs.</td></tr>
+      <tr><td>Mani invites Bala as a Member of the Sales folder</td><td>Bala also becomes a workspace member, and sees all public items. Warning shown first.</td></tr>
+      <tr><td>Mani invites Priya as a Viewer of the Sales folder</td><td>Priya sees only Sales and its docs, read-only.</td></tr>
+      <tr><td>Mani invites Priya as a Viewer of one file</td><td>Priya sees only that file.</td></tr>
+      <tr><td>Mani invites a workspace Viewer</td><td>They see every public item, read-only. They can't create docs.</td></tr>
+      <tr><td>Bala (Member) invites Sumanth</td><td>Allowed. Members can invite Members and Viewers. Viewers can't invite.</td></tr>
+      <tr><td>Pro user tries to invite anyone</td><td>"Upgrade to Team". The widget still works.</td></tr>
+      <tr class="grp"><td colspan="2">Credits (free workspace)</td></tr>
+      <tr><td>Invited Member creates a new account and joins the workspace</td><td>+200 credits to the workspace pool, added the moment they join.</td></tr>
+      <tr><td>Invited Member creates an account but never accepts the invite</td><td>No credits.</td></tr>
+      <tr><td>Invited Member already has an account</td><td>Joins, no credits.</td></tr>
+      <tr><td>Invited Viewer creates a new account</td><td>No credits.</td></tr>
+      <tr><td>Bonus already at 1,000 credits and another new member joins</td><td>Joins as normal, no more credits. There's no limit on members.</td></tr>
+      <tr><td>Mani tries to create a second free workspace <span class="upd">updated</span></td><td>Blocked. Extra workspaces must be paid.</td></tr>
+      <tr><td>New account hasn't verified their email <span class="upd">updated</span></td><td>No credits until they verify.</td></tr>
+      <tr><td>Member switched to Viewer after earning the bonus <span class="upd">updated</span></td><td>Allowed. The credits stay.</td></tr>
+      <tr><td>Viewer upgraded to Member</td><td>No credits, because the account already exists.</td></tr>
+      <tr><td>Team or single paid plan invites</td><td>No invite bonus on paid workspaces.</td></tr>
+      <tr><td>Free workspace runs out of credits <span class="upd">updated</span></td><td>Can't buy more. "Upgrade to buy more credits".</td></tr>
+      <tr class="grp"><td colspan="2">Folders and privacy</td></tr>
+      <tr><td>Mani makes Project 1 private</td><td>Only Mani sees it. No one else, not even Admins.</td></tr>
+      <tr><td>Mani shares Project 1 with Madhu and Sumanth</td><td>Only the 3 of them see it.</td></tr>
+      <tr><td>A new doc is added to a shared folder</td><td>Everyone who has the folder sees it.</td></tr>
+      <tr><td>A doc is moved out of the Sales folder</td><td>Sales-only people lose it. Warning first.</td></tr>
+      <tr><td>A private doc is moved into a public project</td><td>Warning: "Everyone in Formula One will get access".</td></tr>
+      <tr><td>A public doc is moved into a private folder</td><td>Warning: "Workspace members will lose access".</td></tr>
+      <tr><td>Mani makes one doc inside a private folder public <span class="upd">updated</span></td><td>Allowed. The team sees only that doc, in "Shared with me". The rest of the folder stays private.</td></tr>
+      <tr><td>Mani tries to make a doc more private than its folder <span class="upd">updated</span></td><td>Not allowed. Move it out of the folder instead.</td></tr>
+      <tr><td>Marketing → Q1 → "Q1 Pitch": Bala has Marketing, Priya has Q1, "Q1 Pitch" is public <span class="upd">updated</span></td><td>Bala sees all of Marketing. Priya sees only Q1 and what's inside. The team sees only "Q1 Pitch".</td></tr>
+      <tr><td>Where does Priya find the Sales folder? <span class="upd">updated</span></td><td>In her "Shared with me" tab.</td></tr>
+      <tr><td>Sara renames the Marketing project <span class="upd">updated</span></td><td>Not allowed. Only its creator or an Admin.</td></tr>
+      <tr><td>Priya is a Sales Viewer and later becomes a workspace Member</td><td>The higher role wins on each item.</td></tr>
+      <tr class="grp"><td colspan="2">Editing and files</td></tr>
+      <tr><td>Bala (Member) deletes a doc in Sales</td><td>Allowed. Restorable for 30 days. The owner is alerted.</td></tr>
+      <tr><td>Sara tries to delete the whole Marketing project <span class="upd">updated</span></td><td>Not allowed. Only its creator or an Admin. Sara can leave a shared project instead.</td></tr>
+      <tr><td>Bala (Member) deletes a project he created <span class="upd">updated</span></td><td>Allowed. He's its owner. Restorable for 30 days.</td></tr>
+      <tr><td>Sara tries to make Bala's public doc private <span class="upd">updated</span></td><td>Not allowed. Only the creator. Sara can move it to another public project.</td></tr>
+      <tr><td>Priya (Viewer) leaves a comment <span class="upd">updated</span></td><td>Allowed. Viewers can comment and present.</td></tr>
+      <tr><td>Bala duplicates a deck <span class="upd">updated</span></td><td>Copy next to the original, slides only.</td></tr>
+      <tr><td>Bala downloads, exports or duplicates</td><td>Allowed for Members.</td></tr>
+      <tr><td>Priya (Viewer) tries to download</td><td>Not allowed.</td></tr>
+      <tr><td>Bala uses AI to make slides</td><td>Uses the shared workspace credit pool.</td></tr>
+      <tr class="grp"><td colspan="2">Widget</td></tr>
+      <tr><td>Stranger opens the widget</td><td>Watches without signing up.</td></tr>
+      <tr><td>Stranger clicks Export as PowerPoint</td><td>Signs up, pays, then downloads. The owner isn't charged.</td></tr>
+      <tr><td>Michael is in the USA <span class="upd">updated</span></td><td>He sees plans only. A plan gives unlimited exports.</td></tr>
+      <tr><td>Michael is in India <span class="upd">updated</span></td><td>He sees both: a one-time export for this file, or a plan.</td></tr>
+      <tr><td>Owner wants to block export on a sensitive deck</td><td>Not possible. Don't create a widget for it.</td></tr>
+      <tr><td>Who turns the widget on <span class="upd">updated</span></td><td>Anyone with edit access. Viewers can only copy an existing link.</td></tr>
+      <tr><td>Doc with a widget is made private <span class="upd">updated</span></td><td>The widget keeps working.</td></tr>
+      <tr><td>Doc with a widget is deleted <span class="upd">updated</span></td><td>The widget stops. Restoring the doc doesn't turn it back on.</td></tr>
+      <tr class="grp"><td colspan="2">People leaving and access</td></tr>
+      <tr><td>Bala leaves Formula One</td><td>His public and shared docs stay, and an Admin owns them. His private docs are deleted (back only if he rejoins within 30 days).</td></tr>
+      <tr><td>Access removed while the doc is open</td><td>Applies right away.</td></tr>
+      <tr><td>Invite not accepted</td><td>Expires after 14 days.</td></tr>
+      <tr class="grp"><td colspan="2">Billing</td></tr>
+      <tr><td>Bala (Member) buys credits</td><td>Allowed, on the workspace card. Credits go to the shared pool.</td></tr>
+      <tr><td>Bala orders Hire an expert</td><td>Allowed, on the workspace card. The expert gets a copy. Only Bala sees the finished file. <span class="upd">updated</span></td></tr>
+      <tr><td>Credit pool hits 80% <span class="upd">updated</span></td><td>The Owner gets an alert.</td></tr>
+      <tr><td>Payment fails <span class="upd">updated</span></td><td>Read-only right away until paid. Widgets keep working.</td></tr>
+      <tr><td>Free workspace with only Mani wants to upgrade <span class="upd">updated</span></td><td>He can pick Basic, Pro, Gold or Team.</td></tr>
+      <tr><td>Free workspace with Bala added wants to upgrade <span class="upd">updated</span></td><td>Team only. Single plans are hidden, because they can't have other people. To pick Pro, remove everyone else first.</td></tr>
+      <tr><td>Free workspace upgrades to Team <span class="upd">updated</span></td><td>Everything carries over. Bonus credits stay. The invite bonus stops.</td></tr>
+      <tr class="grp"><td colspan="2">Owner and Admins</td></tr>
+      <tr><td>Owner leaves <span class="upd">updated</span></td><td>Must transfer to an Admin first. In a free workspace, blocked if that Admin already owns a free one.</td></tr>
+      <tr><td>Admin removes another Admin <span class="upd">updated</span></td><td>Allowed. Nobody can remove the Owner.</td></tr>
+      <tr><td>Team turns on Block outside sharing <span class="upd">updated</span></td><td>Only company emails can be invited. Widgets stop.</td></tr>
+      <tr><td>Someone joins by company email (auto-join) <span class="upd">updated</span></td><td>They join as Member or Viewer, whichever the Admin picked.</td></tr>
+      <tr><td>Bala wants to make Sara the owner of his file <span class="upd">updated</span></td><td>Not possible. The creator always owns it.</td></tr>
+      <tr><td>Mani deletes Formula One <span class="upd">updated</span></td><td>Only the Owner can, after typing its name. Kept 30 days, everyone emailed.</td></tr>
+      <tr><td>Bala is in Formula One and his own Pro workspace <span class="upd">updated</span></td><td>Separate files, members and credits. He switches at the top.</td></tr>
+      <tr><td>Bala and Sara edit slide 3 together <span class="upd">updated</span></td><td>Live co-editing, with cursors.</td></tr>
+      <tr><td>Someone wants an older version of a deck <span class="upd">updated</span></td><td>Version history is coming later.</td></tr>
+    </table>
+  </div>
+</main>
+<main id="kid" class="kid" hidden>
+  <h1>Who can see and do what 🧒</h1>
+  <p class="k-lead">The super simple version of v2. Every rule is here, in plain words.</p>
+
+  <section>
+    <h2>🏠 1. It's like a house</h2>
+    <div class="k-house">
+      <div><span>🏠</span><b>Workspace</b><i>the house</i></div>
+      <div class="k-arr">→</div>
+      <div><span>🚪</span><b>Folder or project</b><i>a room (rooms can have rooms inside)</i></div>
+      <div class="k-arr">→</div>
+      <div><span>📄</span><b>File</b><i>a page</i></div>
+    </div>
+    <p class="k-note">Mani built the house called <b>Formula One</b>. So Mani is the boss (the Owner).</p>
+  </section>
+
+  <section>
+    <h2>👥 2. The people</h2>
+    <div class="k-grid k4">
+      <div class="k-card"><span>👑</span><h3>Owner</h3><p>Built the house. Can do everything a helper can. Must give the house to a helper before leaving.</p></div>
+      <div class="k-card"><span>🛠</span><h3>Admin</h3><p>The boss's helper. Adds and removes people, and can make more helpers. Can never remove the Owner.</p></div>
+      <div class="k-card blue"><span>✏️</span><h3>Member</h3><p>On the team. Sees every public room, changes things, makes new pages, invites people.</p></div>
+      <div class="k-card orange"><span>👀</span><h3>Viewer</h3><p>Only looks. Can leave comments and present. Can't change anything.</p></div>
+    </div>
+    <p class="k-note">🙈 Nobody can see your private stuff. Not the Owner, not the helpers.</p>
+  </section>
+
+  <section>
+    <h2>⭐ 3. The two golden rules</h2>
+    <div class="k-rule blue">✏️ <b>A Member always joins the whole house.</b> Even if you invite them to one room, they see every public room.</div>
+    <div class="k-rule orange">👀 <b>A Viewer only sees what you give them.</b> One room = only that room. One page = only that page.</div>
+    <p class="k-note">When you pick Member for one room, we warn you: "Bala will see all public rooms. Pick Viewer to share only this room."</p>
+  </section>
+
+  <section>
+    <h2>🚪 4. Three kinds of rooms</h2>
+    <div class="k-grid k3">
+      <div class="k-card"><span>🔒</span><h3>Private</h3><p>Only you.</p></div>
+      <div class="k-card purple"><span>👥</span><h3>Shared</h3><p>You plus the people you pick.</p></div>
+      <div class="k-card green"><span>🌎</span><h3>Public</h3><p>Everyone in the house.</p></div>
+    </div>
+    <p class="k-note">If a room is shared, everyone in it also sees new pages and rooms you add later. Take a page out of the room, and they lose it (we warn you first).</p>
+    <p class="k-note">🪆 Rooms can have rooms inside them. An inside room or page can be <b>more open</b> than the room around it, but never <b>more secret</b>.</p>
+  </section>
+
+  <section>
+    <h2>🎟 5. Plans</h2>
+    <div class="k-grid k3">
+      <div class="k-card blue"><span>🆓</span><h3>Free</h3><p>One free house per person. Invite as many people as you want. Get <b>200 credits</b> each time a new person makes an account, checks their email and joins. Up to <b>1,000</b>. You can't buy more credits on Free. Upgrading later: alone = any plan, with other people = Team only.</p></div>
+      <div class="k-card"><span>👤</span><h3>Basic, Pro, Gold</h3><p>Just you. To invite anyone, upgrade to Team.</p></div>
+      <div class="k-card green"><span>👥</span><h3>Team</h3><p>Invite everyone. The whole team shares one big pot of credits.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>🌍 6. The widget link</h2>
+    <p class="k-note">It's like a YouTube link. Anyone in the world can watch your deck, without signing up. Every plan has it.</p>
+    <div class="k-steps">
+      <div>🐦<br>Mani posts it on Twitter</div>
+      <div>👀<br>Michael watches</div>
+      <div>📥<br>Michael clicks "Export as PowerPoint"</div>
+      <div>💳<br>Michael signs up and pays. Mani pays nothing</div>
+    </div>
+    <ul class="k-list">
+      <li>✏️ Members switch the widget on and off. 👀 Viewers can only copy a link that's already on.</li>
+      <li>🔒 Making the deck private? The widget keeps working.</li>
+      <li>🗑 Deleting the deck? The widget stops. Bringing the deck back doesn't turn it on again.</li>
+      <li>🤫 You can't stop people buying the PowerPoint. So don't make a widget for secret decks.</li>
+      <li>🌎 In the USA, people buy a plan to export. In other countries, they can also buy just one file.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>❓ 7. Quick answers</h2>
+    <div class="k-qa"><h3 class="k-g">Inviting</h3><div class="k-qgrid"><div class="k-q"><b>Mani invites Bala as a Member of the whole house. What can Bala see?</b><span>✅ Every public room. He can change things and make new pages.</span></div><div class="k-q"><b>Mani invites Bala as a Member of just the Sales room. Does he see only Sales?</b><span>🚫 No. Members always join the whole house, so he sees all public rooms too.</span></div><div class="k-q"><b>Mani invites Priya as a Viewer of the Sales room. What does she see?</b><span>✅ Only the Sales room.</span></div><div class="k-q"><b>Priya is a Viewer of one page. Can she see other pages?</b><span>🚫 No, only that one page.</span></div><div class="k-q"><b>Can a Member invite people?</b><span>✅ Yes, as Members or Viewers.</span></div><div class="k-q"><b>Can a Viewer invite people?</b><span>🚫 No.</span></div><div class="k-q"><b>Pro user wants to invite someone. Can they?</b><span>🚫 No. They need to upgrade to Team first.</span></div><div class="k-q"><b>Does an invite last forever?</b><span>🚫 No. It stops after 14 days. You can send it again or cancel it.</span></div><div class="k-q"><b>A new person makes an account but never says yes to the invite. Credits?</b><span>🚫 No. They have to join.</span></div><div class="k-q"><b>The new person hasn't checked their email yet. Credits?</b><span>🚫 Not yet. Only after they check it.</span></div><div class="k-q"><b>Can a Member make a Viewer into a Member?</b><span>✅ Yes, with one click.</span></div><div class="k-q"><b>Can a Member be turned back into a Viewer?</b><span>✅ Yes, by the Owner or an Admin.</span></div><div class="k-q"><b>Bala earned us 200 credits, then became a Viewer. Do we lose the credits?</b><span>🚫 No, the credits stay.</span></div><div class="k-q"><b>Can an Admin remove another Admin?</b><span>✅ Yes. But nobody can remove the Owner.</span></div></div><h3 class="k-g">Credits</h3><div class="k-qgrid"><div class="k-q"><b>A new person makes an account, checks their email and joins. Do we get credits?</b><span>✅ Yes, 200 credits (free house only).</span></div><div class="k-q"><b>The person already had an account. Credits?</b><span>🚫 No.</span></div><div class="k-q"><b>A new Viewer joins. Credits?</b><span>🚫 No, only new Members count.</span></div><div class="k-q"><b>We already got 1,000 bonus credits. Can more people join?</b><span>✅ Yes, as many as you want. Just no more bonus.</span></div><div class="k-q"><b>Can Mani make a second free house?</b><span>🚫 No. One free house per person. More houses must be paid.</span></div><div class="k-q"><b>Who uses the credits?</b><span>✅ Everyone on the team shares one pot.</span></div><div class="k-q"><b>Pot almost empty?</b><span>✅ The Owner gets told when it's 80% used.</span></div><div class="k-q"><b>Paid houses get the invite bonus?</b><span>🚫 No, only free houses.</span></div><div class="k-q"><b>Free house out of credits. Can we buy more?</b><span>🚫 No. You need to upgrade.</span></div><div class="k-q"><b>Only Mani lives in the free house. Which plans can he buy?</b><span>✅ Any plan: Basic, Pro, Gold or Team.</span></div><div class="k-q"><b>Bala was invited to the free house. Can they buy Pro?</b><span>🚫 No, only Team. Pro is just for one person.</span></div><div class="k-q"><b>I'm in two houses. Do they share credits?</b><span>🚫 No. Each house has its own.</span></div></div><h3 class="k-g">Rooms and pages</h3><div class="k-qgrid"><div class="k-q"><b>Can the Owner peek at my private room?</b><span>🚫 No. Nobody can.</span></div><div class="k-q"><b>Can Sara make Bala's public page private?</b><span>🚫 No. Only the person who made it.</span></div><div class="k-q"><b>Can Sara move Bala's page to another public room?</b><span>✅ Yes.</span></div><div class="k-q"><b>Can Sara delete Bala's page?</b><span>✅ Yes, but Bala gets told and can bring it back for 30 days.</span></div><div class="k-q"><b>Can Sara delete a whole room?</b><span>🚫 Only if she made it. Or an Admin can.</span></div><div class="k-q"><b>Bala made a room. Can he delete it?</b><span>✅ Yes, it's his. It waits 30 days in case he changes his mind.</span></div><div class="k-q"><b>Can I leave a shared room?</b><span>✅ Yes. You just can't leave a public room.</span></div><div class="k-q"><b>I move a secret page into a public room. What happens?</b><span>✅ We warn you first: "Everyone in the house will see this."</span></div><div class="k-q"><b>I move a public page into a secret room. What happens?</b><span>✅ We warn you first: "The team will lose access."</span></div><div class="k-q"><b>Can a room have a room inside it?</b><span>✅ Yes, as many as you like.</span></div><div class="k-q"><b>Can one page in a secret room be public?</b><span>✅ Yes. People see only that page.</span></div><div class="k-q"><b>Where do I find things shared with me?</b><span>✅ In the "Shared with me" tab.</span></div><div class="k-q"><b>Can Sara rename a room she didn't make?</b><span>🚫 No. Only the person who made it, or an Admin.</span></div><div class="k-q"><b>Someone has two roles on one room. Which counts?</b><span>✅ The bigger one.</span></div></div><h3 class="k-g">Using files</h3><div class="k-qgrid"><div class="k-q"><b>Can a Member download, export or copy?</b><span>✅ Yes.</span></div><div class="k-q"><b>Can a Viewer download?</b><span>🚫 No.</span></div><div class="k-q"><b>Can a Viewer comment and present?</b><span>✅ Yes.</span></div><div class="k-q"><b>Can a Viewer copy a widget link?</b><span>✅ Yes, if it's already on. They can't switch it on.</span></div><div class="k-q"><b>Copying a deck: what gets copied?</b><span>✅ Only the slides. No comments, no invites, no widget.</span></div><div class="k-q"><b>Who sees a file I export?</b><span>✅ Only you.</span></div><div class="k-q"><b>Can two people change the same slide at once?</b><span>✅ Yes, you see each other's cursors.</span></div><div class="k-q"><b>Can I go back to an older version?</b><span>🚫 Not yet. Coming later.</span></div><div class="k-q"><b>When do I get an email?</b><span>✅ When someone shares with you or @mentions you.</span></div><div class="k-q"><b>Hire an expert: can the expert get into our house?</b><span>🚫 No. They get a copy. Only the person who ordered sees the finished file.</span></div></div><h3 class="k-g">Money</h3><div class="k-qgrid"><div class="k-q"><b>Can a Member buy credits or Hire an expert?</b><span>✅ Yes, with the team card (paid houses only).</span></div><div class="k-q"><b>Refund?</b><span>✅ Email support. The money goes back to the same card.</span></div><div class="k-q"><b>Payment didn't go through?</b><span>🚫 Everything turns read-only until it's paid. Nothing is lost.</span></div><div class="k-q"><b>Can Team go back to Pro?</b><span>🚫 No.</span></div><div class="k-q"><b>Free house upgrades to Team. Do we keep stuff?</b><span>✅ Yes, everything and everyone. Bonus credits stay.</span></div></div><h3 class="k-g">People leaving</h3><div class="k-qgrid"><div class="k-q"><b>Bala leaves. What happens to his stuff?</b><span>✅ Public and shared pages stay. His private pages get deleted.</span></div><div class="k-q"><b>Can the Owner just leave?</b><span>🚫 No. They give the house to an Admin first.</span></div><div class="k-q"><b>Can an Admin remove the Owner?</b><span>🚫 Never.</span></div><div class="k-q"><b>Can I give my page to someone else to own?</b><span>🚫 No. You made it, you own it.</span></div><div class="k-q"><b>Who can delete the whole house?</b><span>✅ Only the Owner. It waits 30 days first.</span></div><div class="k-q"><b>Someone gets removed while the page is open?</b><span>✅ It closes right away.</span></div></div><h3 class="k-g">Big teams (Team plan)</h3><div class="k-qgrid"><div class="k-q"><b>Can people with our company email join by themselves?</b><span>✅ Only if an Admin switches it on. The Admin picks if they join as Member or Viewer.</span></div><div class="k-q"><b>Can we stop sharing outside the company?</b><span>✅ Yes, an Admin can switch it on. Then widgets stop too.</span></div></div></div>
+  </section>
+</main>
+
+
+
+<script>
+(function(){
+  var full=document.getElementById('full'), kid=document.getElementById('kid');
+  var btns=document.querySelectorAll('.modes button');
+  function set(m){
+    full.hidden = m==='kid'; kid.hidden = m!=='kid';
+    btns.forEach(function(b){ b.classList.toggle('on', b.dataset.mode===m); });
+    try { localStorage.setItem('v2-mode', m); } catch(e) {}
+    if (location.hash !== '#'+m) history.replaceState(null,'', m==='kid' ? '#kid' : location.pathname);
+    window.scrollTo(0,0);
+  }
+  btns.forEach(function(b){ b.addEventListener('click', function(){ set(b.dataset.mode); }); });
+  var start = location.hash==='#kid' ? 'kid' : 'full';
+  if (location.hash!=='#kid') { try { if (localStorage.getItem('v2-mode')==='kid') start='kid'; } catch(e) {} }
+  set(start);
+})();
+</script>
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body>
+</html>
