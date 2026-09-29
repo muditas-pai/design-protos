@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sharing Flows v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<style>
+  :root { --bg: #f4f4f4; --dot: #cfcfcf; --ink: #1f1f1f; --line: #6e6e6e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+  header { max-width: 1240px; margin: 0 auto; padding: 36px 16px 8px; }
+  h1 { font-size: 28px; margin: 0 0 6px; font-weight: 800; }
+  .sub { color: #555; font-size: 14px; margin: 0 0 14px; }
+  .back { display: inline-block; font: 600 13px Inter; color: var(--ink); text-decoration: none; background: #fff; border: 1.5px solid #ccc; border-radius: 999px; padding: 6px 12px; margin-right: 6px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; margin: 12px 0 0; }
+  .legend span { display: inline-flex; gap: 6px; align-items: center; }
+  .sw { width: 16px; height: 12px; border-radius: 3px; border: 2px solid; display: inline-block; }
+  nav.toc { max-width: 1240px; margin: 14px auto 0; padding: 0 16px; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.toc a { font: 600 12px Inter; color: var(--ink); background: #fff; border: 1px solid #ddd; border-radius: 999px; padding: 5px 10px; text-decoration: none; }
+  nav.toc a.hot { border-color: #dc2626; color: #b91c1c; }
+  main { max-width: 1240px; margin: 0 auto; padding: 10px 16px 90px; }
+  .flow { margin-top: 30px; background: #fff; border: 1px solid #e3e3e3; border-radius: 14px; overflow: hidden; }
+  .fhead { padding: 16px 20px 10px; border-bottom: 1px solid #eee; }
+  .fhead h2 { margin: 0; font-size: 18px; }
+  .fhead h2 .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 13px; margin-right: 8px; vertical-align: 1px; }
+  .fhead p { margin: 6px 0 0; color: #555; font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  .canvas { position: relative; padding: 28px 24px 30px; min-width: 900px;
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px); background-size: 22px 22px; }
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .g { display: grid; gap: 34px 54px; align-items: center; justify-items: center; }
+  .nd { position: relative; z-index: 1; border: 2.5px solid var(--line); background: #fff; border-radius: 6px; padding: 9px 11px; font-size: 13px; line-height: 1.35; text-align: center; width: 190px; }
+  .nd.start { background: #111; color: #fff; border-color: #111; border-radius: 999px; font-weight: 600; }
+  .nd.ok { background: #d3f2d0; border-color: #7dd87a; }
+  .nd.no { background: #fde2e2; border-color: #ef8f8f; }
+  .nd.warn { background: #fff3a8; border-color: #e2c73a; }
+  .nd.info { background: #cfe3fb; border-color: #5aa5f5; text-align: left; }
+  .nd.priv { background: #fbe0c6; border-color: #f5a55a; }
+  .dia { position: relative; z-index: 1; width: 128px; height: 128px; display: grid; place-items: center; }
+  .dia::before { content: ""; position: absolute; inset: 18px; background: #fff; border: 2.5px solid var(--line); transform: rotate(45deg); border-radius: 5px; }
+  .dia span { position: relative; font-size: 12px; font-weight: 700; text-align: center; max-width: 96px; line-height: 1.25; }
+  .elabel { font: 700 11px Inter, sans-serif; fill: #333; paint-order: stroke; stroke: #f4f4f4; stroke-width: 4px; }
+  .loops { padding: 12px 20px 16px; border-top: 1px solid #eee; display: grid; gap: 8px; }
+  .lh { border-radius: 8px; padding: 9px 12px; font-size: 13px; line-height: 1.5; }
+  .lh.red { background: #fdeeee; border: 1px solid #f2a7a7; }
+  .lh.amb { background: #fff5e6; border: 1px solid #f5c67a; }
+  .lh.ok { background: #effbf2; border: 1px solid #b7e4c4; }
+  .lh b.t { margin-right: 4px; }
+  .lh .fix { display: block; margin-top: 3px; }
+  .lh .fix::before { content: "Suggested fix: "; font-weight: 700; }
+  .summary { margin-top: 30px; background: #fff; border: 2px solid #111; border-radius: 14px; padding: 16px 20px; }
+  .summary h2 { margin: 0 0 8px; font-size: 18px; }
+  .summary ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="./">← Back to v2 rules</a><a class="back" href="./#kid">🧒 Kid version</a>
+  <h1>Sharing flows v2</h1>
+  <p class="sub">Every flow as a diagram, one by one. Loopholes found while drawing are marked at the bottom of each flow. Example workspace: Formula One. Mani is the Owner.</p>
+  <div class="legend">
+    <span><i class="sw" style="background:#111;border-color:#111"></i>Start</span>
+    <span><i class="sw" style="background:#fff;border-color:#6e6e6e;transform:rotate(45deg)"></i>Question</span>
+    <span><i class="sw" style="background:#d3f2d0;border-color:#7dd87a"></i>Allowed</span>
+    <span><i class="sw" style="background:#fde2e2;border-color:#ef8f8f"></i>Blocked</span>
+    <span><i class="sw" style="background:#fff3a8;border-color:#e2c73a"></i>Warning</span>
+    <span><i class="sw" style="background:#cfe3fb;border-color:#5aa5f5"></i>Note</span>
+    <span>🔴 Loophole · 🟠 Check · 🟢 No issue found</span>
+  </div>
+</header>
+<nav class="toc" id="toc"></nav>
+<main id="flows"></main>
+
+<script>
+const F = [
+  { id:'invite', title:'Inviting someone', story:'Mani (or any Member) clicks Invite on the workspace, a folder or a file.', cols:3,
+    nodes:[
+      ['s','1/1','start','Someone clicks Invite'],
+      ['d1','1/2','dia','Which plan?'],
+      ['n1','1/3','no','"Upgrade to Team"'],
+      ['d2','2/2','dia','Are they a Viewer?'],
+      ['n2','2/3','no','Viewers can\'t invite'],
+      ['d3','3/2','dia','Invite as?'],
+      ['o1','3/3','ok','Joins the whole workspace. Sees and edits all public items. Warning shown if invited from a folder or file'],
+      ['d4','4/2','dia','Viewer of what?'],
+      ['o2','4/3','ok','Workspace Viewer: sees all public items, read-only'],
+      ['o3','5/2','ok','Sees only that folder or file, read-only. Tagged in Settings → Members'],
+      ['i1','5/1','info','Invites expire after 14 days. Resend restarts the clock. Revoke anytime. Existing members get access right away'],
+    ],
+    edges:[['s','d1','h'],['d1','n1','h','Basic, Pro, Gold'],['d1','d2','v','Free or Team'],['d2','n2','h','Yes'],['d2','d3','v','No'],
+      ['d3','o1','h','Member'],['d3','d4','v','Viewer'],['d4','o2','h','Workspace'],['d4','o3','v','Folder or file']],
+    loops:[['ok','Decided: any Member can invite outsiders as Members, with no approval. Kept as is for now.','']] },
+
+  { id:'bonus', title:'200-credit invite bonus', story:'A person accepts an invite to a workspace.', cols:3,
+    nodes:[
+      ['s','1/1','start','Person accepts the invite'],
+      ['d1','1/2','dia','Joined as?'],
+      ['n1','1/3','no','No credits'],
+      ['d2','2/2','dia','Free workspace?'],
+      ['n2','2/3','no','No bonus on paid plans'],
+      ['d3','3/2','dia','Brand-new account?'],
+      ['n3','3/3','no','Joins, no credits'],
+      ['d4','4/2','dia','Email verified?'],
+      ['w1','4/3','warn','Credits wait until they verify'],
+      ['d5','5/2','dia','Bonus under 1,000?'],
+      ['n4','5/3','no','Joins, no more credits'],
+      ['o1','6/2','ok','+200 credits to the workspace pool'],
+      ['i1','6/1','info','One free workspace per person, so the 1,000 cap works per person. A Member later made a Viewer keeps the credits'],
+    ],
+    edges:[['s','d1','h'],['d1','n1','h','Viewer'],['d1','d2','v','Member'],['d2','n2','h','No'],['d2','d3','v','Yes'],['d3','n3','h','No'],['d3','d4','v','Yes'],
+      ['d4','w1','h','No'],['d4','d5','v','Yes'],['d5','n4','h','No'],['d5','o1','v','Yes']],
+    loops:[['ok','No loophole found. The one-free-workspace rule and email check close the "fake accounts" trick.','']] },
+
+  { id:'access', title:'Can this person open this file?', story:'The check the app makes every time someone opens a file.', cols:4,
+    nodes:[
+      ['s','1/1','start','Person opens a file'],
+      ['d1','1/2','dia','Did they create it?'],
+      ['o1','1/3','ok','Yes, full access (owner)'],
+      ['d2','2/2','dia','Shared with them on the file?'],
+      ['o2','2/3','ok','The role on the file'],
+      ['d3','3/2','dia','Shared on a folder above it?'],
+      ['o3','3/3','ok','The folder\'s role. Two roles: the higher wins'],
+      ['d4','4/2','dia','Public, or shared with everyone?'],
+      ['d5','4/3','dia','Workspace Member?'],
+      ['o4','4/4','ok','Can edit'],
+      ['o5','5/3','ok','Workspace Viewer: read-only. Folder or file Viewers don\'t get in'],
+      ['n1','5/2','no','"You don\'t have access". No request button'],
+    ],
+    edges:[['s','d1','h'],['d1','o1','h','Yes'],['d1','d2','v','No'],['d2','o2','h','Yes'],['d2','d3','v','No'],['d3','o3','h','Yes'],['d3','d4','v','No'],
+      ['d4','d5','h','Yes'],['d5','o4','h','Yes'],['d5','o5','v','No'],['d4','n1','v','No']],
+    loops:[['ok','No loophole found. Private stays private, even for the Owner and Admins.','']] },
+
+  { id:'onefile', title:'One file from a private folder', story:'Mani, Madhu and Sarana share a private folder. Mani wants to share just "Q4 Pitch".', cols:3,
+    nodes:[
+      ['s','1/2','priv','🔒 Private folder: Mani, Madhu, Sarana'],
+      ['st','2/2','nd','Mani opens Share on "Q4 Pitch"'],
+      ['d1','3/2','dia','Share with?'],
+      ['o1','4/1','ok','Sumanth only: sees just Q4 Pitch in "Shared with me"'],
+      ['o2','4/2','ok','Everyone in workspace: the team sees just Q4 Pitch'],
+      ['o3','4/3','ok','Widget: anyone in the world can watch Q4 Pitch'],
+      ['i1','5/2','info','The folder stays private. Madhu and Sarana still see everything in it'],
+    ],
+    edges:[['s','st','v'],['st','d1','v'],['d1','o1','v','One person'],['d1','o2','v','Everyone'],['d1','o3','v','Widget']],
+    loops:[['ok','Decided: anyone who can edit the file (Madhu too) can share it with one person, everyone in the workspace, or the widget. Only the creator can make it private again.','']] },
+
+  { id:'widget', title:'Widget and export', story:'Mani posts a widget on Twitter. Michael in the USA sees it.', cols:5,
+    nodes:[
+      ['s','1/1','start','Member with edit turns the widget on'],
+      ['w1','1/2','warn','"Anyone with this link can view it and buy a PowerPoint copy"'],
+      ['st1','1/3','nd','Link posted on Twitter'],
+      ['st2','1/4','nd','Michael watches, no sign up'],
+      ['d1','2/4','dia','Clicks Export as PowerPoint?'],
+      ['o0','2/5','ok','Just watches'],
+      ['st3','3/4','nd','Michael signs up'],
+      ['d2','4/4','dia','Card\'s billing country?'],
+      ['p1','4/5','nd','Plans only (unlimited exports)'],
+      ['p2','5/4','nd','One-time export for this file, or a plan'],
+      ['o1','6/4','ok','Pays and downloads. Mani pays nothing'],
+      ['i1','3/2','info','Doc made private: widget keeps working. Doc deleted: widget stops, and restoring doesn\'t turn it back on. Export can\'t be turned off'],
+    ],
+    edges:[['s','w1','h'],['w1','st1','h'],['st1','st2','h'],['st2','d1','v'],['d1','o0','h','No'],['d1','st3','v','Yes'],['st3','d2','v'],
+      ['d2','p1','h','USA'],['d2','p2','v','Other'],['p2','o1','v'],['p1','o1','vl']],
+    loops:[
+      ['ok','By design: anyone who can edit a file (for example Madhu in a shared private folder) can turn on its widget, and it keeps working after the file is made private.',''],
+      ['ok','Decided: the card\'s billing country sets the final price, so a VPN doesn\'t help.','']] },
+
+  { id:'move', title:'Moving a doc', story:'Someone drags a doc to another folder or project.', cols:3,
+    nodes:[
+      ['s','1/1','start','Someone moves a doc'],
+      ['d1','1/2','dia','Does who can see it change?'],
+      ['o1','1/3','ok','Moves, no warning'],
+      ['d2','2/2','dia','Which way?'],
+      ['w1','2/3','warn','"Everyone in Formula One will get access"'],
+      ['d3','3/2','dia','Are they the creator?'],
+      ['n1','3/3','no','Only the creator can make it private'],
+      ['w2','4/2','warn','"Workspace members will lose access"'],
+      ['i1','4/1','info','Out of a shared folder: "Priya will lose access". Members can move docs between public projects freely'],
+    ],
+    edges:[['s','d1','h'],['d1','o1','h','No'],['d1','d2','v','Yes'],['d2','w1','h','Private → public'],['d2','d3','v','Public → private'],['d3','n1','h','No'],['d3','w2','v','Yes']],
+    loops:[['ok','No loophole found.','']] },
+
+  { id:'delete', title:'Deleting a doc or a project', story:'Sara deletes something in Formula One.', cols:4,
+    nodes:[
+      ['s','1/1','start','Sara clicks Delete'],
+      ['d1','1/2','dia','A doc, or a whole project or folder?'],
+      ['d2','1/3','dia','Can she edit it?'],
+      ['n1','1/4','no','Can\'t delete'],
+      ['o1','2/3','ok','Recently deleted for 30 days. Owner alerted "Deleted by Sara". Widget stops'],
+      ['d3','3/2','dia','Is she its creator, or an Admin?'],
+      ['n2','3/3','no','Not allowed. She can Leave a shared one (public ones can\'t be left)'],
+      ['o2','4/2','warn','"This deletes 12 files by 3 people". Then everything inside goes to Recently deleted for 30 days, and each creator is alerted'],
+      ['i1','5/2','info','Restore: any member in a public project, only the owner on private items. Widgets stay off'],
+    ],
+    edges:[['s','d1','h'],['d1','d2','h','Doc'],['d2','n1','h','No'],['d2','o1','v','Yes'],['d1','d3','v','Project'],['d3','n2','h','No'],['d3','o2','v','Yes'],['o2','i1','v']],
+    loops:[['ok','Decided: deleting a folder deletes everything inside (30-day restore). A warning first: "This deletes 12 files by 3 people", and each creator is alerted.','']] },
+
+  { id:'upgrade', title:'Upgrading a plan', story:'Mani wants to upgrade Formula One.', cols:4,
+    nodes:[
+      ['s','1/1','start','Mani clicks Upgrade'],
+      ['d1','1/2','dia','Current plan?'],
+      ['d2','1/3','dia','Anyone else in the workspace?'],
+      ['o1','1/4','ok','Any plan: Basic, Pro, Gold or Team'],
+      ['o2','2/3','ok','Team only. Everything carries over, bonus credits stay, invite bonus stops'],
+      ['d3','3/2','dia','Wants to invite someone?'],
+      ['w1','3/3','warn','"Upgrade to Team to invite people"'],
+      ['o3','4/2','ok','Stays on their single plan'],
+      ['n1','4/1','no','Team → single plan: not possible'],
+    ],
+    edges:[['s','d1','h'],['d1','d2','h','Free'],['d2','o1','h','No'],['d2','o2','v','Yes'],['d1','d3','v','Basic, Pro, Gold'],['d3','w1','h','Yes'],['d3','o3','v','No']],
+    loops:[['ok','By design: Mani can remove everyone to downgrade to a single-user plan. Their private files are deleted, as with anyone who is removed.','']] },
+
+  { id:'buy', title:'Buying credits or Hire an expert', story:'Bala wants more AI credits or an expert redesign.', cols:4,
+    nodes:[
+      ['s','1/1','start','Bala wants to buy'],
+      ['d1','1/2','dia','Free workspace?'],
+      ['n1','1/3','no','Can\'t buy. "Upgrade to buy more credits"'],
+      ['d2','2/2','dia','Is Bala a Viewer?'],
+      ['n2','2/3','no','Viewers can\'t buy'],
+      ['o1','3/2','ok','Pays with the workspace card. No limit. The Owner is emailed'],
+      ['o2','3/3','ok','Credits go to the shared pool. Owner alerted at 80%'],
+      ['o3','4/2','ok','Hire an expert: the expert gets a copy. Only Bala sees the finished file'],
+      ['i1','4/3','info','Refunds: email support only. Money goes back to the card that paid. Unspent credits only'],
+    ],
+    edges:[['s','d1','h'],['d1','n1','h','Yes'],['d1','d2','v','No'],['d2','n2','h','Yes'],['d2','o1','v','No'],['o1','o2','h','Credits'],['o1','o3','v','Expert']],
+    loops:[['ok','Decided: the Owner is emailed on every purchase, and all purchases show in billing history. No spending limit.','']] },
+
+  { id:'leave', title:'Someone leaves', story:'Bala leaves Formula One, or is removed.', cols:4,
+    nodes:[
+      ['s','1/1','start','Bala leaves or is removed'],
+      ['d1','1/2','dia','Which of his files?'],
+      ['o1','1/3','ok','Public and shared files stay. An Admin owns them (or the Owner)'],
+      ['w1','2/2','warn','Private files hidden for 30 days. Nobody can open them'],
+      ['d2','3/2','dia','Bala rejoins within 30 days?'],
+      ['o2','3/3','ok','His private files come back'],
+      ['n1','4/2','no','Private files deleted for good'],
+      ['i1','4/3','info','Invites he sent stay valid. Access ends right away, even in open files'],
+    ],
+    edges:[['s','d1','h'],['d1','o1','h','Public or shared'],['d1','w1','v','Private'],['w1','d2','v'],['d2','o2','h','Yes'],['d2','n1','v','No']],
+    loops:[['ok','No loophole found. Private files stay private, even after he leaves.','']] },
+
+  { id:'owner', title:'The Owner leaves', story:'Mani wants to leave Formula One.', cols:4,
+    nodes:[
+      ['s','1/1','start','Mani clicks Leave'],
+      ['d1','1/2','dia','Is there an Admin?'],
+      ['st','1/3','warn','No Admin: make a Member an Admin first, then try again'],
+      ['d2','2/2','dia','Free workspace, and that Admin owns another free one?'],
+      ['n1','2/3','no','Blocked. Pick another Admin, or upgrade'],
+      ['o1','3/2','ok','Ownership moves to the Admin. Mani can leave'],
+      ['i1','3/3','info','Owner unreachable (left the company): contact support. Admins can never remove the Owner'],
+    ],
+    edges:[['s','d1','h'],['d1','st','h','No'],['d1','d2','v','Yes'],['d2','n1','h','Yes'],['d2','o1','v','No']],
+    loops:[['ok','No loophole found.','']] },
+
+  { id:'nest', title:'Folders inside folders', story:'Marketing holds Q1, which holds "Q1 Pitch".', cols:2,
+    nodes:[
+      ['a','1/1','nd','📁 Marketing: shared with Bala'],
+      ['b','2/1','nd','📁 Q1 (inside Marketing): also shared with Priya'],
+      ['c','3/1','nd','📄 Q1 Pitch (inside Q1): public'],
+      ['ra','1/2','ok','Bala sees Marketing, Q1 and Q1 Pitch'],
+      ['rb','2/2','ok','Priya sees Q1 and Q1 Pitch only'],
+      ['rc','3/2','ok','The whole team sees Q1 Pitch only'],
+      ['i1','4/1','info','Access flows down. An inner level can be more open, never more private. To hide something, move it out'],
+    ],
+    edges:[['a','b','v'],['b','c','v'],['a','ra','h'],['b','rb','h'],['c','rc','h']],
+    loops:[['ok','No loophole found.','']] },
+
+  { id:'company', title:'Company settings (Team)', story:'Foursquare uses auto-join and blocks outside sharing.', cols:4,
+    nodes:[
+      ['s','1/1','start','Someone signs up with @foursquare.com'],
+      ['d1','1/2','dia','Auto-join on?'],
+      ['n1','1/3','nd','Needs a normal invite'],
+      ['d2','2/2','dia','Default role the Admin picked?'],
+      ['o1','2/3','ok','Joins as Member'],
+      ['o2','3/2','ok','Joins as Viewer'],
+      ['s2','4/1','start','Someone invites a gmail.com address'],
+      ['d3','4/2','dia','Block outside sharing on?'],
+      ['n2','4/3','no','Blocked. Widgets stop working too'],
+      ['o3','5/2','ok','Invite sent'],
+    ],
+    edges:[['s','d1','h'],['d1','n1','h','No'],['d1','d2','v','Yes'],['d2','o1','h','Member'],['d2','o2','v','Viewer'],['s2','d3','h'],['d3','n2','h','Yes'],['d3','o3','v','No']],
+    loops:[['ok','No loophole found.','']] },
+
+  { id:'money', title:'Payment fails, or the workspace is deleted', story:'The card fails, or Mani deletes Formula One.', cols:4,
+    nodes:[
+      ['s','1/1','start','Paid plan payment fails'],
+      ['n1','1/2','no','Read-only right away. No grace period'],
+      ['i1','1/3','info','Widgets keep working. Nothing is deleted. Pay to unlock'],
+      ['s2','2/1','start','Someone clicks Delete workspace'],
+      ['d1','2/2','dia','Are they the Owner?'],
+      ['n2','2/3','no','Only the Owner can'],
+      ['st','3/2','nd','Types the workspace name to confirm'],
+      ['w1','4/2','warn','"This will also turn off 6 live widgets". Paid plan cancelled. Everyone emailed. Kept 30 days, then deleted'],
+    ],
+    edges:[['s','n1','h'],['n1','i1','h'],['s2','d1','h'],['d1','n2','h','No'],['d1','st','v','Yes'],['st','w1','v']],
+    loops:[['ok','Decided: the delete warning also says "This will also turn off 6 live widgets". Anyone who already bought an export keeps their file.','']] },
+];
+
+const main = document.getElementById('flows'), toc = document.getElementById('toc');
+const NS = 'http://www.w3.org/2000/svg';
+const esc = t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+F.forEach((f, i) => {
+  const hot = f.loops.some(l => l[0] === 'red');
+  toc.insertAdjacentHTML('beforeend', `<a href="#${f.id}" class="${hot ? 'hot' : ''}">${i + 1}. ${f.title}${hot ? ' 🔴' : ''}</a>`);
+  const nodes = f.nodes.map(([id, pos, type, text]) => type === 'dia'
+    ? `<div class="dia" id="${f.id}-${id}" style="grid-area:${pos}"><span>${esc(text)}</span></div>`
+    : `<div class="nd ${type}" id="${f.id}-${id}" style="grid-area:${pos}">${esc(text)}</div>`).join('');
+  const loops = f.loops.map(([sev, t, fix]) => {
+    const icon = sev === 'red' ? '🔴' : sev === 'amb' ? '🟠' : '🟢';
+    const label = sev === 'red' ? 'Loophole:' : sev === 'amb' ? 'Check:' : '';
+    return `<div class="lh ${sev}"><b class="t">${icon} ${label}</b>${esc(t)}${fix ? `<span class="fix">${esc(fix)}</span>` : ''}</div>`;
+  }).join('');
+  main.insertAdjacentHTML('beforeend', `
+    <section class="flow" id="${f.id}">
+      <div class="fhead"><h2><span class="n">${i + 1}</span>${f.title}</h2><p>${esc(f.story)}</p></div>
+      <div class="scroll"><div class="canvas"><svg class="wires"></svg>
+        <div class="g" style="grid-template-columns:repeat(${f.cols}, auto)">${nodes}</div>
+      </div></div>
+      <div class="loops">${loops}</div>
+    </section>`);
+});
+
+main.insertAdjacentHTML('beforeend', `
+  <section class="summary">
+    <h2>Loopholes found while drawing: all decided ✅</h2>
+    <ol>
+      <li>🟢 <b>Widget on someone else's private file</b> (flow 5): by design.</li>
+      <li>🟢 <b>Removing people to downgrade</b> (flow 8): by design.</li>
+      <li>🟢 <b>Who opens one file to the whole workspace</b> (flow 4): anyone who can edit it.</li>
+      <li>🟢 <b>Deleting a folder</b> (flow 7): warn with the count, and alert each creator.</li>
+      <li>🟢 <b>Country pricing</b> (flow 5): set by the card's billing country.</li>
+      <li>🟢 <b>Purchase alert</b> (flow 9): the Owner is emailed on every purchase.</li>
+      <li>🟢 <b>Members add outsiders as Members</b> (flow 1): kept as is for now.</li>
+      <li>🟢 <b>Deleting the workspace</b> (flow 14): the warning lists the live widgets that will stop.</li>
+    </ol>
+  </section>`);
+
+function box(canvas, el) {
+  const c = canvas.getBoundingClientRect(); let r = el.getBoundingClientRect();
+  if (el.classList.contains('dia')) { const k = (128 - 92 * Math.SQRT2) / 2; r = { left: r.left + k, top: r.top + k, right: r.right - k, bottom: r.bottom - k }; }
+  return { l: r.left - c.left, t: r.top - c.top, r: r.right - c.left, b: r.bottom - c.top, cx: (r.left + r.right) / 2 - c.left, cy: (r.top + r.bottom) / 2 - c.top };
+}
+function pts(a, b, t) {
+  const g = 8;
+  if (t === 'v') { const x1 = a.cx, y1 = a.b, x2 = b.cx, y2 = b.t - g; if (Math.abs(x1 - x2) < 2) return [[x1, y1], [x1, y2]]; const ym = (y1 + y2) / 2; return [[x1, y1], [x1, ym], [x2, ym], [x2, y2]]; }
+  if (t === 'h') { const x1 = a.r, y1 = a.cy, x2 = b.l - g, y2 = b.cy; if (Math.abs(y1 - y2) < 2) return [[x1, y1], [x2, y1]]; const xm = (x1 + x2) / 2; return [[x1, y1], [xm, y1], [xm, y2], [x2, y2]]; }
+  if (t === 'vl') return [[a.cx, a.b], [a.cx, b.cy], [b.r + g, b.cy]];
+  return [[a.cx, a.b], [a.cx, b.cy], [b.l - g, b.cy]];
+}
+function round(p, rad = 12) {
+  let d = `M${p[0][0]},${p[0][1]}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const [x0, y0] = p[i - 1], [x1, y1] = p[i], [x2, y2] = p[i + 1];
+    const r = Math.min(rad, Math.hypot(x1 - x0, y1 - y0) / 2, Math.hypot(x2 - x1, y2 - y1) / 2);
+    d += ` L${x1 - Math.sign(x1 - x0) * r},${y1 - Math.sign(y1 - y0) * r} Q${x1},${y1} ${x1 + Math.sign(x2 - x1) * r},${y1 + Math.sign(y2 - y1) * r}`;
+  }
+  const l = p[p.length - 1]; return d + ` L${l[0]},${l[1]}`;
+}
+function draw() {
+  F.forEach(f => {
+    const sec = document.getElementById(f.id), canvas = sec.querySelector('.canvas'), svg = sec.querySelector('svg');
+    svg.innerHTML = `<defs><marker id="m-${f.id}" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6e6e6e"/></marker></defs>`;
+    f.edges.forEach(([a, b, t, label]) => {
+      const ea = document.getElementById(`${f.id}-${a}`), eb = document.getElementById(`${f.id}-${b}`);
+      if (!ea || !eb) return;
+      const p = pts(box(canvas, ea), box(canvas, eb), t);
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', round(p)); path.setAttribute('fill', 'none'); path.setAttribute('stroke', '#6e6e6e');
+      path.setAttribute('stroke-width', '2.5'); path.setAttribute('stroke-linecap', 'round'); path.setAttribute('marker-end', `url(#m-${f.id})`);
+      svg.appendChild(path);
+      if (label) {
+        const [x0, y0] = p[0], [x1, y1] = p[1], horiz = Math.abs(y1 - y0) < 2;
+        const tx = document.createElementNS(NS, 'text'); tx.setAttribute('class', 'elabel');
+        tx.setAttribute('x', x0 + 8); tx.setAttribute('y', horiz ? y0 - 8 : y0 + 18); tx.textContent = label; svg.appendChild(tx);
+      }
+    });
+  });
+}
+const redraw = () => requestAnimationFrame(draw);
+addEventListener('resize', redraw); document.fonts.ready.then(redraw); redraw();
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body>
+</html>
