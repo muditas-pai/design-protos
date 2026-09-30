@@ -90,6 +90,8 @@
   .ic-check { color: #16a34a; } .ic-x { color: #dc2626; } .ic-alert { color: #b45309; } .ic-info { color: #2563eb; } .ic-link { color: #0ea5a4; }
   .av { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; font: 700 11px Inter; margin: 0 2px; vertical-align: -6px; border: 2px solid #fff; }
   .lh { margin: 0; padding: 10px 18px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; }
+  .embed .links { display: none; }
+  .embed .top { padding-top: 64px; }
   @media (max-width: 700px) { .search input { font-size: 17px; } h1 { font-size: 28px; } }
 </style>
 </head>
@@ -110,6 +112,8 @@
 <main id="out"></main>
 
 <script>
+const EMBED = new URLSearchParams(location.search).get('embed') === '1';
+if (EMBED) document.documentElement.classList.add('embed');
 const CHIPS = ['Can a member invite?', 'Who can buy credits?', 'Hire an expert', 'Widget and export', 'Delete a folder', 'Someone leaves', 'Upgrade free workspace', 'Share one file from a private folder', 'Viewer can download?', 'Invite bonus credits', 'Owner leaves', 'Folders inside folders'];
 
 // words that mean the same thing
@@ -274,8 +278,9 @@ const input = document.getElementById('q');
 document.getElementById('chips').innerHTML = CHIPS.map(c => `<button type="button">${c}</button>`).join('');
 document.getElementById('chips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; input.value = b.textContent; go(); });
 let t; input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(go, 150); });
-function go() { const q = input.value; try { history.replaceState(null, '', q ? '?q=' + encodeURIComponent(q) : location.pathname); } catch (e) {} show(q); }
+function go() { const q = input.value; try { const p = new URLSearchParams(); if (EMBED) p.set('embed', '1'); if (q) p.set('q', q); const qs = p.toString(); history.replaceState(null, '', qs ? '?' + qs : location.pathname); } catch (e) {} show(q); }
 addEventListener('resize', () => current && requestAnimationFrame(() => drawWires(current)));
+if (EMBED && parent !== window) { const post = () => parent.postMessage({ v3h: document.documentElement.scrollHeight }, '*'); new ResizeObserver(post).observe(document.body); addEventListener('load', post); }
 load().then(() => { const q = new URLSearchParams(location.search).get('q'); if (q) { input.value = q; } show(input.value); document.fonts.ready.then(() => current && drawWires(current)); input.focus(); })
   .catch(err => { document.getElementById('status').textContent = 'Could not load the rules from v2. Open this page from the web link, not as a file.'; console.error(err); });
 </script>
