@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sharing Rules Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<style>
+  :root { --bg: #f5f5f3; --ink: #1c1c1c; --muted: #666; --line: #6e6e6e; --dot: #d2d2d2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+  .top { max-width: 1100px; margin: 0 auto; padding: 44px 16px 10px; }
+  .links { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 22px; }
+  .links a { font: 600 13px Inter; color: var(--ink); text-decoration: none; background: #fff; border: 1.5px solid #ddd; border-radius: 999px; padding: 6px 12px; }
+  h1 { font-size: 34px; margin: 0 0 6px; font-weight: 800; }
+  h1 .v { display: inline-block; background: #111; color: #fff; font: 700 13px Inter; border-radius: 6px; padding: 3px 9px; vertical-align: 8px; margin-left: 6px; }
+  .lead { color: var(--muted); margin: 0 0 20px; font-size: 16px; }
+  .search { position: relative; }
+  .search input { width: 100%; font: 500 20px Inter, sans-serif; padding: 18px 20px 18px 56px; border: 2.5px solid #111; border-radius: 16px; background: #fff; outline: none; box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+  .search input:focus { box-shadow: 0 0 0 4px rgba(47,125,246,.18); }
+  .search .mag { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; color: #555; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 0; }
+  .chips button { font: 600 13px Inter; border: 1.5px solid #ddd; background: #fff; border-radius: 999px; padding: 7px 12px; cursor: pointer; color: #333; }
+  .chips button:hover { border-color: #111; }
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 90px; }
+  .status { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  .answer { background: #111; color: #fff; border-radius: 16px; padding: 18px 20px; margin-top: 18px; }
+  .answer .k { font: 700 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: #bbb; }
+  .answer h2 { margin: 6px 0 6px; font-size: 22px; line-height: 1.3; }
+  .answer p { margin: 0; font-size: 17px; line-height: 1.5; }
+  .more-kid { margin-top: 10px; display: grid; gap: 6px; }
+  .more-kid div { background: rgba(255,255,255,.08); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
+  .more-kid b { display: block; }
+  h3.sec { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #777; margin: 30px 0 10px; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .rule { background: #fff; border: 1px solid #e3e3e3; border-left: 6px solid #2f7df6; border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.5; }
+  .rule .src { font: 700 10px Inter; letter-spacing: .06em; text-transform: uppercase; color: #888; }
+  .rule h4 { margin: 2px 0 4px; font-size: 15px; }
+  .rule ul { margin: 4px 0 0; padding-left: 18px; }
+  .uc { background: #fff; border: 1px solid #e3e3e3; border-radius: 12px; overflow: hidden; }
+  .uc table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+  .uc td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .uc td:first-child { font-weight: 600; width: 42%; }
+  .uc td .g { display: block; font: 700 10px Inter; letter-spacing: .06em; text-transform: uppercase; color: #7c3aed; margin-bottom: 2px; }
+  mark { background: #fff1a8; border-radius: 3px; padding: 0 2px; }
+  .answer mark { background: #6b5b00; color: #fff; }
+  .others { display: flex; flex-wrap: wrap; gap: 8px; }
+  .others button { font: 600 13px Inter; border: 1.5px solid #ddd; background: #fff; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  .others button.on { border-color: #111; background: #111; color: #fff; }
+  .empty { background: #fff; border: 1px dashed #ccc; border-radius: 12px; padding: 20px; text-align: center; color: #555; margin-top: 18px; }
+
+  /* flow diagram (same look as the flows page) */
+  .flow { background: #fff; border: 1px solid #e3e3e3; border-radius: 14px; overflow: hidden; }
+  .fhead { padding: 14px 18px 10px; border-bottom: 1px solid #eee; }
+  .fhead h4 { margin: 0; font-size: 17px; }
+  .fhead p { margin: 4px 0 0; color: #555; font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  .canvas { position: relative; padding: 26px 22px 28px; min-width: 860px; background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px); background-size: 22px 22px; }
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .g { display: grid; gap: 34px 54px; align-items: center; justify-items: center; }
+  .nd { position: relative; z-index: 1; border: 2.5px solid var(--line); background: #fff; border-radius: 6px; padding: 9px 11px; font-size: 13px; line-height: 1.35; text-align: center; width: 190px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .nd.start { background: #111; color: #fff; border-color: #111; border-radius: 999px; font-weight: 600; }
+  .nd.ok { background: #d3f2d0; border-color: #7dd87a; } .nd.no { background: #fde2e2; border-color: #ef8f8f; }
+  .nd.warn { background: #fff3a8; border-color: #e2c73a; } .nd.info { background: #cfe3fb; border-color: #5aa5f5; text-align: left; align-items: flex-start; }
+  .nd.priv { background: #fbe0c6; border-color: #f5a55a; }
+  .nd.hit { box-shadow: 0 0 0 4px rgba(124,58,237,.35); }
+  .dia { position: relative; z-index: 1; width: 128px; height: 128px; display: grid; place-items: center; }
+  .dia::before { content: ""; position: absolute; inset: 18px; background: #fff; border: 2.5px solid var(--line); transform: rotate(45deg); border-radius: 5px; }
+  .dia.hit::before { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124,58,237,.25); }
+  .dia span { position: relative; font-size: 12px; font-weight: 700; text-align: center; max-width: 96px; line-height: 1.25; }
+  .elabel { font: 700 11px Inter, sans-serif; fill: #333; paint-order: stroke; stroke: #f5f5f3; stroke-width: 4px; }
+  .ic { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.75); flex: none; }
+  .ic svg { width: 22px; height: 22px; }
+  .nd.start .ic { background: rgba(255,255,255,.14); color: #fff; }
+  .ic-folder { color: #e9a23b; } .ic-project { color: #7c3aed; } .ic-doc { color: #2f7df6; } .ic-lock { color: #d9822b; }
+  .ic-globe { color: #0ea5a4; } .ic-coin { color: #d4a017; } .ic-card { color: #334155; } .ic-mail { color: #2563eb; }
+  .ic-trash { color: #dc2626; } .ic-user { color: #475569; } .ic-shield { color: #7c3aed; } .ic-crown { color: #d4a017; }
+  .ic-check { color: #16a34a; } .ic-x { color: #dc2626; } .ic-alert { color: #b45309; } .ic-info { color: #2563eb; } .ic-link { color: #0ea5a4; }
+  .av { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; font: 700 11px Inter; margin: 0 2px; vertical-align: -6px; border: 2px solid #fff; }
+  .lh { margin: 0; padding: 10px 18px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; }
+  @media (max-width: 700px) { .search input { font-size: 17px; } h1 { font-size: 28px; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="links">
+    <a href="../v2/">📘 v2 rules</a><a href="../v2/#kid">🧒 Kid version</a><a href="../v2/flows.html">🔀 All flows</a>
+  </div>
+  <h1>Ask the sharing rules <span class="v">v3</span></h1>
+  <p class="lead">Type a question. You get the short answer, the rules, the flow diagram and the use cases. Answers come live from v2, so they're always up to date.</p>
+  <div class="search">
+    <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="q" type="search" placeholder="e.g. Can a member invite?" autocomplete="off" aria-label="Search the sharing rules">
+  </div>
+  <div class="chips" id="chips"></div>
+  <p class="status" id="status">Loading the rules…</p>
+</div>
+<main id="out"></main>
+
+<script>
+const CHIPS = ['Can a member invite?', 'Who can buy credits?', 'Hire an expert', 'Widget and export', 'Delete a folder', 'Someone leaves', 'Upgrade free workspace', 'Share one file from a private folder', 'Viewer can download?', 'Invite bonus credits', 'Owner leaves', 'Folders inside folders'];
+
+// words that mean the same thing
+const SYN = {
+  invite: ['invite','invites','inviting','add','adding','join','joins','share','sharing'],
+  buy: ['buy','buys','purchase','purchases','pay','pays','payment','card','order','request'],
+  credit: ['credit','credits','ai','pool','bonus'],
+  expert: ['expert','hire'],
+  delete: ['delete','deletes','deleting','remove','removed','trash','restore'],
+  widget: ['widget','public','link','twitter','export','exports','embed','world','powerpoint','pptx'],
+  upgrade: ['upgrade','upgrades','plan','plans','team','pro','basic','gold','downgrade','free'],
+  viewer: ['viewer','viewers','view','read','look'],
+  member: ['member','members'],
+  owner: ['owner','admin','admins'],
+  leave: ['leave','leaves','leaving','removed','quit'],
+  folder: ['folder','folders','project','projects','room','rooms'],
+  file: ['file','files','doc','docs','deck','decks','page','pages','slide','slides'],
+  private: ['private','secret','hidden','hide'],
+  download: ['download','downloads','export','copy','duplicate','duplicates'],
+  move: ['move','moves','moving','drag'],
+  email: ['email','emails','notify','notification','alert','alerts'],
+  setting: ['setting','settings','toggle','switch','approval','approve','approves'],
+};
+const STOP = new Set('a an the can could do does is are be to of in on for with and or my i we you it who what how when if as at by from that this they them their his her he she will would should any all'.split(' '));
+const norm = s => s.toLowerCase().replace(/[^a-z0-9,\s]/g, ' ');
+function expand(q) {
+  const toks = norm(q).split(/\s+/).filter(t => t && !STOP.has(t));
+  const groups = toks.map(t => {
+    for (const k in SYN) if (SYN[k].includes(t) || SYN[k].includes(t.replace(/s$/, ''))) return SYN[k];
+    return [t, t.replace(/s$/, '')];
+  });
+  return groups;
+}
+function score(text, groups, weight = 1) {
+  const t = ' ' + norm(text) + ' ';
+  let s = 0, hit = 0;
+  groups.forEach(g => { if (g.some(w => w.length > 1 && t.includes(' ' + w))) { s += weight; hit++; } });
+  return hit ? s + hit * hit * 0.5 : 0;
+}
+function highlight(html, groups) {
+  const words = [...new Set(groups.flat().filter(w => w.length > 2))].sort((a, b) => b.length - a.length);
+  if (!words.length) return html;
+  const re = new RegExp('\\b(' + words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\w*', 'gi');
+  return html.split(/(<[^>]+>)/).map(p => p.startsWith('<') ? p : p.replace(re, '<mark>$&</mark>')).join('');
+}
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+let DB = null, FL = null;
+
+async function load() {
+  const [v2, fl] = await Promise.all([fetch('../v2/index.html').then(r => r.text()), fetch('../v2/flows.html').then(r => r.text())]);
+  const doc = new DOMParser().parseFromString(v2, 'text/html');
+  const txt = el => el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+  const rules = [];
+  doc.querySelectorAll('#full .way').forEach(w => rules.push({ src: 'Rule', title: txt(w.querySelector('h4')), body: txt(w).replace(txt(w.querySelector('h4')), '').trim() }));
+  doc.querySelectorAll('#full .person').forEach(p => rules.push({ src: 'Person', title: txt(p.querySelector('h4')), items: [...p.querySelectorAll('li')].map(txt) }));
+  doc.querySelectorAll('#full .plan').forEach(p => rules.push({ src: 'Plan', title: txt(p.querySelector('h4')), items: [...p.querySelectorAll('li')].map(txt) }));
+  doc.querySelectorAll('#full .rules').forEach(r => { const head = r.parentElement.querySelector('.node'); if (head) rules.push({ src: 'Item type', title: txt(head), items: [...r.querySelectorAll('li')].map(txt) }); });
+  const pub = doc.querySelector('#full .publink'); if (pub) rules.push({ src: 'Widget', title: txt(pub.querySelector('h4')), items: [...pub.querySelectorAll('li')].map(txt) });
+  const inv = doc.querySelector('#full .inv'); if (inv) rules.push({ src: 'Invites', title: 'What a Member can invite', items: [...inv.querySelectorAll('.inv-def, .inv-notes li')].map(txt) });
+  doc.querySelectorAll('#full .warnbox').forEach(w => rules.push({ src: 'Rule', title: 'Note', body: txt(w) }));
+  const uses = []; let grp = '';
+  const tables = doc.querySelectorAll('#full .edge table');
+  tables.forEach(tb => tb.querySelectorAll('tr').forEach(tr => {
+    if (tr.classList.contains('grp')) { grp = txt(tr); return; }
+    const td = tr.querySelectorAll('td'); if (td.length === 2) uses.push({ grp, q: txt(td[0]), a: txt(td[1]) });
+  }));
+  const kid = [...doc.querySelectorAll('#kid .k-q')].map(k => ({ q: txt(k.querySelector('b')), a: txt(k.querySelector('span')) }));
+  // flows data comes straight from the flows page script
+  const i = fl.indexOf('const F = ['), j = fl.indexOf('const main =');
+  FL = new Function(fl.slice(i, j) + '\nreturn { F, I, AV, avatars, pickIcon };')();
+  DB = { rules, uses, kid };
+  document.getElementById('status').textContent = `${rules.length} rules, ${uses.length} use cases, ${kid.length} quick answers and ${FL.F.length} flows loaded from v2.`;
+}
+
+function flowText(f) { return [f.title, f.title, f.story, ...f.nodes.map(n => n[3]), ...f.edges.map(e => e[3] || ''), ...f.loops.map(l => l[1])].join(' '); }
+
+function search(q) {
+  const groups = expand(q);
+  if (!groups.length) return null;
+  const kid = DB.kid.map(k => ({ ...k, s: score(k.q, groups, 2) + score(k.a, groups) })).filter(x => x.s).sort((a, b) => b.s - a.s);
+  const rules = DB.rules.map(r => ({ ...r, s: score(r.title, groups, 3) + score(r.body || (r.items || []).join(' '), groups) })).filter(x => x.s).sort((a, b) => b.s - a.s);
+  const uses = DB.uses.map(u => ({ ...u, s: score(u.q, groups, 2) + score(u.a, groups) + score(u.grp, groups) })).filter(x => x.s).sort((a, b) => b.s - a.s);
+  const flows = FL.F.map(f => ({ f, s: score(f.title, groups, 4) + score(flowText(f), groups) })).filter(x => x.s).sort((a, b) => b.s - a.s);
+  return { groups, kid, rules, uses, flows };
+}
+
+function renderFlow(f, groups) {
+  const { I, avatars, pickIcon } = FL;
+  const nodes = f.nodes.map(([id, pos, type, text]) => {
+    const hit = score(text, groups) ? ' hit' : '';
+    if (type === 'dia') return `<div class="dia${hit}" data-id="${id}" style="grid-area:${pos}"><span>${esc(text)}</span></div>`;
+    const clean = text.replace(/^[📁📄🔒🌎🌍]️?\s*/u, ''); const k = pickIcon(text, type);
+    return `<div class="nd ${type}${hit}" data-id="${id}" style="grid-area:${pos}"><i class="ic ic-${k}">${I[k]}</i><span>${avatars(esc(clean))}</span></div>`;
+  }).join('');
+  const loop = f.loops[0] ? `<p class="lh">${f.loops[0][0] === 'ok' ? '🟢' : '🟠'} ${esc(f.loops[0][1])}</p>` : '';
+  return `<div class="flow" id="flowbox"><div class="fhead"><h4>${esc(f.title)}</h4><p>${esc(f.story)}</p></div>
+    <div class="scroll"><div class="canvas"><svg class="wires"></svg><div class="g" style="grid-template-columns:repeat(${f.cols}, auto)">${nodes}</div></div></div>${loop}</div>`;
+}
+
+function drawWires(f) {
+  const box = document.getElementById('flowbox'); if (!box) return;
+  const canvas = box.querySelector('.canvas'), svg = box.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  const get = id => box.querySelector(`[data-id="${id}"]`);
+  const rect = el => { const c = canvas.getBoundingClientRect(); let r = el.getBoundingClientRect();
+    if (el.classList.contains('dia')) { const k = (128 - 92 * Math.SQRT2) / 2; r = { left: r.left + k, top: r.top + k, right: r.right - k, bottom: r.bottom - k }; }
+    return { l: r.left - c.left, t: r.top - c.top, r: r.right - c.left, b: r.bottom - c.top, cx: (r.left + r.right) / 2 - c.left, cy: (r.top + r.bottom) / 2 - c.top }; };
+  const pts = (a, b, t) => { const g = 8;
+    if (t === 'v') { const x1 = a.cx, y1 = a.b, x2 = b.cx, y2 = b.t - g; if (Math.abs(x1 - x2) < 2) return [[x1, y1], [x1, y2]]; const ym = (y1 + y2) / 2; return [[x1, y1], [x1, ym], [x2, ym], [x2, y2]]; }
+    if (t === 'h') { const x1 = a.r, y1 = a.cy, x2 = b.l - g, y2 = b.cy; if (Math.abs(y1 - y2) < 2) return [[x1, y1], [x2, y1]]; const xm = (x1 + x2) / 2; return [[x1, y1], [xm, y1], [xm, y2], [x2, y2]]; }
+    if (t === 'vl') return [[a.cx, a.b], [a.cx, b.cy], [b.r + g, b.cy]];
+    return [[a.cx, a.b], [a.cx, b.cy], [b.l - g, b.cy]]; };
+  const round = (p, rad = 12) => { let d = `M${p[0][0]},${p[0][1]}`;
+    for (let i = 1; i < p.length - 1; i++) { const [x0, y0] = p[i - 1], [x1, y1] = p[i], [x2, y2] = p[i + 1];
+      const r = Math.min(rad, Math.hypot(x1 - x0, y1 - y0) / 2, Math.hypot(x2 - x1, y2 - y1) / 2);
+      d += ` L${x1 - Math.sign(x1 - x0) * r},${y1 - Math.sign(y1 - y0) * r} Q${x1},${y1} ${x1 + Math.sign(x2 - x1) * r},${y1 + Math.sign(y2 - y1) * r}`; }
+    const l = p[p.length - 1]; return d + ` L${l[0]},${l[1]}`; };
+  svg.innerHTML = '<defs><marker id="arr" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6e6e6e"/></marker></defs>';
+  f.edges.forEach(([a, b, t, label]) => {
+    const ea = get(a), eb = get(b); if (!ea || !eb) return;
+    const p = pts(rect(ea), rect(eb), t);
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', round(p)); path.setAttribute('fill', 'none'); path.setAttribute('stroke', '#6e6e6e'); path.setAttribute('stroke-width', '2.5'); path.setAttribute('marker-end', 'url(#arr)');
+    svg.appendChild(path);
+    if (label) { const [x0, y0] = p[0], [x1, y1] = p[1], hz = Math.abs(y1 - y0) < 2; const tx = document.createElementNS(NS, 'text');
+      tx.setAttribute('class', 'elabel'); tx.setAttribute('x', x0 + 8); tx.setAttribute('y', hz ? y0 - 8 : y0 + 18); tx.textContent = label; svg.appendChild(tx); }
+  });
+}
+
+let current = null;
+function show(q) {
+  const out = document.getElementById('out');
+  if (!DB) return;
+  if (!q.trim()) { out.innerHTML = ''; return; }
+  const r = search(q);
+  if (!r || (!r.kid.length && !r.rules.length && !r.uses.length && !r.flows.length)) {
+    out.innerHTML = `<div class="empty">No match for "<b>${esc(q)}</b>". Try other words, like "invite", "credits", "delete", "widget" or "upgrade".</div>`; return;
+  }
+  const H = s => highlight(esc(s), r.groups);
+  let html = '';
+  if (r.kid[0]) {
+    html += `<section class="answer"><span class="k">Short answer</span><h2>${H(r.kid[0].q)}</h2><p>${H(r.kid[0].a)}</p>`;
+    if (r.kid.length > 1) html += `<div class="more-kid">${r.kid.slice(1, 4).map(k => `<div><b>${H(k.q)}</b>${H(k.a)}</div>`).join('')}</div>`;
+    html += `</section>`;
+  }
+  if (r.rules.length) {
+    html += `<h3 class="sec">📘 The rules</h3><div class="rules">${r.rules.slice(0, 6).map(x => `<div class="rule"><span class="src">${x.src}</span><h4>${H(x.title)}</h4>${x.body ? `<div>${H(x.body)}</div>` : `<ul>${x.items.filter(i => score(i, r.groups)).slice(0, 6).map(i => `<li>${H(i)}</li>`).join('') || x.items.slice(0, 4).map(i => `<li>${H(i)}</li>`).join('')}</ul>`}</div>`).join('')}</div>`;
+  }
+  if (r.flows.length) {
+    current = r.flows[0].f;
+    html += `<h3 class="sec">🔀 The flow</h3>`;
+    if (r.flows.length > 1) html += `<div class="others" id="others">${r.flows.slice(0, 5).map((x, i) => `<button data-i="${i}" class="${i ? '' : 'on'}">${esc(x.f.title)}</button>`).join('')}</div><div style="height:10px"></div>`;
+    html += `<div id="flowslot">${renderFlow(current, r.groups)}</div>`;
+  }
+  if (r.uses.length) {
+    html += `<h3 class="sec">📋 Use cases</h3><div class="uc"><table>${r.uses.slice(0, 10).map(u => `<tr><td><span class="g">${esc(u.grp)}</span>${H(u.q)}</td><td>${H(u.a)}</td></tr>`).join('')}</table></div>`;
+  }
+  out.innerHTML = html;
+  const others = document.getElementById('others');
+  if (others) others.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+    others.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    current = r.flows[+b.dataset.i].f; document.getElementById('flowslot').innerHTML = renderFlow(current, r.groups); requestAnimationFrame(() => drawWires(current)); });
+  if (current) requestAnimationFrame(() => drawWires(current));
+}
+
+const input = document.getElementById('q');
+document.getElementById('chips').innerHTML = CHIPS.map(c => `<button type="button">${c}</button>`).join('');
+document.getElementById('chips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; input.value = b.textContent; go(); });
+let t; input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(go, 150); });
+function go() { const q = input.value; try { history.replaceState(null, '', q ? '?q=' + encodeURIComponent(q) : location.pathname); } catch (e) {} show(q); }
+addEventListener('resize', () => current && requestAnimationFrame(() => drawWires(current)));
+load().then(() => { const q = new URLSearchParams(location.search).get('q'); if (q) { input.value = q; } show(input.value); document.fonts.ready.then(() => current && drawWires(current)); input.focus(); })
+  .catch(err => { document.getElementById('status').textContent = 'Could not load the rules from v2. Open this page from the web link, not as a file.'; console.error(err); });
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body>
+</html>
