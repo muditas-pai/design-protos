@@ -96,16 +96,16 @@
 <body>
 <div class="top">
   <div class="links">
-    <a href="../v2/">📘 v2 rules</a><a href="../v2/#kid">🧒 Kid version</a><a href="../v2/flows.html">🔀 All flows</a>
+    <a href="../v2/">📘 v2 rules</a>
   </div>
   <h1>Ask the sharing rules <span class="v">v3</span></h1>
-  <p class="lead">Type a question. You get the short answer, the rules, the flow diagram and the use cases. Answers come live from v2, so they're always up to date.</p>
+  <p class="lead">Type a question. You get the answer and the flow. Answers come live from v2, so they're always up to date.</p>
   <div class="search">
     <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
     <input id="q" type="search" placeholder="e.g. Can a member invite?" autocomplete="off" aria-label="Search the sharing rules">
   </div>
   <div class="chips" id="chips"></div>
-  <p class="status" id="status">Loading the rules…</p>
+  <p class="status" id="status">Loading…</p>
 </div>
 <main id="out"></main>
 
@@ -182,7 +182,7 @@ async function load() {
   const i = fl.indexOf('const F = ['), j = fl.indexOf('const main =');
   FL = new Function(fl.slice(i, j) + '\nreturn { F, I, AV, avatars, pickIcon };')();
   DB = { rules, uses, kid };
-  document.getElementById('status').textContent = `${rules.length} rules, ${uses.length} use cases, ${kid.length} quick answers and ${FL.F.length} flows loaded from v2.`;
+  document.getElementById('status').textContent = '';
 }
 
 function flowText(f) { return [f.title, f.title, f.story, ...f.nodes.map(n => n[3]), ...f.edges.map(e => e[3] || ''), ...f.loops.map(l => l[1])].join(' '); }
@@ -245,27 +245,22 @@ function show(q) {
   if (!DB) return;
   if (!q.trim()) { out.innerHTML = ''; return; }
   const r = search(q);
-  if (!r || (!r.kid.length && !r.rules.length && !r.uses.length && !r.flows.length)) {
+  if (!r || (!r.kid.length && !r.uses.length && !r.flows.length)) {
     out.innerHTML = `<div class="empty">No match for "<b>${esc(q)}</b>". Try other words, like "invite", "credits", "delete", "widget" or "upgrade".</div>`; return;
   }
   const H = s => highlight(esc(s), r.groups);
   let html = '';
+  if (!r.kid[0] && r.uses[0]) r.kid.unshift({ q: r.uses[0].q, a: r.uses[0].a });
   if (r.kid[0]) {
-    html += `<section class="answer"><span class="k">Short answer</span><h2>${H(r.kid[0].q)}</h2><p>${H(r.kid[0].a)}</p>`;
+    html += `<section class="answer"><span class="k">Answer</span><h2>${H(r.kid[0].q)}</h2><p>${H(r.kid[0].a)}</p>`;
     if (r.kid.length > 1) html += `<div class="more-kid">${r.kid.slice(1, 4).map(k => `<div><b>${H(k.q)}</b>${H(k.a)}</div>`).join('')}</div>`;
     html += `</section>`;
-  }
-  if (r.rules.length) {
-    html += `<h3 class="sec">📘 The rules</h3><div class="rules">${r.rules.slice(0, 6).map(x => `<div class="rule"><span class="src">${x.src}</span><h4>${H(x.title)}</h4>${x.body ? `<div>${H(x.body)}</div>` : `<ul>${x.items.filter(i => score(i, r.groups)).slice(0, 6).map(i => `<li>${H(i)}</li>`).join('') || x.items.slice(0, 4).map(i => `<li>${H(i)}</li>`).join('')}</ul>`}</div>`).join('')}</div>`;
   }
   if (r.flows.length) {
     current = r.flows[0].f;
     html += `<h3 class="sec">🔀 The flow</h3>`;
     if (r.flows.length > 1) html += `<div class="others" id="others">${r.flows.slice(0, 5).map((x, i) => `<button data-i="${i}" class="${i ? '' : 'on'}">${esc(x.f.title)}</button>`).join('')}</div><div style="height:10px"></div>`;
     html += `<div id="flowslot">${renderFlow(current, r.groups)}</div>`;
-  }
-  if (r.uses.length) {
-    html += `<h3 class="sec">📋 Use cases</h3><div class="uc"><table>${r.uses.slice(0, 10).map(u => `<tr><td><span class="g">${esc(u.grp)}</span>${H(u.q)}</td><td>${H(u.a)}</td></tr>`).join('')}</table></div>`;
   }
   out.innerHTML = html;
   const others = document.getElementById('others');
