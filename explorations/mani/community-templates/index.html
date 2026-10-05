@@ -827,6 +827,10 @@
   /* ── Flow bar (proto navigation, not product UI) ───────── */
   #flow { position: fixed; left: 120px; bottom: 12px; z-index: 90; background: rgba(23,23,23,.94); color: #fff; border-radius: 12px; padding: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: calc(100vw - 100px); flex-wrap: wrap; }
   #flow button { color: rgba(255,255,255,.7); font-size: 12px; }
+  #flow .grip { width: 18px; height: 28px; display: grid; place-items: center; cursor: grab; color: rgba(255,255,255,.5); border-radius: 5px; touch-action: none; flex: none; font-size: 16px; }
+  #flow .grip:hover { color: #fff; background: rgba(255,255,255,.1); }
+  #flow.dragging { opacity: .92; box-shadow: 0 14px 34px rgba(0,0,0,.35); }
+  #flow.dragging .grip { cursor: grabbing; }
   #flow .tog { height: 28px; padding: 0 6px; border-radius: 6px; display: flex; align-items: center; gap: 5px; }
   #flow .tog:hover { background: rgba(255,255,255,.1); color: #fff; }
   #flow .jg { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.5); margin-left: 6px; white-space: nowrap; }
@@ -940,6 +944,36 @@
 <div id="modal-root"></div>
 <div id="toasts"></div>
 <div id="flow"></div>
+<script>
+/* Flow bar can be dragged by its grip so you can see what is behind it. Position is a per-viewer convenience. */
+(function () {
+  const KEY = 'ct-flow-pos';
+  const flow = document.getElementById('flow');
+  const clamp = (x, y) => [Math.min(Math.max(8, x), innerWidth - flow.offsetWidth - 8), Math.min(Math.max(8, y), innerHeight - flow.offsetHeight - 8)];
+  const place = (x, y) => { [x, y] = clamp(x, y); Object.assign(flow.style, { left: x + 'px', top: y + 'px', bottom: 'auto' }); return [x, y]; };
+  const reset = () => { Object.assign(flow.style, { left: '', top: '', bottom: '' }); try { localStorage.removeItem(KEY); } catch (e) {} };
+  try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p) requestAnimationFrame(() => place(p[0], p[1])); } catch (e) {}
+  let start = null;
+  flow.addEventListener('pointerdown', e => {
+    if (!e.target.closest('#flow-grip')) return;
+    e.preventDefault();
+    const r = flow.getBoundingClientRect();
+    start = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId };
+    flow.setPointerCapture(e.pointerId); flow.classList.add('dragging');
+  });
+  flow.addEventListener('pointermove', e => { if (start && e.pointerId === start.id) place(e.clientX - start.dx, e.clientY - start.dy); });
+  const end = e => {
+    if (!start || e.pointerId !== start.id) return;
+    start = null; flow.classList.remove('dragging');
+    const r = flow.getBoundingClientRect();
+    try { localStorage.setItem(KEY, JSON.stringify([r.left, r.top])); } catch (err) {}
+  };
+  flow.addEventListener('pointerup', end); flow.addEventListener('pointercancel', end);
+  // While dragging, the pointer is captured by the bar, so a double-click lands on #flow itself
+  flow.addEventListener('dblclick', e => { if (e.target === flow || e.target.closest('#flow-grip')) reset(); });
+  addEventListener('resize', () => { if (flow.style.top) { const r = flow.getBoundingClientRect(); place(r.left, r.top); } });
+})();
+</script>
 
 <script>
 /* ═══════════════════════════════════════════════════════════
@@ -3111,6 +3145,7 @@ function renderFlow() {
   const j = currentJourney();
   const i = Math.max(0, j.steps.indexOf(ROUTE));
   $('#flow').innerHTML = `
+    <span class="grip" id="flow-grip" title="Drag to move. Double-click to reset."><i class="ph ph-dots-six-vertical"></i></span>
     <button class="tog" title="${min ? 'Show' : 'Hide'} flow bar" id="flow-tog"><i class="ph ${min ? 'ph-path' : 'ph-caret-left'}"></i>${min ? 'Flow' : ''}</button>
     ${(REFER_ONLY ? [['Refer & earn', 'refer']] : COMMUNITY_ONLY ? [['Your page', 'me'], ['Team page', 'team'], ['Visitor', 'other']] : [['Your page', 'me'], ['Team page', 'team'], ['More', 'other'], ['Refer a friend', 'refer']]).map(([g, k]) => [g, JOURNEYS.filter(x => x.group === k && !(COMMUNITY_ONLY && x.id === 'r'))]).map(([g, list]) => `
     <span class="jg">${g}</span><div class="jr">${list.map(x => `<button class="${x.id === j.id ? 'on' : ''}" data-j="${x.id}" title="${x.hint}">${x.label}</button>`).join('')}</div>`).join('')}
