@@ -825,7 +825,7 @@
   @keyframes tin { from { opacity: 0; transform: translateY(-8px); } }
 
   /* ── Flow bar (proto navigation, not product UI) ───────── */
-  #flow { position: fixed; left: 12px; bottom: 12px; z-index: 90; background: rgba(23,23,23,.94); color: #fff; border-radius: 12px; padding: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: calc(100vw - 100px); flex-wrap: wrap; }
+  #flow { position: fixed; left: 120px; bottom: 12px; z-index: 90; background: rgba(23,23,23,.94); color: #fff; border-radius: 12px; padding: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: calc(100vw - 100px); flex-wrap: wrap; }
   #flow button { color: rgba(255,255,255,.7); font-size: 12px; }
   #flow .tog { height: 28px; padding: 0 6px; border-radius: 6px; display: flex; align-items: center; gap: 5px; }
   #flow .tog:hover { background: rgba(255,255,255,.1); color: #fff; }
@@ -857,8 +857,6 @@
   .rf-hero h3 { margin: 0; font-size: 24px; font-weight: 400; line-height: 1.3; }
   .rf-hero p { margin: 0 0 12px; color: var(--t2); }
   .rf-hero .lbl { margin-top: 8px; }
-  .rf-hero .mail { display: flex; gap: 6px; }
-  .rf-hero .mail .input { height: 36px; }
   .rf-hero .b { display: flex; flex-direction: column; justify-content: center; padding: 24px 22px; }
   .rf-hero .b .rf-gets { margin: 0; gap: 0; }
   .rf-hero .b .rf-gets > div { background: none; box-shadow: none; border-radius: 0; padding: 16px 0; }
@@ -2659,8 +2657,8 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
           <p>They sign up with your link and get their own workspace. Nothing in yours is shared.</p>
           <div class="lbl">Your referral link</div>
           <div class="ref-row" style="box-shadow:0 1px 4px -1px var(--line), inset 0 0 0 1px var(--line)"><span style="color:var(--t2)">${esc(refUrl())}</span><button class="btn btn-primary btn-sm" id="rf-copy"><i class="ph ph-copy"></i>Copy</button></div>
-          <div class="mail"><input class="input" id="rf-email" placeholder="Invite by email"><button class="btn btn-outline" id="rf-send">Send invite</button></div>
-          <div class="share-ic" style="margin-top:4px">${['linkedin-logo', 'x-logo', 'facebook-logo', 'whatsapp-logo'].map(i => `<button class="icon-btn sm" data-share="${i}"><i class="ph ph-${i}"></i></button>`).join('')}</div>
+          <div class="lbl">Or share via</div>
+          <div class="share-ic">${[['envelope-simple', 'Email'], ['linkedin-logo', 'LinkedIn'], ['x-logo', 'X'], ['facebook-logo', 'Facebook'], ['whatsapp-logo', 'WhatsApp']].map(([i, n]) => `<button class="icon-btn sm" data-share="${i}" title="${n}" aria-label="Share via ${n}"><i class="ph ph-${i}"></i></button>`).join('')}</div>
           <div class="terms">By sharing your link, you agree to the <u>Referral terms</u>.</div>
         </div>
         <div class="b">
@@ -2697,17 +2695,11 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
       <div class="faq">${REF_FAQ.map(([q, a, isPro]) => `<details><summary><span>${q} ${isPro ? proBadge : ''}</span><i class="ph ph-caret-down"></i></summary><p>${a}</p></details>`).join('')}</div>
     </div>`, tog);
   $('#rf-copy').onclick = () => toast('Referral link copied');
-  $$('[data-share]').forEach(b => b.onclick = () => toast('Share sheet opens with your link', 'ph ph-share-network'));
+  $$('[data-share]').forEach(b => b.onclick = () => b.dataset.share === 'envelope-simple'
+    ? toast('Your email opens with the invite and your link', 'ph ph-envelope-simple')
+    : toast(`${b.title} opens with your link`, 'ph ph-share-network'));
   $$('[data-remind]').forEach(b => b.onclick = () => toast(`Reminder sent to ${esc(b.dataset.remind)}`, 'ph ph-paper-plane-tilt'));
   $('#rf-payout') && ($('#rf-payout').onclick = () => { S._pay = null; renderPayout({ redeem: false }); });
-  $('#rf-send').onclick = () => {
-    const list = $('#rf-email').value.split(/[,\s]+/).map(v => v.trim()).filter(Boolean);
-    const bad = list.filter(v => !/^\S+@\S+\.\S+$/.test(v));
-    if (!list.length || bad.length) { $('#rf-email').style.boxShadow = 'inset 0 0 0 1px var(--red)'; $('#rf-email').focus(); if (bad.length) toast(`Check this email: ${esc(bad[0])}`, 'ph ph-warning'); return; }
-    list.reverse().forEach(v => S.refs.unshift({ who: v, status: 'invited', when: 'Just now', at: Date.now() })); save();
-    renderRefer(); toast(list.length === 1 ? `Invite sent to ${esc(list[0])}` : `${list.length} invites sent`);
-  };
-  $('#rf-email').onkeydown = e => { if (e.key === 'Enter') $('#rf-send').click(); };
   $$('[data-rmax]').forEach(b => b.onclick = () => { S.refMax = b.dataset.rmax === '1'; save(); renderRefer(); });
   $$('[data-plan]').forEach(b => b.onclick = () => setPlan(b.dataset.plan));
   if (paid && mine) later(() => toast(`${esc(friendFirst())} upgraded to Pro. You earn ${money(mine.cash || 0)}, paid ${mine.payDate}`, 'ph-fill ph-coins'), 350);
