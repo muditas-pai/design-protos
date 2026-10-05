@@ -1054,6 +1054,8 @@ const DEFAULT_STATE = () => ({
 });
 // ?mode=refer: the separate Refer & earn link. Same proto, community parts hidden, flow bar shows Free and Pro only.
 const REFER_ONLY = new URLSearchParams(location.search).get('mode') === 'refer';
+// ?mode=community: the separate Community publish link. Referral parts hidden, flow bar shows page, team and visitor flows.
+const COMMUNITY_ONLY = new URLSearchParams(location.search).get('mode') === 'community';
 let S = DEFAULT_STATE();
 try { const saved = sessionStorage.getItem('ct2-state'); if (saved) S = Object.assign(DEFAULT_STATE(), JSON.parse(saved)); } catch (e) {}
 function save() { try { sessionStorage.setItem('ct2-state', JSON.stringify(S)); } catch (e) {} }
@@ -1451,7 +1453,7 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
       <nav>${nav('ph-house-simple', 'Home', 'dashboard')}${nav('ph-paint-brush-broad', 'Brand kit', null, pro)}</nav>
       ${friend ? `<nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, goldTag)}</nav>` : sidebarFolders(active.startsWith('folder:') ? active.slice(7) : '')}
       <nav>${nav('ph-pencil-ruler', 'Hire an expert')}${nav('ph-layout', 'Templates')}${REFER_ONLY ? '' : nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}</nav>
-      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
+      <nav class="bot">${COMMUNITY_ONLY ? '' : nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
     </aside>
     <main class="dmain">
       <div class="dtop">
@@ -1494,7 +1496,7 @@ function renderDashboard() {
         <button class="fd-pill"><i class="ph-fill ph-microsoft-powerpoint-logo"></i>Import PowerPoint</button>
         <button class="fd-pill"><i class="ph-fill ph-pen-nib"></i>Hire an Expert</button>
         <button class="fd-pill"><i class="ph-fill ph-layout"></i>Use a Template</button>
-        <button class="fd-pill" data-go="refer"><i class="ph-fill ph-paper-plane-tilt"></i>Refer &amp; earn</button>
+        ${COMMUNITY_ONLY ? '' : '<button class="fd-pill" data-go="refer"><i class="ph-fill ph-paper-plane-tilt"></i>Refer &amp; earn</button>'}
       </div>
     </section>
     <section class="fd-files">
@@ -2112,7 +2114,7 @@ function settingsShell(tab, main, topLeft = '') {
       <nav class="st-nav"><div class="st-lbl">Workspace settings</div>
         ${item('general', 'ph-gear', 'General')}${item('members', 'ph-users-three', 'Members')}${item('billing', 'ph-credit-card', 'Billing')}${item('gallery', 'ph-globe-hemisphere-west', 'Public gallery', S.company.on ? '' : '<span class="fd-badge">New</span>')}
       </nav>
-      <nav class="st-nav"><div class="st-lbl">Profile settings</div>${item('profile', 'ph-user', 'Profile')}${item('community', 'ph-users-three', 'Community page', S.profile ? '' : '<span class="fd-badge">New</span>')}${item('rewards', 'ph-gift', 'Rewards')}</nav>
+      <nav class="st-nav"><div class="st-lbl">Profile settings</div>${item('profile', 'ph-user', 'Profile')}${item('community', 'ph-users-three', 'Community page', S.profile ? '' : '<span class="fd-badge">New</span>')}${COMMUNITY_ONLY ? '' : item('rewards', 'ph-gift', 'Rewards')}</nav>
     </aside>
     <main class="st-main">
       <div class="dtop">${topLeft}<span style="flex:1"></span>
@@ -2837,7 +2839,7 @@ function notifItems() {
   if (S.redeemed) L.push({ i: 'ph-bank', t: `<b>${money(S.redeemed)}</b> is on its way to ${esc(S.payout || 'you')}`, m: 'Arrives in 3 to 5 business days', go: 'rewards', at: S.redeemedAt });
   L.push({ i: 'ph-heart', t: '<b>Dana Ortiz</b> started following you', go: 'creator', cr: 'dana', at: 2 });
   L.push({ i: 'ph-sparkle', t: 'Publish a deck to Community and earn <b>200 credits</b> for every sign up', go: 'editor', at: 1 });
-  return L.filter(n => !REFER_ONLY || ['refer', 'rewards'].includes(n.go)).sort((a, b) => (b.at || 0) - (a.at || 0));
+  return L.filter(n => (!REFER_ONLY || ['refer', 'rewards'].includes(n.go)) && (!COMMUNITY_ONLY || n.go !== 'refer')).sort((a, b) => (b.at || 0) - (a.at || 0));
 }
 const notifUnread = () => notifItems().filter(n => n.at > (S.notifSeen || 0)).length;
 const bellHTML = () => `<button class="fd-ic bell" id="bell" aria-label="Notifications"><i class="ph ph-bell"></i>${notifUnread() ? `<span class="dot">${notifUnread()}</span>` : ''}</button>`;
@@ -3074,9 +3076,12 @@ function go(r) {
 
 /* Flow bar: pick a journey, then step through it. Proto navigation only. */
 const JOURNEYS = [
-  { id: 'a', group: 'me', label: 'From dashboard', hint: 'Create the page from the dashboard, publish later', fresh: true,
+  { id: 'e', group: 'me', label: 'Has a page', hint: 'Page already set up, publish a deck from Share', fresh: true,
+    init: s => { s.profile = JSON.parse(JSON.stringify(s.draft)); },
+    steps: ['editor', 'share', 'mask', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
+  { id: 'a', group: 'me', label: 'No page · from dashboard', hint: 'Create the page from the dashboard, publish later', fresh: true,
     steps: ['dashboard', 'community', 'create-page', 'my-page', 'editor', 'share', 'mask', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
-  { id: 'b', group: 'me', label: 'From Share', hint: 'Publish from Share, create the page on the way', fresh: true,
+  { id: 'b', group: 'me', label: 'No page · from Share', hint: 'Publish from Share, create the page on the way', fresh: true,
     steps: ['editor', 'share', 'profile-setup', 'mask', 'details', 'live', 'gallery', 'template', 'profile'] },
   { id: 'v', group: 'other', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['gallery', 'template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
@@ -3107,7 +3112,7 @@ function renderFlow() {
   const i = Math.max(0, j.steps.indexOf(ROUTE));
   $('#flow').innerHTML = `
     <button class="tog" title="${min ? 'Show' : 'Hide'} flow bar" id="flow-tog"><i class="ph ${min ? 'ph-path' : 'ph-caret-left'}"></i>${min ? 'Flow' : ''}</button>
-    ${(REFER_ONLY ? [['Refer & earn', 'refer']] : [['Your page', 'me'], ['Team page', 'team'], ['More', 'other'], ['Refer a friend', 'refer']]).map(([g, k]) => [g, JOURNEYS.filter(x => x.group === k)]).map(([g, list]) => `
+    ${(REFER_ONLY ? [['Refer & earn', 'refer']] : COMMUNITY_ONLY ? [['Your page', 'me'], ['Team page', 'team'], ['Visitor', 'other']] : [['Your page', 'me'], ['Team page', 'team'], ['More', 'other'], ['Refer a friend', 'refer']]).map(([g, k]) => [g, JOURNEYS.filter(x => x.group === k && !(COMMUNITY_ONLY && x.id === 'r'))]).map(([g, list]) => `
     <span class="jg">${g}</span><div class="jr">${list.map(x => `<button class="${x.id === j.id ? 'on' : ''}" data-j="${x.id}" title="${x.hint}">${x.label}</button>`).join('')}</div>`).join('')}
     ${j.steps.length > 1 ? `
     <div class="stepper">
@@ -3163,6 +3168,7 @@ document.addEventListener('keydown', e => {
   if (jj) { if (jj.plan) S.plan = jj.plan; if (jj.init) jj.init(S); S.journey = jj.id; save(); go(q.get('s') || jj.steps[0]); return; }
   if (q.get('plan') === 'pro' || q.get('plan') === 'free') { S.plan = q.get('plan'); S.journey = S.plan === 'pro' ? 'p' : 'f'; save(); }
   if (REFER_ONLY && !JOURNEYS.find(x => x.id === S.journey && x.group === 'refer')) { S.journey = S.plan === 'pro' ? 'p' : 'f'; save(); }
+  if (COMMUNITY_ONLY && !JOURNEYS.find(x => x.id === S.journey && x.group !== 'refer' && x.id !== 'r')) { S.journey = 'a'; save(); }
   go(q.get('s') || 'dashboard');
 })();
 </script>
