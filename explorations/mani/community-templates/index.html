@@ -497,6 +497,35 @@
   .co-review { display: flex; align-items: center; gap: 12px; margin-top: 28px; padding: 12px 14px; border-radius: 6px; background: var(--amber-bg); color: #78350F; font-size: 13px; }
   .co-review > i { font-size: 18px; color: var(--amber); }
   .co-review span { flex: 1; } .co-review b { font-weight: 500; }
+  .pub-as { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .pub-as .lb { font-size: 12px; color: var(--t3); margin-right: 4px; white-space: nowrap; }
+  .pub-as button { flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line2); text-align: left; min-width: 0; }
+  .pub-as button img { width: 28px; height: 28px; border-radius: 6px; flex: none; }
+  .pub-as button span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .pub-as button b { font-weight: 500; font-size: 13px; }
+  .pub-as button small { font-size: 11px; color: var(--t3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pub-as button > i { font-size: 16px; color: var(--ink); opacity: 0; }
+  .pub-as button.on { box-shadow: inset 0 0 0 2px var(--ink); background: var(--bg2); }
+  .pub-as button.on > i { opacity: 1; }
+  .cl { display: grid; grid-template-columns: 1fr 300px; min-height: 380px; }
+  .cl-form { padding: 28px; display: flex; flex-direction: column; gap: 14px; }
+  .cl-form h3 { margin: 0; font-size: 20px; font-weight: 500; }
+  .cl-form p { margin: 0 0 6px; color: var(--t2); }
+  .cl-code { font-size: 22px; letter-spacing: .4em; text-align: center; height: 52px; }
+  .cl-err { color: var(--red); font-size: 13px; min-height: 1px; }
+  .cl-err:empty { display: none; }
+  .cl-prev { background: var(--bg2); border-left: 1px solid var(--line); padding: 0 0 20px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+  .cl-prev .cv { align-self: stretch; height: 84px; }
+  .cl-prev .lg { width: 64px; height: 64px; border-radius: 14px; border: 3px solid #fff; margin-top: -32px; box-shadow: var(--e1); background: #fff; }
+  .cl-prev b { font-weight: 500; margin-top: 6px; }
+  .cl-prev > span { font-size: 12px; color: var(--t3); }
+  .cl-prev .pill { margin: 6px 0 14px; }
+  .cl-tpls { display: grid; grid-template-columns: repeat(3, 76px); gap: 6px; }
+  .cl-tpls .th { aspect-ratio: 16 / 9; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); background-size: cover; }
+  .cl-tpls .th.tcv { padding: 6%; } .cl-tpls .th.tcv small { display: none; } .cl-tpls .th.tcv b { font-size: 9cqw; margin: 0; }
+  .cl-prev > small { font-size: 12px; color: var(--t3); margin-top: 10px; padding: 0 20px; }
+  .co-unclaimed { display: flex; align-items: center; gap: 10px; padding: 10px 24px; background: var(--bg3); font-size: 13px; color: var(--t2); justify-content: center; }
+  .co-unclaimed b { font-weight: 500; color: var(--t1); }
   .crumbs a { color: inherit; }
   .crumbs a:hover { color: var(--t1); text-decoration: underline; }
   .credits { position: absolute; right: 12px; bottom: 12px; width: 320px; border-radius: 8px; box-shadow: var(--e3), 0 30px 60px rgba(0,0,0,.18); background: url(assets/confetti.jpg) center/cover; padding: 12px; animation: pop .5s var(--ease); z-index: 6; }
@@ -851,6 +880,7 @@ const DEFAULT_STATE = () => ({
   viewTpl: 'mine',      // which template page is open: 'mine' or a gallery id
   gCat: 'All', gSort: 'popular', gQ: '',
   follows: {},          // creators the viewer follows
+  publishAs: 'me',      // Share modal: publish as 'me' (personal page) or 'team' (Foursquare page)
   company: { on: false, name: 'Foursquare', slug: 'foursquare', about: 'Foursquare helps businesses understand places and the people who visit them. These are the decks our teams use every week.', website: 'foursquare.com', linkedin: 'linkedin.com/company/foursquare', cover: 'linear-gradient(120deg,#F94877,#FF8A5B 55%,#FFD36E)', membersPublish: true, review: true },
   refs: [],             // refer a friend: invites sent + friends joined this session
   refMax: false,        // proto toggle: inviter already earned the 2,000 max
@@ -947,7 +977,7 @@ function openModal(inner, { width, onClose = () => go('editor'), plain = false, 
 function closeModal() { $('#modal-root').innerHTML = ''; }
 
 function stepHead(title, backTo) {
-  const list = S._firstTime ? ['profile-setup', 'mask', 'details'] : ['mask', 'details'];
+  const list = S._firstTime ? ['profile-setup', 'mask', 'details'] : S._teamFirst ? ['team-claim', 'mask', 'details'] : ['mask', 'details'];
   const idx = list.indexOf(ROUTE);
   return `<div class="f-head">
     ${backTo ? `<button class="back" data-go="${backTo}" aria-label="Back"><i class="ph ph-arrow-left"></i></button>` : ''}
@@ -1010,7 +1040,10 @@ function renderShare() {
           </div>
           <div class="divider"></div>
           <div class="pad">${community}
-            ${S.profile && !pub ? `<div style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px;margin-top:10px">${avatar(18)} Publishing as <b style="color:var(--t1);font-weight:500">${esc(S.profile.name)}</b> · presentations.ai/@${esc(S.profile.handle)}</div>` : ''}
+            ${!pub ? `<div class="pub-as"><span class="lb">Publish as</span>
+              <button data-as="me" class="${S.publishAs !== 'team' ? 'on' : ''}">${avatar(28)}<span><b>${esc(P().name)}</b><small>${S.profile ? `presentations.ai/@${esc(S.profile.handle)}` : 'You’ll create your page next'}</small></span><i class="ph-fill ph-check-circle"></i></button>
+              <button data-as="team" class="${S.publishAs === 'team' ? 'on' : ''}"><img src="${A}ws-foursquare.jpg" alt=""><span><b>${esc(S.company.name)}</b><small>${S.company.on ? `presentations.ai/${esc(S.company.slug)}` : 'Team page · you’ll claim it next'}</small></span><i class="ph-fill ph-check-circle"></i></button>
+            </div>` : ''}
           </div>
           <div class="pad">
             <div style="margin-bottom:10px">Share on social media</div>
@@ -1039,9 +1072,13 @@ function renderShare() {
   $$('[data-tog]').forEach(b => b.onclick = () => b.classList.toggle('on'));
   $('#adv-tog').onclick = () => { const b = $('#adv-body'); const h = b.style.display === 'none'; b.style.display = h ? 'flex' : 'none'; $('#adv-tog i').className = 'ph ' + (h ? 'ph-caret-up' : 'ph-caret-down'); };
   const pa = $('#publish-again');
-  if (pa) pa.onclick = () => { S._firstTime = false; go('mask'); };
+  if (pa) pa.onclick = () => { S._firstTime = false; S._teamFirst = false; go('mask'); };
+  $$('[data-as]').forEach(b => b.onclick = () => { S.publishAs = b.dataset.as; save(); renderShare(); });
   const pn = $('#publish-now');
-  if (pn) pn.onclick = () => { S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); };
+  if (pn) pn.onclick = () => {
+    if (S.publishAs === 'team') { S._firstTime = false; S._teamFirst = !S.company.on; save(); go(S.company.on ? 'mask' : 'team-claim'); return; }
+    S._teamFirst = false; S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup');
+  };
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1347,7 +1384,7 @@ function renderPageModal({ from = 'dashboard', edit = false } = {}) {
    ═══════════════════════════════════════════════════════════ */
 function renderMask() {
   openModal(`
-    ${stepHead('Before publishing, mask sensitive data', S._firstTime ? 'profile-setup' : 'share')}
+    ${stepHead('Before publishing, mask sensitive data', S._firstTime ? 'profile-setup' : S._teamFirst ? 'team-claim' : 'share')}
     <div class="card" style="width:1112px">
       <div class="mask">
         <div class="mask-left">
@@ -1426,8 +1463,10 @@ function renderDetails() {
           <div class="field"><label class="label">Description</label><textarea class="textarea" id="d-desc" rows="6" maxlength="600">${esc(t.desc)}</textarea></div>
           <div class="field"><label class="label">Category <span class="hint">Where it shows on Community</span></label><div class="tags" id="d-cat">${GALLERY_CATS.map(c => `<button class="chip sm ${t.cat === c ? 'on' : ''}" data-dcat="${c}">${c}</button>`).join('')}</div></div>
           <div class="field"><label class="label">Tags</label><div class="tags" id="d-tags"></div></div>
-          ${S.company.on && S.company.membersPublish ? `<label class="co-also"><button class="toggle ${t.toCompany ? 'on' : ''}" id="d-co" type="button" aria-label="Also show on team gallery"></button><img src="${A}ws-foursquare.jpg" alt=""><span>Also show on <b>${esc(S.company.name)}</b>’s team gallery${S.company.review ? '<small>An admin approves it first</small>' : ''}</span></label>` : ''}
-          <div class="as-row">${avatar(28)}<div class="who">Publishing as <b style="font-weight:500">${esc(P().name)}</b><span>presentations.ai/@${esc(P().handle)}</span></div><button class="link" id="d-editp" style="font-size:13px">Edit</button></div>
+          ${S.publishAs !== 'team' && S.company.on && S.company.membersPublish ? `<label class="co-also"><button class="toggle ${t.toCompany ? 'on' : ''}" id="d-co" type="button" aria-label="Also show on team gallery"></button><img src="${A}ws-foursquare.jpg" alt=""><span>Also show on <b>${esc(S.company.name)}</b>’s team gallery${S.company.review ? '<small>An admin approves it first</small>' : ''}</span></label>` : ''}
+          ${S.publishAs === 'team'
+            ? `<div class="as-row">${avatar(28, TEAM())}<div class="who">Publishing as <b style="font-weight:500">${esc(S.company.name)}</b><span>presentations.ai/${esc(S.company.slug)} · by ${esc(P().name)}</span></div><button class="link" data-go="share" style="font-size:13px">Change</button></div>`
+            : `<div class="as-row">${avatar(28)}<div class="who">Publishing as <b style="font-weight:500">${esc(P().name)}</b><span>presentations.ai/@${esc(P().handle)}</span></div><button class="link" id="d-editp" style="font-size:13px">Edit</button></div>`}
         </div>
       </div>
       <div class="f-foot">
@@ -1450,7 +1489,7 @@ function renderDetails() {
   $('#d-co') && ($('#d-co').onclick = () => { t.toCompany = !t.toCompany; save(); $('#d-co').classList.toggle('on', t.toCompany); });
   $('#d-title').oninput = e => { t.title = e.target.value; $('#d-publish').disabled = !t.title.trim(); save(); };
   $('#d-desc').oninput = e => { t.desc = e.target.value; save(); };
-  $('#d-editp').onclick = () => renderPageModal({ edit: true });
+  $('#d-editp') && ($('#d-editp').onclick = () => renderPageModal({ edit: true }));
   $('#d-publish').onclick = () => {
     const b = $('#d-publish');
     b.innerHTML = '<span class="spin"></span>Publishing'; b.disabled = true;
@@ -1467,7 +1506,7 @@ function renderLive() {
     <div class="live">
       <div style="display:flex;flex-direction:column;padding-bottom:24px">
         <h2>“${esc(S.tpl.title)}” is live <i class="ph-fill ph-check-circle"></i></h2>
-        <div style="display:flex;gap:16px"><a class="link" href="#" data-go="gallery">View on Community <i class="ph ph-arrow-up-right"></i></a><a class="link" href="#" data-go="template">Template page <i class="ph ph-arrow-up-right"></i></a><a class="link" href="#" data-go="profile">Your profile <i class="ph ph-arrow-up-right"></i></a></div>
+        <div style="display:flex;gap:16px"><a class="link" href="#" data-go="gallery">View on Community <i class="ph ph-arrow-up-right"></i></a><a class="link" href="#" data-go="template">Template page <i class="ph ph-arrow-up-right"></i></a>${S.publishAs === 'team' ? `<a class="link" href="#" data-go="company">${esc(S.company.name)} page <i class="ph ph-arrow-up-right"></i></a>` : '<a class="link" href="#" data-go="profile">Your profile <i class="ph ph-arrow-up-right"></i></a>'}</div>
         <div style="margin-top:auto">
           <div style="font-size:16px">Share it with your community</div>
           <div class="steps-v">
@@ -1510,7 +1549,7 @@ function cNav(asVisitor) {
   </div>`;
 }
 function myTemplates() {
-  const kpi = S.published ? [{ title: S.tpl.title, img: KPI[0].src, signups: S.signups.length, uses: S.uses, status: 'live', kpi: true }] : [];
+  const kpi = S.published && S.publishAs !== 'team' ? [{ title: S.tpl.title, img: KPI[0].src, signups: S.signups.length, uses: S.uses, status: 'live', kpi: true }] : [];
   return kpi.concat(S.later ? EXISTING_TEMPLATES : []);
 }
 function creditsTotal() { return (S.later ? 4200 : 0) + S.signups.length * 200; }
@@ -1614,7 +1653,9 @@ function galleryItems() {
   const mine = S.published ? [{ id: 'mine', title: S.tpl.title, cat: S.tpl.cat, by: 'me', uses: S.uses, age: 0, img: KPI[0].src, mine: true }] : [];
   return mine.concat(GALLERY);
 }
-const creatorOf = t => t.by === 'me' ? P() : CREATORS[t.by];
+// Your template shows under the team page when you published it as the team
+const byKey = t => t.mine && S.publishAs === 'team' ? 'co' : t.by;
+const creatorOf = t => ({ co: TEAM(), me: P() })[byKey(t)] || CREATORS[t.by];
 function coverHTML(t, cls = 'img') {
   if (t.img) return `<div class="${cls}" style="background-image:url(${t.img})"></div>`;
   const [bg, fg, kicker] = t.cover;
@@ -1627,7 +1668,7 @@ function gcard(t) {
     ${coverHTML(t)}
     ${t.inReview ? '<span class="pill soft-amber g-new">In review</span>' : t.mine ? `<span class="pill pro g-new">${own ? 'New · Yours' : 'New'}</span>` : ''}
     <div class="meta"><b>${esc(t.title)}</b>
-      <div class="by"><span class="who" data-creator="${t.by}">${avatar(20, c)}<span class="n">${esc(c.name)}</span></span><span class="u" title="Uses"><i class="ph ph-copy-simple"></i>${t.uses.toLocaleString()}</span></div>
+      <div class="by"><span class="who" data-creator="${byKey(t)}">${avatar(20, c)}<span class="n">${esc(c.name)}</span></span><span class="u" title="Uses"><i class="ph ph-copy-simple"></i>${t.uses.toLocaleString()}</span></div>
     </div>
   </div>`;
 }
@@ -1649,7 +1690,7 @@ function renderGallery() {
       </div>
       <div id="g-grid"></div>
       <div class="sec-h"><h3>Top creators</h3></div>
-      <div class="g-creators">${S.company.on ? `<div class="gc team" data-go="company"><img src="${A}ws-foursquare.jpg" alt=""><div><b>${esc(S.company.name)}</b><span>Team gallery</span></div><span class="ct">${teamItems().length} templates</span></div>` : ''}${top.slice(0, S.company.on ? 3 : 4).map(k => { const c = CREATORS[k]; return `<div class="gc" data-creator="${k}">${avatar(40, c)}<div><b>${esc(c.name)}</b><span>${esc(c.headline)}</span></div><span class="ct">${creatorStats(k).n} templates</span></div>`; }).join('')}</div>
+      <div class="g-creators"><div class="gc team" data-go="company"><img src="${A}ws-foursquare.jpg" alt=""><div><b>${esc(S.company.name)}</b><span>${S.company.on ? 'Team page' : 'Team page · unclaimed'}</span></div><span class="ct">${teamItems(true).length} templates</span></div>${top.slice(0, 3).map(k => { const c = CREATORS[k]; return `<div class="gc" data-creator="${k}">${avatar(40, c)}<div><b>${esc(c.name)}</b><span>${esc(c.headline)}</span></div><span class="ct">${creatorStats(k).n} templates</span></div>`; }).join('')}</div>
       <div class="g-cta">
         <div><b>Share your best deck</b><span>Publish it from Share in the editor. Earn 200 credits for every sign up from your link.</span></div>
         <button class="btn btn-outline" data-go="${asVisitor ? 'login' : 'editor'}">${asVisitor ? 'Sign up to publish' : 'Publish a deck'}</button>
@@ -1683,7 +1724,7 @@ function renderGallery() {
 
 /* G3 · Creator hover card + follow (works anywhere a [data-creator] shows) */
 function creatorStats(key) {
-  const list = galleryItems().filter(t => t.by === key);
+  const list = key === 'co' ? teamItems() : galleryItems().filter(t => byKey(t) === key);
   return { n: list.length, uses: list.reduce((a, t) => a + t.uses, 0), followers: (FOLLOWERS[key] || 0) + (S.follows[key] ? 1 : 0) };
 }
 function followBtn(key, big = false) {
@@ -1700,15 +1741,15 @@ function showHover(el) {
   if (hcEl === el && $('#hc')) return;
   $('#hc')?.remove();
   hcKey = key; hcEl = el;
-  const c = key === 'me' ? P() : CREATORS[key];
+  const c = key === 'me' ? P() : key === 'co' ? TEAM() : CREATORS[key];
   if (!c) return;
   const st = creatorStats(key);
   const card = document.createElement('div');
   card.id = 'hc';
   card.innerHTML = `<div class="hc-top">${avatar(48, c)}<div><b>${esc(c.name)}</b><span>${esc(c.headline || '@' + c.handle)}</span></div></div>
     <div class="hc-stats"><div><b>${st.n}</b>Templates</div><div><b>${fmtK(st.uses)}</b>Uses</div><div><b>${fmtK(st.followers)}</b>Followers</div></div>
-    ${c.team && S.company.on ? `<a href="#" class="hc-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">Member of ${esc(S.company.name)}</a>` : ''}
-    <div class="hc-acts">${key === 'me' ? (S.journey === 'v' ? '<button class="btn btn-outline btn-sm" data-go="profile" data-visitor>View page</button>' : '<button class="btn btn-outline btn-sm" data-go="profile">Your page</button>') : followBtn(key)}</div>`;
+    ${c.team ? `<a href="#" class="hc-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">Member of ${esc(S.company.name)}</a>` : ''}
+    <div class="hc-acts">${key === 'co' ? `<button class="btn btn-outline btn-sm" data-go="company">Team page</button>${followBtn('co')}` : key === 'me' ? (S.journey === 'v' ? '<button class="btn btn-outline btn-sm" data-go="profile" data-visitor>View page</button>' : '<button class="btn btn-outline btn-sm" data-go="profile">Your page</button>') : followBtn(key)}</div>`;
   document.body.appendChild(card);
   // Keep the card fully on screen: below the name if it fits, otherwise above
   const r = el.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight;
@@ -1794,8 +1835,8 @@ function renderOtherTemplate(t) {
 const TEAM_MEMBERS = ['me', 'lena', 'omar'];
 const CO_TAKEN = ['admin', 'team', 'presentations', 'google', 'community'];
 // Your template joins the team gallery only if members may publish. With review on it waits for an admin.
-const mineOnTeam = () => S.published && S.tpl.toCompany && S.company.membersPublish;
-const mineInReview = () => mineOnTeam() && S.company.review && !S.tplApproved;
+const mineOnTeam = () => S.published && (S.publishAs === 'team' || (S.company.on && S.tpl.toCompany && S.company.membersPublish));
+const mineInReview = () => mineOnTeam() && S.publishAs !== 'team' && S.company.review && !S.tplApproved;
 function teamItems(visitor = false) {
   return galleryItems().filter(t => t.team || (t.mine && mineOnTeam() && !(visitor && mineInReview())))
     .map(t => t.mine && mineInReview() ? { ...t, inReview: true } : t);
@@ -1813,18 +1854,19 @@ function renderWsSettings() {
       <div class="co-intro">
         <div class="bn" style="background:${co.cover}"><img src="${A}ws-foursquare.jpg" alt=""></div>
         <div class="tx">
-          <h3>Give ${esc(co.name)} a public gallery</h3>
-          <p>One page for your team’s best decks at <b>presentations.ai/${esc(co.slug)}</b>. Members publish from Share, and you decide what shows.</p>
+          <span class="pill soft-gray">Unclaimed</span>
+          <h3>${esc(co.name)} already has a page on Community</h3>
+          <p>It shows ${GALLERY.filter(t => t.team).length} templates your teammates published, at <b>presentations.ai/${esc(co.slug)}</b>. Claim it to manage it.</p>
           <ul>
-            <li><i class="ph ph-buildings"></i>Your logo, about and links, on a page people can follow</li>
-            <li><i class="ph ph-users-three"></i>Templates from members show with their names</li>
-            <li><i class="ph ph-shield-check"></i>Optional review before anything goes live</li>
+            <li><i class="ph ph-buildings"></i>Add your logo, about and links, on a page people can follow</li>
+            <li><i class="ph ph-users-three"></i>Publish decks as ${esc(co.name)}, right from Share</li>
+            <li><i class="ph ph-shield-check"></i>Choose what members can publish, with optional review</li>
           </ul>
-          <button class="btn btn-primary btn-lg" id="co-setup">Set up public gallery</button>
+          <div style="display:flex;gap:10px;align-items:center"><button class="btn btn-primary btn-lg" data-go="ws-claim">Claim this page</button><a class="link" href="#" data-go="company">See the page</a></div>
+          <small class="muted" style="display:block;margin-top:10px">You need an @${CO_DOMAIN} email</small>
         </div>
       </div>
     </div>`);
-    $('#co-setup').onclick = () => { co.on = true; save(); renderWsSettings(); toast('Public gallery created. Fill in the details and save.'); };
     return;
   }
   const d = JSON.parse(JSON.stringify(co));
@@ -1847,8 +1889,8 @@ function renderWsSettings() {
       <div class="co-foot"><button class="btn btn-primary" id="co-save">Save changes</button></div>
     </div>
     <div class="co-danger">
-      <div><b>Delete public gallery</b><span>Removes presentations.ai/${esc(co.slug)}. Templates stay on members’ own pages.</span></div>
-      <button class="btn btn-outline" id="co-del">Delete</button>
+      <div><b>Unclaim this page</b><span>presentations.ai/${esc(co.slug)} stays public with members’ templates, but nobody manages it.</span></div>
+      <button class="btn btn-outline" id="co-del">Unclaim</button>
     </div>
   </div>`);
   const slugIn = $('#co-slug');
@@ -1868,26 +1910,95 @@ function renderWsSettings() {
   };
   const del = () => {
     const box = $('.co-danger'), before = box.innerHTML;
-    box.innerHTML = `<div><b>Delete presentations.ai/${esc(co.slug)}?</b><span>People with the link will see a not found page. You can set it up again later.</span></div>
-      <button class="btn btn-outline" id="co-del-no">Cancel</button><button class="btn btn-danger" id="co-del-yes">Delete gallery</button>`;
+    box.innerHTML = `<div><b>Unclaim ${esc(co.name)}’s page?</b><span>You lose admin access. Anyone with an @${CO_DOMAIN} email can claim it again.</span></div>
+      <button class="btn btn-outline" id="co-del-no">Cancel</button><button class="btn btn-danger" id="co-del-yes">Unclaim page</button>`;
     $('#co-del-no').onclick = () => { box.innerHTML = before; $('#co-del').onclick = del; };
-    $('#co-del-yes').onclick = () => { S.company.on = false; S.tplApproved = false; save(); renderWsSettings(); toast('Public gallery deleted', 'ph ph-trash'); };
+    $('#co-del-yes').onclick = () => { S.company.on = false; S.tplApproved = false; if (S.publishAs === 'team') S.publishAs = 'me'; save(); renderWsSettings(); toast('Page unclaimed', 'ph ph-info'); };
   };
   $('#co-del').onclick = del;
 }
 
+/* W2 · Claim the team page. ONE modal used from Workspace settings and from Share (Publish as team).
+   The page already exists, built from templates members published. Claiming = confirm a work email. */
+const TEAM = () => ({ name: S.company.name, handle: S.company.slug, headline: S.company.on ? 'Team page' : 'Team page · unclaimed', photo: A + 'ws-foursquare.jpg' });
+const CO_DOMAIN = 'foursquare.com';
+function renderClaimModal({ from = 'settings' } = {}) {
+  const co = S.company, st = S._claim || (S._claim = { step: 'email', email: 'joe@' + CO_DOMAIN });
+  const inShare = from === 'share';
+  const close = () => { S._claim = null; go(inShare ? 'editor' : 'ws-settings'); };
+  const preview = `<div class="cl-prev">
+      <div class="cv" style="background:${co.cover}"></div>
+      <img class="lg" src="${A}ws-foursquare.jpg" alt="">
+      <b>${esc(co.name)}</b><span>presentations.ai/${esc(co.slug)}</span>
+      <span class="pill ${st.step === 'done' ? 'soft-green' : 'soft-gray'}">${st.step === 'done' ? 'Claimed' : 'Unclaimed'}</span>
+      <div class="cl-tpls">${GALLERY.filter(t => t.team).map(t => coverHTML(t, 'th')).join('')}</div>
+      <small>${GALLERY.filter(t => t.team).length} templates from your teammates are already here</small>
+    </div>`;
+  const body = st.step === 'email' ? `
+      <h3>Confirm you work at ${esc(co.name)}</h3>
+      <p>${esc(co.name)}’s page already exists on Community. Anyone with an <b>@${CO_DOMAIN}</b> email can claim it and manage it.</p>
+      <div class="field"><label class="label">Work email</label><input class="input" id="cl-email" value="${esc(st.email)}" autocomplete="off"></div>
+      <div class="cl-err" id="cl-err"></div>
+      <button class="btn btn-primary btn-lg" id="cl-send" style="width:100%">Send code</button>`
+    : `
+      <h3>Check your email</h3>
+      <p>We sent a 6-digit code to <b>${esc(st.email)}</b>. <button class="link" id="cl-change">Change email</button></p>
+      <div class="field"><label class="label">Code <span class="hint">Proto: any 6 digits</span></label><input class="input cl-code" id="cl-code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code"></div>
+      <div class="cl-err" id="cl-err"></div>
+      <button class="btn btn-primary btn-lg" id="cl-verify" style="width:100%" disabled>Verify and claim</button>
+      <button class="link" id="cl-resend" style="align-self:center;font-weight:400;color:var(--t3)">Resend code</button>`;
+  openModal(`
+    ${inShare ? stepHead(`Claim ${esc(co.name)}’s page`, 'share') : `<div class="f-head">Claim ${esc(co.name)}’s page</div>`}
+    <div class="card" style="width:820px">
+      <div class="cl">
+        <div class="cl-form">${body}</div>
+        ${preview}
+      </div>
+      <div class="f-foot"><span class="note"><i class="ph ph-shield-check"></i>Teammates can still publish here. You decide what shows.</span></div>
+    </div>`, { onClose: close });
+  const err = m => { $('#cl-err').textContent = m; };
+  if (st.step === 'email') {
+    const inp = $('#cl-email');
+    inp.oninput = () => { st.email = inp.value.trim(); err(''); inp.style.boxShadow = ''; };
+    const send = () => {
+      if (!/^\S+@\S+\.\S+$/.test(st.email)) { err('Enter a valid email'); inp.style.boxShadow = 'inset 0 0 0 1px var(--red)'; return; }
+      if (!st.email.toLowerCase().endsWith('@' + CO_DOMAIN)) { err(`Use your @${CO_DOMAIN} email to claim this page`); inp.style.boxShadow = 'inset 0 0 0 1px var(--red)'; return; }
+      st.step = 'code'; save(); renderClaimModal({ from }); toast(`Code sent to ${esc(st.email)}`, 'ph ph-envelope-simple');
+    };
+    $('#cl-send').onclick = send;
+    inp.onkeydown = e => { if (e.key === 'Enter') send(); };
+    inp.focus();
+  } else {
+    const code = $('#cl-code');
+    code.oninput = () => { code.value = code.value.replace(/\D/g, ''); $('#cl-verify').disabled = code.value.length !== 6; err(''); };
+    $('#cl-change').onclick = () => { st.step = 'email'; save(); renderClaimModal({ from }); };
+    $('#cl-resend').onclick = () => toast(`New code sent to ${esc(st.email)}`, 'ph ph-envelope-simple');
+    $('#cl-verify').onclick = () => {
+      const b = $('#cl-verify'); b.innerHTML = '<span class="spin"></span>Verifying'; b.disabled = true;
+      later(() => {
+        S.company.on = true; S.company.claimedBy = st.email; S._claim = null; save();
+        toast(`You now manage ${esc(co.name)}’s page`);
+        go(inShare ? 'mask' : 'company');
+      }, 900);
+    };
+    code.focus();
+  }
+}
+
 function renderCompany() {
   const co = S.company;
-  const admin = !S.coVisitor;
+  const claimed = co.on;
+  const admin = !S.coVisitor && claimed;
   const list = teamItems(!admin);
   const uses = list.reduce((a, t) => a + t.uses, 0);
   $('#screen').innerHTML = `<div class="page">
     ${cNav(!admin)}
     <div class="co-cover" style="background:${co.cover}"></div>
+    ${claimed ? '' : `<div class="co-unclaimed"><i class="ph ph-flag"></i><span><b>This page isn’t claimed yet.</b> It was made from templates people at ${esc(co.name)} published.</span>${S.coVisitor ? '' : '<button class="btn btn-primary btn-sm" data-go="ws-claim">Claim this page</button>'}</div>`}
     <div class="wrap">
       <div class="co-head">
         <img class="co-lg" src="${A}ws-foursquare.jpg" alt="">
-        <div class="who"><h1>${esc(co.name)} <span class="pill pro"><i class="ph-fill ph-seal-check" style="margin-right:3px"></i>Team</span></h1>
+        <div class="who"><h1>${esc(co.name)} ${claimed ? '<span class="pill pro"><i class="ph-fill ph-seal-check" style="margin-right:3px"></i>Team</span>' : '<span class="pill soft-gray">Unclaimed</span>'}</h1>
           <div class="hd">presentations.ai/${esc(co.slug)}</div></div>
         <div class="acts">
           ${admin ? '<button class="btn btn-outline" data-go="ws-settings"><i class="ph ph-gear-six"></i>Edit gallery</button>' : ''}
@@ -1896,8 +2007,8 @@ function renderCompany() {
         </div>
       </div>
       <div class="prof-meta">
-        <div><div class="bio">${esc(co.about)}</div>
-          <div class="prof-links">${co.website ? `<a href="#" onclick="return false"><i class="ph ph-globe-simple"></i>${esc(co.website)}</a>` : ''}${co.linkedin ? `<a href="#" onclick="return false"><i class="ph-fill ph-linkedin-logo"></i>${esc(co.linkedin)}</a>` : ''}</div>
+        <div><div class="bio">${claimed ? esc(co.about) : `Templates published by people at ${esc(co.name)}.`}</div>
+          <div class="prof-links">${claimed && co.website ? `<a href="#" onclick="return false"><i class="ph ph-globe-simple"></i>${esc(co.website)}</a>` : ''}${claimed && co.linkedin ? `<a href="#" onclick="return false"><i class="ph-fill ph-linkedin-logo"></i>${esc(co.linkedin)}</a>` : ''}</div>
           <div class="co-members">${TEAM_MEMBERS.map(k => { const c = k === 'me' ? P() : CREATORS[k]; return `<span class="m" data-creator="${k}">${avatar(28, c)}${esc(c.name.split(' ')[0])}</span>`; }).join('')}<span class="more">+9 members</span></div></div>
         <div class="stats">
           <div><b>${list.length}</b><span>Templates</span></div>
@@ -1909,7 +2020,7 @@ function renderCompany() {
       ${admin && mineInReview() ? `<div class="co-review"><i class="ph-fill ph-hourglass-medium"></i><span><b>1 template waiting for review.</b> “${esc(S.tpl.title)}” by ${esc(P().name)} shows here once an admin approves it.</span><button class="btn btn-primary btn-sm" id="co-approve">Approve</button></div>` : ''}
       <div class="sec-h"><h3>Templates</h3>${admin ? '<button class="btn btn-outline" data-go="editor"><i class="ph ph-plus"></i>Publish a deck</button>' : ''}</div>
       <div class="tgrid">${list.map(gcard).join('')}</div>
-      ${admin && !mineOnTeam() ? `<div class="empty" style="margin-bottom:48px"><i class="ph ph-info" style="font-size:20px"></i>${!S.company.membersPublish ? 'Members can’t publish here right now. Turn it on in Workspace settings.' : `Your own decks show here once you publish one with “Also show on ${esc(S.company.name)}’s team gallery” on.`}</div>` : ''}
+      ${admin && !mineOnTeam() && claimed ? `<div class="empty" style="margin-bottom:48px"><i class="ph ph-info" style="font-size:20px"></i>${!S.company.membersPublish ? 'Members can’t publish here right now. Turn it on in Workspace settings.' : `Your own decks show here once you publish one with “Also show on ${esc(S.company.name)}’s team gallery” on.`}</div>` : ''}
     </div></div>`;
   $('#co-share').onclick = () => toast(`Copied presentations.ai/${esc(co.slug)}`);
   $('#co-approve') && ($('#co-approve').onclick = () => { S.tplApproved = true; save(); renderCompany(); toast('Approved. It’s live on the team gallery'); });
@@ -1938,8 +2049,8 @@ function renderTemplate() {
         </div>
         <div class="tp-side">
           <div><h1>${esc(t.title)}</h1><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${t.tags.map(g => `<span class="chip sm">${esc(g)}</span>`).join('')}</div></div>
-          <div class="creator"><span class="who" data-creator="me">${avatar(36, p)}<div class="w"><b style="font-weight:500">${esc(p.name)}</b><span>${esc(p.headline || '@' + p.handle)}</span></div></span><button class="btn btn-outline btn-sm" data-go="profile" data-visitor>Profile</button></div>
-          ${(() => { const owner = !(S.visitorView || S.journey === 'v'); return S.company.on && mineOnTeam() && (owner || !mineInReview()) ? `<a href="#" class="tp-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">${owner && mineInReview() ? `Waiting for approval on ${esc(S.company.name)}’s team gallery` : `Also on ${esc(S.company.name)}’s team gallery`}<i class="ph ph-arrow-right"></i></a>` : ''; })()}
+          ${S.publishAs === 'team' ? `<div class="creator"><span class="who" data-creator="co">${avatar(36, TEAM())}<div class="w"><b style="font-weight:500">${esc(S.company.name)}</b><span>Published by ${esc(p.name)}</span></div></span><button class="btn btn-outline btn-sm" data-go="company">Team page</button></div>` : `<div class="creator"><span class="who" data-creator="me">${avatar(36, p)}<div class="w"><b style="font-weight:500">${esc(p.name)}</b><span>${esc(p.headline || '@' + p.handle)}</span></div></span><button class="btn btn-outline btn-sm" data-go="profile" data-visitor>Profile</button></div>`}
+          ${(() => { const owner = !(S.visitorView || S.journey === 'v'); return S.publishAs !== 'team' && S.company.on && mineOnTeam() && (owner || !mineInReview()) ? `<a href="#" class="tp-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">${owner && mineInReview() ? `Waiting for approval on ${esc(S.company.name)}’s team gallery` : `Also on ${esc(S.company.name)}’s team gallery`}<i class="ph ph-arrow-right"></i></a>` : ''; })()}
           <button class="btn btn-primary btn-lg" data-go="login" style="width:100%"><i class="ph ph-copy-simple"></i>Use this template</button>
           <div class="gift"><i class="ph-fill ph-gift"></i><span><b>New here?</b> Start from ${esc(first())}'s link and get <b>200 extra credits</b> to make it your own.</span></div>
           <div class="facts"><div><i class="ph ph-slideshow"></i>${KPI.length} slides</div><div><i class="ph ph-copy-simple"></i>${S.uses} uses</div><div><i class="ph ph-eye"></i>${viewsOf({ uses: S.uses })} views</div><div><i class="ph ph-tag"></i>Free</div></div>
@@ -2468,14 +2579,14 @@ function renderRefUpgrade() {
    ═══════════════════════════════════════════════════════════ */
 const ROUTES = [
   ['A · Page first', [['dashboard', 'Dashboard'], ['community', 'Community tab'], ['create-page', 'Create page'], ['my-page', 'Your page']]],
-  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['profile-setup', 'Create page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile']]],
+  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['profile-setup', 'Create page'], ['team-claim', 'Claim team page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile']]],
   ['Visitor signs up', [['template', 'Template link'], ['login', 'Sign up'], ['role', 'Role'], ['context', 'Your context'], ['generating', 'Generating'], ['present', 'Present'], ['visitor-editor', '200 credits']]],
   ['Rewards', [['rewards', 'Rewards']]],
-  ['Team gallery', [['ws-settings', 'Workspace settings'], ['company', 'Team gallery']]],
+  ['Team page', [['ws-settings', 'Workspace settings'], ['ws-claim', 'Claim team page'], ['company', 'Team page']]],
   ['Refer a friend', [['refer', 'Refer & earn'], ['ref-login', 'Friend signs up'], ['ref-setup', 'Own workspace'], ['ref-home', 'Friend gets 200'], ['ref-upgrade', 'Friend upgrades'], ['refer-joined', 'You see it'], ['refer-paid', 'You get 10%']]],
 ];
 const FLAT = ROUTES.flatMap(g => g[1].map(r => r[0]));
-const MODAL_ROUTES = ['share', 'profile-setup', 'mask', 'details', 'live', 'create-page'];
+const MODAL_ROUTES = ['share', 'profile-setup', 'mask', 'details', 'live', 'create-page', 'team-claim', 'ws-claim'];
 let ROUTE = 'editor';
 
 function ensurePrereqs(r) {
@@ -2488,7 +2599,9 @@ function ensurePrereqs(r) {
   if (needsProfile && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
   if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
   if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
-  if (r === 'company' && !S.company.on) S.company.on = true;
+  if (r === 'team-claim') { S._teamFirst = true; S._firstTime = false; S.publishAs = 'team'; S.company.on = false; S._claim = null; }
+  if (r === 'ws-claim') { S.company.on = false; S._claim = null; }
+  if ((r === 'mask' || r === 'details' || r === 'live') && S.publishAs === 'team' && !S.company.on) S.company.on = true;
   if (r === 'ref-login') S._refCredited = false;
   if (r === 'refer-joined') creditFriend();
   if (r === 'ref-upgrade' || r === 'refer-paid') S.plan = 'pro';
@@ -2498,8 +2611,8 @@ function ensurePrereqs(r) {
 function renderRoute() {
   const r = ROUTE;
   if (MODAL_ROUTES.includes(r)) {
-    if (r === 'create-page') renderCommunity(); else renderPublisherEditor();
-    ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'profile-setup': () => renderPageModal({ from: 'share' }), mask: renderMask, details: renderDetails, live: renderLive })[r]();
+    if (r === 'create-page') renderCommunity(); else if (r === 'ws-claim') renderWsSettings(); else renderPublisherEditor();
+    ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'profile-setup': () => renderPageModal({ from: 'share' }), 'team-claim': () => renderClaimModal({ from: 'share' }), 'ws-claim': () => renderClaimModal({ from: 'settings' }), mask: renderMask, details: renderDetails, live: renderLive })[r]();
   } else {
     closeModal();
     ({ dashboard: renderDashboard, community: renderCommunity, 'my-page': renderCommunity, editor: renderPublisherEditor, profile: renderProfile, template: renderTemplate, login: renderLogin, role: renderRole, context: renderContext, generating: renderGenerating, present: renderPresent, 'visitor-editor': renderVisitorEditor, rewards: renderRewards,
@@ -2528,14 +2641,17 @@ function go(r) {
 
 /* Flow bar: pick a journey, then step through it. Proto navigation only. */
 const JOURNEYS = [
-  { id: 'a', label: 'Page first', hint: 'Create the page from the dashboard, publish later', fresh: true,
+  { id: 'a', group: 'me', label: 'From dashboard', hint: 'Create the page from the dashboard, publish later', fresh: true,
     steps: ['dashboard', 'community', 'create-page', 'my-page', 'editor', 'share', 'mask', 'details', 'live', 'gallery', 'template', 'profile'] },
-  { id: 'b', label: 'No page yet', hint: 'Publish from Share, create the page on the way', fresh: true,
+  { id: 'b', group: 'me', label: 'From Share', hint: 'Publish from Share, create the page on the way', fresh: true,
     steps: ['editor', 'share', 'profile-setup', 'mask', 'details', 'live', 'gallery', 'template', 'profile'] },
-  { id: 'v', label: 'Visitor', hint: 'Someone opens the template link and signs up',
+  { id: 'v', group: 'other', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['gallery', 'template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
-  { id: 'r', label: 'Rewards', hint: 'Credits and cash from sign ups', steps: ['rewards'] },
-  { id: 'w', label: 'Team gallery', hint: 'Admin sets up a public gallery for the workspace', steps: ['dashboard', 'ws-settings', 'company'] },
+  { id: 'r', group: 'other', label: 'Rewards', hint: 'Credits and cash from sign ups', steps: ['rewards'] },
+  { id: 'ts', group: 'team', label: 'From settings', hint: 'Claim the Foursquare page in Workspace settings', fresh: true,
+    steps: ['dashboard', 'ws-settings', 'ws-claim', 'company'] },
+  { id: 'tb', group: 'team', label: 'From Share', hint: 'Publish as Foursquare from Share, claim the page on the way', fresh: true, init: s => { s.publishAs = 'team'; },
+    steps: ['editor', 'share', 'team-claim', 'mask', 'details', 'live', 'gallery', 'template', 'company'] },
   { id: 'f', label: 'Free user', group: 'refer', hint: 'Free user invites a friend. Both get 200 credits', fresh: true, plan: 'free',
     steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined'] },
   { id: 'p', label: 'Pro user', group: 'refer', hint: 'Pro user invites a friend. Earns 10% cash when they upgrade', fresh: true, plan: 'pro',
@@ -2556,7 +2672,7 @@ function renderFlow() {
   const i = Math.max(0, j.steps.indexOf(ROUTE));
   $('#flow').innerHTML = `
     <button class="tog" title="${min ? 'Show' : 'Hide'} flow bar" id="flow-tog"><i class="ph ${min ? 'ph-path' : 'ph-caret-left'}"></i>${min ? 'Flow' : ''}</button>
-    ${[['Community', JOURNEYS.filter(x => !x.group)], ['Refer a friend', JOURNEYS.filter(x => x.group === 'refer')]].map(([g, list]) => `
+    ${[['Your page', 'me'], ['Team page', 'team'], ['Visitor', 'other'], ['Refer a friend', 'refer']].map(([g, k]) => [g, JOURNEYS.filter(x => x.group === k)]).map(([g, list]) => `
     <span class="jg">${g}</span><div class="jr">${list.map(x => `<button class="${x.id === j.id ? 'on' : ''}" data-j="${x.id}" title="${x.hint}">${x.label}</button>`).join('')}</div>`).join('')}
     ${j.steps.length > 1 ? `
     <div class="stepper">
@@ -2571,6 +2687,7 @@ function renderFlow() {
     const x = JOURNEYS.find(y => y.id === b.dataset.j);
     if (x.fresh) { S = DEFAULT_STATE(); }
     if (x.plan) S.plan = x.plan;
+    if (x.init) x.init(S);
     S.journey = x.id; save();
     step(x.steps[0]);
     toast(x.hint, 'ph ph-path');
