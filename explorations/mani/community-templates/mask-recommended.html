@@ -1,0 +1,233 @@
+<!doctype html>
+<!-- exploration: Mask sensitive data, recommended direction · owner: Mani (@manivasakan-arch)
+     Private items are hidden by default inside the Details step (Deel / Zapier pattern).
+     "Review" opens the slides: spots with Hide or Keep, plus a Blur area tool (Loom / Databricks pattern). -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mask recommended</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>
+  :root { --ink:#0B0F14; --t1:#171717; --t2:#525252; --t3:#737373; --t4:#A3A3A3; --line:rgba(11,15,20,.09); --line2:rgba(11,15,20,.2);
+    --bg2:#FAFAFA; --bg3:#F5F5F5; --brand:#005EFF; --amber:#B45309; --amber-bg:#FEF3C7; --green:#15803D; --green-bg:#DCFCE7; --ease:cubic-bezier(.23,1,.32,1); }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; }
+  body { font:14px/1.45 Inter,system-ui,sans-serif; color:var(--t1); background:#E9E9E9; display:grid; place-items:center; padding:24px; }
+  button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; padding:0; }
+  .modal { width:min(1120px, 100%); height:min(640px, calc(100vh - 48px)); background:#F5F5F5; border-radius:10px; box-shadow:0 30px 60px rgba(0,0,0,.18); display:flex; flex-direction:column; overflow:hidden; }
+  .head { height:56px; display:flex; align-items:center; gap:12px; padding:0 22px; font-size:16px; font-weight:500; flex:none; }
+  .head .back { font-size:20px; color:var(--t2); display:flex; } .head .sp { flex:1; }
+  .head small { font-size:12px; color:var(--t3); font-weight:400; display:flex; align-items:center; gap:8px; }
+  .dots { display:flex; gap:4px; } .dots i { width:16px; height:3px; border-radius:2px; background:#E5E5E5; } .dots i.on { background:var(--ink); }
+  .card { flex:1; min-height:0; margin:0 6px 6px; background:#fff; border-radius:8px; box-shadow:inset 0 0 0 1px var(--line2); display:flex; flex-direction:column; overflow:hidden; }
+  .body { flex:1; min-height:0; display:grid; grid-template-columns:1fr 420px; }
+  .foot { height:64px; flex:none; display:flex; align-items:center; gap:12px; padding:0 14px 0 18px; border-top:1px solid var(--line); }
+  .foot .note { flex:1; color:var(--t3); font-size:12px; display:flex; align-items:center; gap:6px; }
+  .btn { height:40px; padding:0 18px; border-radius:6px; background:var(--ink); color:#fff; font-weight:500; display:inline-flex; align-items:center; gap:8px; }
+  .btn.o { background:#fff; color:var(--t1); box-shadow:inset 0 0 0 1px var(--line2); }
+  .btn.sm { height:30px; padding:0 12px; font-size:13px; }
+  .link { color:var(--brand); font-weight:500; }
+  .left { background:var(--bg2); border-right:1px solid var(--line); padding:16px; display:flex; flex-direction:column; gap:10px; min-width:0; min-height:0; }
+  .stage { position:relative; border-radius:6px; overflow:hidden; box-shadow:0 0 0 1px var(--line); user-select:none; flex:none; }
+  .stage img { display:block; width:100%; pointer-events:none; }
+  .stage.blurmode { cursor:crosshair; }
+  .spot { position:absolute; border-radius:4px; }
+  .spot.hid { background:rgba(11,15,20,.78); box-shadow:0 0 0 1.5px var(--ink); color:#fff; display:flex; align-items:center; padding:0 8px; font-size:11px; overflow:hidden; white-space:nowrap; }
+  .spot.hid span { overflow:hidden; text-overflow:clip; }
+  .spot.pub { box-shadow:0 0 0 2px #F59E0B, 0 0 0 6px rgba(245,158,11,.18); background:rgba(245,158,11,.10); }
+  .spot.sel { outline:2px solid var(--brand); outline-offset:3px; }
+  .review .spot { cursor:pointer; }
+  .blur { position:absolute; border-radius:4px; backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); background:rgba(255,255,255,.08); box-shadow:0 0 0 1.5px rgba(255,255,255,.8), 0 0 0 2.5px rgba(11,15,20,.35); }
+  .blur .x { position:absolute; right:-9px; top:-9px; width:18px; height:18px; border-radius:50%; background:var(--ink); color:#fff; display:grid; place-items:center; font-size:10px; }
+  .draft { position:absolute; border:1.5px dashed #fff; background:rgba(0,94,255,.12); border-radius:4px; pointer-events:none; }
+  .pop { position:absolute; z-index:5; width:230px; background:#fff; border-radius:8px; box-shadow:0 0 0 1px var(--line), 0 12px 30px rgba(0,0,0,.18); padding:12px; display:flex; flex-direction:column; gap:8px; animation:pop .18s var(--ease); }
+  @keyframes pop { from { opacity:0; transform:translateY(4px) scale(.98); } }
+  .pop b { font-weight:500; } .pop small { color:var(--t3); }
+  .pop input, .field input, .field textarea { width:100%; border:0; border-radius:5px; padding:8px 10px; box-shadow:inset 0 0 0 1px var(--line2); font:inherit; outline:none; background:#fff; }
+  .pop input:focus, .field input:focus, .field textarea:focus { box-shadow:inset 0 0 0 1px var(--ink), 0 0 0 3px rgba(11,15,20,.08); }
+  .pop .acts { display:flex; gap:6px; } .pop .acts .btn { flex:1; justify-content:center; height:32px; font-size:13px; }
+  .tools { position:absolute; left:50%; bottom:12px; transform:translateX(-50%); display:flex; gap:4px; padding:4px; border-radius:22px; background:rgba(255,255,255,.96); box-shadow:0 0 0 1px var(--line), 0 6px 18px rgba(0,0,0,.14); z-index:4; }
+  .tools button { height:32px; padding:0 12px; border-radius:16px; display:flex; align-items:center; gap:6px; font-size:13px; color:var(--t2); }
+  .tools button.on { background:var(--ink); color:#fff; } .tools button:hover:not(.on) { background:var(--bg3); }
+  .strip { display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:6px; }
+  .strip button { position:relative; border-radius:3px; overflow:hidden; box-shadow:0 0 0 1px var(--line); }
+  .strip button.on { box-shadow:0 0 0 2px var(--ink); } .strip img { display:block; width:100%; }
+  .strip .f { position:absolute; right:3px; top:3px; min-width:15px; height:15px; border-radius:8px; padding:0 4px; font-size:9px; font-weight:600; display:grid; place-items:center; background:var(--ink); color:#fff; }
+  .strip .f.a { background:#F59E0B; }
+  .right { padding:20px 22px; overflow:auto; display:flex; flex-direction:column; gap:18px; }
+  .field { display:flex; flex-direction:column; gap:6px; } .field label { color:var(--t2); font-size:13px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { height:28px; padding:0 11px; border-radius:14px; box-shadow:0 0 0 1px var(--line), 0 1px 2px var(--line); font-size:13px; display:inline-flex; align-items:center; }
+  .chip.on { background:var(--ink); color:#fff; }
+  .safe { border-radius:10px; padding:14px; display:flex; gap:12px; background:var(--green-bg); }
+  .safe.off { background:var(--amber-bg); }
+  .safe > i { font-size:22px; color:var(--green); flex:none; } .safe.off > i { color:var(--amber); }
+  .safe .tx { flex:1; display:flex; flex-direction:column; gap:3px; } .safe b { font-weight:600; } .safe span { color:var(--t2); font-size:13px; }
+  .safe .row { display:flex; align-items:center; gap:8px 14px; margin-top:8px; flex-wrap:wrap; }
+  .seg { display:inline-flex; padding:2px; border-radius:7px; background:rgba(255,255,255,.7); box-shadow:inset 0 0 0 1px var(--line); }
+  .seg button { height:26px; padding:0 10px; white-space:nowrap; border-radius:5px; font-size:12px; color:var(--t2); } .seg button.on { background:#fff; color:var(--t1); box-shadow:0 0 0 1px var(--line), 0 1px 2px var(--line); font-weight:500; }
+  .as { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; box-shadow:inset 0 0 0 1px var(--line); }
+  .av { width:28px; height:28px; border-radius:50%; background:#3F5A4A; color:#fff; font-size:11px; font-weight:600; display:grid; place-items:center; flex:none; }
+  .as .w { flex:1; display:flex; flex-direction:column; } .as small { color:var(--t3); font-size:12px; }
+  .explain { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; background:#fff; box-shadow:0 0 0 1px var(--line); font-size:13px; color:var(--t2); }
+  .explain s { color:var(--t4); } .explain b { color:var(--t1); font-weight:500; } .explain i { color:var(--t4); }
+  .list { display:flex; flex-direction:column; }
+  .item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .item .ic { width:30px; height:30px; border-radius:7px; background:var(--bg3); display:grid; place-items:center; flex:none; }
+  .item.pubi .ic { background:var(--amber-bg); color:var(--amber); }
+  .item .tx { flex:1; min-width:0; } .item b { font-weight:500; display:block; } .item small { color:var(--t3); font-size:12px; }
+  .item.sel b { color:var(--brand); }
+  .tg { width:32px; height:18px; border-radius:9px; background:var(--ink); position:relative; flex:none; transition:background .2s; }
+  .tg::after { content:""; position:absolute; top:2px; left:16px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .2s var(--ease); }
+  .tg.off { background:#D4D4D4; } .tg.off::after { left:2px; }
+  .muted { color:var(--t3); }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 14px; border-radius:8px; font-size:13px; display:flex; gap:8px; align-items:center; animation:pop .2s var(--ease); z-index:20; }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+</style></head><body>
+<div class="modal" id="app"></div>
+<script>
+const A = 'assets/';
+const SLIDES = ['kpi-01-cover', 'kpi-02-sessions', 'kpi-03-signups', 'kpi-04-marketing', 'kpi-05-landing', 'kpi-06-product', 'kpi-07-mrr', 'kpi-08-retention'].map(n => A + n + '.jpg');
+const ITEMS = [
+  { key: 'client', short: 'client name',  label: 'Client name',       icon: 'ph-buildings',       slide: 0, orig: 'Northwind Logistics',    rep: 'Client Name',        on: true,  at: [3, 81, 30, 9] },
+  { key: 'logo', short: 'logo',    label: 'Client logo',       icon: 'ph-image-square',    slide: 0, orig: 'Northwind logo',         rep: 'Logo',               on: true,  at: [70, 4, 26, 12] },
+  { key: 'revenue', short: 'revenue', label: 'Revenue',           icon: 'ph-currency-dollar', slide: 6, orig: '$1.4M ARR',              rep: '$0.0 ARR',           on: true,  at: [6, 22, 40, 16] },
+  { key: 'team', short: 'team names',    label: 'Team names',        icon: 'ph-users-three',     slide: 4, orig: 'Priya Raman, Tom Beck',  rep: 'Team member',        on: false, at: [55, 70, 38, 12] },
+  { key: 'quote', short: 'quote',   label: 'Quote attribution', icon: 'ph-quotes',          slide: 5, orig: 'Head of Ops, Northwind', rep: 'Job title, company', on: true,  at: [8, 60, 50, 12] },
+];
+const S = { view: 'details', slide: 0, sel: null, mode: 'select', blurs: [], cat: 'Reports', title: 'KPI Report' };
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hidden = () => ITEMS.filter(i => i.on);
+const toast = (m, ic = 'ph-check-circle') => { const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="ph-fill ${ic}"></i>${m}`; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); };
+
+// Spots and blur boxes on one slide. In review mode spots are clickable.
+function stageHTML(i, review) {
+  const spots = ITEMS.filter(it => it.slide === i).map(it => {
+    const [x, y, w, h] = it.at;
+    return `<div class="spot ${it.on ? 'hid' : review ? 'pub' : ''} ${S.sel === it.key ? 'sel' : ''}" data-spot="${it.key}" style="left:${x}%;top:${y}%;width:${w}%;height:${h}%">${it.on ? `<span>${esc(it.rep)}</span>` : ''}</div>`;
+  }).join('');
+  const blurs = S.blurs.map((b, n) => b.slide === i ? `<div class="blur" style="left:${b.x}%;top:${b.y}%;width:${b.w}%;height:${b.h}%">${review ? `<button class="x" data-unblur="${n}" aria-label="Remove blur"><i class="ph-bold ph-x"></i></button>` : ''}</div>` : '').join('');
+  return `<img src="${SLIDES[i]}" alt="">${spots}${blurs}`;
+}
+
+/* 1 · Details step (last step). Private items are hidden by default. */
+function renderDetails() {
+  const h = hidden(), pub = ITEMS.filter(i => !i.on), on = h.length > 0 || S.blurs.length > 0;
+  const list = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0] || '';
+  $('#app').innerHTML = `
+    <div class="head"><button class="back" aria-label="Back"><i class="ph ph-arrow-left"></i></button>Confirm template details<span class="sp"></span><small>Step 2 of 2<span class="dots"><i class="on"></i><i class="on"></i></span></small></div>
+    <div class="card">
+      <div class="body">
+        <div class="left">
+          <div class="stage">${stageHTML(0, false)}</div>
+          <div class="muted" style="font-size:12px">This is how your cover looks on Community.</div>
+        </div>
+        <div class="right">
+          <div class="field"><label>Title</label><input id="title" value="${esc(S.title)}"></div>
+          <div class="field"><label>Category</label><div class="chips">${['Reports', 'Marketing', 'Sales', 'Finance', 'Product'].map(c => `<button class="chip ${S.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div></div>
+          <div class="safe ${on ? '' : 'off'}">
+            <i class="ph-fill ${on ? 'ph-shield-check' : 'ph-warning'}"></i>
+            <div class="tx">
+              ${on
+                ? `<b>${h.length} private item${h.length === 1 ? '' : 's'} hidden for you${S.blurs.length ? ` + ${S.blurs.length} blurred area${S.blurs.length === 1 ? '' : 's'}` : ''}</b><span>We hide the ${list(h.map(i => i.short))} in the template. Your own deck stays the same.${pub.length ? ` The ${list(pub.map(i => i.short))} will stay public.` : ''}</span>`
+                : `<b>Nothing is hidden</b><span>Names, logos and numbers on your slides go out as they are.</span>`}
+              <div class="row">
+                <div class="seg"><button data-preset="rec" class="${on ? 'on' : ''}">Hide private info</button><button data-preset="off" class="${on ? '' : 'on'}">Publish as is</button></div>
+                <button class="link" id="review">Review on slides <i class="ph ph-arrow-right"></i></button>
+              </div>
+            </div>
+          </div>
+          <div class="field"><label>Publishing as</label><div class="as"><span class="av">JT</span><div class="w"><b style="font-weight:500">Joe Thomas</b><small>Your page · @joe-t</small></div></div></div>
+        </div>
+      </div>
+      <div class="foot"><span class="note"><i class="ph ph-lock-simple"></i>Your deck and its live link stay private</span><button class="btn" id="publish">Publish</button></div>
+    </div>`;
+  $('#title').oninput = e => { S.title = e.target.value; };
+  $$('[data-cat]').forEach(b => b.onclick = () => { S.cat = b.dataset.cat; renderDetails(); });
+  $$('[data-preset]').forEach(b => b.onclick = () => {
+    const rec = b.dataset.preset === 'rec';
+    ITEMS.forEach(i => { i.on = rec ? i.key !== 'team' : false; });
+    if (!rec) S.blurs = [];
+    renderDetails();
+  });
+  $('#review').onclick = () => { S.view = 'review'; S.slide = (hidden()[0] || ITEMS[0]).slide; S.sel = null; S.mode = 'select'; renderReview(); };
+  $('#publish').onclick = () => toast(`Published with ${hidden().length} items hidden`);
+}
+
+/* 2 · Review on slides: spots with Hide or Keep, plus a Blur area tool for anything we missed. */
+function renderReview() {
+  const i = S.slide, here = ITEMS.filter(it => it.slide === i);
+  const ex = ITEMS.find(it => it.on) || ITEMS[0];
+  $('#app').innerHTML = `
+    <div class="head"><button class="back" id="back" aria-label="Back to details"><i class="ph ph-arrow-left"></i></button>Review private items<span class="sp"></span><small>${hidden().length} hidden · ${S.blurs.length} blurred</small></div>
+    <div class="card">
+      <div class="body review">
+        <div class="left">
+          <div class="explain"><s>${esc(ex.orig)}</s><i class="ph ph-arrow-right"></i><b>${esc(ex.rep)}</b><span>· We change the template only. Your deck stays the same.</span></div>
+          <div class="stage ${S.mode === 'blur' ? 'blurmode' : ''}" id="stage">${stageHTML(i, true)}
+            <div class="tools"><button data-mode="select" class="${S.mode === 'select' ? 'on' : ''}"><i class="ph ph-cursor"></i>Select</button><button data-mode="blur" class="${S.mode === 'blur' ? 'on' : ''}"><i class="ph ph-drop-half"></i>Blur area</button>${S.blurs.some(b => b.slide === i) ? '<button id="clear"><i class="ph ph-eraser"></i>Clear</button>' : ''}</div>
+          </div>
+          <div class="strip">${SLIDES.map((src, n) => { const its = ITEMS.filter(it => it.slide === n), pub = its.filter(it => !it.on).length, hid = its.length - pub + S.blurs.filter(b => b.slide === n).length; return `<button class="${n === i ? 'on' : ''}" data-slide="${n}"><img src="${src}" alt="">${pub ? `<span class="f a">${pub}</span>` : hid ? `<span class="f">${hid}</span>` : ''}</button>`; }).join('')}</div>
+        </div>
+        <div class="right" style="gap:10px">
+          <div><b style="font-weight:500">${ITEMS.length} things look private</b><div class="muted" style="font-size:13px">Click one to see it on the slide. Use Blur area for anything we missed.</div></div>
+          <div class="list">${ITEMS.map(it => `<div class="item ${it.on ? '' : 'pubi'} ${S.sel === it.key ? 'sel' : ''}" data-item="${it.key}"><span class="ic"><i class="ph ${it.icon}"></i></span><div class="tx"><b>${it.label}</b><small>Slide ${it.slide + 1} · ${it.on ? `shows “${esc(it.rep)}”` : 'will be public'}</small></div><button class="tg ${it.on ? '' : 'off'}" data-tog="${it.key}" aria-label="Hide ${it.label}"></button></div>`).join('')}</div>
+          ${S.blurs.length ? `<div class="muted" style="font-size:13px"><i class="ph ph-drop-half"></i> ${S.blurs.length} area${S.blurs.length === 1 ? '' : 's'} blurred by you</div>` : ''}
+        </div>
+      </div>
+      <div class="foot"><span class="note"><i class="ph ph-shield-check"></i>${hidden().length} of ${ITEMS.length} hidden${S.blurs.length ? ` · ${S.blurs.length} blurred` : ''}</span><button class="btn" id="done">Done</button></div>
+    </div>`;
+  const stage = $('#stage');
+  $('#back').onclick = $('#done').onclick = () => { S.view = 'details'; renderDetails(); };
+  $$('[data-slide]').forEach(b => b.onclick = () => { S.slide = +b.dataset.slide; S.sel = null; renderReview(); });
+  $$('[data-mode]').forEach(b => b.onclick = () => { S.mode = b.dataset.mode; S.sel = null; renderReview(); });
+  $('#clear') && ($('#clear').onclick = () => { S.blurs = S.blurs.filter(b => b.slide !== i); renderReview(); toast('Blurred areas cleared', 'ph-eraser'); });
+  $$('[data-unblur]').forEach(b => b.onclick = e => { e.stopPropagation(); S.blurs.splice(+b.dataset.unblur, 1); renderReview(); });
+  $$('[data-tog]').forEach(b => b.onclick = e => { e.stopPropagation(); const it = ITEMS.find(x => x.key === b.dataset.tog); it.on = !it.on; S.sel = it.key; S.slide = it.slide; renderReview(); });
+  $$('[data-item]').forEach(r => r.onclick = () => { const it = ITEMS.find(x => x.key === r.dataset.item); S.sel = it.key; S.slide = it.slide; S.mode = 'select'; renderReview(); openPop(it); });
+  // Select mode: click a spot to edit it
+  $$('[data-spot]').forEach(sp => sp.onclick = e => { if (S.mode !== 'select') return; e.stopPropagation(); const it = ITEMS.find(x => x.key === sp.dataset.spot); S.sel = it.key; renderReview(); openPop(it); });
+  // Blur mode: drag a box on the slide
+  let start = null, draft = null;
+  const pt = e => { const r = stage.getBoundingClientRect(); return [Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100)), Math.min(100, Math.max(0, (e.clientY - r.top) / r.height * 100))]; };
+  stage.addEventListener('pointerdown', e => {
+    if (S.mode !== 'blur' || e.target.closest('.tools, .x')) return;
+    e.preventDefault(); start = pt(e); draft = document.createElement('div'); draft.className = 'draft'; stage.appendChild(draft); stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!start) return; const [x, y] = pt(e);
+    Object.assign(draft.style, { left: Math.min(x, start[0]) + '%', top: Math.min(y, start[1]) + '%', width: Math.abs(x - start[0]) + '%', height: Math.abs(y - start[1]) + '%' });
+  });
+  stage.addEventListener('pointerup', e => {
+    if (!start) return; const [x, y] = pt(e), w = Math.abs(x - start[0]), h = Math.abs(y - start[1]);
+    if (w > 2 && h > 2) { S.blurs.push({ slide: i, x: Math.min(x, start[0]), y: Math.min(y, start[1]), w, h }); toast('Area blurred in the template', 'ph-drop-half'); }
+    start = null; renderReview();
+  });
+}
+function openPop(it) {
+  const sp = $(`[data-spot="${it.key}"]`); if (!sp) return;
+  const stage = $('#stage'), r = sp.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  const p = document.createElement('div'); p.className = 'pop';
+  p.innerHTML = `<b>${it.label}</b><small>Found: ${esc(it.orig)}</small><input id="rep" value="${esc(it.rep)}" aria-label="Show instead"><div class="acts"><button class="btn" id="hide">${it.on ? 'Save' : 'Hide it'}</button><button class="btn o" id="keep">Keep public</button></div>`;
+  stage.appendChild(p);
+  const left = Math.min(Math.max(8, r.left - sr.left), sr.width - p.offsetWidth - 8);
+  const below = r.bottom - sr.top + 8, top = below + p.offsetHeight > sr.height ? r.top - sr.top - p.offsetHeight - 8 : below;
+  Object.assign(p.style, { left: left + 'px', top: Math.max(8, top) + 'px' });
+  p.addEventListener('pointerdown', e => e.stopPropagation());
+  $('#rep').focus();
+  $('#hide').onclick = () => { it.rep = $('#rep').value.trim() || it.rep; it.on = true; renderReview(); };
+  $('#keep').onclick = () => { it.on = false; renderReview(); };
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.pop')) { $('.pop').remove(); S.sel = null; } });
+renderDetails();
+</script>
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body></html>
