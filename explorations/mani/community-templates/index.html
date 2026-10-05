@@ -500,11 +500,13 @@
   .co-review span { flex: 1; } .co-review b { font-weight: 500; }
   .pub-as { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 12px; }
   .pub-as .lb { width: 100%; font-size: 12px; color: var(--t3); }
+  .det-form .pub-as { margin-top: 0; }
+  .det-form .pub-pin { position: sticky; bottom: -24px; margin: auto -24px -24px; padding: 14px 24px 18px; background: #fff; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; z-index: 1; }
   .pub-as button { flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line2); text-align: left; min-width: 0; }
   .pub-as button img { width: 28px; height: 28px; border-radius: 6px; flex: none; }
   .pub-as button > span:not(.avatar) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .pub-as button b { font-weight: 500; font-size: 13px; }
-  .pub-as button small { font-size: 12px; color: var(--t3); }
+  .pub-as button small { font-size: 12px; color: var(--t3); overflow-wrap: anywhere; }
   .pub-as button > i { font-size: 16px; color: var(--ink); opacity: 0; }
   .pub-as button.on { box-shadow: inset 0 0 0 2px var(--ink); background: var(--bg2); }
   .pub-as button.on > i { opacity: 1; }
@@ -981,7 +983,7 @@ function openModal(inner, { width, onClose = () => go('editor'), plain = false, 
 function closeModal() { $('#modal-root').innerHTML = ''; }
 
 function stepHead(title, backTo) {
-  const list = S._firstTime ? ['profile-setup', 'mask', 'details'] : S._teamFirst ? ['team-claim', 'mask', 'details'] : ['mask', 'details'];
+  const list = (S._firstTime ? ['profile-setup'] : []).concat(['mask', 'details'], S.publishAs === 'team' && (!S.company.on || ROUTE === 'team-claim') ? ['team-claim'] : []);
   const idx = list.indexOf(ROUTE);
   return `<div class="f-head">
     ${backTo ? `<button class="back" data-go="${backTo}" aria-label="Back"><i class="ph ph-arrow-left"></i></button>` : ''}
@@ -1044,10 +1046,6 @@ function renderShare() {
           </div>
           <div class="divider"></div>
           <div class="pad">${community}
-            ${!pub ? `<div class="pub-as"><span class="lb">Publish as</span>
-              <button data-as="me" class="${S.publishAs !== 'team' ? 'on' : ''}">${avatar(28)}<span><b>${esc(P().name)}</b><small>${S.profile ? `presentations.ai/@${esc(S.profile.handle)}` : 'You’ll set up your page next'}</small></span><i class="ph-fill ph-check-circle"></i></button>
-              <button data-as="team" class="${S.publishAs === 'team' ? 'on' : ''}"><img src="${A}ws-foursquare.jpg" alt=""><span><b>${esc(S.company.name)}</b><small>${S.company.on ? `presentations.ai/${esc(S.company.slug)}` : 'Team page. You’ll claim it next'}</small></span><i class="ph-fill ph-check-circle"></i></button>
-            </div>` : ''}
           </div>
           <div class="pad">
             <div style="margin-bottom:10px">Share on social media</div>
@@ -1076,13 +1074,9 @@ function renderShare() {
   $$('[data-tog]').forEach(b => b.onclick = () => b.classList.toggle('on'));
   $('#adv-tog').onclick = () => { const b = $('#adv-body'); const h = b.style.display === 'none'; b.style.display = h ? 'flex' : 'none'; $('#adv-tog i').className = 'ph ' + (h ? 'ph-caret-up' : 'ph-caret-down'); };
   const pa = $('#publish-again');
-  if (pa) pa.onclick = () => { S._firstTime = false; S._teamFirst = false; go('mask'); };
-  $$('[data-as]').forEach(b => b.onclick = () => { S.publishAs = b.dataset.as; save(); renderShare(); });
+  if (pa) pa.onclick = () => { S._firstTime = false; go('mask'); };
   const pn = $('#publish-now');
-  if (pn) pn.onclick = () => {
-    if (S.publishAs === 'team') { S._firstTime = false; S._teamFirst = !S.company.on; save(); go(S.company.on ? 'mask' : 'team-claim'); return; }
-    S._teamFirst = false; S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup');
-  };
+  if (pn) pn.onclick = () => { S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); };
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1388,7 +1382,7 @@ function renderPageModal({ from = 'dashboard', edit = false } = {}) {
    ═══════════════════════════════════════════════════════════ */
 function renderMask() {
   openModal(`
-    ${stepHead('Before publishing, mask sensitive data', S._firstTime ? 'profile-setup' : S._teamFirst ? 'team-claim' : 'share')}
+    ${stepHead('Before publishing, mask sensitive data', S._firstTime ? 'profile-setup' : 'share')}
     <div class="card" style="width:1112px">
       <div class="mask">
         <div class="mask-left">
@@ -1464,18 +1458,23 @@ function renderDetails() {
         <div class="stack"><div class="stack-in"><div class="g g1"></div><div class="g g2"></div><div class="g g3"></div>${img(KPI[0].src)}</div></div>
         <div class="det-form">
           <div class="field"><label class="label">Title</label><input class="input" id="d-title" value="${esc(t.title)}" maxlength="60"></div>
-          <div class="field"><label class="label">Description</label><textarea class="textarea" id="d-desc" rows="6" maxlength="600">${esc(t.desc)}</textarea></div>
+          <div class="field"><label class="label">Description</label><textarea class="textarea" id="d-desc" rows="5" maxlength="600">${esc(t.desc)}</textarea></div>
           <div class="field"><label class="label">Category <span class="hint">Where it shows on Community</span></label><div class="tags" id="d-cat">${GALLERY_CATS.map(c => `<button class="chip sm ${t.cat === c ? 'on' : ''}" data-dcat="${c}">${c}</button>`).join('')}</div></div>
           <div class="field"><label class="label">Tags</label><div class="tags" id="d-tags"></div></div>
+          <div class="pub-pin">
+          <div class="field"><label class="label">Publishing as${S.publishAs === 'team' ? '' : '<button class="link" id="d-editp" type="button" style="font-size:12px;font-weight:400">Edit your page</button>'}</label>
+            <div class="pub-as">
+              <button data-as="me" class="${S.publishAs !== 'team' ? 'on' : ''}">${avatar(28)}<span><b>${esc(P().name)}</b><small>Your page · @${esc(P().handle)}</small></span><i class="ph-fill ph-check-circle"></i></button>
+              <button data-as="team" class="${S.publishAs === 'team' ? 'on' : ''}"><img src="${A}ws-foursquare.jpg" alt=""><span><b>${esc(S.company.name)}</b><small>${S.company.on ? 'Team page' : 'Team page · not claimed yet'}</small></span><i class="ph-fill ph-check-circle"></i></button>
+            </div>
+          </div>
           ${S.publishAs !== 'team' && S.company.on && S.company.membersPublish ? `<label class="co-also"><button class="toggle ${t.toCompany ? 'on' : ''}" id="d-co" type="button" aria-label="Also show on team gallery"></button><img src="${A}ws-foursquare.jpg" alt=""><span>Also show on <b>${esc(S.company.name)}</b>’s team gallery${S.company.review ? '<small>An admin approves it first</small>' : ''}</span></label>` : ''}
-          ${S.publishAs === 'team'
-            ? `<div class="as-row">${avatar(28, TEAM())}<div class="who">Publishing as <b style="font-weight:500">${esc(S.company.name)}</b><span>presentations.ai/${esc(S.company.slug)} · by ${esc(P().name)}</span></div><button class="link" data-go="share" style="font-size:13px">Change</button></div>`
-            : `<div class="as-row">${avatar(28)}<div class="who">Publishing as <b style="font-weight:500">${esc(P().name)}</b><span>presentations.ai/@${esc(P().handle)}</span></div><button class="link" id="d-editp" style="font-size:13px">Edit</button></div>`}
+          </div>
         </div>
       </div>
       <div class="f-foot">
         <span class="note"><i class="ph ph-lock-simple"></i>Your deck and its live link stay private</span>
-        <button class="btn btn-primary btn-lg" id="d-publish" style="min-width:96px" ${t.title.trim() ? '' : 'disabled'}>Publish</button>
+        <button class="btn btn-primary btn-lg" id="d-publish" style="min-width:96px" ${t.title.trim() ? '' : 'disabled'}>${S.publishAs === 'team' && !S.company.on ? 'Claim page and publish' : 'Publish'}</button>
       </div>
     </div>`, { height: 600 });
 
@@ -1494,7 +1493,9 @@ function renderDetails() {
   $('#d-title').oninput = e => { t.title = e.target.value; $('#d-publish').disabled = !t.title.trim(); save(); };
   $('#d-desc').oninput = e => { t.desc = e.target.value; save(); };
   $('#d-editp') && ($('#d-editp').onclick = () => renderPageModal({ edit: true }));
+  $$('[data-as]').forEach(b => b.onclick = () => { S.publishAs = b.dataset.as; save(); renderDetails(); });
   $('#d-publish').onclick = () => {
+    if (S.publishAs === 'team' && !S.company.on) { go('team-claim'); return; }
     const b = $('#d-publish');
     b.innerHTML = '<span class="spin"></span>Publishing'; b.disabled = true;
     later(() => { if (!$('#d-publish')) return; S.published = true; S.publishedAt = Date.now(); save(); go('live'); }, 1200);
@@ -1929,7 +1930,7 @@ const CO_DOMAIN = 'foursquare.com';
 function renderClaimModal({ from = 'settings' } = {}) {
   const co = S.company, st = S._claim || (S._claim = { step: 'email', email: 'joe@' + CO_DOMAIN });
   const inShare = from === 'share';
-  const close = () => { S._claim = null; go(inShare ? 'editor' : 'ws-settings'); };
+  const close = () => { S._claim = null; go(inShare ? 'details' : 'ws-settings'); };
   const preview = `<div class="cl-prev">
       <div class="cv" style="background:${co.cover}"></div>
       <img class="lg" src="${A}ws-foursquare.jpg" alt="">
@@ -1949,10 +1950,10 @@ function renderClaimModal({ from = 'settings' } = {}) {
       <p>We sent a 6-digit code to <b>${esc(st.email)}</b>. <button class="link" id="cl-change">Change email</button></p>
       <div class="field"><label class="label">Code <span class="hint">Proto: any 6 digits</span></label><input class="input cl-code" id="cl-code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code"></div>
       <div class="cl-err" id="cl-err"></div>
-      <button class="btn btn-primary btn-lg" id="cl-verify" style="width:100%" disabled>Verify and claim</button>
+      <button class="btn btn-primary btn-lg" id="cl-verify" style="width:100%" disabled>${inShare ? 'Verify, claim and publish' : 'Verify and claim'}</button>
       <button class="link" id="cl-resend" style="align-self:center;font-weight:400;color:var(--t3)">Resend code</button>`;
   openModal(`
-    ${inShare ? stepHead(`Claim ${esc(co.name)}’s page`, 'share') : `<div class="f-head">Claim ${esc(co.name)}’s page</div>`}
+    ${inShare ? stepHead(`Claim ${esc(co.name)}’s page to publish`, 'details') : `<div class="f-head">Claim ${esc(co.name)}’s page</div>`}
     <div class="card" style="width:820px">
       <div class="cl">
         <div class="cl-form">${body}</div>
@@ -1982,7 +1983,7 @@ function renderClaimModal({ from = 'settings' } = {}) {
       later(() => {
         S.company.on = true; S.company.claimedBy = st.email; S._claim = null; save();
         toast(`You now manage ${esc(co.name)}’s page`);
-        go(inShare ? 'mask' : 'company');
+        if (inShare) { S.published = true; S.publishedAt = Date.now(); save(); go('live'); } else go('company');
       }, 900);
     };
     code.focus();
@@ -2586,9 +2587,9 @@ function ensurePrereqs(r) {
   if (needsProfile && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
   if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
   if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
-  if (r === 'team-claim') { S._teamFirst = true; S._firstTime = false; S.publishAs = 'team'; S.company.on = false; S._claim = null; }
+  if (r === 'team-claim') { S.publishAs = 'team'; S.company.on = false; S._claim = null; }
   if (r === 'ws-claim') { S.company.on = false; S._claim = null; }
-  if ((r === 'mask' || r === 'details' || r === 'live') && S.publishAs === 'team' && !S.company.on) S.company.on = true;
+  if (r === 'live' && S.publishAs === 'team' && !S.company.on) S.company.on = true;
   if (r === 'ref-login') S._refCredited = false;
   if (r === 'refer-joined') creditFriend();
   if (r === 'ref-upgrade' || r === 'refer-paid') S.plan = 'pro';
@@ -2638,8 +2639,9 @@ const JOURNEYS = [
   { id: 'r', group: 'other', label: 'Rewards', hint: 'Credits and cash from sign ups', steps: ['rewards'] },
   { id: 'ts', group: 'team', label: 'From settings', hint: 'Claim the Foursquare page in Workspace settings', fresh: true,
     steps: ['dashboard', 'ws-settings', 'ws-claim', 'company'] },
-  { id: 'tb', group: 'team', label: 'From Share', hint: 'Publish as Foursquare from Share, claim the page on the way', fresh: true, init: s => { s.publishAs = 'team'; },
-    steps: ['editor', 'share', 'team-claim', 'mask', 'details', 'live', 'gallery', 'template', 'company'] },
+  { id: 'tb', group: 'team', label: 'From Share', hint: 'Pick Foursquare in the last publish step, claim the page there', fresh: true,
+    init: s => { s.profile = JSON.parse(JSON.stringify(s.draft)); s.publishAs = 'team'; },
+    steps: ['editor', 'share', 'mask', 'details', 'team-claim', 'live', 'gallery', 'template', 'company'] },
   { id: 'f', label: 'Free user', group: 'refer', hint: 'Free user invites a friend. Both get 200 credits', fresh: true, plan: 'free',
     steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined'] },
   { id: 'p', label: 'Pro user', group: 'refer', hint: 'Pro user invites a friend. Earns 10% cash when they upgrade', fresh: true, plan: 'pro',
