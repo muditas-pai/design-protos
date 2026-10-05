@@ -659,7 +659,8 @@
   .st-plan, .st-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; }
   .st-plan b { font-size: 28px; font-weight: 500; display: block; } .st-plan span, .st-row span { color: var(--t2); }
   .st-row { margin-top: 8px; } .st-row b { display: block; font-weight: 600; }
-  .rwrap.rf-wrap { max-width: 840px; } /* 800px content + 20px side padding */
+  .rwrap.rf-wrap { max-width: 840px; }
+  .st-content .rwrap.rf-wrap { max-width: 800px; padding-left: 0; padding-right: 0; } /* 800px content + 20px side padding */
   .gold-tag { display: inline-flex; align-items: center; background: #FBF0D2; color: #a16207; font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; padding: 2px 6px; border-radius: 34px; line-height: 1.33; }
   .cap .gold-tag, .fd-lbl .gold-tag { margin-left: 6px; vertical-align: 1px; }
   .dash .side .sb-sec .cap { display: flex; align-items: center; }
@@ -1448,7 +1449,7 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
       <nav>${nav('ph-house-simple', 'Home', 'dashboard')}${nav('ph-paint-brush-broad', 'Brand kit', null, pro)}</nav>
       ${friend ? `<nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, goldTag)}</nav>` : sidebarFolders(active.startsWith('folder:') ? active.slice(7) : '')}
       <nav>${nav('ph-pencil-ruler', 'Hire an expert')}${nav('ph-layout', 'Templates')}${nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}</nav>
-      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
+      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
     </aside>
     <main class="dmain">
       <div class="dtop">
@@ -2097,7 +2098,7 @@ const coSlugState = v => !/^[a-z0-9][a-z0-9-]{2,29}$/.test(v) ? ['bad', 'Use 3 t
 
 /* W0 · Settings shell, same layout as 7-day-trial-v6/settings.html:
    Back to Home, Workspace settings (General, Members, Billing, Public gallery), Profile settings (Profile). */
-function settingsShell(tab, main) {
+function settingsShell(tab, main, topLeft = '') {
   const paid = S.plan === 'pro';
   const item = (key, icon, label, extra = '') => `<a href="#" class="st-item ${tab === key ? 'on' : ''}" data-stab="${key}"><i class="ph ${icon}"></i><span>${label}</span>${extra}</a>`;
   return `<div class="st">
@@ -2107,10 +2108,10 @@ function settingsShell(tab, main) {
       <nav class="st-nav"><div class="st-lbl">Workspace settings</div>
         ${item('general', 'ph-gear', 'General')}${item('members', 'ph-users-three', 'Members')}${item('billing', 'ph-credit-card', 'Billing')}${item('gallery', 'ph-globe-hemisphere-west', 'Public gallery', S.company.on ? '' : '<span class="fd-badge">New</span>')}
       </nav>
-      <nav class="st-nav"><div class="st-lbl">Profile settings</div>${item('profile', 'ph-user', 'Profile')}${item('community', 'ph-users-three', 'Community page', S.profile ? '' : '<span class="fd-badge">New</span>')}</nav>
+      <nav class="st-nav"><div class="st-lbl">Profile settings</div>${item('profile', 'ph-user', 'Profile')}${item('community', 'ph-users-three', 'Community page', S.profile ? '' : '<span class="fd-badge">New</span>')}${item('rewards', 'ph-gift', 'Rewards')}</nav>
     </aside>
     <main class="st-main">
-      <div class="dtop"><span style="flex:1"></span>
+      <div class="dtop">${topLeft}<span style="flex:1"></span>
         ${paid ? '<span class="fd-badge" style="height:24px;padding:0 10px"><i class="ph-fill ph-crown-simple" style="margin-right:4px"></i>Pro plan</span>' : '<div class="fd-trial"><span>🔥 Trial: 4 days left</span><button class="fd-btn-up"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button></div>'}
         <button class="fd-ic" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button><button class="fd-ic" aria-label="Help"><i class="ph ph-question"></i></button>${bellHTML()}
         <button data-go="community" title="Community page">${avatar(32)}</button>
@@ -2142,7 +2143,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-stab]');
   if (!t) return;
   e.preventDefault();
-  const routeOf = { gallery: 'ws-settings', community: 'community' }[t.dataset.stab];
+  const routeOf = { gallery: 'ws-settings', community: 'community', rewards: 'rewards' }[t.dataset.stab];
   if (routeOf) go(routeOf);
   else renderSettingsTab(t.dataset.stab);
 });
@@ -2544,56 +2545,9 @@ function renderVisitorEditor() {
   $('#ed-share').onclick = () => toast('This is the visitor’s own copy now', 'ph ph-info');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   R1 · REWARDS (dashboard)
-   ═══════════════════════════════════════════════════════════ */
-function renderRewards() {
-  const mine = myTemplates();
-  const newCredits = S.signups.length * 200;
-  const credits = creditsTotal();
-  const cash = S.later ? 68 : 0;
-  const statusCell = r => {
-    const map = { capped: 'soft-gray', available: 'soft-green', pending: 'soft-amber' };
-    return `<span class="pill ${map[r.status]}">${r.status}</span>${r.note ? `<small>${r.note}</small>` : ''}`;
-  };
-  const newRows = S.signups.map(s => ({ ev: 'Sign Up', src: S.tpl.title + ' (Community)', via: s.via, date: 'Today', status: 'available', credits: '+ 200', cash: '-', fresh: Date.now() - s.at < 8000 }));
-  const payoutRow = S.redeemed && S.later ? [{ ev: 'Payout', src: `To ${S.payout}`, date: 'Today', status: 'pending', note: 'Arrives in 3 to 5 days', credits: '-', cash: `- ${money(S.redeemed)}`, fresh: Date.now() - (S.redeemedAt || 0) < 8000 }] : [];
-  const rows = payoutRow.concat(newRows, S.later ? FIGMA_BREAKDOWN : []);
-  const tog = `<div class="state-tog" title="Proto only"><button data-later="0" class="${S.later ? '' : 'on'}">Just published</button><button data-later="1" class="${S.later ? 'on' : ''}">Few weeks later</button></div>`;
-  $('#screen').innerHTML = dashShell('rewards', `
-      <div class="rwrap">
-        <h2>Rewards</h2>
-        <div class="kpis">
-          <div class="kpi"><b>${credits.toLocaleString()}</b><small>Credits from sign ups</small><small>${S.later ? '+800 credits by 30 Sep, 2026' : newCredits ? `+${newCredits} from ${esc(S.tpl.title)}` : 'Share a template to start earning'}</small></div>
-          <div class="kpi"><b>$${cashAvailable().toFixed(2)}</b><small>Cash available</small><a class="link" href="#" data-go="redeem" style="margin-top:4px">Redeem now</a></div>
-        </div>
-        <div class="refer">
-          <div class="a">
-            <h3>Refer your friends,<br>earn credits</h3>
-            <div style="margin-bottom:10px">Your referral link</div>
-            <div class="ref-row" style="box-shadow:0 1px 4px -1px var(--line), inset 0 0 0 1px var(--line)"><span style="color:var(--t2)">${refUrl()}</span><button class="btn btn-primary btn-sm" id="rf-copy"><i class="ph ph-copy"></i>Copy</button></div>
-            <div style="margin:20px 0 10px">Or share via</div>
-            <div class="share-ic">${['linkedin-logo', 'x-logo', 'facebook-logo', 'whatsapp-logo', 'envelope-simple'].map(i => `<button class="icon-btn sm"><i class="ph ph-${i}"></i></button>`).join('')}</div>
-          </div>
-          <div class="b">
-            <div class="gets">
-              <div><i class="ph-fill ph-gift"></i><span><b>You get</b>200 credits per friend who signs up, up to 2,000</span></div>
-              <div><i class="ph-fill ph-heart"></i><span><b>They get</b>200 credits on sign up</span></div>
-            </div>
-            <div class="art"><img src="${A}hand-envelope.png" alt=""></div>
-          </div>
-        </div>
-        <div class="sec-h" style="margin-top:56px"><h3>Your Templates</h3><button class="btn btn-outline" data-go="share"><i class="ph ph-plus"></i>New Template</button></div>
-        ${mine.length ? `<div class="tgrid" style="padding-bottom:0">${mine.map(t => tcard(t, true)).join('')}</div>` : '<div class="empty"><i class="ph ph-squares-four" style="font-size:24px"></i>No templates yet. Publish a deck from its Share menu.<button class="btn btn-outline btn-sm" data-go="share">Publish a deck</button></div>'}
-        <div class="sec-h" style="margin-top:56px"><h3>Breakdown</h3></div>
-        ${rows.length ? `<div class="brk"><table>
-          <thead><tr><th>Event</th><th>Source</th><th>Date</th><th>Status</th><th>Credits</th><th style="text-align:right">Cash</th></tr></thead>
-          <tbody>${rows.map(r => `<tr class="${r.fresh ? 'new' : ''}"><td class="ev">${r.ev}</td><td>${esc(r.src)}${r.via ? ` •<small>${r.via}</small>` : ''}</td><td>${r.date}</td><td>${statusCell(r)}</td><td>${r.credits}</td><td style="text-align:right">${r.cash}</td></tr>`).join('')}</tbody>
-        </table></div>` : `<div class="empty"><i class="ph ph-hand-coins" style="font-size:24px"></i>No sign ups yet. When someone signs up from your template link, it shows here.${S.published ? '<button class="btn btn-outline btn-sm" data-go="template">Preview your template link</button>' : ''}</div>`}
-      </div>`, tog);
-  $('#rf-copy').onclick = () => toast('Referral link copied');
-  $$('[data-later]').forEach(b => b.onclick = () => { S.later = b.dataset.later === '1'; save(); renderRewards(); });
-}
+/* R1 · REWARDS lives in Settings and shows the Refer & earn page, identical */
+function renderRewards() { renderRefer({ inSettings: true }); }
+
 
 /* ═══════════════════════════════════════════════════════════
    F · REFER A FRIEND
@@ -2617,7 +2571,7 @@ const REF_SEED_PRO = [
   { who: 'sam@northwind.co', status: 'invited', when: 'Yesterday' },
   { who: 'Sofia Alvarez', status: 'joined', when: '4 days ago' },
   { who: 'Marcus Lee', status: 'upgraded', when: '2 weeks ago', pay: 180, plan: 'Yearly', payout: 'pending', payDate: '21 Oct' },
-  { who: 'Ken Watanabe', status: 'upgraded', when: '2 months ago', pay: 20, plan: 'Monthly', payout: 'paid' },
+  { who: 'Ken Watanabe', status: 'upgraded', when: '2 months ago', pay: 180, plan: 'Yearly', payout: 'paid' },
 ];
 const isPro = () => S.plan === 'pro';
 const money = n => '$' + n.toFixed(2);
@@ -2669,7 +2623,7 @@ const REF_FAQ = [
   ['How does the 10% cash work?', 'On Pro, you get 10% cash back when a friend you invited upgrades. That’s $18 for a yearly plan and $2 for monthly, paid out after 30 days.', true],
 ];
 const PRO_BADGE = '<span class="pill pro pro-b"><i class="ph-fill ph-crown-simple"></i>Pro</span>';
-function renderRefer({ joined = false, paid = false } = {}) {
+function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rewards' || ROUTE === 'redeem' } = {}) {
   const pro = isPro();
   const proBadge = pro ? '' : PRO_BADGE;
   const rows = refRows();
@@ -2691,7 +2645,8 @@ function renderRefer({ joined = false, paid = false } = {}) {
   const cashCell = r => !pro ? (r.status === 'invited' ? '' : '<i class="ph ph-lock-simple muted" title="Pro feature"></i>')
     : r.cash != null ? `<b class="cash">${money(r.cash)}</b><small>${r.payout === 'paid' ? 'Paid out' : `Pending · pays ${r.payDate}`}</small>`
     : r.status === 'invited' ? '' : '<span class="muted">When they upgrade</span>';
-  $('#screen').innerHTML = dashShell('refer', `
+  const shell = (main, top) => inSettings ? settingsShell('rewards', main, top) : dashShell('refer', main, top);
+  $('#screen').innerHTML = shell(`
     <div class="rwrap rf-wrap">
       <h2>Refer &amp; earn</h2>
       <div class="rf-hero">
@@ -2716,7 +2671,7 @@ function renderRefer({ joined = false, paid = false } = {}) {
         <div><b>${joinedN}</b><span>Friends joined</span><small>${rows.length - joinedN} invite${rows.length - joinedN === 1 ? '' : 's'} waiting</small></div>
         <div><b>${earned.toLocaleString()}<small>/ ${REF_MAX.toLocaleString()}</small></b><span>Credits earned</span><small>${atMax ? 'Max reached' : `${Math.ceil((REF_MAX - earned) / REF_BONUS)} more friends to the max`}</small></div>
         <div class="${pro ? '' : 'off'}">${pro
-          ? `<b>${money(pending + paidOut)}</b><span>Cash earned</span><small>${money(pending)} pending · <button class="link" id="rf-payout">${S.payout ? `To ${esc(S.payout)}` : 'Add payout method'}</button></small>`
+          ? `<b>${money(pending + paidOut)}</b><span>Cash earned</span><small>${money(pending)} pending${cashAvailable() >= 10 ? ` · <a class="link" href="#" data-go="redeem">Redeem ${money(cashAvailable())}</a>` : S.redeemed ? ` · ${money(S.redeemed)} paid out` : ''}</small><small><button class="link" id="rf-payout">${S.payout ? `To ${esc(S.payout)}` : 'Add payout method'}</button></small>`
           : `<b>${locked('$38.00')}</b><span>Cash earned</span><small>Upgrade to earn 10% when friends upgrade</small>`}</div>
       </div>
       <div class="rf-how">
@@ -2881,7 +2836,7 @@ function notifItems() {
     : { i: 'ph-paper-plane-tilt', t: `<b>${esc(r.who)}</b> joined with your referral link`, m: '+200 credits', go: 'refer', at: r.at }));
   if (mineInReview()) L.push({ i: 'ph-hourglass-medium', t: `<b>${esc(S.tpl.title)}</b> is waiting for approval on ${esc(S.company.name)}’s team page`, go: 'company', at: S.publishedAt + 1 });
   if (S.published) L.push({ i: 'ph-check-circle', t: `<b>${esc(S.tpl.title)}</b> is live on Community`, m: 'Share it to start earning', go: 'gallery', at: S.publishedAt });
-  if (S.redeemed && S.later) L.push({ i: 'ph-bank', t: `<b>${money(S.redeemed)}</b> is on its way to ${esc(S.payout || 'you')}`, m: 'Arrives in 3 to 5 business days', go: 'rewards', at: S.redeemedAt });
+  if (S.redeemed) L.push({ i: 'ph-bank', t: `<b>${money(S.redeemed)}</b> is on its way to ${esc(S.payout || 'you')}`, m: 'Arrives in 3 to 5 business days', go: 'rewards', at: S.redeemedAt });
   L.push({ i: 'ph-heart', t: '<b>Dana Ortiz</b> started following you', go: 'creator', cr: 'dana', at: 2 });
   L.push({ i: 'ph-sparkle', t: 'Publish a deck to Community and earn <b>200 credits</b> for every sign up', go: 'editor', at: 1 });
   return L.sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -2912,7 +2867,7 @@ document.addEventListener('click', e => {
 /* ═══════════════════════════════════════════════════════════
    R2 · PAYOUT METHOD + REDEEM CASH (Rewards "Redeem now", Refer "Add payout method")
    ═══════════════════════════════════════════════════════════ */
-const cashAvailable = () => Math.max(0, (S.later ? 68 : 0) - (S.redeemed || 0));
+const cashAvailable = () => isPro() ? Math.max(0, refRows().reduce((n, r) => n + (r.cash && r.payout === 'paid' ? r.cash : 0), 0) - (S.redeemed || 0)) : 0;
 function renderPayout({ redeem = true, done = false } = {}) {
   const amt = cashAvailable();
   const st = S._pay || (S._pay = { kind: (S.payout || '').startsWith('bank') ? 'bank' : 'paypal', email: 'joe@foursquare.com', acct: '', edit: !S.payout });
@@ -3127,7 +3082,7 @@ const JOURNEYS = [
     steps: ['editor', 'share', 'profile-setup', 'mask', 'details', 'live', 'gallery', 'template', 'profile'] },
   { id: 'v', group: 'other', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['gallery', 'template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
-  { id: 'r', group: 'other', label: 'Rewards', hint: 'Notifications, credits and cash, redeem to PayPal or bank', steps: ['notifs', 'rewards', 'redeem'] },
+  { id: 'r', group: 'other', label: 'Rewards', hint: 'Notifications, then Rewards in Settings, redeem to PayPal or bank', init: s => { s.plan = 'pro'; }, steps: ['notifs', 'rewards', 'redeem'] },
   { id: 'c', group: 'other', label: 'Creators', hint: 'Browse Community and open another creator’s page', init: s => { s.viewCreator = 'dana'; }, fresh: true, steps: ['gallery', 'creator'] },
   { id: 'ts', group: 'team', label: 'From settings', hint: 'Claim the Foursquare page in Workspace settings', fresh: true,
     steps: ['dashboard', 'ws-settings', 'ws-claim', 'company'] },
@@ -3163,7 +3118,7 @@ function renderFlow() {
       <button class="arr" id="fl-next" ${i === j.steps.length - 1 ? 'disabled' : ''} aria-label="Next step"><i class="ph ph-caret-right"></i></button>
       <span class="dots">${j.steps.map((k, n) => `<button class="${n === i ? 'on' : n < i ? 'past' : ''}" data-step="${k}" title="${n + 1}. ${LABEL[k]}"></button>`).join('')}</span>
     </div>` : ''}`;
-  const step = k => { if (k === 'creator' && !S.viewCreator) S.viewCreator = 'dana'; if (k === 'redeem') S.later = true; if (k === 'profile') S.visitorView = false; if (k === 'company') S.coVisitor = false; if (k === 'template') S.viewTpl = 'mine';
+  const step = k => { if (k === 'creator' && !S.viewCreator) S.viewCreator = 'dana'; if (k === 'profile') S.visitorView = false; if (k === 'company') S.coVisitor = false; if (k === 'template') S.viewTpl = 'mine';
     if (k === 'gallery') { S.gCat = 'All'; S.gQ = ''; if (!S.published) { if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft)); S.published = true; S.publishedAt = Date.now(); } } if (k === 'rewards' && !S.published) S.later = true; go(k); };
   $$('[data-j]').forEach(b => b.onclick = () => {
     const x = JOURNEYS.find(y => y.id === b.dataset.j);
@@ -3205,7 +3160,6 @@ document.addEventListener('keydown', e => {
   if (q.has('reset')) { S = DEFAULT_STATE(); save(); }
   S.tpl.cat = S.tpl.cat || 'Reports';
   if (q.get('s') === 'template') S.viewTpl = 'mine';
-  if (q.get('s') === 'redeem') S.later = true;
   // ?j=<journey id> opens that flow at its first step (links for review)
   const jj = JOURNEYS.find(x => x.id === q.get('j'));
   if (jj) { if (jj.plan) S.plan = jj.plan; if (jj.init) jj.init(S); S.journey = jj.id; save(); go(q.get('s') || jj.steps[0]); return; }
