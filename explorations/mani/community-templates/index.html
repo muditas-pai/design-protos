@@ -586,6 +586,19 @@
   .rs-card .info { display: flex; gap: 10px; padding: 12px; border-radius: 4px; background: var(--bg2); color: var(--t2); font-size: 13px; }
   .rs-card .info i { font-size: 16px; color: var(--t1); margin-top: 1px; }
   .rs-card .info.gift i { color: var(--brand); }
+  .up .up-body { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .up-plans { display: flex; flex-direction: column; gap: 8px; }
+  .up-plan { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line2); text-align: left; }
+  .up-plan.on { box-shadow: inset 0 0 0 2px var(--ink); background: var(--bg2); }
+  .up-plan .rd { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line2); flex: none; }
+  .up-plan.on .rd { box-shadow: inset 0 0 0 5px var(--ink); }
+  .up-plan .tx { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .up-plan .tx b { font-weight: 500; }
+  .up-plan .tx small { color: var(--t3); }
+  .up-plan .pr { font-size: 18px; font-weight: 500; }
+  .up-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; color: var(--t2); }
+  .up-list li { display: flex; gap: 8px; }
+  .up-list i { color: var(--green); margin-top: 3px; }
   .credits.fixed { position: fixed; right: 20px; bottom: 76px; }
 </style>
 </head>
@@ -692,6 +705,8 @@ const DEFAULT_STATE = () => ({
   refs: [],             // refer a friend: invites sent + friends joined this session
   refMax: false,        // proto toggle: inviter already earned the 2,000 max
   friend: { name: 'Priya Raman', ws: 'Priya’s workspace' },
+  plan: 'free',         // inviter's plan for the refer journeys: free (credits) or pro (10% cash)
+  friendPlan: 'year',
 });
 let S = DEFAULT_STATE();
 try { const saved = sessionStorage.getItem('ct2-state'); if (saved) S = Object.assign(DEFAULT_STATE(), JSON.parse(saved)); } catch (e) {}
@@ -1007,17 +1022,17 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
   const ws = friend ? `<span class="ws-tile">${esc(initials(S.friend.ws))[0]}</span>${esc(S.friend.ws)}` : `<img src="${A}ws-foursquare.jpg" alt="">Foursquare`;
   return `<div class="dash">
     <aside class="side">
-      <div class="ws">${ws}<span class="pill pro">Upgrade</span><i class="ph ph-caret-down"></i></div>
+      <div class="ws">${ws}${S.plan === 'pro' && !friend ? '' : '<span class="pill pro">Upgrade</span>'}<i class="ph ph-caret-down"></i></div>
       <nav>${nav('ph-house', 'Home', 'dashboard')}${nav('ph-file', 'Created by Me')}</nav>
       <nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, '<span class="pill pro">Pro</span>')}</nav>
       <nav>${nav('ph-layout', 'Templates')}${nav('ph-users-three', 'Community page', 'community', S.profile ? '' : '<span class="pill pro">New</span>')}${nav('ph-books', 'Hire an Expert')}</nav>
-      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear-six', 'Workspace settings')}${nav('ph-user-plus', 'Invite new member', null, '<span class="pill pro">Pro</span>')}</nav>
+      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '<span class="pill pro">10%</span>' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear-six', 'Workspace settings')}${nav('ph-user-plus', 'Invite new member', null, '<span class="pill pro">Pro</span>')}</nav>
     </aside>
     <main class="dmain">
       <div class="dtop">
         ${topLeft}
         <span style="flex:1"></span>
-        <div class="trial">🔥Trial: 4 days left<button class="btn btn-brand"><i class="ph ph-rocket-launch"></i>Upgrade</button></div>
+        ${S.plan === 'pro' && !friend ? '<span class="pill pro" style="height:24px;padding:0 10px;font-size:11px"><i class="ph-fill ph-crown-simple" style="margin-right:4px"></i>Pro plan</span>' : '<div class="trial">🔥Trial: 4 days left<button class="btn btn-brand"><i class="ph ph-rocket-launch"></i>Upgrade</button></div>'}
         <i class="ph ph-magnifying-glass"></i><i class="ph ph-question"></i><i class="ph ph-bell"></i>
         ${friend ? avatar(32, friend) : `<button data-go="community" title="Community page">${avatar(32)}</button>`}
       </div>
@@ -1045,7 +1060,7 @@ function renderDashboard() {
     <h2>Good morning, ${esc(first())}</h2>
     <div class="dprompt"><i class="ph ph-sparkle"></i><span>Describe the presentation you need, or drop in a file</span><button class="btn btn-primary btn-sm" disabled>Create</button></div>
     ${promo}
-    <div class="rf-strip"><i class="ph-fill ph-paper-plane-tilt"></i><span><b>Invite friends, you both get ${REF_BONUS} credits</b>Earn up to ${REF_MAX.toLocaleString()} credits.</span><button class="btn btn-outline btn-sm" data-go="refer">Refer &amp; earn</button></div>
+    <div class="rf-strip"><i class="ph-fill ph-paper-plane-tilt"></i><span>${S.plan === 'pro' ? `<b>Invite friends, earn 10% in cash</b>They get ${REF_BONUS} credits. You get 10% of their first payment.` : `<b>Invite friends, you both get ${REF_BONUS} credits</b>Earn up to ${REF_MAX.toLocaleString()} credits.`}</span><button class="btn btn-outline btn-sm" data-go="refer">Refer &amp; earn</button></div>
     <div class="sec-h" style="margin-top:36px"><h3>Recent</h3></div>
     <div class="recent">${recent.map(r => `<div class="tcard" ${r.go ? `data-go="${r.go}"` : ''}><div class="img" style="background-image:url(${r.img})"></div><div class="meta"><b>${r.t}</b><small>${r.when}</small></div></div>`).join('')}</div>
   </div>`);
@@ -1654,32 +1669,50 @@ function renderRewards() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   F · REFER A FRIEND (free plan)
+   F · REFER A FRIEND
    Friend signs up with the inviter's link and gets their own
-   workspace. Both get 200 credits. Inviter earns up to 2,000.
+   workspace with 200 credits.
+   Free inviter: 200 credits per friend, up to 2,000.
+   Pro inviter: 10% of the friend's first payment, in cash.
    ═══════════════════════════════════════════════════════════ */
-const REF_BONUS = 200, REF_MAX = 2000;
+const REF_BONUS = 200, REF_MAX = 2000, REF_CUT = 0.1;
+const PRO_PLANS = [
+  { id: 'year', label: 'Yearly', price: 180, per: '$15/mo, billed $180 yearly', save: 'Save $60' },
+  { id: 'month', label: 'Monthly', price: 20, per: '$20/mo, billed monthly' },
+];
 const REF_SEED = [
   { who: 'sam@northwind.co', status: 'invited', when: 'Yesterday' },
   { who: 'Marcus Lee', status: 'joined', when: '3 days ago' },
 ];
 const REF_SEED_MAX = ['Marcus Lee', 'Sofia Alvarez', 'Ken Watanabe', 'Amara Okafor', 'Liam Chen', 'Nora Haddad', 'Diego Ruiz', 'Hana Kim', 'Omar Farouk', 'Elena Rossi']
   .map((who, i) => ({ who, status: 'joined', when: i < 2 ? `${i + 2} days ago` : `${i} weeks ago` }));
+const REF_SEED_PRO = [
+  { who: 'sam@northwind.co', status: 'invited', when: 'Yesterday' },
+  { who: 'Sofia Alvarez', status: 'joined', when: '4 days ago' },
+  { who: 'Marcus Lee', status: 'upgraded', when: '2 weeks ago', pay: 180 },
+];
+const isPro = () => S.plan === 'pro';
+const money = n => '$' + n.toFixed(2);
 const friendFirst = () => (S.friend.name || '').trim().split(/\s+/)[0] || 'Your friend';
 const friendHandle = () => (S.friend.name || 'you').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'you';
 
-// Newest first. "got" is worked out oldest first so the 2,000 cap applies in order.
+// Newest first. Free: credits worked out oldest first so the 2,000 cap applies in order.
+// Pro: cash is 10% of the first payment, only once the friend upgrades.
 function refRows() {
-  const rows = S.refs.concat(S.refMax ? REF_SEED_MAX : REF_SEED).map(r => ({ ...r }));
+  const seed = isPro() ? REF_SEED_PRO : S.refMax ? REF_SEED_MAX : REF_SEED;
+  const rows = S.refs.concat(seed).map(r => ({ ...r }));
   let total = 0;
   for (let i = rows.length - 1; i >= 0; i--) {
-    if (rows[i].status !== 'joined') { rows[i].got = null; continue; }
-    rows[i].got = Math.min(REF_BONUS, REF_MAX - total);
-    total += rows[i].got;
+    const r = rows[i];
+    if (isPro()) { r.cash = r.status === 'upgraded' ? r.pay * REF_CUT : null; continue; }
+    if (r.status === 'invited') { r.got = null; continue; }
+    r.got = Math.min(REF_BONUS, REF_MAX - total);
+    total += r.got;
   }
   return rows;
 }
 const refEarned = () => refRows().reduce((n, r) => n + (r.got || 0), 0);
+const refCash = () => refRows().reduce((n, r) => n + (r.cash || 0), 0);
 
 function creditFriend() {
   if (S._refCredited) return;
@@ -1688,34 +1721,34 @@ function creditFriend() {
   S.refs.unshift({ who: S.friend.name, status: 'joined', when: 'Just now', at: Date.now() });
   save();
 }
+function upgradeFriend(pay) {
+  creditFriend();
+  const r = S.refs.find(x => x.who === S.friend.name);
+  Object.assign(r, { status: 'upgraded', pay, when: 'Just now', at: Date.now() });
+  save();
+}
 
-/* F1 · Refer & earn page (inviter, free plan) */
-function renderRefer({ joined = false } = {}) {
+/* F1 · Refer & earn page (inviter). Free and Pro share one layout. */
+function renderRefer({ joined = false, paid = false } = {}) {
+  const pro = isPro();
   const rows = refRows();
-  const earned = refEarned();
-  const atMax = earned >= REF_MAX;
+  const earned = refEarned(), cash = refCash();
+  const atMax = !pro && earned >= REF_MAX;
   const left = Math.ceil((REF_MAX - earned) / REF_BONUS);
-  const link = refUrl();
   const fresh = rows[0] && rows[0].at && Date.now() - rows[0].at < 8000;
   const shown = rows.slice(0, 6);
-  const tog = `<div class="state-tog" title="Proto only"><button data-rmax="0" class="${S.refMax ? '' : 'on'}">First invites</button><button data-rmax="1" class="${S.refMax ? 'on' : ''}">Max reached</button></div>`;
-  const gotCell = r => r.got === null ? '<span style="color:var(--t4)">Waiting for sign up</span>'
-    : r.got > 0 ? `+${r.got} credits` : `0 credits<small>Max reached. ${esc(r.who.split(' ')[0])} still got 200</small>`;
-  $('#screen').innerHTML = dashShell('refer', `
-    <div class="rwrap">
-      <h2>Refer &amp; earn</h2>
-      <div class="rf-hero">
-        <div class="a">
-          <h3>Invite a friend.<br>You both get ${REF_BONUS} credits.</h3>
-          <p>They sign up with your link and get their own workspace. Nothing in your workspace is shared.</p>
-          <div class="lbl">Your referral link</div>
-          <div class="ref-row" style="box-shadow:0 1px 4px -1px var(--line), inset 0 0 0 1px var(--line)"><span style="color:var(--t2)">${esc(link)}</span><button class="btn btn-primary btn-sm" id="rf-copy"><i class="ph ph-copy"></i>Copy</button></div>
-          <div class="lbl">Or invite by email</div>
-          <div class="mail"><input class="input" id="rf-email" placeholder="friend@company.com"><button class="btn btn-outline" id="rf-send">Send invite</button></div>
-          <div class="share-ic" style="margin-top:8px">${['linkedin-logo', 'x-logo', 'facebook-logo', 'whatsapp-logo'].map(i => `<button class="icon-btn sm" data-share="${i}"><i class="ph ph-${i}"></i></button>`).join('')}</div>
-        </div>
-        <div class="b"><img src="${A}hand-envelope.png" alt=""></div>
-      </div>
+  const tog = `<div class="state-tog" title="Proto only: which plan the inviter is on"><button data-plan="free" class="${pro ? '' : 'on'}">Free plan</button><button data-plan="pro" class="${pro ? 'on' : ''}">Pro plan</button></div>
+    ${pro ? '' : `<div class="state-tog" title="Proto only" style="margin-left:8px"><button data-rmax="0" class="${S.refMax ? '' : 'on'}">First invites</button><button data-rmax="1" class="${S.refMax ? 'on' : ''}">Max reached</button></div>`}`;
+  const pill = s => `<span class="pill ${{ joined: 'soft-green', upgraded: 'pro', invited: 'soft-gray' }[s]}">${s}</span>`;
+  const gotCell = r => pro
+    ? (r.cash != null ? `<b style="font-weight:500">${money(r.cash)} cash</b><small>10% of ${money(r.pay)}</small>` : `<span style="color:var(--t4)">${r.status === 'invited' ? 'Waiting for sign up' : 'Waiting for upgrade'}</span>`)
+    : (r.got === null ? '<span style="color:var(--t4)">Waiting for sign up</span>'
+      : r.got > 0 ? `+${r.got} credits` : `0 credits<small>Max reached. ${esc(r.who.split(' ')[0])} still got ${REF_BONUS}</small>`);
+  const progress = pro ? `
+      <div class="kpis" style="margin-top:18px">
+        <div class="kpi"><b>${money(cash)}</b><small>Cash earned from referrals</small><a class="link" href="#" data-go="rewards" style="margin-top:4px">See in Rewards</a></div>
+        <div class="kpi"><b>${rows.filter(r => r.status !== 'invited').length} joined · ${rows.filter(r => r.status === 'upgraded').length} upgraded</b><small>Friends from your link</small><small>You earn when a friend upgrades to Pro</small></div>
+      </div>` : `
       <div class="rf-cap ${atMax ? 'max' : ''}">
         <div class="top"><b>${earned.toLocaleString()}<small>of ${REF_MAX.toLocaleString()} credits earned</small></b><span>${atMax ? 'Max reached' : `${left} more friend${left === 1 ? '' : 's'} to reach the max`}</span></div>
         <div class="bar"><i style="width:${Math.min(100, earned / REF_MAX * 100)}%"></i></div>
@@ -1725,18 +1758,37 @@ function renderRefer({ joined = false } = {}) {
         <i class="ph-fill ph-crown-simple"></i>
         <div class="tx"><b>${atMax ? 'Keep earning with Pro' : 'Earn cash with Pro'}</b><span>On Pro, you get 10% of a friend’s first payment in cash when they upgrade. You’re on the Free plan now.</span></div>
         <button class="btn btn-brand" id="rf-pro"><i class="ph ph-rocket-launch"></i>Upgrade to Pro</button>
+      </div>`;
+  $('#screen').innerHTML = dashShell('refer', `
+    <div class="rwrap">
+      <h2>Refer &amp; earn ${pro ? '<span class="pill pro" style="vertical-align:middle;margin-left:6px">Pro</span>' : ''}</h2>
+      <div class="rf-hero">
+        <div class="a">
+          <h3>${pro ? 'Invite a friend.<br>Earn 10% in cash.' : `Invite a friend.<br>You both get ${REF_BONUS} credits.`}</h3>
+          <p>${pro ? `They get ${REF_BONUS} credits and their own workspace. When they upgrade to Pro, you get 10% of their first payment.` : 'They sign up with your link and get their own workspace. Nothing in your workspace is shared.'}</p>
+          <div class="lbl">Your referral link</div>
+          <div class="ref-row" style="box-shadow:0 1px 4px -1px var(--line), inset 0 0 0 1px var(--line)"><span style="color:var(--t2)">${esc(refUrl())}</span><button class="btn btn-primary btn-sm" id="rf-copy"><i class="ph ph-copy"></i>Copy</button></div>
+          <div class="lbl">Or invite by email</div>
+          <div class="mail"><input class="input" id="rf-email" placeholder="friend@company.com"><button class="btn btn-outline" id="rf-send">Send invite</button></div>
+          <div class="share-ic" style="margin-top:8px">${['linkedin-logo', 'x-logo', 'facebook-logo', 'whatsapp-logo'].map(i => `<button class="icon-btn sm" data-share="${i}"><i class="ph ph-${i}"></i></button>`).join('')}</div>
+        </div>
+        <div class="b"><img src="${A}hand-envelope.png" alt=""></div>
       </div>
-      <div class="rf-how">
+      ${progress}
+      <div class="rf-how">${pro ? `
+        <div><span class="n">1</span><b>Share your link</b>Send it to anyone who makes presentations.</div>
+        <div><span class="n">2</span><b>They get ${REF_BONUS} credits</b>Your friend signs up and gets their own workspace.</div>
+        <div><span class="n">3</span><b>You get 10% in cash</b>When they upgrade to Pro, 10% of their first payment goes to your Rewards.</div>` : `
         <div><span class="n">1</span><b>Share your link</b>Send it to anyone who makes presentations.</div>
         <div><span class="n">2</span><b>They sign up</b>Your friend gets their own workspace, separate from yours.</div>
-        <div><span class="n">3</span><b>You both get ${REF_BONUS} credits</b>Added right after sign up. You can earn up to ${REF_MAX.toLocaleString()}.</div>
+        <div><span class="n">3</span><b>You both get ${REF_BONUS} credits</b>Added right after sign up. You can earn up to ${REF_MAX.toLocaleString()}.</div>`}
       </div>
       <div class="sec-h" style="margin-top:48px"><h3>Your invites</h3></div>
       <div class="brk"><table>
         <thead><tr><th>Friend</th><th>Status</th><th>Date</th><th style="text-align:right">You got</th></tr></thead>
         <tbody>${shown.map((r, n) => `<tr class="${n === 0 && fresh ? 'new' : ''}">
-          <td><span class="rf-who">${r.status === 'joined' ? avatar(24, { name: r.who }) : '<i class="ph ph-envelope-simple" style="font-size:18px;color:var(--t3);width:24px;text-align:center"></i>'}${esc(r.who)}</span></td>
-          <td><span class="pill ${r.status === 'joined' ? 'soft-green' : 'soft-gray'}">${r.status}</span></td>
+          <td><span class="rf-who">${r.status !== 'invited' ? avatar(24, { name: r.who }) : '<i class="ph ph-envelope-simple" style="font-size:18px;color:var(--t3);width:24px;text-align:center"></i>'}${esc(r.who)}</span></td>
+          <td>${pill(r.status)}</td>
           <td>${r.when}</td><td class="got" style="text-align:right">${gotCell(r)}</td></tr>`).join('')}
           ${rows.length > shown.length ? `<tr><td colspan="4" style="color:var(--t3)">And ${rows.length - shown.length} more</td></tr>` : ''}
         </tbody>
@@ -1744,7 +1796,7 @@ function renderRefer({ joined = false } = {}) {
     </div>`, tog);
   $('#rf-copy').onclick = () => toast('Referral link copied');
   $$('[data-share]').forEach(b => b.onclick = () => toast('Share sheet opens with your link', 'ph ph-share-network'));
-  $('#rf-pro').onclick = () => toast('Upgrade flow is not part of this proto', 'ph ph-info');
+  $('#rf-pro') && ($('#rf-pro').onclick = () => { setPlan('pro'); toast('You’re on Pro. Referrals now earn 10% in cash', 'ph-fill ph-crown-simple'); });
   $('#rf-send').onclick = () => {
     const v = $('#rf-email').value.trim();
     if (!/^\S+@\S+\.\S+$/.test(v)) { $('#rf-email').style.boxShadow = 'inset 0 0 0 1px var(--red)'; $('#rf-email').focus(); return; }
@@ -1753,12 +1805,20 @@ function renderRefer({ joined = false } = {}) {
   };
   $('#rf-email').onkeydown = e => { if (e.key === 'Enter') $('#rf-send').click(); };
   $$('[data-rmax]').forEach(b => b.onclick = () => { S.refMax = b.dataset.rmax === '1'; save(); renderRefer(); });
-  if (joined) {
-    const mine = rows.find(r => r.who === S.friend.name);
-    later(() => toast(mine && mine.got
-      ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
-      : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the max`, 'ph-fill ph-gift'), 350);
-  }
+  $$('[data-plan]').forEach(b => b.onclick = () => setPlan(b.dataset.plan));
+  const mine = rows.find(r => r.who === S.friend.name);
+  if (paid && mine) later(() => toast(`${esc(friendFirst())} upgraded to Pro. You earned ${money(mine.cash || 0)} in cash`, 'ph-fill ph-coins'), 350);
+  else if (joined && mine) later(() => toast(pro
+    ? `${esc(friendFirst())} joined with your link. You earn 10% when they upgrade`
+    : mine.got ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
+    : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the max`, 'ph-fill ph-gift'), 350);
+}
+// Switch the inviter's plan (proto). The flow bar follows the matching journey.
+function setPlan(plan) {
+  S.plan = plan;
+  S.journey = plan === 'pro' ? 'p' : 'f';
+  if (plan !== 'pro' && ['ref-upgrade', 'refer-paid'].includes(ROUTE)) { save(); go('refer-joined'); return; }
+  save(); renderRoute(); renderFlow();
 }
 
 /* F3 · Friend sets up their own workspace */
@@ -1789,17 +1849,19 @@ function renderRefSetup() {
 }
 
 /* F4 · Friend lands in their own dashboard */
-function renderRefHome() {
-  creditFriend();
-  const friend = { name: S.friend.name };
-  $('#screen').innerHTML = dashShell('dashboard', `<div class="dhome">
+function friendHomeHTML() {
+  return dashShell('dashboard', `<div class="dhome">
     <h2>Welcome, ${esc(friendFirst())}</h2>
     <div class="dprompt"><i class="ph ph-sparkle"></i><span>Describe the presentation you need, or drop in a file</span><button class="btn btn-primary btn-sm" disabled>Create</button></div>
     <div class="promo"><div class="pc" style="background:url(${A}confetti.jpg) center/cover"></div>
       <div class="tx"><span class="pill soft-green">+${REF_BONUS} credits</span><b>${esc(first())} invited you</b><span>Your ${REF_BONUS} bonus credits are ready to use in ${esc(S.friend.ws)}.</span></div></div>
     <div class="sec-h" style="margin-top:36px"><h3>Recent</h3></div>
     <div class="empty"><i class="ph ph-presentation" style="font-size:24px"></i>No presentations yet. Describe one above to get started.</div>
-  </div>`, '', { friend }) + `
+  </div>`, '', { friend: { name: S.friend.name } });
+}
+function renderRefHome() {
+  creditFriend();
+  $('#screen').innerHTML = friendHomeHTML() + `
     <div class="credits fixed" id="credits">
       <button class="x-out x-float" id="cr-x" aria-label="Close"><i class="ph ph-x"></i></button>
       <div class="hero"><b>${REF_BONUS}</b><span>credits added!</span></div>
@@ -1810,6 +1872,38 @@ function renderRefHome() {
     </div>`;
   $('#cr-x').onclick = () => $('#credits').remove();
   $('#cr-copy').onclick = () => toast('Referral link copied');
+  if (isPro()) $$('.trial .btn').forEach(b => b.onclick = () => go('ref-upgrade'));
+}
+
+/* F5 · Friend upgrades to Pro (Pro inviter journey) */
+function renderRefUpgrade() {
+  creditFriend();
+  $('#screen').innerHTML = friendHomeHTML();
+  let pick = S.friendPlan || 'year';
+  const draw = () => {
+    openModal(`<div class="up">
+      <div class="f-head"><span>Upgrade to Pro</span></div>
+      <div class="up-body">
+        <div class="up-plans">${PRO_PLANS.map(p => `<button class="up-plan ${p.id === pick ? 'on' : ''}" data-pp="${p.id}">
+          <span class="rd"></span><span class="tx"><b>${p.label}${p.save ? ` <span class="pill soft-green">${p.save}</span>` : ''}</b><small>${p.per}</small></span><b class="pr">$${p.price}</b></button>`).join('')}</div>
+        <ul class="up-list">
+          <li><i class="ph ph-check"></i>Unlimited presentations and AI edits</li>
+          <li><i class="ph ph-check"></i>Export to PowerPoint and PDF</li>
+          <li><i class="ph ph-check"></i>Your ${REF_BONUS} bonus credits stay with you</li>
+        </ul>
+        <button class="btn btn-primary btn-lg" id="up-go" style="width:100%">Pay $${PRO_PLANS.find(p => p.id === pick).price} and upgrade</button>
+      </div>
+    </div>`, { width: 460, onClose: () => go('ref-home') });
+    $$('[data-pp]').forEach(b => b.onclick = () => { pick = b.dataset.pp; S.friendPlan = pick; save(); draw(); });
+    $('#up-go').onclick = () => {
+      const p = PRO_PLANS.find(x => x.id === pick);
+      upgradeFriend(p.price);
+      closeModal();
+      toast(`Welcome to Pro, ${esc(friendFirst())}`, 'ph-fill ph-crown-simple');
+      later(() => go('refer-paid'), 1100);
+    };
+  };
+  draw();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1820,7 +1914,7 @@ const ROUTES = [
   ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['profile-setup', 'Create page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['profile', 'Profile']]],
   ['Visitor signs up', [['template', 'Template link'], ['login', 'Sign up'], ['role', 'Role'], ['context', 'Your context'], ['generating', 'Generating'], ['present', 'Present'], ['visitor-editor', '200 credits']]],
   ['Rewards', [['rewards', 'Rewards']]],
-  ['Refer a friend', [['refer', 'Refer & earn'], ['ref-login', 'Friend signs up'], ['ref-setup', 'Own workspace'], ['ref-home', 'Friend gets 200'], ['refer-joined', 'You get 200']]],
+  ['Refer a friend', [['refer', 'Refer & earn'], ['ref-login', 'Friend signs up'], ['ref-setup', 'Own workspace'], ['ref-home', 'Friend gets 200'], ['ref-upgrade', 'Friend upgrades'], ['refer-joined', 'You see it'], ['refer-paid', 'You get 10%']]],
 ];
 const FLAT = ROUTES.flatMap(g => g[1].map(r => r[0]));
 const MODAL_ROUTES = ['share', 'profile-setup', 'mask', 'details', 'live', 'create-page'];
@@ -1838,6 +1932,8 @@ function ensurePrereqs(r) {
   if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
   if (r === 'ref-login') S._refCredited = false;
   if (r === 'refer-joined') creditFriend();
+  if (r === 'ref-upgrade' || r === 'refer-paid') S.plan = 'pro';
+  if (r === 'refer-paid' && !S.refs.some(x => x.who === S.friend.name && x.status === 'upgraded')) upgradeFriend(PRO_PLANS.find(p => p.id === S.friendPlan).price);
 }
 
 function renderRoute() {
@@ -1848,7 +1944,7 @@ function renderRoute() {
   } else {
     closeModal();
     ({ dashboard: renderDashboard, community: renderCommunity, 'my-page': renderCommunity, editor: renderPublisherEditor, profile: renderProfile, template: renderTemplate, login: renderLogin, role: renderRole, context: renderContext, generating: renderGenerating, present: renderPresent, 'visitor-editor': renderVisitorEditor, rewards: renderRewards,
-      refer: renderRefer, 'ref-login': () => renderLogin({ ref: true }), 'ref-setup': renderRefSetup, 'ref-home': renderRefHome, 'refer-joined': () => renderRefer({ joined: true }) })[r]();
+      refer: renderRefer, 'ref-login': () => renderLogin({ ref: true }), 'ref-setup': renderRefSetup, 'ref-home': renderRefHome, 'refer-joined': () => renderRefer({ joined: true }), 'ref-upgrade': renderRefUpgrade, 'refer-paid': () => renderRefer({ paid: true }) })[r]();
   }
 }
 
@@ -1864,6 +1960,7 @@ function go(r) {
   const u = new URL(location.href);
   u.searchParams.set('s', r);
   u.searchParams.delete('reset');
+  u.searchParams.delete('plan');
   history.replaceState(null, '', u);
   renderFlow();
   const pg = $('.page, .dmain'); if (pg) pg.scrollTop = 0;
@@ -1878,15 +1975,17 @@ const JOURNEYS = [
   { id: 'v', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
   { id: 'r', label: 'Rewards', hint: 'Credits and cash from sign ups', steps: ['rewards'] },
-  { id: 'f', label: 'Refer a friend', hint: 'Free user invites a friend. Both get 200 credits', fresh: true,
+  { id: 'f', label: 'Refer · Free', hint: 'Free user invites a friend. Both get 200 credits', fresh: true, plan: 'free',
     steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined'] },
+  { id: 'p', label: 'Refer · Pro', hint: 'Pro user invites a friend. Earns 10% cash when they upgrade', fresh: true, plan: 'pro',
+    steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'ref-upgrade', 'refer-paid'] },
 ];
 const LABEL = Object.fromEntries(ROUTES.flatMap(g => g[1]));
 LABEL.community = 'Community tab'; LABEL['my-page'] = 'Your page';
 function currentJourney() {
   const j = JOURNEYS.find(x => x.id === S.journey);
-  if (j && j.steps.includes(ROUTE)) return j;
-  const found = JOURNEYS.find(x => x.steps.includes(ROUTE)) || JOURNEYS[0];
+  if (j && j.steps.includes(ROUTE) && (!j.plan || j.plan === S.plan)) return j;
+  const found = JOURNEYS.find(x => x.steps.includes(ROUTE) && (!x.plan || x.plan === S.plan)) || JOURNEYS.find(x => x.steps.includes(ROUTE)) || JOURNEYS[0];
   S.journey = found.id; save();
   return found;
 }
@@ -1908,6 +2007,7 @@ function renderFlow() {
   $$('[data-j]').forEach(b => b.onclick = () => {
     const x = JOURNEYS.find(y => y.id === b.dataset.j);
     if (x.fresh) { S = DEFAULT_STATE(); }
+    if (x.plan) S.plan = x.plan;
     S.journey = x.id; save();
     step(x.steps[0]);
     toast(x.hint, 'ph ph-path');
@@ -1935,6 +2035,7 @@ document.addEventListener('keydown', e => {
 (function boot() {
   const q = new URLSearchParams(location.search);
   if (q.has('reset')) { S = DEFAULT_STATE(); save(); }
+  if (q.get('plan') === 'pro' || q.get('plan') === 'free') { S.plan = q.get('plan'); S.journey = S.plan === 'pro' ? 'p' : 'f'; save(); }
   go(q.get('s') || 'dashboard');
 })();
 </script>
