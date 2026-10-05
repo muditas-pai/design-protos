@@ -541,6 +541,52 @@
   #flow .dots button.on { background: #fff; transform: scale(1.3); }
   #flow .dots button:hover { transform: scale(1.4); }
   #flow.min > :not(.tog) { display: none; }
+
+  /* Refer a friend (free plan) */
+  .rf-strip { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 12px 14px 12px 18px; border-radius: 8px; box-shadow: var(--e1); }
+  .rf-strip > i { font-size: 20px; color: var(--brand); }
+  .rf-strip span { flex: 1; color: var(--t2); }
+  .rf-strip span b { color: var(--t1); font-weight: 500; margin-right: 6px; }
+  .rf-hero { display: grid; grid-template-columns: 1.25fr 1fr; border-radius: 4px; box-shadow: var(--e1); overflow: hidden; }
+  .rf-hero .a { padding: 24px 22px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid var(--line); }
+  .rf-hero h3 { margin: 0; font-size: 24px; font-weight: 400; line-height: 1.3; }
+  .rf-hero p { margin: 0 0 12px; color: var(--t2); }
+  .rf-hero .lbl { margin-top: 8px; }
+  .rf-hero .mail { display: flex; gap: 6px; }
+  .rf-hero .mail .input { height: 36px; }
+  .rf-hero .b { display: flex; align-items: flex-end; justify-content: flex-end; background: var(--bg2); }
+  .rf-hero .b img { width: 100%; max-width: 300px; }
+  .rf-cap { margin-top: 18px; padding: 16px 18px; border-radius: 4px; box-shadow: var(--e1); }
+  .rf-cap .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .rf-cap .top b { font-size: 20px; font-weight: 400; }
+  .rf-cap .top b small { font-size: 13px; color: var(--t3); margin-left: 4px; }
+  .rf-cap .top span { color: var(--t2); font-size: 13px; }
+  .rf-cap .bar { height: 6px; border-radius: 3px; background: var(--bg3); margin: 12px 0 0; overflow: hidden; }
+  .rf-cap .bar i { display: block; height: 100%; background: var(--ink); border-radius: 3px; transition: width .6s var(--ease); }
+  .rf-cap.max .bar i { background: var(--green); }
+  .rf-cap .note { margin-top: 12px; display: flex; gap: 8px; color: var(--t2); font-size: 13px; }
+  .rf-cap .note i { color: var(--green); font-size: 16px; }
+  .rf-how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+  .rf-how div { padding: 14px 16px; border-radius: 4px; background: var(--bg2); display: flex; flex-direction: column; gap: 4px; color: var(--t2); font-size: 13px; }
+  .rf-how div b { color: var(--t1); font-weight: 500; font-size: 14px; }
+  .rf-how div .n { width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: var(--e1); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--t1); margin-bottom: 6px; }
+  .rf-pro { display: flex; align-items: center; gap: 16px; margin-top: 18px; padding: 18px; border-radius: 8px; background: linear-gradient(90deg, var(--brand-bg), #fff 75%); box-shadow: var(--e1); }
+  .rf-pro > i { font-size: 28px; color: var(--brand); }
+  .rf-pro .tx { flex: 1; display: flex; flex-direction: column; gap: 3px; color: var(--t2); }
+  .rf-pro .tx b { color: var(--t1); font-weight: 500; font-size: 15px; }
+  .rf-pro.hot { box-shadow: 0 0 0 1px var(--brand); }
+  .rf-who { display: flex; align-items: center; gap: 10px; }
+  .rf-who .avatar { flex: none; }
+  .brk td.got { white-space: nowrap; }
+  .ws-tile { width: 28px; height: 28px; border-radius: 6px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; flex: none; }
+  .rs { display: flex; flex-direction: column; align-items: center; padding-top: 72px; }
+  .rs h1 { margin: 0; font-size: 28px; font-weight: 400; text-align: center; line-height: 1.3; }
+  .rs h1 span { color: var(--t4); display: block; }
+  .rs-card { width: 440px; margin-top: 32px; padding: 24px; border-radius: 8px; background: #fff; box-shadow: var(--e3); display: flex; flex-direction: column; gap: 16px; }
+  .rs-card .info { display: flex; gap: 10px; padding: 12px; border-radius: 4px; background: var(--bg2); color: var(--t2); font-size: 13px; }
+  .rs-card .info i { font-size: 16px; color: var(--t1); margin-top: 1px; }
+  .rs-card .info.gift i { color: var(--brand); }
+  .credits.fixed { position: fixed; right: 20px; bottom: 76px; }
 </style>
 </head>
 <body>
@@ -643,6 +689,9 @@ const DEFAULT_STATE = () => ({
   role: null,
   ctx: '',
   journey: null,
+  refs: [],             // refer a friend: invites sent + friends joined this session
+  refMax: false,        // proto toggle: inviter already earned the 2,000 max
+  friend: { name: 'Priya Raman', ws: 'Priya’s workspace' },
 });
 let S = DEFAULT_STATE();
 try { const saved = sessionStorage.getItem('ct2-state'); if (saved) S = Object.assign(DEFAULT_STATE(), JSON.parse(saved)); } catch (e) {}
@@ -953,15 +1002,16 @@ function startDraft(editMode) {
 /* ═══════════════════════════════════════════════════════════
    A · DASHBOARD SHELL (home, community page, rewards)
    ═══════════════════════════════════════════════════════════ */
-function dashShell(active, main, topLeft = '') {
-  const nav = (icon, label, key, extra = '') => `<a href="#" ${key ? `data-go="${key}"` : 'onclick="return false"'} class="${active === key ? 'on' : ''}"><i class="ph ${icon}"></i>${label}${extra}</a>`;
+function dashShell(active, main, topLeft = '', { friend = null } = {}) {
+  const nav = (icon, label, key, extra = '') => `<a href="#" ${key && !friend ? `data-go="${key}"` : 'onclick="return false"'} class="${active === key ? 'on' : ''}"><i class="ph ${icon}"></i>${label}${extra}</a>`;
+  const ws = friend ? `<span class="ws-tile">${esc(initials(S.friend.ws))[0]}</span>${esc(S.friend.ws)}` : `<img src="${A}ws-foursquare.jpg" alt="">Foursquare`;
   return `<div class="dash">
     <aside class="side">
-      <div class="ws"><img src="${A}ws-foursquare.jpg" alt="">Foursquare<span class="pill pro">Upgrade</span><i class="ph ph-caret-down"></i></div>
+      <div class="ws">${ws}<span class="pill pro">Upgrade</span><i class="ph ph-caret-down"></i></div>
       <nav>${nav('ph-house', 'Home', 'dashboard')}${nav('ph-file', 'Created by Me')}</nav>
       <nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, '<span class="pill pro">Pro</span>')}</nav>
       <nav>${nav('ph-layout', 'Templates')}${nav('ph-users-three', 'Community page', 'community', S.profile ? '' : '<span class="pill pro">New</span>')}${nav('ph-books', 'Hire an Expert')}</nav>
-      <nav class="bot">${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear-six', 'Workspace settings')}${nav('ph-user-plus', 'Invite new member', null, '<span class="pill pro">Pro</span>')}</nav>
+      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear-six', 'Workspace settings')}${nav('ph-user-plus', 'Invite new member', null, '<span class="pill pro">Pro</span>')}</nav>
     </aside>
     <main class="dmain">
       <div class="dtop">
@@ -969,7 +1019,7 @@ function dashShell(active, main, topLeft = '') {
         <span style="flex:1"></span>
         <div class="trial">🔥Trial: 4 days left<button class="btn btn-brand"><i class="ph ph-rocket-launch"></i>Upgrade</button></div>
         <i class="ph ph-magnifying-glass"></i><i class="ph ph-question"></i><i class="ph ph-bell"></i>
-        <button data-go="community" title="Community page">${avatar(32)}</button>
+        ${friend ? avatar(32, friend) : `<button data-go="community" title="Community page">${avatar(32)}</button>`}
       </div>
       ${main}
     </main>
@@ -995,6 +1045,7 @@ function renderDashboard() {
     <h2>Good morning, ${esc(first())}</h2>
     <div class="dprompt"><i class="ph ph-sparkle"></i><span>Describe the presentation you need, or drop in a file</span><button class="btn btn-primary btn-sm" disabled>Create</button></div>
     ${promo}
+    <div class="rf-strip"><i class="ph-fill ph-paper-plane-tilt"></i><span><b>Invite friends, you both get ${REF_BONUS} credits</b>Earn up to ${REF_MAX.toLocaleString()} credits.</span><button class="btn btn-outline btn-sm" data-go="refer">Refer &amp; earn</button></div>
     <div class="sec-h" style="margin-top:36px"><h3>Recent</h3></div>
     <div class="recent">${recent.map(r => `<div class="tcard" ${r.go ? `data-go="${r.go}"` : ''}><div class="img" style="background-image:url(${r.img})"></div><div class="meta"><b>${r.t}</b><small>${r.when}</small></div></div>`).join('')}</div>
   </div>`);
@@ -1379,13 +1430,13 @@ function renderTemplate() {
 /* ═══════════════════════════════════════════════════════════
    V2 · INVITE LOGIN
    ═══════════════════════════════════════════════════════════ */
-function renderLogin() {
+function renderLogin({ ref = false } = {}) {
   $('#screen').innerHTML = `<div class="login">
     <div class="l">
       <img class="logo" src="${A}pai-logo.svg" alt="presentations.ai">
       <div class="mid">
         <h1>${esc(first())} has invited you.<br>You get <em>200 extra credits!</em></h1>
-        <div class="sub">Sign up to get started</div>
+        <div class="sub">${ref ? 'Sign up to get your own workspace' : 'Sign up to get started'}</div>
         <div class="auth">
           <button class="google" data-auth="Google"><img src="${A}icon-google.svg" alt="">Continue with Google</button>
           <button id="auth-email"><img src="${A}icon-mail.svg" alt="">Continue with Email</button>
@@ -1410,7 +1461,7 @@ function renderLogin() {
       <div class="band"><span>Trusted by marquee<br>companies such as</span><span class="lg"><img src="${A}logo-adobe.svg" alt="Adobe"><img src="${A}logo-microsoft.svg" alt="Microsoft"><img src="${A}logo-facebook.svg" alt="facebook" style="height:18px"></span></div>
     </div>
   </div>`;
-  const signIn = via => { S.signupVia = via; save(); go('role'); };
+  const signIn = via => { S.signupVia = via; save(); go(ref ? 'ref-setup' : 'role'); };
   $$('[data-auth]').forEach(b => b.onclick = () => signIn(b.dataset.auth));
   $('#auth-email').onclick = () => { $('#email-row').style.display = 'flex'; $('#auth-email').style.display = 'none'; $('#email-in').focus(); };
   $('#email-go').onclick = () => {
@@ -1584,8 +1635,8 @@ function renderRewards() {
           </div>
           <div class="b">
             <div class="gets">
-              <div><i class="ph-fill ph-gift"></i><span><b>You get</b>200 points per referral + 1,000 bonus points when they upgrade</span></div>
-              <div><i class="ph-fill ph-heart"></i><span><b>They get</b>200 credits on signup + 20% off Pro</span></div>
+              <div><i class="ph-fill ph-gift"></i><span><b>You get</b>200 credits per friend who signs up, up to 2,000</span></div>
+              <div><i class="ph-fill ph-heart"></i><span><b>They get</b>200 credits on sign up</span></div>
             </div>
             <div class="art"><img src="${A}hand-envelope.png" alt=""></div>
           </div>
@@ -1603,6 +1654,165 @@ function renderRewards() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   F · REFER A FRIEND (free plan)
+   Friend signs up with the inviter's link and gets their own
+   workspace. Both get 200 credits. Inviter earns up to 2,000.
+   ═══════════════════════════════════════════════════════════ */
+const REF_BONUS = 200, REF_MAX = 2000;
+const REF_SEED = [
+  { who: 'sam@northwind.co', status: 'invited', when: 'Yesterday' },
+  { who: 'Marcus Lee', status: 'joined', when: '3 days ago' },
+];
+const REF_SEED_MAX = ['Marcus Lee', 'Sofia Alvarez', 'Ken Watanabe', 'Amara Okafor', 'Liam Chen', 'Nora Haddad', 'Diego Ruiz', 'Hana Kim', 'Omar Farouk', 'Elena Rossi']
+  .map((who, i) => ({ who, status: 'joined', when: i < 2 ? `${i + 2} days ago` : `${i} weeks ago` }));
+const friendFirst = () => (S.friend.name || '').trim().split(/\s+/)[0] || 'Your friend';
+const friendHandle = () => (S.friend.name || 'you').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'you';
+
+// Newest first. "got" is worked out oldest first so the 2,000 cap applies in order.
+function refRows() {
+  const rows = S.refs.concat(S.refMax ? REF_SEED_MAX : REF_SEED).map(r => ({ ...r }));
+  let total = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].status !== 'joined') { rows[i].got = null; continue; }
+    rows[i].got = Math.min(REF_BONUS, REF_MAX - total);
+    total += rows[i].got;
+  }
+  return rows;
+}
+const refEarned = () => refRows().reduce((n, r) => n + (r.got || 0), 0);
+
+function creditFriend() {
+  if (S._refCredited) return;
+  S._refCredited = true;
+  S.refs = S.refs.filter(r => r.who !== S.friend.name);
+  S.refs.unshift({ who: S.friend.name, status: 'joined', when: 'Just now', at: Date.now() });
+  save();
+}
+
+/* F1 · Refer & earn page (inviter, free plan) */
+function renderRefer({ joined = false } = {}) {
+  const rows = refRows();
+  const earned = refEarned();
+  const atMax = earned >= REF_MAX;
+  const left = Math.ceil((REF_MAX - earned) / REF_BONUS);
+  const link = refUrl();
+  const fresh = rows[0] && rows[0].at && Date.now() - rows[0].at < 8000;
+  const shown = rows.slice(0, 6);
+  const tog = `<div class="state-tog" title="Proto only"><button data-rmax="0" class="${S.refMax ? '' : 'on'}">First invites</button><button data-rmax="1" class="${S.refMax ? 'on' : ''}">Max reached</button></div>`;
+  const gotCell = r => r.got === null ? '<span style="color:var(--t4)">Waiting for sign up</span>'
+    : r.got > 0 ? `+${r.got} credits` : `0 credits<small>Max reached. ${esc(r.who.split(' ')[0])} still got 200</small>`;
+  $('#screen').innerHTML = dashShell('refer', `
+    <div class="rwrap">
+      <h2>Refer &amp; earn</h2>
+      <div class="rf-hero">
+        <div class="a">
+          <h3>Invite a friend.<br>You both get ${REF_BONUS} credits.</h3>
+          <p>They sign up with your link and get their own workspace. Nothing in your workspace is shared.</p>
+          <div class="lbl">Your referral link</div>
+          <div class="ref-row" style="box-shadow:0 1px 4px -1px var(--line), inset 0 0 0 1px var(--line)"><span style="color:var(--t2)">${esc(link)}</span><button class="btn btn-primary btn-sm" id="rf-copy"><i class="ph ph-copy"></i>Copy</button></div>
+          <div class="lbl">Or invite by email</div>
+          <div class="mail"><input class="input" id="rf-email" placeholder="friend@company.com"><button class="btn btn-outline" id="rf-send">Send invite</button></div>
+          <div class="share-ic" style="margin-top:8px">${['linkedin-logo', 'x-logo', 'facebook-logo', 'whatsapp-logo'].map(i => `<button class="icon-btn sm" data-share="${i}"><i class="ph ph-${i}"></i></button>`).join('')}</div>
+        </div>
+        <div class="b"><img src="${A}hand-envelope.png" alt=""></div>
+      </div>
+      <div class="rf-cap ${atMax ? 'max' : ''}">
+        <div class="top"><b>${earned.toLocaleString()}<small>of ${REF_MAX.toLocaleString()} credits earned</small></b><span>${atMax ? 'Max reached' : `${left} more friend${left === 1 ? '' : 's'} to reach the max`}</span></div>
+        <div class="bar"><i style="width:${Math.min(100, earned / REF_MAX * 100)}%"></i></div>
+        ${atMax ? `<div class="note"><i class="ph-fill ph-check-circle"></i>You earned the full ${REF_MAX.toLocaleString()} credits. Friends you invite still get ${REF_BONUS} credits when they sign up.</div>` : ''}
+      </div>
+      <div class="rf-pro ${atMax ? 'hot' : ''}">
+        <i class="ph-fill ph-crown-simple"></i>
+        <div class="tx"><b>${atMax ? 'Keep earning with Pro' : 'Earn cash with Pro'}</b><span>On Pro, you get 10% of a friend’s first payment in cash when they upgrade. You’re on the Free plan now.</span></div>
+        <button class="btn btn-brand" id="rf-pro"><i class="ph ph-rocket-launch"></i>Upgrade to Pro</button>
+      </div>
+      <div class="rf-how">
+        <div><span class="n">1</span><b>Share your link</b>Send it to anyone who makes presentations.</div>
+        <div><span class="n">2</span><b>They sign up</b>Your friend gets their own workspace, separate from yours.</div>
+        <div><span class="n">3</span><b>You both get ${REF_BONUS} credits</b>Added right after sign up. You can earn up to ${REF_MAX.toLocaleString()}.</div>
+      </div>
+      <div class="sec-h" style="margin-top:48px"><h3>Your invites</h3></div>
+      <div class="brk"><table>
+        <thead><tr><th>Friend</th><th>Status</th><th>Date</th><th style="text-align:right">You got</th></tr></thead>
+        <tbody>${shown.map((r, n) => `<tr class="${n === 0 && fresh ? 'new' : ''}">
+          <td><span class="rf-who">${r.status === 'joined' ? avatar(24, { name: r.who }) : '<i class="ph ph-envelope-simple" style="font-size:18px;color:var(--t3);width:24px;text-align:center"></i>'}${esc(r.who)}</span></td>
+          <td><span class="pill ${r.status === 'joined' ? 'soft-green' : 'soft-gray'}">${r.status}</span></td>
+          <td>${r.when}</td><td class="got" style="text-align:right">${gotCell(r)}</td></tr>`).join('')}
+          ${rows.length > shown.length ? `<tr><td colspan="4" style="color:var(--t3)">And ${rows.length - shown.length} more</td></tr>` : ''}
+        </tbody>
+      </table></div>
+    </div>`, tog);
+  $('#rf-copy').onclick = () => toast('Referral link copied');
+  $$('[data-share]').forEach(b => b.onclick = () => toast('Share sheet opens with your link', 'ph ph-share-network'));
+  $('#rf-pro').onclick = () => toast('Upgrade flow is not part of this proto', 'ph ph-info');
+  $('#rf-send').onclick = () => {
+    const v = $('#rf-email').value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(v)) { $('#rf-email').style.boxShadow = 'inset 0 0 0 1px var(--red)'; $('#rf-email').focus(); return; }
+    S.refs.unshift({ who: v, status: 'invited', when: 'Just now', at: Date.now() }); save();
+    renderRefer(); toast(`Invite sent to ${esc(v)}`);
+  };
+  $('#rf-email').onkeydown = e => { if (e.key === 'Enter') $('#rf-send').click(); };
+  $$('[data-rmax]').forEach(b => b.onclick = () => { S.refMax = b.dataset.rmax === '1'; save(); renderRefer(); });
+  if (joined) {
+    const mine = rows.find(r => r.who === S.friend.name);
+    later(() => toast(mine && mine.got
+      ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
+      : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the max`, 'ph-fill ph-gift'), 350);
+  }
+}
+
+/* F3 · Friend sets up their own workspace */
+function renderRefSetup() {
+  $('#screen').innerHTML = `<div class="onb">
+    <button class="back-c" data-go="ref-login" aria-label="Back"><i class="ph ph-arrow-left"></i></button>
+    <div class="rs">
+      <h1>Set up your workspace<span>Your own space for your presentations.</span></h1>
+      <div class="rs-card">
+        <div class="field"><label>Your name</label><input class="input" id="rs-name" value="${esc(S.friend.name)}"></div>
+        <div class="field"><label>Workspace name</label><input class="input" id="rs-ws" value="${esc(S.friend.ws)}"></div>
+        <div class="info"><i class="ph ph-lock-simple"></i><span>This workspace is yours. ${esc(first())} can’t see your work, and you won’t join theirs.</span></div>
+        <div class="info gift"><i class="ph-fill ph-gift"></i><span>${REF_BONUS} bonus credits from ${esc(first())}’s invite are added when you finish.</span></div>
+        <button class="btn btn-primary btn-lg" id="rs-go">Create workspace</button>
+      </div>
+    </div>
+  </div>`;
+  const name = $('#rs-name'), ws = $('#rs-ws');
+  let wsTouched = S.friend.ws !== `${friendFirst()}’s workspace`;
+  ws.oninput = () => { wsTouched = true; };
+  name.oninput = () => { S.friend.name = name.value; if (!wsTouched) ws.value = `${friendFirst()}’s workspace`; };
+  $('#rs-go').onclick = () => {
+    const bad = [name, ws].find(i => !i.value.trim());
+    if (bad) { bad.style.boxShadow = 'inset 0 0 0 1px var(--red)'; bad.focus(); return; }
+    S.friend = { name: name.value.trim(), ws: ws.value.trim() }; save();
+    go('ref-home');
+  };
+}
+
+/* F4 · Friend lands in their own dashboard */
+function renderRefHome() {
+  creditFriend();
+  const friend = { name: S.friend.name };
+  $('#screen').innerHTML = dashShell('dashboard', `<div class="dhome">
+    <h2>Welcome, ${esc(friendFirst())}</h2>
+    <div class="dprompt"><i class="ph ph-sparkle"></i><span>Describe the presentation you need, or drop in a file</span><button class="btn btn-primary btn-sm" disabled>Create</button></div>
+    <div class="promo"><div class="pc" style="background:url(${A}confetti.jpg) center/cover"></div>
+      <div class="tx"><span class="pill soft-green">+${REF_BONUS} credits</span><b>${esc(first())} invited you</b><span>Your ${REF_BONUS} bonus credits are ready to use in ${esc(S.friend.ws)}.</span></div></div>
+    <div class="sec-h" style="margin-top:36px"><h3>Recent</h3></div>
+    <div class="empty"><i class="ph ph-presentation" style="font-size:24px"></i>No presentations yet. Describe one above to get started.</div>
+  </div>`, '', { friend }) + `
+    <div class="credits fixed" id="credits">
+      <button class="x-out x-float" id="cr-x" aria-label="Close"><i class="ph ph-x"></i></button>
+      <div class="hero"><b>${REF_BONUS}</b><span>credits added!</span></div>
+      <div class="body">
+        <div class="t">Invite friends and earn too</div>
+        <div class="ref-row"><span>https://presentations.ai/ref/${esc(friendHandle())}</span><button class="btn btn-primary btn-sm" id="cr-copy"><i class="ph ph-copy"></i>Copy</button></div>
+      </div>
+    </div>`;
+  $('#cr-x').onclick = () => $('#credits').remove();
+  $('#cr-copy').onclick = () => toast('Referral link copied');
+}
+
+/* ═══════════════════════════════════════════════════════════
    ROUTER
    ═══════════════════════════════════════════════════════════ */
 const ROUTES = [
@@ -1610,6 +1820,7 @@ const ROUTES = [
   ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['profile-setup', 'Create page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['profile', 'Profile']]],
   ['Visitor signs up', [['template', 'Template link'], ['login', 'Sign up'], ['role', 'Role'], ['context', 'Your context'], ['generating', 'Generating'], ['present', 'Present'], ['visitor-editor', '200 credits']]],
   ['Rewards', [['rewards', 'Rewards']]],
+  ['Refer a friend', [['refer', 'Refer & earn'], ['ref-login', 'Friend signs up'], ['ref-setup', 'Own workspace'], ['ref-home', 'Friend gets 200'], ['refer-joined', 'You get 200']]],
 ];
 const FLAT = ROUTES.flatMap(g => g[1].map(r => r[0]));
 const MODAL_ROUTES = ['share', 'profile-setup', 'mask', 'details', 'live', 'create-page'];
@@ -1625,6 +1836,8 @@ function ensurePrereqs(r) {
   if (needsProfile && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
   if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
   if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
+  if (r === 'ref-login') S._refCredited = false;
+  if (r === 'refer-joined') creditFriend();
 }
 
 function renderRoute() {
@@ -1634,7 +1847,8 @@ function renderRoute() {
     ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'profile-setup': () => renderPageModal({ from: 'share' }), mask: renderMask, details: renderDetails, live: renderLive })[r]();
   } else {
     closeModal();
-    ({ dashboard: renderDashboard, community: renderCommunity, 'my-page': renderCommunity, editor: renderPublisherEditor, profile: renderProfile, template: renderTemplate, login: renderLogin, role: renderRole, context: renderContext, generating: renderGenerating, present: renderPresent, 'visitor-editor': renderVisitorEditor, rewards: renderRewards })[r]();
+    ({ dashboard: renderDashboard, community: renderCommunity, 'my-page': renderCommunity, editor: renderPublisherEditor, profile: renderProfile, template: renderTemplate, login: renderLogin, role: renderRole, context: renderContext, generating: renderGenerating, present: renderPresent, 'visitor-editor': renderVisitorEditor, rewards: renderRewards,
+      refer: renderRefer, 'ref-login': () => renderLogin({ ref: true }), 'ref-setup': renderRefSetup, 'ref-home': renderRefHome, 'refer-joined': () => renderRefer({ joined: true }) })[r]();
   }
 }
 
@@ -1664,6 +1878,8 @@ const JOURNEYS = [
   { id: 'v', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
   { id: 'r', label: 'Rewards', hint: 'Credits and cash from sign ups', steps: ['rewards'] },
+  { id: 'f', label: 'Refer a friend', hint: 'Free user invites a friend. Both get 200 credits', fresh: true,
+    steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined'] },
 ];
 const LABEL = Object.fromEntries(ROUTES.flatMap(g => g[1]));
 LABEL.community = 'Community tab'; LABEL['my-page'] = 'Your page';
