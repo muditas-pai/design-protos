@@ -1439,8 +1439,9 @@ document.addEventListener('click', e => {
 function dashShell(active, main, topLeft = '', { friend = null } = {}) {
   // Sidebar and top bar follow dashboard/dashboard-qc1.html; community, refer and rewards items added
   const nav = (icon, label, key, extra = '') => `<a href="#" ${key && !friend ? `data-go="${key}"` : 'onclick="return false"'} class="${active === key ? 'on' : ''}"><i class="ph ${icon}"></i><span>${label}</span>${extra}</a>`;
-  const pro = '<span class="fd-badge">Pro</span>', isNew = '<span class="fd-badge">New</span>';
   const paid = friend ? friendIsPro() : S.plan === 'pro';
+  // Paid users already have Pro, so no Pro tags. Only Projects keeps its Gold tag.
+  const pro = paid ? '' : '<span class="fd-badge">Pro</span>', isNew = '<span class="fd-badge">New</span>';
   const ws = friend ? `<span class="fd-wsa">${esc(initials(S.friend.ws)[0])}</span><span class="fd-wsn">${esc(S.friend.ws)}</span>` : `<img src="${A}ws-foursquare.jpg" alt=""><span class="fd-wsn">Foursquare</span>`;
   return `<div class="dash">
     <aside class="side">
@@ -1448,7 +1449,7 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
       <nav>${nav('ph-house-simple', 'Home', 'dashboard')}${nav('ph-paint-brush-broad', 'Brand kit', null, pro)}</nav>
       ${friend ? `<nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, goldTag)}</nav>` : sidebarFolders(active.startsWith('folder:') ? active.slice(7) : '')}
       <nav>${nav('ph-pencil-ruler', 'Hire an expert')}${nav('ph-layout', 'Templates')}${nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}</nav>
-      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '<span class="fd-badge">10%</span>' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
+      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
     </aside>
     <main class="dmain">
       <div class="dtop">
@@ -2669,9 +2670,10 @@ const REF_FAQ = [
   ['Is there a limit?', `You can earn up to ${REF_MAX.toLocaleString()} credits, so 10 friends. After that, friends still get their ${REF_BONUS} credits.`],
   ['How does the 10% cash work?', 'On Pro, you get 10% cash back when a friend you invited upgrades. That’s $18 for a yearly plan and $2 for monthly, paid out after 30 days.', true],
 ];
-const proBadge = '<span class="pill pro pro-b"><i class="ph-fill ph-crown-simple"></i>Pro</span>';
+const PRO_BADGE = '<span class="pill pro pro-b"><i class="ph-fill ph-crown-simple"></i>Pro</span>';
 function renderRefer({ joined = false, paid = false } = {}) {
   const pro = isPro();
+  const proBadge = pro ? '' : PRO_BADGE;
   const rows = refRows();
   const earned = refEarned();
   const joinedN = rows.filter(r => r.status !== 'invited').length;
@@ -2769,17 +2771,18 @@ function setPlan(plan) {
 function friendHomeHTML() {
   const f = { name: S.friend.name };
   const pro = friendIsPro();
+  const proTag = pro ? '' : '<span class="fd-badge">Pro</span>';
   return `<div class="fd">
     <aside class="fd-side">
       <div class="fd-ws"><span class="fd-wsa">${esc(initials(S.friend.name)[0])}</span><span class="fd-wsn">${esc(friendFirst())}</span>${pro ? '' : '<span class="fd-up">Upgrade</span>'}<span class="fd-caret"><i class="ph ph-caret-down"></i></span></div>
-      <nav class="fd-nav"><a class="on"><i class="ph ph-house-simple"></i><span>Home</span></a><a><i class="ph ph-paint-brush-broad"></i><span>Brand kit</span><span class="fd-badge">Pro</span></a></nav>
+      <nav class="fd-nav"><a class="on"><i class="ph ph-house-simple"></i><span>Home</span></a><a><i class="ph ph-paint-brush-broad"></i><span>Brand kit</span>${proTag}</a></nav>
       <div class="fd-div"></div>
       <nav class="fd-nav"><div class="fd-lbl">Folders</div><a><i class="ph ph-plus"></i><span>New folder</span></a></nav>
       <div class="fd-div"></div>
       <nav class="fd-nav"><div class="fd-lbl">Projects</div><a data-gold="project"><i class="ph ph-plus"></i><span>Create project</span>${goldTag}</a></nav>
       <div class="fd-div"></div>
       <nav class="fd-nav"><a><i class="ph ph-pencil-ruler"></i><span>Hire an expert</span></a><a><i class="ph ph-layout"></i><span>Templates</span></a></nav>
-      <nav class="fd-nav fd-foot"><a><i class="ph ph-gear"></i><span>Workspace settings</span></a><a><i class="ph ph-user-plus"></i><span>Invite new members</span><span class="fd-badge">Pro</span></a></nav>
+      <nav class="fd-nav fd-foot"><a><i class="ph ph-gear"></i><span>Workspace settings</span></a><a><i class="ph ph-user-plus"></i><span>Invite new members</span>${proTag}</a></nav>
     </aside>
     <main class="fd-main">
       <header class="fd-top">
@@ -2791,7 +2794,7 @@ function friendHomeHTML() {
       </header>
       <section class="fd-hero">
         <div class="fd-prompt">
-          <div class="fd-banner"><i class="ph ph-paint-brush-broad bk"></i>Set up Brand Kit to use your logo, colours, and voice<span class="fd-badge">Pro</span><i class="ph ph-caret-right go"></i></div>
+          <div class="fd-banner"><i class="ph ph-paint-brush-broad bk"></i>Set up Brand Kit to use your logo, colours, and voice${proTag}<i class="ph ph-caret-right go"></i></div>
           <div class="fd-pbody">
             <div class="fd-field">To start creating, type here or <u>upload a file</u>...</div>
             <div class="fd-ctrls">
