@@ -423,7 +423,7 @@
   .gcard .by .who:hover .n { color: var(--t1); text-decoration: underline; }
   .g-row + .g-row { margin-top: 8px; }
   .g-row .sec-h { margin: 20px 0 12px; }
-  .g-creators .gc[data-creator], .g-creators .gc[data-go] { cursor: pointer; }
+  .g-creators .gc[data-go] { cursor: pointer; }
   .g-creators .gc.team img { width: 40px; height: 40px; border-radius: 8px; }
   .creator .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
   #hc { position: fixed; z-index: 200; width: 272px; padding: 14px; border-radius: 10px; background: #fff; box-shadow: var(--e3), 0 18px 40px rgba(0,0,0,.14); display: flex; flex-direction: column; gap: 12px; animation: pop .2s var(--ease); }
@@ -447,8 +447,8 @@
   .inside .th { width: 96px; aspect-ratio: 16 / 9; border-radius: 3px; flex: none; background-size: cover; background-position: center; box-shadow: 0 0 0 1px var(--line); object-fit: cover; }
   .inside .th.tcv { padding: 6%; } .inside .th.tcv small { display: none; }
   .inside li div { display: flex; flex-direction: column; min-width: 0; }
-  .inside li b { font-weight: 500; font-size: 13px; }
-  .inside li span { font-size: 12px; color: var(--t3); }
+  .inside li > div b { font-weight: 500; font-size: 13px; }
+  .inside li > div span { font-size: 12px; color: var(--t3); }
   .cat-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 64px; }
   .cat-tiles button { height: 72px; border-radius: 8px; color: #fff; text-align: left; padding: 12px 14px; font-size: 15px; font-weight: 500; display: flex; flex-direction: column; justify-content: space-between; transition: transform .2s var(--ease), box-shadow .2s; }
   .cat-tiles button:hover { transform: translateY(-2px); box-shadow: 0 8px 18px -8px rgba(0,0,0,.4); }
@@ -494,6 +494,9 @@
   .co-also { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; background: var(--bg2); cursor: pointer; }
   .co-also img { width: 22px; height: 22px; border-radius: 5px; }
   .co-also span { display: flex; flex-direction: column; font-size: 13px; } .co-also small { color: var(--t3); font-size: 12px; }
+  .co-review { display: flex; align-items: center; gap: 12px; margin-top: 28px; padding: 12px 14px; border-radius: 6px; background: var(--amber-bg); color: #78350F; font-size: 13px; }
+  .co-review > i { font-size: 18px; color: var(--amber); }
+  .co-review span { flex: 1; } .co-review b { font-weight: 500; }
   .crumbs a { color: inherit; }
   .crumbs a:hover { color: var(--t1); text-decoration: underline; }
   .credits { position: absolute; right: 12px; bottom: 12px; width: 320px; border-radius: 8px; box-shadow: var(--e3), 0 30px 60px rgba(0,0,0,.18); background: url(assets/confetti.jpg) center/cover; padding: 12px; animation: pop .5s var(--ease); z-index: 6; }
@@ -1622,7 +1625,7 @@ function gcard(t) {
   const own = t.mine && S.journey !== 'v';
   return `<div class="tcard gcard ${own ? 'mine' : ''}" data-go="template" data-tpl="${t.id}">
     ${coverHTML(t)}
-    ${t.mine ? `<span class="pill pro g-new">${own ? 'New · Yours' : 'New'}</span>` : ''}
+    ${t.inReview ? '<span class="pill soft-amber g-new">In review</span>' : t.mine ? `<span class="pill pro g-new">${own ? 'New · Yours' : 'New'}</span>` : ''}
     <div class="meta"><b>${esc(t.title)}</b>
       <div class="by"><span class="who" data-creator="${t.by}">${avatar(20, c)}<span class="n">${esc(c.name)}</span></span><span class="u" title="Uses"><i class="ph ph-copy-simple"></i>${t.uses.toLocaleString()}</span></div>
     </div>
@@ -1659,6 +1662,7 @@ function renderGallery() {
     list.sort((a, b) => S.gSort === 'new' ? a.age - b.age : b.uses - a.uses);
     // Your new template stays first so you can find it right after publishing
     list.sort((a, b) => (b.mine ? 1 : 0) - (a.mine ? 1 : 0));
+    hideHover();
     const rows = S.gCat === 'All' && !q;
     $('#g-grid').innerHTML = rows
       ? `<div class="g-count">${list.length} templates in ${GALLERY_CATS.length} categories</div>` + GALLERY_CATS.map(c => {
@@ -1682,20 +1686,20 @@ function creatorStats(key) {
   const list = galleryItems().filter(t => t.by === key);
   return { n: list.length, uses: list.reduce((a, t) => a + t.uses, 0), followers: (FOLLOWERS[key] || 0) + (S.follows[key] ? 1 : 0) };
 }
-function followBtn(key) {
+function followBtn(key, big = false) {
   if (key === 'me') return '';
   const on = !!S.follows[key];
-  return `<button class="btn ${on ? 'btn-outline' : 'btn-primary'} btn-sm" data-follow="${key}">${on ? '<i class="ph ph-check"></i>Following' : '<i class="ph ph-plus"></i>Follow'}</button>`;
+  return `<button class="btn ${on ? 'btn-outline' : 'btn-primary'} ${big ? '' : 'btn-sm'}" data-follow="${key}">${on ? '<i class="ph ph-check"></i>Following' : '<i class="ph ph-plus"></i>Follow'}</button>`;
 }
 const fmtK = n => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
-let hcTimer = null, hcKey = null;
-function hideHover() { clearTimeout(hcTimer); hcKey = null; $('#hc')?.remove(); }
+let hcTimer = null, hcKey = null, hcEl = null;
+function hideHover() { clearTimeout(hcTimer); hcKey = null; hcEl = null; $('#hc')?.remove(); }
 function showHover(el) {
   const key = el.dataset.creator;
   clearTimeout(hcTimer);
-  if (hcKey === key && $('#hc')) return;
+  if (hcEl === el && $('#hc')) return;
   $('#hc')?.remove();
-  hcKey = key;
+  hcKey = key; hcEl = el;
   const c = key === 'me' ? P() : CREATORS[key];
   if (!c) return;
   const st = creatorStats(key);
@@ -1703,8 +1707,8 @@ function showHover(el) {
   card.id = 'hc';
   card.innerHTML = `<div class="hc-top">${avatar(48, c)}<div><b>${esc(c.name)}</b><span>${esc(c.headline || '@' + c.handle)}</span></div></div>
     <div class="hc-stats"><div><b>${st.n}</b>Templates</div><div><b>${fmtK(st.uses)}</b>Uses</div><div><b>${fmtK(st.followers)}</b>Followers</div></div>
-    ${c.team ? `<a href="#" class="hc-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">Member of ${esc(S.company.name)}</a>` : ''}
-    <div class="hc-acts">${key === 'me' ? '<button class="btn btn-outline btn-sm" data-go="profile">Your page</button>' : followBtn(key)}</div>`;
+    ${c.team && S.company.on ? `<a href="#" class="hc-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">Member of ${esc(S.company.name)}</a>` : ''}
+    <div class="hc-acts">${key === 'me' ? (S.journey === 'v' ? '<button class="btn btn-outline btn-sm" data-go="profile" data-visitor>View page</button>' : '<button class="btn btn-outline btn-sm" data-go="profile">Your page</button>') : followBtn(key)}</div>`;
   document.body.appendChild(card);
   // Keep the card fully on screen: below the name if it fits, otherwise above
   const r = el.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight;
@@ -1712,6 +1716,7 @@ function showHover(el) {
   card.style.top = Math.max(8, top) + 'px';
   card.style.left = Math.min(Math.max(8, r.left), innerWidth - w - 8) + 'px';
 }
+document.addEventListener('scroll', () => { if ($('#hc')) hideHover(); }, true);
 document.addEventListener('mouseover', e => {
   const el = e.target.closest('[data-creator]');
   if (el) return showHover(el);
@@ -1724,7 +1729,8 @@ document.addEventListener('click', e => {
   e.preventDefault(); e.stopPropagation();
   const k = b.dataset.follow;
   S.follows[k] = !S.follows[k]; save();
-  $$(`[data-follow="${k}"]`).forEach(x => { x.outerHTML = followBtn(k); });
+  $$(`[data-follow="${k}"]`).forEach(x => { x.outerHTML = followBtn(k, !x.classList.contains('btn-sm')); });
+  if (k === 'co' && ROUTE === 'company') $('#co-followers').textContent = fmtK(320 + (S.follows.co ? 1 : 0));
   const f = $('#hc .hc-stats div:last-child b'); if (f && hcKey === k) f.textContent = fmtK(creatorStats(k).followers);
   if (S.follows[k]) toast(`Following ${esc(k === 'co' ? S.company.name : (CREATORS[k] || {}).name || '')}`);
 }, true);
@@ -1787,13 +1793,18 @@ function renderOtherTemplate(t) {
    ═══════════════════════════════════════════════════════════ */
 const TEAM_MEMBERS = ['me', 'lena', 'omar'];
 const CO_TAKEN = ['admin', 'team', 'presentations', 'google', 'community'];
-function teamItems() {
-  return galleryItems().filter(t => t.team || (t.mine && S.tpl.toCompany));
+// Your template joins the team gallery only if members may publish. With review on it waits for an admin.
+const mineOnTeam = () => S.published && S.tpl.toCompany && S.company.membersPublish;
+const mineInReview = () => mineOnTeam() && S.company.review && !S.tplApproved;
+function teamItems(visitor = false) {
+  return galleryItems().filter(t => t.team || (t.mine && mineOnTeam() && !(visitor && mineInReview())))
+    .map(t => t.mine && mineInReview() ? { ...t, inReview: true } : t);
 }
 const coSlugState = v => !/^[a-z0-9][a-z0-9-]{2,29}$/.test(v) ? ['bad', 'Use 3 to 30 lowercase letters, numbers or dashes']
   : CO_TAKEN.includes(v) ? ['bad', 'That address is taken'] : ['ok', 'Available'];
 
 function renderWsSettings() {
+  hideHover();
   const co = S.company;
   const tabs = `<div class="ws-tabs">${['General', 'Members', 'Billing', 'Public gallery'].map(t => `<span class="${t === 'Public gallery' ? 'on' : ''}">${t}</span>`).join('')}</div>`;
   if (!co.on) {
@@ -1842,7 +1853,7 @@ function renderWsSettings() {
   </div>`);
   const slugIn = $('#co-slug');
   slugIn.oninput = () => { slugIn.value = slugIn.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); d.slug = slugIn.value; const [a, b] = coSlugState(d.slug); $('#co-st').textContent = b; $('#co-st').dataset.st = a; };
-  $('#co-name').oninput = e => { d.name = e.target.value; };
+  $('#co-name').oninput = e => { d.name = e.target.value; e.target.style.boxShadow = ''; };
   $('#co-about').oninput = e => { d.about = e.target.value; $('#co-ct').textContent = `${d.about.length}/280`; };
   $('#co-web').oninput = e => { d.website = e.target.value; };
   $('#co-li').oninput = e => { d.linkedin = e.target.value; };
@@ -1855,18 +1866,20 @@ function renderWsSettings() {
     if (coSlugState(d.slug)[0] !== 'ok') { slugIn.focus(); return; }
     S.company = d; save(); renderWsSettings(); toast('Public gallery saved');
   };
-  $('#co-del').onclick = () => {
-    const box = $('.co-danger');
+  const del = () => {
+    const box = $('.co-danger'), before = box.innerHTML;
     box.innerHTML = `<div><b>Delete presentations.ai/${esc(co.slug)}?</b><span>People with the link will see a not found page. You can set it up again later.</span></div>
       <button class="btn btn-outline" id="co-del-no">Cancel</button><button class="btn btn-danger" id="co-del-yes">Delete gallery</button>`;
-    $('#co-del-no').onclick = () => renderWsSettings();
-    $('#co-del-yes').onclick = () => { S.company.on = false; save(); renderWsSettings(); toast('Public gallery deleted', 'ph ph-trash'); };
+    $('#co-del-no').onclick = () => { box.innerHTML = before; $('#co-del').onclick = del; };
+    $('#co-del-yes').onclick = () => { S.company.on = false; S.tplApproved = false; save(); renderWsSettings(); toast('Public gallery deleted', 'ph ph-trash'); };
   };
+  $('#co-del').onclick = del;
 }
 
 function renderCompany() {
-  const co = S.company, list = teamItems();
-  const admin = S.journey !== 'v';
+  const co = S.company;
+  const admin = !S.coVisitor;
+  const list = teamItems(!admin);
   const uses = list.reduce((a, t) => a + t.uses, 0);
   $('#screen').innerHTML = `<div class="page">
     ${cNav(!admin)}
@@ -1878,7 +1891,7 @@ function renderCompany() {
           <div class="hd">presentations.ai/${esc(co.slug)}</div></div>
         <div class="acts">
           ${admin ? '<button class="btn btn-outline" data-go="ws-settings"><i class="ph ph-gear-six"></i>Edit gallery</button>' : ''}
-          ${followBtn('co').replace('btn-sm', '')}
+          ${followBtn('co', true)}
           <button class="btn btn-primary" id="co-share"><i class="ph ph-share-network"></i>Share</button>
         </div>
       </div>
@@ -1890,14 +1903,16 @@ function renderCompany() {
           <div><b>${list.length}</b><span>Templates</span></div>
           <div><b>${uses.toLocaleString()}</b><span>Uses</span></div>
           <div><b>12</b><span>Members</span></div>
-          <div><b>${fmtK(320 + (S.follows.co ? 1 : 0))}</b><span>Followers</span></div>
+          <div><b id="co-followers">${fmtK(320 + (S.follows.co ? 1 : 0))}</b><span>Followers</span></div>
         </div>
       </div>
+      ${admin && mineInReview() ? `<div class="co-review"><i class="ph-fill ph-hourglass-medium"></i><span><b>1 template waiting for review.</b> “${esc(S.tpl.title)}” by ${esc(P().name)} shows here once an admin approves it.</span><button class="btn btn-primary btn-sm" id="co-approve">Approve</button></div>` : ''}
       <div class="sec-h"><h3>Templates</h3>${admin ? '<button class="btn btn-outline" data-go="editor"><i class="ph ph-plus"></i>Publish a deck</button>' : ''}</div>
       <div class="tgrid">${list.map(gcard).join('')}</div>
-      ${admin && !S.published ? '<div class="empty" style="margin-bottom:48px"><i class="ph ph-info" style="font-size:20px"></i>Your own decks show here once you publish one and keep “Also show on Foursquare’s gallery” on.</div>' : ''}
+      ${admin && !mineOnTeam() ? `<div class="empty" style="margin-bottom:48px"><i class="ph ph-info" style="font-size:20px"></i>${!S.company.membersPublish ? 'Members can’t publish here right now. Turn it on in Workspace settings.' : `Your own decks show here once you publish one with “Also show on ${esc(S.company.name)}’s team gallery” on.`}</div>` : ''}
     </div></div>`;
   $('#co-share').onclick = () => toast(`Copied presentations.ai/${esc(co.slug)}`);
+  $('#co-approve') && ($('#co-approve').onclick = () => { S.tplApproved = true; save(); renderCompany(); toast('Approved. It’s live on the team gallery'); });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1905,6 +1920,7 @@ function renderCompany() {
    ═══════════════════════════════════════════════════════════ */
 function renderTemplate() {
   const other = S.viewTpl !== 'mine' && GALLERY.find(g => g.id === S.viewTpl);
+  hideHover();
   if (other) return renderOtherTemplate(other);
   const p = S.profile, t = S.tpl, i = S.tplSlide;
   $('#screen').innerHTML = `<div class="page">
@@ -1923,10 +1939,10 @@ function renderTemplate() {
         <div class="tp-side">
           <div><h1>${esc(t.title)}</h1><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${t.tags.map(g => `<span class="chip sm">${esc(g)}</span>`).join('')}</div></div>
           <div class="creator"><span class="who" data-creator="me">${avatar(36, p)}<div class="w"><b style="font-weight:500">${esc(p.name)}</b><span>${esc(p.headline || '@' + p.handle)}</span></div></span><button class="btn btn-outline btn-sm" data-go="profile" data-visitor>Profile</button></div>
-          ${S.company.on && t.toCompany ? `<a href="#" class="tp-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">Also on ${esc(S.company.name)}’s team gallery<i class="ph ph-arrow-right"></i></a>` : ''}
+          ${(() => { const owner = !(S.visitorView || S.journey === 'v'); return S.company.on && mineOnTeam() && (owner || !mineInReview()) ? `<a href="#" class="tp-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">${owner && mineInReview() ? `Waiting for approval on ${esc(S.company.name)}’s team gallery` : `Also on ${esc(S.company.name)}’s team gallery`}<i class="ph ph-arrow-right"></i></a>` : ''; })()}
           <button class="btn btn-primary btn-lg" data-go="login" style="width:100%"><i class="ph ph-copy-simple"></i>Use this template</button>
           <div class="gift"><i class="ph-fill ph-gift"></i><span><b>New here?</b> Start from ${esc(first())}'s link and get <b>200 extra credits</b> to make it your own.</span></div>
-          <div class="facts"><div><i class="ph ph-slideshow"></i>${KPI.length} slides</div><div><i class="ph ph-copy-simple"></i>${S.uses} uses</div><div><i class="ph ph-eye"></i>${S.uses * 6 + 38} views</div><div><i class="ph ph-tag"></i>Free</div></div>
+          <div class="facts"><div><i class="ph ph-slideshow"></i>${KPI.length} slides</div><div><i class="ph ph-copy-simple"></i>${S.uses} uses</div><div><i class="ph ph-eye"></i>${viewsOf({ uses: S.uses })} views</div><div><i class="ph ph-tag"></i>Free</div></div>
           <div class="desc">${esc(t.desc)}</div>
         </div>
       </div>
@@ -2549,7 +2565,7 @@ function renderFlow() {
       <button class="arr" id="fl-next" ${i === j.steps.length - 1 ? 'disabled' : ''} aria-label="Next step"><i class="ph ph-caret-right"></i></button>
       <span class="dots">${j.steps.map((k, n) => `<button class="${n === i ? 'on' : n < i ? 'past' : ''}" data-step="${k}" title="${n + 1}. ${LABEL[k]}"></button>`).join('')}</span>
     </div>` : ''}`;
-  const step = k => { if (k === 'profile') S.visitorView = false; if (k === 'template') S.viewTpl = 'mine';
+  const step = k => { if (k === 'profile') S.visitorView = false; if (k === 'company') S.coVisitor = false; if (k === 'template') S.viewTpl = 'mine';
     if (k === 'gallery') { S.gCat = 'All'; S.gQ = ''; if (!S.published) { if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft)); S.published = true; S.publishedAt = Date.now(); } } if (k === 'rewards' && !S.published) S.later = true; go(k); };
   $$('[data-j]').forEach(b => b.onclick = () => {
     const x = JOURNEYS.find(y => y.id === b.dataset.j);
@@ -2573,6 +2589,7 @@ document.addEventListener('click', e => {
   if (r === 'profile') S.visitorView = el.hasAttribute('data-visitor');
   if (r === 'template') { S.viewTpl = el.dataset.tpl || 'mine'; S.tplSlide = 0; }
   if (r === 'gallery') { S.gCat = el.dataset.gcat || 'All'; S.gQ = ''; }
+  if (r === 'company') S.coVisitor = S.journey === 'v';
   go(r);
 });
 document.addEventListener('keydown', e => {
