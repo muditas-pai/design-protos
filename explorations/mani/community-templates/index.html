@@ -660,6 +660,30 @@
   .st-plan b { font-size: 28px; font-weight: 500; display: block; } .st-plan span, .st-row span { color: var(--t2); }
   .st-row { margin-top: 8px; } .st-row b { display: block; font-weight: 600; }
   .rwrap.rf-wrap { max-width: 840px; } /* 800px content + 20px side padding */
+  .gold-tag { display: inline-flex; align-items: center; background: #FBF0D2; color: #a16207; font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; padding: 2px 6px; border-radius: 34px; line-height: 1.33; }
+  .cap .gold-tag, .fd-lbl .gold-tag { margin-left: 6px; vertical-align: 1px; }
+  .dash .side .sb-sec .cap { display: flex; align-items: center; }
+  .sb-add { margin-left: auto; width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center; color: var(--t2); font-size: 14px; }
+  .sb-add:hover { background: rgba(22,30,39,.08); color: var(--t1); }
+  .sb-ct { color: var(--t4); font-size: 12px; }
+  .sb-new { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; }
+  .sb-new i { font-size: 18px; color: var(--t2); }
+  .sb-new input { flex: 1; min-width: 0; height: 28px; border: 0; border-radius: 5px; padding: 0 8px; box-shadow: inset 0 0 0 1px var(--ink); outline: none; font: inherit; }
+  .fo-h { display: flex; align-items: center; gap: 8px; margin: 8px 0 24px; }
+  .fo-h h2 { margin: 0 6px 0 0; font-size: 24px; font-weight: 400; }
+  .gd { display: grid; grid-template-columns: 1fr 280px; }
+  .gd .tx { padding: 28px; display: flex; flex-direction: column; gap: 12px; }
+  .gd h3 { margin: 0; font-size: 22px; font-weight: 400; }
+  .gd p { margin: 0; color: var(--t2); }
+  .gd ul { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 10px; color: var(--t2); }
+  .gd li { display: flex; gap: 10px; } .gd li i { font-size: 18px; color: #a16207; flex: none; }
+  .gold-btn { background: linear-gradient(180deg, #E9B949, #C98A12); color: #fff; }
+  .gd-prev { background: #FFFBF0; border-left: 1px solid var(--line); padding: 24px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .gd-prev .pj { display: flex; align-items: center; gap: 8px; font-size: 15px; } .gd-prev .pj i { color: #C98A12; font-size: 20px; } .gd-prev .pj b { font-weight: 500; }
+  .gd-prev .lb { margin-top: 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--t4); font-weight: 600; }
+  .gd-prev .kf { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; background: #fff; box-shadow: var(--e1); font-size: 13px; }
+  .gd-prev .kf i { font-size: 16px; color: var(--t2); }
+  .gd-prev .ins { padding: 10px; border-radius: 6px; background: #fff; box-shadow: var(--e1); font-size: 13px; color: var(--t2); line-height: 1.45; }
   .crumbs a { color: inherit; }
   .crumbs a:hover { color: var(--t1); text-decoration: underline; }
   .credits { position: absolute; right: 12px; bottom: 12px; width: 360px; border-radius: 8px; box-shadow: var(--e3), 0 30px 60px rgba(0,0,0,.18); background: url(assets/confetti.jpg) center/cover; padding: 12px; animation: pop .5s var(--ease); z-index: 6; }
@@ -1014,6 +1038,10 @@ const DEFAULT_STATE = () => ({
   viewTpl: 'mine',      // which template page is open: 'mine' or a gallery id
   gCat: 'All', gSort: 'popular', gQ: '',
   follows: {},          // creators the viewer follows
+  folders: [
+    { id: 'q3', name: 'Q3 reviews', decks: ['Monthly business review', 'Quarterly Product Update'] },
+    { id: 'clients', name: 'Client pitches', decks: ['Brand Playbook', 'Digital Marketing Portfolio'] },
+  ],
   publishAs: 'me',      // Share modal: publish as 'me' (personal page) or 'team' (Foursquare page)
   company: { on: false, name: 'Foursquare', slug: 'foursquare', about: 'Foursquare helps businesses understand places and the people who visit them. These are the decks our teams use every week.', website: 'foursquare.com', linkedin: 'linkedin.com/company/foursquare', cover: 'linear-gradient(120deg,#F94877,#FF8A5B 55%,#FFD36E)', membersPublish: true, review: true },
   refs: [],             // refer a friend: invites sent + friends joined this session
@@ -1332,6 +1360,81 @@ function startDraft(editMode) {
 /* ═══════════════════════════════════════════════════════════
    A · DASHBOARD SHELL (home, community page, rewards)
    ═══════════════════════════════════════════════════════════ */
+/* S · Sidebar folders (free, organisation only) and projects (Gold, shared knowledge) */
+const DECKS = [
+  { t: 'Monthly business review', img: A + 'ed-slide-1.jpg', go: 'editor', when: 'Edited 2h ago' },
+  { t: 'Quarterly Product Update', img: A + 'tpl-q2-product.jpg', when: 'Edited yesterday' },
+  { t: 'Brand Playbook', img: A + 'tpl-brand-playbook.jpg', when: 'Edited 3 days ago' },
+  { t: 'Digital Marketing Portfolio', img: A + 'tpl-digital.jpg', when: 'Edited last week' },
+];
+const goldTag = '<span class="gold-tag">Gold</span>';
+const deckCard = r => `<article class="fd-card fd-deck" ${r.go ? `data-go="${r.go}"` : ''}><img src="${r.img}" alt=""><div class="fd-db"><b>${esc(r.t)}</b><small>${r.when}</small></div></article>`;
+function sidebarFolders(activeFolder) {
+  return `<nav class="sb-sec"><div class="cap">Folders<button class="sb-add" id="sb-newfolder" title="New folder" aria-label="New folder"><i class="ph ph-plus"></i></button></div>
+    ${S.folders.map(f => `<a href="#" class="${activeFolder === f.id ? 'on' : ''}" data-folder="${f.id}"><i class="ph ${activeFolder === f.id ? 'ph-folder-open' : 'ph-folder'}"></i><span>${esc(f.name)}</span><small class="sb-ct">${f.decks.length}</small></a>`).join('')}
+    ${S._newFolder ? '<div class="sb-new"><i class="ph ph-folder"></i><input id="sb-folder-in" placeholder="Folder name" maxlength="40"></div>' : ''}
+  </nav>
+  <nav class="sb-sec"><div class="cap">Projects</div>
+    <a href="#" data-gold="project"><i class="ph ph-plus"></i><span>Create project</span>${goldTag}</a>
+  </nav>`;
+}
+function renderFolder(id) {
+  const f = S.folders.find(x => x.id === id);
+  if (!f) return renderDashboard();
+  const list = DECKS.filter(d => f.decks.includes(d.t));
+  $('#screen').innerHTML = dashShell('folder:' + id, `<section class="fd-files">
+    <div class="fo-h"><span class="muted">Folders</span><i class="ph ph-caret-right muted"></i><h2>${esc(f.name)}</h2><span class="muted">${list.length} presentation${list.length === 1 ? '' : 's'}</span></div>
+    ${list.length ? `<div class="fd-grid">${list.map(deckCard).join('')}</div>`
+      : '<div class="empty"><i class="ph ph-folder-open" style="font-size:24px"></i>This folder is empty. Use Move to folder from any presentation’s menu to add it here.</div>'}
+  </section>`);
+}
+function openGold() {
+  openModal(`<div class="f-head">Projects ${goldTag}</div>
+    <div class="card" style="width:720px"><div class="gd">
+      <div class="tx">
+        <h3>Give every deck the same knowledge</h3>
+        <p>A project holds your files and instructions. Every presentation you make inside it uses them, so you don’t upload the same brief twice.</p>
+        <ul>
+          <li><i class="ph ph-files"></i>Add docs, decks, PDFs and links as project knowledge</li>
+          <li><i class="ph ph-note-pencil"></i>Write instructions once: tone, audience, must-have slides</li>
+          <li><i class="ph ph-users-three"></i>Share the project with your team</li>
+        </ul>
+        <div style="display:flex;gap:10px;margin-top:6px"><button class="btn btn-primary btn-lg gold-btn" id="gd-up"><i class="ph-fill ph-crown-simple"></i>Upgrade to Gold</button><button class="btn btn-outline btn-lg" id="gd-no">Maybe later</button></div>
+        <small class="muted">Folders stay free on every plan. Use them to keep presentations tidy.</small>
+      </div>
+      <div class="gd-prev">
+        <div class="pj"><i class="ph-fill ph-cube"></i><b>Q4 board prep</b></div>
+        <div class="lb">Knowledge</div>
+        ${[['ph-file-pdf', 'Board memo Q3.pdf'], ['ph-file-xls', 'Revenue model.xlsx'], ['ph-file-ppt', 'Last board deck.pptx'], ['ph-link', 'foursquare.com/investors']].map(([i, n]) => `<div class="kf"><i class="ph ${i}"></i>${n}</div>`).join('')}
+        <div class="lb">Instructions</div>
+        <div class="ins">Keep it under 12 slides. Lead with revenue, then product. Board audience.</div>
+      </div>
+    </div></div>`, { onClose: () => closeModal() });
+  $('#gd-no').onclick = closeModal;
+  $('#gd-up').onclick = () => { closeModal(); toast('Gold upgrade opens here (proto)', 'ph-fill ph-crown-simple'); };
+}
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-gold]');
+  if (g) { e.preventDefault(); openGold(); return; }
+  const f = e.target.closest('[data-folder]');
+  if (f) { e.preventDefault(); clearTimers(); renderFolder(f.dataset.folder); return; }
+  if (e.target.closest('#sb-newfolder')) {
+    e.preventDefault(); S._newFolder = true;
+    renderRoute(); const inp = $('#sb-folder-in'); if (!inp) return;
+    inp.focus();
+    let finished = false;
+    const done = ok => {
+      if (finished) return;
+      finished = true; inp.onblur = null;
+      const v = inp.value.trim(); S._newFolder = false;
+      if (ok && v) { const id = 'f' + Date.now(); S.folders.push({ id, name: v, decks: [] }); save(); renderFolder(id); toast(`Folder “${esc(v)}” created`); }
+      else renderRoute();
+    };
+    inp.onkeydown = ev => { if (ev.key === 'Enter') done(true); if (ev.key === 'Escape') { ev.stopPropagation(); done(false); } };
+    inp.onblur = () => done(true);
+  }
+});
+
 function dashShell(active, main, topLeft = '', { friend = null } = {}) {
   // Sidebar and top bar follow dashboard/dashboard-qc1.html; community, refer and rewards items added
   const nav = (icon, label, key, extra = '') => `<a href="#" ${key && !friend ? `data-go="${key}"` : 'onclick="return false"'} class="${active === key ? 'on' : ''}"><i class="ph ${icon}"></i><span>${label}</span>${extra}</a>`;
@@ -1342,7 +1445,7 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
     <aside class="side">
       <div class="ws">${ws}${paid ? '' : '<span class="fd-up">Upgrade</span>'}<span class="fd-caret"><i class="ph ph-caret-down"></i></span></div>
       <nav>${nav('ph-house-simple', 'Home', 'dashboard')}${nav('ph-paint-brush-broad', 'Brand kit', null, pro)}</nav>
-      <nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, pro)}</nav>
+      ${friend ? `<nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, goldTag)}</nav>` : sidebarFolders(active.startsWith('folder:') ? active.slice(7) : '')}
       <nav>${nav('ph-pencil-ruler', 'Hire an expert')}${nav('ph-layout', 'Templates')}${nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}${nav('ph-users-three', 'Community page', 'community', S.profile ? '' : isNew)}</nav>
       <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '<span class="fd-badge">10%</span>' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
     </aside>
@@ -1365,11 +1468,7 @@ function renderDashboard() {
   const banner = S.profile
     ? `<div class="fd-banner" data-go="community"><i class="ph-fill ph-users-three bk"></i>Your community page is live at presentations.ai/@${esc(S.profile.handle)}<i class="ph ph-caret-right go"></i></div>`
     : `<div class="fd-banner" data-go="create-page"><i class="ph-fill ph-users-three bk"></i>Create your community page and earn ${REF_BONUS} credits for every sign up<span class="fd-badge">New</span><i class="ph ph-caret-right go"></i></div>`;
-  const recent = [
-    { t: 'Monthly business review', img: A + 'ed-slide-1.jpg', go: 'editor', when: 'Edited 2h ago' },
-    { t: 'Quarterly Product Update', img: A + 'tpl-q2-product.jpg', when: 'Edited yesterday' },
-    { t: 'Brand Playbook', img: A + 'tpl-brand-playbook.jpg', when: 'Edited 3 days ago' },
-  ];
+  const recent = DECKS.slice(0, 3);
   $('#screen').innerHTML = dashShell('dashboard', `
     <section class="fd-hero">
       <div class="fd-prompt">
@@ -1394,7 +1493,7 @@ function renderDashboard() {
     </section>
     <section class="fd-files">
       <div class="fd-tabs"><span class="on">Recent</span><span>Starred</span><span>Downloads</span><span>Recently deleted</span></div>
-      <div class="fd-grid">${recent.map(r => `<article class="fd-card fd-deck" ${r.go ? `data-go="${r.go}"` : ''}><img src="${r.img}" alt=""><div class="fd-db"><b>${esc(r.t)}</b><small>${r.when}</small></div></article>`).join('')}</div>
+      <div class="fd-grid">${recent.map(deckCard).join('')}</div>
     </section>`);
 }
 
@@ -2673,7 +2772,9 @@ function friendHomeHTML() {
       <div class="fd-ws"><span class="fd-wsa">${esc(initials(S.friend.name)[0])}</span><span class="fd-wsn">${esc(friendFirst())}</span>${pro ? '' : '<span class="fd-up">Upgrade</span>'}<span class="fd-caret"><i class="ph ph-caret-down"></i></span></div>
       <nav class="fd-nav"><a class="on"><i class="ph ph-house-simple"></i><span>Home</span></a><a><i class="ph ph-paint-brush-broad"></i><span>Brand kit</span><span class="fd-badge">Pro</span></a></nav>
       <div class="fd-div"></div>
-      <nav class="fd-nav"><div class="fd-lbl">Projects</div><a><i class="ph ph-plus"></i><span>Create project</span><span class="fd-badge">Pro</span></a></nav>
+      <nav class="fd-nav"><div class="fd-lbl">Folders</div><a><i class="ph ph-plus"></i><span>New folder</span></a></nav>
+      <div class="fd-div"></div>
+      <nav class="fd-nav"><div class="fd-lbl">Projects</div><a data-gold="project"><i class="ph ph-plus"></i><span>Create project</span>${goldTag}</a></nav>
       <div class="fd-div"></div>
       <nav class="fd-nav"><a><i class="ph ph-pencil-ruler"></i><span>Hire an expert</span></a><a><i class="ph ph-layout"></i><span>Templates</span></a></nav>
       <nav class="fd-nav fd-foot"><a><i class="ph ph-gear"></i><span>Workspace settings</span></a><a><i class="ph ph-user-plus"></i><span>Invite new members</span><span class="fd-badge">Pro</span></a></nav>
