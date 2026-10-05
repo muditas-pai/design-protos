@@ -1052,6 +1052,8 @@ const DEFAULT_STATE = () => ({
   friendPlan: 'year',
   payout: null,         // Pro inviter's payout method
 });
+// ?mode=refer: the separate Refer & earn link. Same proto, community parts hidden, flow bar shows Free and Pro only.
+const REFER_ONLY = new URLSearchParams(location.search).get('mode') === 'refer';
 let S = DEFAULT_STATE();
 try { const saved = sessionStorage.getItem('ct2-state'); if (saved) S = Object.assign(DEFAULT_STATE(), JSON.parse(saved)); } catch (e) {}
 function save() { try { sessionStorage.setItem('ct2-state', JSON.stringify(S)); } catch (e) {} }
@@ -1448,7 +1450,7 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
       <div class="ws">${ws}${paid ? '' : '<span class="fd-up">Upgrade</span>'}<span class="fd-caret"><i class="ph ph-caret-down"></i></span></div>
       <nav>${nav('ph-house-simple', 'Home', 'dashboard')}${nav('ph-paint-brush-broad', 'Brand kit', null, pro)}</nav>
       ${friend ? `<nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, goldTag)}</nav>` : sidebarFolders(active.startsWith('folder:') ? active.slice(7) : '')}
-      <nav>${nav('ph-pencil-ruler', 'Hire an expert')}${nav('ph-layout', 'Templates')}${nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}</nav>
+      <nav>${nav('ph-pencil-ruler', 'Hire an expert')}${nav('ph-layout', 'Templates')}${REFER_ONLY ? '' : nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}</nav>
       <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
     </aside>
     <main class="dmain">
@@ -1457,7 +1459,7 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
         <span style="flex:1"></span>
         ${paid ? '<span class="fd-badge" style="height:24px;padding:0 10px"><i class="ph-fill ph-crown-simple" style="margin-right:4px"></i>Pro plan</span>' : '<div class="fd-trial"><span>🔥 Trial: 4 days left</span><button class="fd-btn-up"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button></div>'}
         <button class="fd-ic" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button><button class="fd-ic" aria-label="Help"><i class="ph ph-question"></i></button>${friend ? '<button class="fd-ic" aria-label="Notifications"><i class="ph ph-bell"></i></button>' : bellHTML()}
-        ${friend ? avatar(32, friend) : `<button data-go="community" title="Community page">${avatar(32)}</button>`}
+        ${friend ? avatar(32, friend) : `<button data-go="${REFER_ONLY ? 'rewards' : 'community'}" title="Your account">${avatar(32)}</button>`}
       </div>
       ${main}
     </main>
@@ -1467,7 +1469,9 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
 /* A1 · Dashboard home */
 function renderDashboard() {
   // Main area follows dashboard/dashboard-qc1.html. The prompt banner promotes the community page.
-  const banner = S.profile
+  const banner = REFER_ONLY
+    ? `<div class="fd-banner"><i class="ph ph-paint-brush-broad bk"></i>Set up Brand Kit to use your logo, colours, and voice${S.plan === 'pro' ? '' : '<span class="fd-badge">Pro</span>'}<i class="ph ph-caret-right go"></i></div>`
+    : S.profile
     ? `<div class="fd-banner" data-go="community"><i class="ph-fill ph-users-three bk"></i>Your community page is live at presentations.ai/@${esc(S.profile.handle)}<i class="ph ph-caret-right go"></i></div>`
     : `<div class="fd-banner" data-go="create-page"><i class="ph-fill ph-users-three bk"></i>Create your community page and earn ${REF_BONUS} credits for every sign up<span class="fd-badge">New</span><i class="ph ph-caret-right go"></i></div>`;
   const recent = DECKS.slice(0, 3);
@@ -2100,7 +2104,7 @@ const coSlugState = v => !/^[a-z0-9][a-z0-9-]{2,29}$/.test(v) ? ['bad', 'Use 3 t
    Back to Home, Workspace settings (General, Members, Billing, Public gallery), Profile settings (Profile). */
 function settingsShell(tab, main, topLeft = '') {
   const paid = S.plan === 'pro';
-  const item = (key, icon, label, extra = '') => `<a href="#" class="st-item ${tab === key ? 'on' : ''}" data-stab="${key}"><i class="ph ${icon}"></i><span>${label}</span>${extra}</a>`;
+  const item = (key, icon, label, extra = '') => REFER_ONLY && ['gallery', 'community'].includes(key) ? '' : `<a href="#" class="st-item ${tab === key ? 'on' : ''}" data-stab="${key}"><i class="ph ${icon}"></i><span>${label}</span>${extra}</a>`;
   return `<div class="st">
     <aside class="st-side">
       <div class="ws"><img src="${A}ws-foursquare.jpg" alt=""><span class="fd-wsn">Foursquare</span>${paid ? '' : '<span class="fd-up">Upgrade</span>'}<span class="fd-caret"><i class="ph ph-caret-down"></i></span></div>
@@ -2114,7 +2118,7 @@ function settingsShell(tab, main, topLeft = '') {
       <div class="dtop">${topLeft}<span style="flex:1"></span>
         ${paid ? '<span class="fd-badge" style="height:24px;padding:0 10px"><i class="ph-fill ph-crown-simple" style="margin-right:4px"></i>Pro plan</span>' : '<div class="fd-trial"><span>🔥 Trial: 4 days left</span><button class="fd-btn-up"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button></div>'}
         <button class="fd-ic" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button><button class="fd-ic" aria-label="Help"><i class="ph ph-question"></i></button>${bellHTML()}
-        <button data-go="community" title="Community page">${avatar(32)}</button>
+        <button data-go="${REFER_ONLY ? 'rewards' : 'community'}" title="Your account">${avatar(32)}</button>
       </div>
       <div class="st-content">${main}</div>
     </main>
@@ -2839,7 +2843,7 @@ function notifItems() {
   if (S.redeemed) L.push({ i: 'ph-bank', t: `<b>${money(S.redeemed)}</b> is on its way to ${esc(S.payout || 'you')}`, m: 'Arrives in 3 to 5 business days', go: 'rewards', at: S.redeemedAt });
   L.push({ i: 'ph-heart', t: '<b>Dana Ortiz</b> started following you', go: 'creator', cr: 'dana', at: 2 });
   L.push({ i: 'ph-sparkle', t: 'Publish a deck to Community and earn <b>200 credits</b> for every sign up', go: 'editor', at: 1 });
-  return L.sort((a, b) => (b.at || 0) - (a.at || 0));
+  return L.filter(n => !REFER_ONLY || ['refer', 'rewards'].includes(n.go)).sort((a, b) => (b.at || 0) - (a.at || 0));
 }
 const notifUnread = () => notifItems().filter(n => n.at > (S.notifSeen || 0)).length;
 const bellHTML = () => `<button class="fd-ic bell" id="bell" aria-label="Notifications"><i class="ph ph-bell"></i>${notifUnread() ? `<span class="dot">${notifUnread()}</span>` : ''}</button>`;
@@ -3092,7 +3096,7 @@ const JOURNEYS = [
   { id: 'f', label: 'Free user', group: 'refer', hint: 'Free user invites a friend. Both get 200 credits', fresh: true, plan: 'free',
     steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined'] },
   { id: 'p', label: 'Pro user', group: 'refer', hint: 'Pro user invites a friend. Earns 10% cash when they upgrade', fresh: true, plan: 'pro',
-    steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'ref-upgrade', 'refer-paid'] },
+    steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'ref-upgrade', 'refer-paid', 'redeem'] },
 ];
 const LABEL = Object.fromEntries(ROUTES.flatMap(g => g[1]));
 LABEL.community = 'Community page'; LABEL['my-page'] = 'Your page';
@@ -3109,7 +3113,7 @@ function renderFlow() {
   const i = Math.max(0, j.steps.indexOf(ROUTE));
   $('#flow').innerHTML = `
     <button class="tog" title="${min ? 'Show' : 'Hide'} flow bar" id="flow-tog"><i class="ph ${min ? 'ph-path' : 'ph-caret-left'}"></i>${min ? 'Flow' : ''}</button>
-    ${[['Your page', 'me'], ['Team page', 'team'], ['More', 'other'], ['Refer a friend', 'refer']].map(([g, k]) => [g, JOURNEYS.filter(x => x.group === k)]).map(([g, list]) => `
+    ${(REFER_ONLY ? [['Refer & earn', 'refer']] : [['Your page', 'me'], ['Team page', 'team'], ['More', 'other'], ['Refer a friend', 'refer']]).map(([g, k]) => [g, JOURNEYS.filter(x => x.group === k)]).map(([g, list]) => `
     <span class="jg">${g}</span><div class="jr">${list.map(x => `<button class="${x.id === j.id ? 'on' : ''}" data-j="${x.id}" title="${x.hint}">${x.label}</button>`).join('')}</div>`).join('')}
     ${j.steps.length > 1 ? `
     <div class="stepper">
@@ -3164,6 +3168,7 @@ document.addEventListener('keydown', e => {
   const jj = JOURNEYS.find(x => x.id === q.get('j'));
   if (jj) { if (jj.plan) S.plan = jj.plan; if (jj.init) jj.init(S); S.journey = jj.id; save(); go(q.get('s') || jj.steps[0]); return; }
   if (q.get('plan') === 'pro' || q.get('plan') === 'free') { S.plan = q.get('plan'); S.journey = S.plan === 'pro' ? 'p' : 'f'; save(); }
+  if (REFER_ONLY && !JOURNEYS.find(x => x.id === S.journey && x.group === 'refer')) { S.journey = S.plan === 'pro' ? 'p' : 'f'; save(); }
   go(q.get('s') || 'dashboard');
 })();
 </script>
