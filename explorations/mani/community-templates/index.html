@@ -532,8 +532,9 @@
   /* leave room so the proto flow bar never covers the last content */
   .page::after, .dmain::after { content: ""; display: block; height: 120px; }
   /* Friend dashboard: same design as dashboard/dashboard-qc1.html */
-  .fd { position: fixed; inset: 0; display: flex; background: #fafafa; --d1: rgba(11,15,20,.06); --d2: rgba(11,15,20,.09); --inner: rgba(255,255,255,.8);
+  :root { --d1: rgba(11,15,20,.06); --d2: rgba(11,15,20,.09); --inner: rgba(255,255,255,.8);
     --brand-gradient: radial-gradient(162.36% 178.84% at 13.64% -1.28%, #b6daff 0%, #0095ff 31.73%, #0059ff 76.78%, #002464 100%); }
+  .fd { position: fixed; inset: 0; display: flex; background: #fafafa; }
   .fd-side { width: 260px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
   .fd-ws { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
   .fd-wsa { width: 28px; height: 28px; border-radius: 6px; background: #F05A28; color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 14px; flex: none; }
@@ -581,6 +582,19 @@
   .fd-cb { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
   .fd-cb p { margin: 0 auto; color: var(--t2); font-size: 14px; line-height: 1.45; text-align: center; max-width: 34ch; flex: 1; }
   .fd-cb button { height: 36px; border: 1px solid rgba(11,15,20,.14); border-radius: 6px; font-size: 14px; font-weight: 500; }
+  .dash .side .ws img { width: 28px; height: 28px; border-radius: 6px; flex: none; }
+  .dash .side .ws { gap: 8px; padding: 12px; }
+  .dash .side nav a { height: 36px; padding: 8px; gap: 8px; }
+  .dash .side nav a span:first-of-type { flex: 1; }
+  .dash .side nav a.on { background: rgba(22,30,39,.08); }
+  .dash .side nav .cap { padding: 8px 8px 2px; font-size: 14px; }
+  .dtop .fd-ic { width: 36px; height: 36px; }
+  .fd-banner[data-go] { cursor: pointer; }
+  .fd-banner[data-go]:hover { color: var(--brand); }
+  .fd-deck { cursor: pointer; }
+  .fd-deck img { aspect-ratio: 16 / 9; object-position: center; border-bottom: 1px solid var(--line); }
+  .fd-db { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 2px; }
+  .fd-db b { font-weight: 500; } .fd-db small { color: var(--t3); font-size: 12px; }
   .crumbs a { color: inherit; }
   .crumbs a:hover { color: var(--t1); text-decoration: underline; }
   .credits { position: absolute; right: 12px; bottom: 12px; width: 360px; border-radius: 8px; box-shadow: var(--e3), 0 30px 60px rgba(0,0,0,.18); background: url(assets/confetti.jpg) center/cover; padding: 12px; animation: pop .5s var(--ease); z-index: 6; }
@@ -1254,22 +1268,25 @@ function startDraft(editMode) {
    A · DASHBOARD SHELL (home, community page, rewards)
    ═══════════════════════════════════════════════════════════ */
 function dashShell(active, main, topLeft = '', { friend = null } = {}) {
-  const nav = (icon, label, key, extra = '') => `<a href="#" ${key && !friend ? `data-go="${key}"` : 'onclick="return false"'} class="${active === key ? 'on' : ''}"><i class="ph ${icon}"></i>${label}${extra}</a>`;
-  const ws = friend ? `<span class="ws-tile">${esc(initials(S.friend.ws))[0]}</span>${esc(S.friend.ws)}` : `<img src="${A}ws-foursquare.jpg" alt="">Foursquare`;
+  // Sidebar and top bar follow dashboard/dashboard-qc1.html; community, refer and rewards items added
+  const nav = (icon, label, key, extra = '') => `<a href="#" ${key && !friend ? `data-go="${key}"` : 'onclick="return false"'} class="${active === key ? 'on' : ''}"><i class="ph ${icon}"></i><span>${label}</span>${extra}</a>`;
+  const pro = '<span class="fd-badge">Pro</span>', isNew = '<span class="fd-badge">New</span>';
+  const paid = friend ? friendIsPro() : S.plan === 'pro';
+  const ws = friend ? `<span class="fd-wsa">${esc(initials(S.friend.ws)[0])}</span><span class="fd-wsn">${esc(S.friend.ws)}</span>` : `<img src="${A}ws-foursquare.jpg" alt=""><span class="fd-wsn">Foursquare</span>`;
   return `<div class="dash">
     <aside class="side">
-      <div class="ws">${ws}${(friend ? friendIsPro() : S.plan === 'pro') ? '' : '<span class="pill pro">Upgrade</span>'}<i class="ph ph-caret-down"></i></div>
-      <nav>${nav('ph-house', 'Home', 'dashboard')}${nav('ph-file', 'Created by Me')}</nav>
-      <nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, '<span class="pill pro">Pro</span>')}</nav>
-      <nav>${nav('ph-layout', 'Templates')}${nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}${nav('ph-users-three', 'Community page', 'community', S.profile ? '' : '<span class="pill pro">New</span>')}${nav('ph-books', 'Hire an Expert')}</nav>
-      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '<span class="pill pro">10%</span>' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear-six', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : '<span class="pill pro">New</span>')}${nav('ph-user-plus', 'Invite new member', null, '<span class="pill pro">Pro</span>')}</nav>
+      <div class="ws">${ws}${paid ? '' : '<span class="fd-up">Upgrade</span>'}<span class="fd-caret"><i class="ph ph-caret-down"></i></span></div>
+      <nav>${nav('ph-house-simple', 'Home', 'dashboard')}${nav('ph-paint-brush-broad', 'Brand kit', null, pro)}</nav>
+      <nav><div class="cap">Projects</div>${nav('ph-plus', 'Create project', null, pro)}</nav>
+      <nav>${nav('ph-pencil-ruler', 'Hire an expert')}${nav('ph-layout', 'Templates')}${nav('ph-globe-hemisphere-west', 'Explore community', 'gallery')}${nav('ph-users-three', 'Community page', 'community', S.profile ? '' : isNew)}</nav>
+      <nav class="bot">${nav('ph-paper-plane-tilt', 'Refer &amp; earn', 'refer', friend ? '' : S.plan === 'pro' ? '<span class="fd-badge">10%</span>' : `<span class="pill soft-green">+${REF_BONUS}</span>`)}${nav('ph-gift', 'Rewards', 'rewards')}${nav('ph-gear', 'Workspace settings', 'ws-settings', S.company.on || friend ? '' : isNew)}${nav('ph-user-plus', 'Invite new members', null, pro)}</nav>
     </aside>
     <main class="dmain">
       <div class="dtop">
         ${topLeft}
         <span style="flex:1"></span>
-        ${(friend ? friendIsPro() : S.plan === 'pro') ? '<span class="pill pro" style="height:24px;padding:0 10px;font-size:11px"><i class="ph-fill ph-crown-simple" style="margin-right:4px"></i>Pro plan</span>' : '<div class="trial">🔥Trial: 4 days left<button class="btn btn-brand"><i class="ph ph-rocket-launch"></i>Upgrade</button></div>'}
-        <i class="ph ph-magnifying-glass"></i><i class="ph ph-question"></i><i class="ph ph-bell"></i>
+        ${paid ? '<span class="fd-badge" style="height:24px;padding:0 10px"><i class="ph-fill ph-crown-simple" style="margin-right:4px"></i>Pro plan</span>' : '<div class="fd-trial"><span>🔥 Trial: 4 days left</span><button class="fd-btn-up"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button></div>'}
+        <button class="fd-ic" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button><button class="fd-ic" aria-label="Help"><i class="ph ph-question"></i></button><button class="fd-ic" aria-label="Notifications"><i class="ph ph-bell"></i></button>
         ${friend ? avatar(32, friend) : `<button data-go="community" title="Community page">${avatar(32)}</button>`}
       </div>
       ${main}
@@ -1279,27 +1296,41 @@ function dashShell(active, main, topLeft = '', { friend = null } = {}) {
 
 /* A1 · Dashboard home */
 function renderDashboard() {
-  const promo = S.profile
-    ? `<div class="promo"><div class="pc" style="background:${coverCSS(S.profile)}"></div>
-        <div class="tx"><span class="pill soft-green">Live</span><b>Your community page is live</b><span>presentations.ai/@${esc(S.profile.handle)} · ${myTemplates().length} templates</span></div>
-        <button class="btn btn-outline" data-go="community">Open page</button></div>`
-    : `<div class="promo"><div class="pc" style="background:url(${A}kpi-01-cover.jpg) center 35%/cover"></div>
-        <div class="tx"><span class="pill pro">New</span><b>Build your community page</b><span>One public page for the decks you share. Earn 200 credits for every sign up from it.</span></div>
-        <button class="btn btn-primary" data-go="create-page">Create your page</button></div>`;
+  // Main area follows dashboard/dashboard-qc1.html. The prompt banner promotes the community page.
+  const banner = S.profile
+    ? `<div class="fd-banner" data-go="community"><i class="ph-fill ph-users-three bk"></i>Your community page is live at presentations.ai/@${esc(S.profile.handle)}<i class="ph ph-caret-right go"></i></div>`
+    : `<div class="fd-banner" data-go="create-page"><i class="ph-fill ph-users-three bk"></i>Create your community page and earn ${REF_BONUS} credits for every sign up<span class="fd-badge">New</span><i class="ph ph-caret-right go"></i></div>`;
   const recent = [
     { t: 'Monthly business review', img: A + 'ed-slide-1.jpg', go: 'editor', when: 'Edited 2h ago' },
     { t: 'Quarterly Product Update', img: A + 'tpl-q2-product.jpg', when: 'Edited yesterday' },
     { t: 'Brand Playbook', img: A + 'tpl-brand-playbook.jpg', when: 'Edited 3 days ago' },
-    { t: 'Digital Marketing Portfolio', img: A + 'tpl-digital.jpg', when: 'Edited last week' },
   ];
-  $('#screen').innerHTML = dashShell('dashboard', `<div class="dhome">
-    <h2>Good morning, ${esc(first())}</h2>
-    <div class="dprompt"><i class="ph ph-sparkle"></i><span>Describe the presentation you need, or drop in a file</span><button class="btn btn-primary btn-sm" disabled>Create</button></div>
-    ${promo}
-    <div class="rf-strip"><i class="ph-fill ph-paper-plane-tilt"></i><span>${S.plan === 'pro' ? `<b>Invite friends, earn 10% in cash</b>They get ${REF_BONUS} credits. You get 10% cash back when they go Pro.` : `<b>Invite friends, you both get ${REF_BONUS} credits</b>Earn up to ${REF_MAX.toLocaleString()} credits.`}</span><button class="btn btn-outline btn-sm" data-go="refer">Refer &amp; earn</button></div>
-    <div class="sec-h" style="margin-top:36px"><h3>Recent</h3></div>
-    <div class="recent">${recent.map(r => `<div class="tcard" ${r.go ? `data-go="${r.go}"` : ''}><div class="img" style="background-image:url(${r.img})"></div><div class="meta"><b>${r.t}</b><small>${r.when}</small></div></div>`).join('')}</div>
-  </div>`);
+  $('#screen').innerHTML = dashShell('dashboard', `
+    <section class="fd-hero">
+      <div class="fd-prompt">
+        ${banner}
+        <div class="fd-pbody">
+          <div class="fd-field">To start creating, type here or <u>upload a file</u>...</div>
+          <div class="fd-ctrls">
+            <button class="fd-ctl"><i class="ph ph-upload-simple"></i>Upload files, or links</button>
+            <button class="fd-ctl">Let AI decide<i class="ph ph-caret-down caret"></i></button>
+            <button class="fd-ctl"><i class="ph ph-sparkle"></i>Standard Model<i class="ph ph-caret-down caret"></i></button>
+            <button class="fd-ctl sq" aria-label="Settings"><i class="ph ph-faders-horizontal"></i></button>
+            <button class="fd-create">Create Presentation</button>
+          </div>
+        </div>
+      </div>
+      <div class="fd-pills">
+        <button class="fd-pill"><i class="ph-fill ph-microsoft-powerpoint-logo"></i>Import PowerPoint</button>
+        <button class="fd-pill"><i class="ph-fill ph-pen-nib"></i>Hire an Expert</button>
+        <button class="fd-pill"><i class="ph-fill ph-layout"></i>Use a Template</button>
+        <button class="fd-pill" data-go="refer"><i class="ph-fill ph-paper-plane-tilt"></i>Refer &amp; earn</button>
+      </div>
+    </section>
+    <section class="fd-files">
+      <div class="fd-tabs"><span class="on">Recent</span><span>Starred</span><span>Downloads</span><span>Recently deleted</span></div>
+      <div class="fd-grid">${recent.map(r => `<article class="fd-card fd-deck" ${r.go ? `data-go="${r.go}"` : ''}><img src="${r.img}" alt=""><div class="fd-db"><b>${esc(r.t)}</b><small>${r.when}</small></div></article>`).join('')}</div>
+    </section>`);
 }
 
 /* A2 · Community page tab: intro (no page yet) or manage (page exists) */
