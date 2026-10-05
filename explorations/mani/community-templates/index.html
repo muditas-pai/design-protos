@@ -2624,7 +2624,7 @@ const REF_FAQ = [
   ['Who can I invite?', 'Anyone new to Presentations.AI. They sign up with your link and get their own workspace. They never join yours.'],
   ['When do the credits land?', `Right after your friend signs up. You both get ${REF_BONUS} credits.`],
   ['Is there a limit?', `You can earn up to ${REF_MAX.toLocaleString()} credits, so 10 friends. After that, friends still get their ${REF_BONUS} credits.`],
-  ['How does the 10% cash work?', 'On Pro, you get 10% cash back when a friend you invited upgrades. That’s $18 for a yearly plan and $2 for monthly, paid out after 30 days.', true],
+  ['How does the 10% cash work?', 'On Pro, you get 10% cash back when a friend you invited upgrades. That’s $18 for a yearly plan and $2 for monthly, sent to your payout method.', true],
 ];
 const PRO_BADGE = '<span class="pill pro pro-b"><i class="ph-fill ph-crown-simple"></i>Pro</span>';
 function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rewards' || ROUTE === 'redeem' } = {}) {
@@ -2647,7 +2647,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
     ? `<span class="muted">Waiting for sign up</span><button class="link rf-remind" data-remind="${esc(r.who)}">Send reminder</button>`
     : r.got > 0 ? `+${r.got}` : `0<small>Max reached</small>`;
   const cashCell = r => !pro ? (r.status === 'invited' ? '' : '<i class="ph ph-lock-simple muted" title="Pro feature"></i>')
-    : r.cash != null ? `<b class="cash">${money(r.cash)}</b><small>${r.payout === 'paid' ? 'Paid out' : `Pending · pays ${r.payDate}`}</small>`
+    : r.cash != null ? `<b class="cash">${money(r.cash)}</b>`
     : r.status === 'invited' ? '' : '<span class="muted">When they upgrade</span>';
   const shell = (main, top) => inSettings ? settingsShell('rewards', main, top) : dashShell('refer', main, top);
   $('#screen').innerHTML = shell(`
@@ -2675,7 +2675,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
       <div class="rf-stats">
         <div><b>${earned.toLocaleString()}<small>/ ${REF_MAX.toLocaleString()}</small></b><span>Credits earned</span><small>${atMax ? 'Max reached' : `${Math.ceil((REF_MAX - earned) / REF_BONUS)} more friends to the max`}</small></div>
         <div class="${pro ? '' : 'off'}">${pro
-          ? `<b>${money(pending + paidOut)}</b><span>Cash earned</span><small>${money(pending)} pending${cashAvailable() >= 10 ? ` · <a class="link" href="#" data-go="redeem">Redeem ${money(cashAvailable())}</a>` : S.redeemed ? ` · ${money(S.redeemed)} paid out` : ''}</small><small><button class="link" id="rf-payout">${S.payout ? `To ${esc(S.payout)}` : 'Add payout method'}</button></small>`
+          ? `<b>${money(pending + paidOut)}</b><span>Cash earned</span><small><button class="link" id="rf-payout">${S.payout ? `Paid to ${esc(S.payout)}` : 'Add payout method'}</button></small>`
           : `<b>${locked('$38.00')}</b><span>Cash earned</span><small>Upgrade to earn 10% when friends upgrade</small>`}</div>
       </div>
       <div class="rf-how">
@@ -2704,7 +2704,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   $('#rf-payout') && ($('#rf-payout').onclick = () => { S._pay = null; renderPayout({ redeem: false }); });
   $$('[data-rmax]').forEach(b => b.onclick = () => { S.refMax = b.dataset.rmax === '1'; save(); renderRefer(); });
   $$('[data-plan]').forEach(b => b.onclick = () => setPlan(b.dataset.plan));
-  if (paid && mine) later(() => toast(`${esc(friendFirst())} upgraded to Pro. You earn ${money(mine.cash || 0)}, paid ${mine.payDate}`, 'ph-fill ph-coins'), 350);
+  if (paid && mine) later(() => toast(`${esc(friendFirst())} upgraded to Pro. You earned ${money(mine.cash || 0)} cash back`, 'ph-fill ph-coins'), 350);
   else if (joined && mine) later(() => toast(mine.got
     ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
     : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the max`, 'ph-fill ph-gift'), 350);
@@ -2830,7 +2830,7 @@ function notifItems() {
   const L = [];
   S.signups.forEach(s => L.push({ i: 'ph-user-plus', t: `<b>${esc(s.who)}</b> signed up from <b>${esc(S.tpl.title)}</b>`, m: '+200 credits', go: 'rewards', at: s.at }));
   S.refs.filter(r => r.status !== 'invited').forEach(r => L.push(r.status === 'upgraded'
-    ? { i: 'ph-coins', t: `<b>${esc(r.who)}</b> upgraded to Pro`, m: isPro() ? `${money(r.pay * REF_CUT)} cash back, pending` : '+200 credits', go: 'refer', at: r.at }
+    ? { i: 'ph-coins', t: `<b>${esc(r.who)}</b> upgraded to Pro`, m: isPro() ? `+${money(r.pay * REF_CUT)} cash back` : '+200 credits', go: 'refer', at: r.at }
     : { i: 'ph-paper-plane-tilt', t: `<b>${esc(r.who)}</b> joined with your referral link`, m: '+200 credits', go: 'refer', at: r.at }));
   if (mineInReview()) L.push({ i: 'ph-hourglass-medium', t: `<b>${esc(S.tpl.title)}</b> is waiting for approval on ${esc(S.company.name)}’s team page`, go: 'company', at: S.publishedAt + 1 });
   if (S.published) L.push({ i: 'ph-check-circle', t: `<b>${esc(S.tpl.title)}</b> is live on Community`, m: 'Share it to start earning', go: 'gallery', at: S.publishedAt });
@@ -2865,7 +2865,7 @@ document.addEventListener('click', e => {
 /* ═══════════════════════════════════════════════════════════
    R2 · PAYOUT METHOD + REDEEM CASH (Rewards "Redeem now", Refer "Add payout method")
    ═══════════════════════════════════════════════════════════ */
-const cashAvailable = () => isPro() ? Math.max(0, refRows().reduce((n, r) => n + (r.cash && r.payout === 'paid' ? r.cash : 0), 0) - (S.redeemed || 0)) : 0;
+const cashAvailable = () => isPro() ? Math.max(0, refRows().reduce((n, r) => n + (r.cash || 0), 0) - (S.redeemed || 0)) : 0;
 function renderPayout({ redeem = true, done = false } = {}) {
   const amt = cashAvailable();
   const st = S._pay || (S._pay = { kind: (S.payout || '').startsWith('bank') ? 'bank' : 'paypal', email: 'joe@foursquare.com', acct: '', edit: !S.payout });
