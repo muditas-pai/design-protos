@@ -1880,7 +1880,7 @@ function showHover(el) {
   card.style.top = Math.max(8, top) + 'px';
   card.style.left = Math.min(Math.max(8, r.left), innerWidth - w - 8) + 'px';
 }
-document.addEventListener('scroll', () => { if ($('#hc')) hideHover(); }, true);
+document.addEventListener('scroll', e => { if ($('#hc')) hideHover(); if ($('#notifs') && !e.target.closest?.('#notifs')) closeNotifs(); }, true);
 document.addEventListener('mouseover', e => {
   const el = e.target.closest('[data-creator]');
   if (el) return showHover(el);
@@ -2379,7 +2379,7 @@ function renderRewards() {
     return `<span class="pill ${map[r.status]}">${r.status}</span>${r.note ? `<small>${r.note}</small>` : ''}`;
   };
   const newRows = S.signups.map(s => ({ ev: 'Sign Up', src: S.tpl.title + ' (Community)', via: s.via, date: 'Today', status: 'available', credits: '+ 200', cash: '-', fresh: Date.now() - s.at < 8000 }));
-  const payoutRow = S.redeemed ? [{ ev: 'Payout', src: `To ${S.payout}`, date: 'Today', status: 'pending', note: 'Arrives in 3 to 5 days', credits: '-', cash: `- ${money(S.redeemed)}`, fresh: Date.now() - (S.redeemedAt || 0) < 8000 }] : [];
+  const payoutRow = S.redeemed && S.later ? [{ ev: 'Payout', src: `To ${S.payout}`, date: 'Today', status: 'pending', note: 'Arrives in 3 to 5 days', credits: '-', cash: `- ${money(S.redeemed)}`, fresh: Date.now() - (S.redeemedAt || 0) < 8000 }] : [];
   const rows = payoutRow.concat(newRows, S.later ? FIGMA_BREAKDOWN : []);
   const tog = `<div class="state-tog" title="Proto only"><button data-later="0" class="${S.later ? '' : 'on'}">Just published</button><button data-later="1" class="${S.later ? 'on' : ''}">Few weeks later</button></div>`;
   $('#screen').innerHTML = dashShell('rewards', `
@@ -2561,7 +2561,7 @@ function renderRefer({ joined = false, paid = false } = {}) {
   $('#rf-copy').onclick = () => toast('Referral link copied');
   $$('[data-share]').forEach(b => b.onclick = () => toast('Share sheet opens with your link', 'ph ph-share-network'));
   $$('[data-remind]').forEach(b => b.onclick = () => toast(`Reminder sent to ${esc(b.dataset.remind)}`, 'ph ph-paper-plane-tilt'));
-  $('#rf-payout') && ($('#rf-payout').onclick = () => renderPayout({ redeem: false }));
+  $('#rf-payout') && ($('#rf-payout').onclick = () => { S._pay = null; renderPayout({ redeem: false }); });
   $('#rf-send').onclick = () => {
     const list = $('#rf-email').value.split(/[,\s]+/).map(v => v.trim()).filter(Boolean);
     const bad = list.filter(v => !/^\S+@\S+\.\S+$/.test(v));
@@ -2699,7 +2699,7 @@ function notifItems() {
     : { i: 'ph-paper-plane-tilt', t: `<b>${esc(r.who)}</b> joined with your referral link`, m: '+200 credits', go: 'refer', at: r.at }));
   if (mineInReview()) L.push({ i: 'ph-hourglass-medium', t: `<b>${esc(S.tpl.title)}</b> is waiting for approval on ${esc(S.company.name)}’s team page`, go: 'company', at: S.publishedAt + 1 });
   if (S.published) L.push({ i: 'ph-check-circle', t: `<b>${esc(S.tpl.title)}</b> is live on Community`, m: 'Share it to start earning', go: 'gallery', at: S.publishedAt });
-  if (S.redeemed) L.push({ i: 'ph-bank', t: `<b>${money(S.redeemed)}</b> is on its way to ${esc(S.payout || 'you')}`, m: 'Arrives in 3 to 5 business days', go: 'rewards', at: S.redeemedAt });
+  if (S.redeemed && S.later) L.push({ i: 'ph-bank', t: `<b>${money(S.redeemed)}</b> is on its way to ${esc(S.payout || 'you')}`, m: 'Arrives in 3 to 5 business days', go: 'rewards', at: S.redeemedAt });
   L.push({ i: 'ph-heart', t: '<b>Dana Ortiz</b> started following you', go: 'creator', cr: 'dana', at: 2 });
   L.push({ i: 'ph-sparkle', t: 'Publish a deck to Community and earn <b>200 credits</b> for every sign up', go: 'editor', at: 1 });
   return L.sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -2785,7 +2785,8 @@ function renderPayout({ redeem = true, done = false } = {}) {
    ═══════════════════════════════════════════════════════════ */
 function renderManage() {
   const t = S.tpl, st = S._mg || (S._mg = { edit: false, title: t.title, cat: t.cat, confirm: false });
-  const onClose = () => { S._mg = null; go(S.profile ? 'my-page' : 'dashboard'); };
+  const back = ['rewards', 'profile', 'my-page'].includes(S._mgFrom) ? S._mgFrom : 'my-page';
+  const onClose = () => { S._mg = null; go(back); };
   const stats = [['Views', viewsOf({ uses: S.uses })], ['Uses', S.uses], ['Sign ups', S.signups.length], ['Credits earned', (S.signups.length * REF_BONUS).toLocaleString()]];
   openModal(`<div class="f-head">Manage template</div>
     <div class="card" style="width:640px"><div class="mg">
@@ -2795,7 +2796,7 @@ function renderManage() {
           <div class="field"><label class="label">Title</label><input class="input" id="mg-title" value="${esc(st.title)}" maxlength="60"></div>
           <div class="field"><label class="label">Category</label><div class="tags">${GALLERY_CATS.map(c => `<button class="chip sm ${st.cat === c ? 'on' : ''}" data-mcat="${c}">${c}</button>`).join('')}</div></div>
           <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-outline" id="mg-cancel">Cancel</button><button class="btn btn-primary" id="mg-save">Save changes</button></div>
-        </div>` : `<div class="mg-acts">
+        </div>` : st.confirm ? '' : `<div class="mg-acts">
           <button data-go="template"><i class="ph ph-arrow-square-out"></i>View template page</button>
           <button id="mg-copy"><i class="ph ph-link-simple"></i>Copy link</button>
           <button id="mg-edit"><i class="ph ph-pencil-simple"></i>Edit details</button>
@@ -2804,10 +2805,10 @@ function renderManage() {
       ${st.confirm ? `<div class="co-danger" style="margin:0"><div><b>Unpublish “${esc(t.title)}”?</b><span>It leaves Community and your page. People who already used it keep their copy.</span></div><button class="btn btn-outline" id="mg-no">Cancel</button><button class="btn btn-danger" id="mg-yes">Unpublish</button></div>` : ''}
     </div></div>`, { onClose });
   $('#mg-copy') && ($('#mg-copy').onclick = () => toast(`Copied ${tplUrl()}`));
-  $('#mg-edit') && ($('#mg-edit').onclick = () => { st.edit = true; renderManage(); });
+  $('#mg-edit') && ($('#mg-edit').onclick = () => { st.edit = true; st.confirm = false; renderManage(); });
   $('#mg-unpub') && ($('#mg-unpub').onclick = () => { st.confirm = true; renderManage(); });
   $('#mg-no') && ($('#mg-no').onclick = () => { st.confirm = false; renderManage(); });
-  $('#mg-yes') && ($('#mg-yes').onclick = () => { S.published = false; S._mg = null; save(); toast('Template unpublished', 'ph ph-eye-slash'); go(S.profile ? 'my-page' : 'dashboard'); });
+  $('#mg-yes') && ($('#mg-yes').onclick = () => { S.published = false; S._mg = null; save(); toast('Template unpublished', 'ph ph-eye-slash'); go(back); });
   $('#mg-cancel') && ($('#mg-cancel').onclick = () => { S._mg = null; renderManage(); });
   $('#mg-title') && ($('#mg-title').oninput = e => { st.title = e.target.value; });
   $$('[data-mcat]').forEach(b => b.onclick = () => { st.cat = b.dataset.mcat; $$('[data-mcat]').forEach(x => x.classList.toggle('on', x === b)); });
@@ -2882,7 +2883,11 @@ function ensurePrereqs(r) {
   if (needsProfile && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
   if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
   if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
-  if (r === 'redeem') { S.later = true; S._pay = null; }
+  if (r === 'redeem') S._pay = null;
+  if (S.journey === 'c' && (r === 'gallery' || r === 'creator')) {
+    if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft));
+    if (!S.published) { S.published = true; S.publishedAt = Date.now(); }
+  }
   if (r === 'manage') { S._mg = null; if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft)); if (!S.published) { S.published = true; S.publishedAt = Date.now(); } }
   if (r === 'notifs') {
     if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft));
@@ -2902,7 +2907,7 @@ function ensurePrereqs(r) {
 function renderRoute() {
   const r = ROUTE;
   if (MODAL_ROUTES.includes(r)) {
-    if (r === 'create-page' || r === 'manage') renderCommunity(); else if (r === 'ws-claim') renderWsSettings(); else if (r === 'redeem') renderRewards(); else renderPublisherEditor();
+    if (r === 'manage' && S._mgFrom === 'rewards') renderRewards(); else if (r === 'manage' && S._mgFrom === 'profile') renderProfile(); else if (r === 'create-page' || r === 'manage') renderCommunity(); else if (r === 'ws-claim') renderWsSettings(); else if (r === 'redeem') renderRewards(); else renderPublisherEditor();
     ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'profile-setup': () => renderPageModal({ from: 'share' }), 'team-claim': () => renderClaimModal({ from: 'share' }), 'ws-claim': () => renderClaimModal({ from: 'settings' }), redeem: () => renderPayout({ redeem: true }), manage: renderManage, mask: renderMask, details: renderDetails, live: renderLive })[r]();
   } else {
     closeModal();
@@ -2976,7 +2981,7 @@ function renderFlow() {
       <button class="arr" id="fl-next" ${i === j.steps.length - 1 ? 'disabled' : ''} aria-label="Next step"><i class="ph ph-caret-right"></i></button>
       <span class="dots">${j.steps.map((k, n) => `<button class="${n === i ? 'on' : n < i ? 'past' : ''}" data-step="${k}" title="${n + 1}. ${LABEL[k]}"></button>`).join('')}</span>
     </div>` : ''}`;
-  const step = k => { if (k === 'creator' && !S.viewCreator) S.viewCreator = 'dana'; if (k === 'profile') S.visitorView = false; if (k === 'company') S.coVisitor = false; if (k === 'template') S.viewTpl = 'mine';
+  const step = k => { if (k === 'creator' && !S.viewCreator) S.viewCreator = 'dana'; if (k === 'redeem') S.later = true; if (k === 'profile') S.visitorView = false; if (k === 'company') S.coVisitor = false; if (k === 'template') S.viewTpl = 'mine';
     if (k === 'gallery') { S.gCat = 'All'; S.gQ = ''; if (!S.published) { if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft)); S.published = true; S.publishedAt = Date.now(); } } if (k === 'rewards' && !S.published) S.later = true; go(k); };
   $$('[data-j]').forEach(b => b.onclick = () => {
     const x = JOURNEYS.find(y => y.id === b.dataset.j);
@@ -3003,6 +3008,7 @@ document.addEventListener('click', e => {
   if (r === 'gallery') { S.gCat = el.dataset.gcat || 'All'; S.gQ = ''; }
   if (r === 'company') S.coVisitor = S.journey === 'v';
   if (r === 'creator' && el.dataset.cr) S.viewCreator = el.dataset.cr;
+  if (r === 'manage' && ROUTE !== 'manage') S._mgFrom = ROUTE;
   go(r);
 });
 document.addEventListener('keydown', e => {
@@ -3017,6 +3023,7 @@ document.addEventListener('keydown', e => {
   if (q.has('reset')) { S = DEFAULT_STATE(); save(); }
   S.tpl.cat = S.tpl.cat || 'Reports';
   if (q.get('s') === 'template') S.viewTpl = 'mine';
+  if (q.get('s') === 'redeem') S.later = true;
   // ?j=<journey id> opens that flow at its first step (links for review)
   const jj = JOURNEYS.find(x => x.id === q.get('j'));
   if (jj) { if (jj.plan) S.plan = jj.plan; if (jj.init) jj.init(S); S.journey = jj.id; save(); go(q.get('s') || jj.steps[0]); return; }
