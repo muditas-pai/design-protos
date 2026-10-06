@@ -1366,6 +1366,9 @@
   .lv-post .post-top .thumb img { height: 100%; object-fit: cover; border-radius: 6px; box-shadow: none; }
   .lv-post .post-top b { font-weight: 600; } .lv-post .post-top span { color: rgb(var(--ink-3)); }
   .lv-post .post-body { padding: 16px 24px; } .lv-post .post-bar { padding: 12px 24px; }
+  .creator-s { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; font-weight: 500; color: var(--t1); }
+  .creator-s:hover span { text-decoration: underline; color: rgb(var(--brand-fg)); }
+  .stats { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
   @media (max-width: 900px) {
     .sd-top { padding: 0 16px; } .sd-proto, .sd-search kbd { display: none; } .sd-main { padding: 24px 16px 96px; }
     .rf-hero { grid-template-columns: 1fr; } .rf-hero .a { border-right: 0; border-bottom: 1px solid var(--line); } .rf-art { display: none; }
@@ -2514,7 +2517,7 @@ function renderProfile() {
         <div class="who"><h1>${esc(p.name)} ${S.published ? '<span class="pill pro"><i class="ph-fill ph-seal-check" style="margin-right:3px"></i>Creator</span>' : ''}</h1>
           <div class="hd">@${esc(p.handle)}${p.headline ? ` · ${esc(p.headline)}` : ''}</div></div>
         <div class="acts">
-          ${v ? '<button class="btn btn-outline"><i class="ph ph-plus"></i>Follow</button>'
+          ${v ? ''
               : '<button class="btn btn-outline" id="pv-visitor"><i class="ph ph-eye"></i>View as visitor</button><button class="btn btn-outline" id="pv-edit"><i class="ph ph-pencil-simple"></i>Edit profile</button>'}
           <button class="btn btn-primary" id="pv-share"><i class="ph ph-share-network"></i>Share profile</button>
         </div>
@@ -2526,7 +2529,7 @@ function renderProfile() {
           <div><b>${list.length}</b><span>Templates</span></div>
           <div><b>${totalUses.toLocaleString()}</b><span>Uses</span></div>
           <div><b>${totalSignups.toLocaleString()}</b><span>Sign ups</span></div>
-          <div><b>${v ? '48' : creditsTotal().toLocaleString()}</b><span>${v ? 'Followers' : 'Credits earned'}</span></div>
+          ${v ? '' : `<div><b>${creditsTotal().toLocaleString()}</b><span>Credits earned</span></div>`}
         </div>
       </div>
       <div class="sec-h"><h3>Templates</h3>${v ? '' : '<button class="btn btn-outline" data-go="share"><i class="ph ph-plus"></i>New Template</button>'}</div>
@@ -2661,6 +2664,7 @@ function creatorStats(key) {
   return { n: list.length, uses: list.reduce((a, t) => a + t.uses, 0), followers: (FOLLOWERS[key] || 0) + (S.follows[key] ? 1 : 0) };
 }
 function followBtn(key, big = false) {
+  return '';   // v2: no follow
   if (key === 'me') return '';
   const on = !!S.follows[key];
   return `<button class="btn ${on ? 'btn-outline' : 'btn-primary'} ${big ? '' : 'btn-sm'}" data-follow="${key}">${on ? '<i class="ph ph-check"></i>Following' : '<i class="ph ph-plus"></i>Follow'}</button>`;
@@ -2680,7 +2684,7 @@ function showHover(el) {
   const card = document.createElement('div');
   card.id = 'hc';
   card.innerHTML = `<div class="hc-top">${avatar(48, c)}<div><b>${esc(c.name)}</b><span>${esc(c.headline || '@' + c.handle)}</span></div></div>
-    <div class="hc-stats"><div><b>${st.n}</b>Templates</div><div><b>${fmtK(st.uses)}</b>Uses</div><div><b>${fmtK(st.followers)}</b>Followers</div></div>
+    <div class="hc-stats"><div><b>${st.n}</b>Templates</div><div><b>${fmtK(st.uses)}</b>Uses</div></div>
     ${c.team && S.company.on ? `<a href="#" class="hc-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">Member of ${esc(S.company.name)}</a>` : ''}
     <div class="hc-acts">${CREATORS[key] ? `<button class="btn btn-outline btn-sm" data-go="creator" data-cr="${key}">View page</button>` : ''}${key === 'co' ? `<button class="btn btn-outline btn-sm" data-go="company">Team page</button>${followBtn('co')}` : key === 'me' ? (S.journey === 'v' ? '<button class="btn btn-outline btn-sm" data-go="profile" data-visitor>View page</button>' : '<button class="btn btn-outline btn-sm" data-go="profile">Your page</button>') : followBtn(key)}</div>`;
   document.body.appendChild(card);
@@ -2748,7 +2752,7 @@ function renderOtherTemplate(t) {
         <div class="viewer"><div class="main">${coverHTML(t, 'big')}</div></div>
         <div class="tp-side">
           <div><h1>${esc(t.title)}</h1><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><span class="chip sm">${t.cat}</span></div></div>
-          <div class="creator"><span class="who" data-creator="${t.by}" data-go="creator" data-cr="${t.by}" style="cursor:pointer">${avatar(36, c)}<div class="w"><b style="font-weight:500">${esc(c.name)}</b><span>${esc(c.headline)}</span></div></span>${followBtn(t.by)}</div>
+          <a href="#" class="creator-s" data-go="creator" data-cr="${t.by}">${avatar(28, c)}<span>${esc(c.name)}</span></a>
           <button class="btn btn-primary btn-lg" id="ot-use" style="width:100%"><i class="ph ph-copy-simple"></i>Use this template</button>
           <div class="facts"><div><i class="ph ph-slideshow"></i>${OUTLINE[t.cat].length} slides</div><div><i class="ph ph-copy-simple"></i>${t.uses.toLocaleString()} uses</div><div><i class="ph ph-eye"></i>${viewsOf(t)} views</div><div><i class="ph ph-tag"></i>Free</div></div>
           <div class="desc">A ${t.cat.toLowerCase()} deck from ${esc(c.name.split(' ')[0])}. Keep the structure, swap in your content, and AI fits it to your brand.</div>
@@ -2800,7 +2804,7 @@ function renderWsSettings() {
           <h3>Claim ${esc(co.name)}’s page on Community</h3>
           <p>There’s no ${esc(co.name)} page yet. Claim <b>presentations.ai/${esc(co.slug)}</b> and anyone with an @${CO_DOMAIN} email can post templates to it, or to their own page. Templates your teammates already published show there right away.</p>
           <ul>
-            <li><i class="ph ph-buildings"></i>Add your logo, about and links, on a page people can follow</li>
+            <li><i class="ph ph-buildings"></i>Add your logo, about and links, on one public page</li>
             <li><i class="ph ph-users-three"></i>You and teammates post templates to it, right from Share</li>
             <li><i class="ph ph-shield-check"></i>Choose what members can publish, with optional review</li>
           </ul>
@@ -2954,7 +2958,6 @@ function renderCompany() {
           <div><b>${list.length}</b><span>Templates</span></div>
           <div><b>${uses.toLocaleString()}</b><span>Uses</span></div>
           <div><b>12</b><span>Members</span></div>
-          <div><b id="co-followers">${fmtK(320 + (S.follows.co ? 1 : 0))}</b><span>Followers</span></div>
         </div>
       </div>
       ${admin && mineInReview() ? `<div class="co-review"><i class="ph-fill ph-hourglass-medium"></i><span><b>1 template waiting for review.</b> “${esc(S.tpl.title)}” by ${esc(P().name)} shows here once an admin approves it.</span><button class="btn btn-primary btn-sm" id="co-approve">Approve</button></div>` : ''}
@@ -2988,7 +2991,7 @@ function renderTemplate() {
         </div>
         <div class="tp-side">
           <div><h1>${esc(t.title)}</h1><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${t.tags.map(g => `<span class="chip sm">${esc(g)}</span>`).join('')}</div></div>
-          ${S.publishAs === 'team' ? `<div class="creator"><span class="who" data-creator="co">${avatar(36, TEAM())}<div class="w"><b style="font-weight:500">${esc(S.company.name)}</b><span>Published by ${esc(p.name)}</span></div></span><button class="btn btn-outline btn-sm" data-go="company">Team page</button></div>` : `<div class="creator"><span class="who" data-creator="me">${avatar(36, p)}<div class="w"><b style="font-weight:500">${esc(p.name)}</b><span>${esc(p.headline || '@' + p.handle)}</span></div></span><button class="btn btn-outline btn-sm" data-go="profile" data-visitor>Profile</button></div>`}
+          ${S.publishAs === 'team' ? `<a href="#" class="creator-s" data-go="company">${avatar(28, TEAM())}<span>${esc(S.company.name)}</span></a>` : `<a href="#" class="creator-s" data-go="profile" data-visitor>${avatar(28, p)}<span>${esc(p.name)}</span></a>`}
           ${(() => { const owner = !(S.visitorView || S.journey === 'v'); return S.publishAs !== 'team' && S.company.on && mineOnTeam() && (owner || !mineInReview()) ? `<a href="#" class="tp-team" data-go="company"><img src="${A}ws-foursquare.jpg" alt="">${owner && mineInReview() ? `Waiting for approval on ${esc(S.company.name)}’s team gallery` : `Also on ${esc(S.company.name)}’s team gallery`}<i class="ph ph-arrow-right"></i></a>` : ''; })()}
           <button class="btn btn-primary btn-lg" data-go="login" style="width:100%"><i class="ph ph-copy-simple"></i>Use this template</button>
           <div class="gift"><i class="ph-fill ph-gift"></i><span><b>New here?</b> Start from ${esc(first())}’s link and get <b>200 bonus credits</b> after your first deck.</span></div>
@@ -3464,7 +3467,6 @@ function notifItems() {
   if (mineInReview()) L.push({ i: 'ph-hourglass-medium', t: `<b>${esc(S.tpl.title)}</b> is waiting for approval on ${esc(S.company.name)}’s team page`, go: 'company', at: S.publishedAt + 1 });
   if (S.published) L.push({ i: 'ph-check-circle', t: `<b>${esc(S.tpl.title)}</b> is live on Community`, m: 'Share it to start earning', go: 'gallery', at: S.publishedAt });
   if (false && S.redeemed) L.push({ i: 'ph-bank', t: `<b>${money(S.redeemed)}</b> is on its way to ${esc(S.payout || 'you')}`, m: 'Arrives in 3 to 5 business days', go: 'rewards', at: S.redeemedAt });
-  L.push({ i: 'ph-heart', t: '<b>Dana Ortiz</b> started following you', go: 'creator', cr: 'dana', at: 2 });
   L.push({ i: 'ph-sparkle', t: 'Publish a deck to Community and earn <b>200 credits</b> for every sign up', go: 'editor', at: 1 });
   return L.filter(n => (!REFER_ONLY || ['refer', 'rewards'].includes(n.go)) && (!COMMUNITY_ONLY || n.go !== 'refer')).sort((a, b) => (b.at || 0) - (a.at || 0));
 }
@@ -3609,7 +3611,6 @@ function renderCreator() {
         <div class="stats">
           <div><b>${st.n}</b><span>Templates</span></div>
           <div><b>${st.uses.toLocaleString()}</b><span>Uses</span></div>
-          <div><b id="cr-f">${fmtK(st.followers)}</b><span>Followers</span></div>
           <div><b>${fmtK(Math.round(st.uses * 6.2))}</b><span>Views</span></div>
         </div>
       </div>
