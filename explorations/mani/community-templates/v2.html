@@ -3191,7 +3191,7 @@ const REF_SEED_MAX = ['Marcus Lee', 'Sofia Alvarez', 'Ken Watanabe', 'Amara Okaf
 const REF_SEED_PRO = [
   { who: 'sam@northwind.co', status: 'invited', when: 'Yesterday' },
   { who: 'Sofia Alvarez', status: 'joined', when: '4 days ago' },
-  { who: 'Marcus Lee', status: 'upgraded', when: '2 weeks ago' },
+  { who: 'Marcus Lee', status: 'upgraded', when: '2 weeks ago', upAt: 1 },
 ];
 const isPro = () => S.plan === 'pro';
 const money = n => '$' + n.toFixed(2);
@@ -3207,7 +3207,7 @@ function refRows() {
   let total = 0, months = 0;
   for (let i = rows.length - 1; i >= 0; i--) {
     const r = rows[i];
-    if (r.status === 'upgraded') { r.mo = months < 6; if (r.mo) months++; }
+    if (r.status === 'upgraded') { r.ok = isPro() && (r.upAt || 0) >= (S.proSince || 0); r.mo = r.ok && months < 6; if (r.mo) months++; }
     if (r.status === 'invited') { r.got = null; continue; }
     r.got = Math.min(REF_BONUS, REF_MAX - total);
     total += r.got;
@@ -3231,7 +3231,7 @@ function upgradeFriend(pay) {
   creditFriend();
   const r = friendRow();
   if (r.status === 'upgraded') return;   // first payment only, counted once
-  Object.assign(r, { status: 'upgraded', pay, plan: pay === 20 ? 'Monthly' : 'Yearly', payout: 'pending', payDate: '4 Nov', when: 'Just now', at: Date.now() });
+  Object.assign(r, { status: 'upgraded', upAt: Date.now(), pay, plan: pay === 20 ? 'Monthly' : 'Yearly', payout: 'pending', payDate: '4 Nov', when: 'Just now', at: Date.now() });
   save();
 }
 
@@ -3239,15 +3239,15 @@ function upgradeFriend(pay) {
    - Sign up: you both get 200 credits. Inviter capped at 2,000, one limit across invite links and template links.
    - Friend upgrades within 30 days of signing up: Free inviter gets nothing extra (sees a Pro upsell), Pro inviter 1 extra month of Pro, added at the next renewal (up to 6 months in total). */
 const UPG_DAYS = 30, UPG_MONTHS_MAX = 6, NEXT_INVOICE = '5 Nov';
-const proMonths = () => Math.min(UPG_MONTHS_MAX, refRows().filter(r => r.status === 'upgraded').length);
+const proMonths = () => refRows().filter(r => r.mo).length;
 const upgReward = () => '+1 month of Pro';
 const REF_FAQ = [
   ['Who can I invite?', 'Anyone new to Presentations.AI. They get their own workspace. They never join yours.'],
   ['When do the credits land?', `When your friend makes their first deck. You both get ${REF_BONUS} credits then.`],
   ['Do template links count?', `Yes. Every template you publish carries your link. Sign ups from it count toward the same ${REF_MAX.toLocaleString()} credit limit.`],
   ['What counts as an upgrade?', `Your friend moves to any paid plan within ${UPG_DAYS} days of signing up. Later upgrades don’t count.`],
-  ['How do the extra months work?', `Each friend who upgrades adds 1 month of Pro. The months are added at your next renewal, so your next payment moves later. You can earn up to ${UPG_MONTHS_MAX} months in total.`, 'pro'],
-  ['What do I get when they upgrade?', `On Pro, each friend who upgrades adds 1 month of Pro to your plan, up to ${UPG_MONTHS_MAX}. Upgrade to Pro to start earning them.`, 'free'],
+  ['How do the extra months work?', `Each friend who upgrades while you’re on Pro adds 1 month. The months are added at your next renewal, so your next payment moves later. Up to ${UPG_MONTHS_MAX} months in total.`, 'pro'],
+  ['What do I get when they upgrade?', `Only Pro users get extra months. You need to be on Pro when your friend upgrades; upgrades from before you join Pro don’t count.`, 'free'],
 ];
 function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rewards' } = {}) {
   const pro = isPro();
@@ -3266,7 +3266,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   const credCell = r => r.status === 'invited'
     ? `<span class="muted">Waiting for sign up</span><button class="link rf-remind" data-remind="${esc(r.who)}">Send reminder</button>`
     : r.got > 0 ? `+${r.got}` : `0<small>Limit reached</small>`;
-  const upCell = r => !pro ? (r.status === 'upgraded' ? '<span class="muted">On Pro: +1 month</span>' : '') : r.status === 'upgraded' ? (!r.mo ? '<span class="muted">Max reached</span>' : `<b class="up-r">${upgReward()}</b>`) : r.status === 'joined' ? `<span class="muted">If they upgrade in ${UPG_DAYS} days</span>` : '';
+  const upCell = r => r.status === 'upgraded' ? (r.mo ? `<b class="up-r">${upgReward()}</b>` : r.ok ? '<span class="muted">Max reached</span>' : '<span class="muted">No reward, you weren’t on Pro</span>') : r.status === 'joined' && pro ? `<span class="muted">If they upgrade in ${UPG_DAYS} days</span>` : '';
   const shell = (main, top) => inSettings ? settingsShell('rewards', main, top) : dashShell('refer', main, top);
   $('#screen').innerHTML = shell(`
     <div class="rwrap rf-wrap rf2">
@@ -3320,7 +3320,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   $$('[data-plan]').forEach(b => b.onclick = () => setPlan(b.dataset.plan));
   if (paid && mine) later(() => toast(pro
     ? `${esc(friendFirst())} upgraded to Pro. +1 month of Pro at your ${NEXT_INVOICE} renewal`
-    : `${esc(friendFirst())} upgraded to Pro. On Pro, you’d get +1 month of Pro`, 'ph-fill ph-crown-simple'), 350);
+    : `${esc(friendFirst())} upgraded to Pro. Extra months only count while you’re on Pro`, 'ph-fill ph-crown-simple'), 350);
   else if (joined && mine) later(() => toast(mine.got
     ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
     : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the limit`, 'ph-fill ph-gift'), 350);
@@ -3337,10 +3337,10 @@ function openPricing() {
   const draw = () => {
     const pl = PLANS_SDS.find(x => x.id === pick);
     openModal(`<div class="sd-pay">
-      <div class="h"><h2>Get extra months of Pro</h2><p>On Pro, every friend who upgrades adds a month of Pro to your plan, up to ${UPG_MONTHS_MAX}. Your referral credits stay with you.</p></div>
+      <div class="h"><h2>Get extra months of Pro</h2><p>Once you’re on Pro, every friend who upgrades adds a month of Pro to your plan, up to ${UPG_MONTHS_MAX}. Upgrades from before don’t count.</p></div>
       <div class="facts">
         <div><i class="ph ph-users-three"></i><span><b>${refRows().filter(r => r.status !== 'invited').length} friends joined</b>from your link</span></div>
-        <div><i class="ph ph-crown-simple"></i><span><b>${refRows().filter(r => r.status === 'upgraded').length} upgraded</b>would add ${Math.min(UPG_MONTHS_MAX, refRows().filter(r => r.status === 'upgraded').length)} month${refRows().filter(r => r.status === 'upgraded').length === 1 ? '' : 's'} on Pro</span></div>
+        <div><i class="ph ph-crown-simple"></i><span><b>+1 month each</b>for friends who upgrade while you’re on Pro</span></div>
         <div><i class="ph ph-gift"></i><span><b>${refEarned().toLocaleString()} credits</b>earned so far, yours to keep</span></div>
       </div>
       <div class="eb"><span>Annual plans · 10 credits per new slide</span><small>US prices before tax · your local price is shown at checkout</small></div>
@@ -3358,13 +3358,14 @@ function openPricing() {
     </div>`, { plain: true, width: 760, onClose: closeModal });
     $$('[data-pl]').forEach(b => b.onclick = () => { pick = b.dataset.pl; draw(); });
     $('#pay-no').onclick = closeModal;
-    $('#pay-go').onclick = () => { closeModal(); if (pick !== 'standard') setPlan('pro'); toast(pick === 'standard' ? 'You’re on Standard. Extra months come with Pro' : `You’re on ${pl.name}. Friends who upgrade now add a month of Pro`, 'ph-fill ph-crown-simple'); };
+    $('#pay-go').onclick = () => { closeModal(); if (pick !== 'standard') { S.proSince = Date.now(); setPlan('pro', true); } toast(pick === 'standard' ? 'You’re on Standard. Extra months come with Pro' : `You’re on ${pl.name}. Friends who upgrade now add a month of Pro`, 'ph-fill ph-crown-simple'); };
   };
   draw();
 }
 // Switch the inviter's plan (proto). The flow bar follows the matching journey.
-function setPlan(plan) {
+function setPlan(plan, keepSince) {
   S.plan = plan;
+  if (!keepSince) S.proSince = 0;   // proto switch: inviter has always been on this plan
   S.journey = plan === 'pro' ? 'p' : 'f';
   save(); renderRoute(); renderFlow();
 }
@@ -3429,7 +3430,7 @@ function notifItems() {
   const L = [];
   S.signups.forEach(s => L.push({ i: 'ph-user-plus', t: `<b>${esc(s.who)}</b> signed up from <b>${esc(S.tpl.title)}</b>`, m: '+200 credits', go: 'rewards', at: s.at }));
   S.refs.filter(r => r.status !== 'invited').forEach(r => L.push(r.status === 'upgraded'
-    ? { i: 'ph-crown-simple', t: `<b>${esc(r.who)}</b> upgraded to Pro`, m: isPro() ? `+1 month of Pro at your ${NEXT_INVOICE} renewal` : 'Upgrade to Pro to earn extra months', go: 'refer', at: r.at }
+    ? { i: 'ph-crown-simple', t: `<b>${esc(r.who)}</b> upgraded to Pro`, m: refRows().find(x => x.who === r.who)?.mo ? `+1 month of Pro at your ${NEXT_INVOICE} renewal` : 'No extra month, you weren’t on Pro', go: 'refer', at: r.at }
     : { i: 'ph-paper-plane-tilt', t: `<b>${esc(r.who)}</b> joined with your referral link`, m: '+200 credits', go: 'refer', at: r.at }));
   if (mineInReview()) L.push({ i: 'ph-hourglass-medium', t: `<b>${esc(S.tpl.title)}</b> is waiting for approval on ${esc(S.company.name)}’s team page`, go: 'company', at: S.publishedAt + 1 });
   if (S.published) L.push({ i: 'ph-check-circle', t: `<b>${esc(S.tpl.title)}</b> is live on Community`, m: 'Share it to start earning', go: 'gallery', at: S.publishedAt });
