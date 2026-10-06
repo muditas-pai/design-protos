@@ -1903,7 +1903,7 @@ function sdShell(active, main, topLeft = '', { friend = null, settings = false }
   const badge = (t, tone = 'brand') => `<span class="sd-k ${tone}">${t}</span>`;
   const wsName = friend ? `${friendFirst()}’s workspace` : 'Foursquare';
   const wsTile = friend ? `<span class="sd-ws-t">${esc(initials(S.friend.name)[0])}</span>` : `<img class="sd-ws-t" src="${A}ws-foursquare.jpg" alt="">`;
-  const credits = friend ? 200 + REF_BONUS : COMMUNITY_ONLY ? (paid ? 1200 : 200) + S.signups.length * REF_BONUS : (paid ? 1200 : 200) + refEarned() + (paid ? 0 : refRows().filter(r => r.status === 'upgraded').length * UPG_CREDITS);
+  const credits = friend ? 200 + REF_BONUS : COMMUNITY_ONLY ? (paid ? 1200 : 200) + S.signups.length * REF_BONUS : (paid ? 1200 : 200) + refEarned();
   const folders = friend ? '' : S.folders.map((f, i) => `<a href="#" class="sd-nav-i ${active === 'folder:' + f.id ? 'on' : ''}" data-folder="${f.id}"><i class="ph-fill ph-folder" style="color:${FOLDER_TINT[i % 4]}"></i><span>${esc(f.name)}</span><small class="tabular">${f.decks.length}</small></a>`).join('')
     + (S._newFolder ? '<div class="sd-new"><i class="ph ph-folder"></i><input id="sb-folder-in" placeholder="Folder name" maxlength="40"></div>' : '');
   return `<div class="sd-app">
@@ -1960,7 +1960,7 @@ function sdTemplatesRow() {
 function renderDashboard() {
   const p = P();
   const next = REFER_ONLY
-    ? `<div class="sd-alert" data-go="refer"><span class="sd-tile"><i class="ph ph-gift"></i></span><div><b>Refer your friends, earn credits</b><small>You both get ${REF_BONUS} credits when a friend signs up. If they upgrade, you get ${S.plan === 'pro' ? 'an extra month of Pro' : `${UPG_CREDITS.toLocaleString()} more`}.</small></div><button class="btn btn-outline">Invite friends</button></div>`
+    ? `<div class="sd-alert" data-go="refer"><span class="sd-tile"><i class="ph ph-gift"></i></span><div><b>Refer your friends, earn credits</b><small>You both get ${REF_BONUS} credits when a friend signs up. ${S.plan === 'pro' ? 'If they upgrade, you get an extra month of Pro.' : 'On Pro, you also get extra months when they upgrade.'}</small></div><button class="btn btn-outline">Invite friends</button></div>`
     : S.profile
     ? `<div class="sd-alert" data-go="community"><span class="sd-tile"><i class="ph ph-users-three"></i></span><div><b>Your community page is live</b><small>presentations.ai/@${esc(S.profile.handle)} · publish a deck from Share to add it there.</small></div><button class="btn btn-outline">Open page</button></div>`
     : `<div class="sd-alert" data-go="create-page"><span class="sd-tile"><i class="ph ph-users-three"></i></span><div><b>Create your community page</b><small>Publish decks as free templates. You earn ${REF_BONUS} credits for every sign up from them.</small></div><button class="btn btn-outline">Create page</button></div>`;
@@ -3191,17 +3191,17 @@ function upgradeFriend(pay) {
 
 /* F1 · Refer & earn page (inviter). v2 reward model, no cash:
    - Sign up: you both get 200 credits. Inviter capped at 2,000, one limit across invite links and template links.
-   - Friend upgrades within 30 days of signing up: Free inviter +1,000 bonus credits, Pro inviter 1 extra month of Pro, added at the next renewal (up to 6 months in total). */
-const UPG_CREDITS = 1000, UPG_DAYS = 30, UPG_MONTHS_MAX = 6, NEXT_INVOICE = '5 Nov';
+   - Friend upgrades within 30 days of signing up: Free inviter gets nothing extra (sees a Pro upsell), Pro inviter 1 extra month of Pro, added at the next renewal (up to 6 months in total). */
+const UPG_DAYS = 30, UPG_MONTHS_MAX = 6, NEXT_INVOICE = '5 Nov';
 const proMonths = () => Math.min(UPG_MONTHS_MAX, refRows().filter(r => r.status === 'upgraded').length);
-const upgReward = () => isPro() ? '+1 month of Pro' : `+${UPG_CREDITS.toLocaleString()} credits`;
+const upgReward = () => '+1 month of Pro';
 const REF_FAQ = [
   ['Who can I invite?', 'Anyone new to Presentations.AI. They sign up with a work email and get their own workspace. They never join yours.'],
   ['When do the credits land?', `Right after your friend signs up. You both get ${REF_BONUS} credits.`],
   ['Do template links count?', `Yes. Every template you publish carries your link. Sign ups from it count toward the same ${REF_MAX.toLocaleString()} credit limit.`],
   ['What counts as an upgrade?', `Your friend moves to any paid plan within ${UPG_DAYS} days of signing up. Later upgrades don’t count.`],
   ['How do the extra months work?', `Each friend who upgrades adds 1 month of Pro. The months are added at your next renewal, so your next payment moves later. You can earn up to ${UPG_MONTHS_MAX} months in total.`, 'pro'],
-  ['What do I get when they upgrade?', `${UPG_CREDITS.toLocaleString()} bonus credits, on top of the ${REF_MAX.toLocaleString()} limit. On Pro you get an extra month of Pro instead, up to ${UPG_MONTHS_MAX}.`, 'free'],
+  ['What do I get when they upgrade?', `On Pro, each friend who upgrades adds 1 month of Pro to your plan, up to ${UPG_MONTHS_MAX}. Upgrade to Pro to start earning them.`, 'free'],
 ];
 function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rewards' } = {}) {
   const pro = isPro();
@@ -3219,7 +3219,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   const credCell = r => r.status === 'invited'
     ? `<span class="muted">Waiting for sign up</span><button class="link rf-remind" data-remind="${esc(r.who)}">Send reminder</button>`
     : r.got > 0 ? `+${r.got}` : `0<small>Limit reached</small>`;
-  const upCell = r => r.status === 'upgraded' ? (pro && !r.mo ? '<span class="muted">Max reached</span>' : `<b class="up-r">${upgReward()}</b>`) : r.status === 'joined' ? `<span class="muted">If they upgrade in ${UPG_DAYS} days</span>` : '';
+  const upCell = r => !pro ? (r.status === 'upgraded' ? '<span class="muted">On Pro: +1 month</span>' : '') : r.status === 'upgraded' ? (!r.mo ? '<span class="muted">Max reached</span>' : `<b class="up-r">${upgReward()}</b>`) : r.status === 'joined' ? `<span class="muted">If they upgrade in ${UPG_DAYS} days</span>` : '';
   const shell = (main, top) => inSettings ? settingsShell('rewards', main, top) : dashShell('refer', main, top);
   $('#screen').innerHTML = shell(`
     <div class="rwrap rf-wrap rf2">
@@ -3236,7 +3236,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
       <div class="rf2-gets">
         <div><span class="sd-tile"><i class="ph ph-heart"></i></span><b>They get ${REF_BONUS} credits</b><small>And their own workspace</small></div>
         <div><span class="sd-tile"><i class="ph ph-gift"></i></span><b>You get ${REF_BONUS} credits</b><small>Per friend, up to ${REF_MAX.toLocaleString()}</small></div>
-        <div><span class="sd-tile"><i class="ph ph-crown-simple"></i></span><b>${pro ? '+1 month of Pro' : `+${UPG_CREDITS.toLocaleString()} credits`}</b><small>${pro ? `When they upgrade, up to ${UPG_MONTHS_MAX} months` : 'When they upgrade'}</small></div>
+        <div><span class="sd-tile"><i class="ph ph-crown-simple"></i></span><b>${pro ? '+1 month of Pro' : 'Get extra months of Pro'}${pro ? '' : ' <span class="sd-k brand">Pro</span>'}</b><small>${pro ? `When they upgrade, up to ${UPG_MONTHS_MAX} months` : `+1 month for each friend who upgrades, up to ${UPG_MONTHS_MAX}`}</small></div>
       </div>
       <div class="rf2-pair">
         <div class="rf2-box">
@@ -3245,9 +3245,9 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
             <small>${atMax ? `Limit reached. Friends still get their ${REF_BONUS}` : `${Math.ceil((REF_MAX - earned) / REF_BONUS)} more friends to the limit`}</small></div>
         </div>
         <div class="rf2-box ${pro ? '' : 'locked'}">
-          <div class="l"><span class="t">Extra months of Pro ${pro ? '' : '<span class="sd-k brand">Paid plans</span>'}</span>
+          <div class="l"><span class="t">Extra months of Pro ${pro ? '' : '<span class="sd-k brand">Pro</span>'}</span>
             <b>${pro ? `+${proMonths()} month${proMonths() === 1 ? '' : 's'}` : '<span class="blur">+3 months</span>'}<small>/ ${UPG_MONTHS_MAX}</small></b>
-            ${pro ? `<small>${proMonths() >= UPG_MONTHS_MAX ? 'Max reached. Added at your next renewal' : proMonths() ? `Added at your ${NEXT_INVOICE} renewal` : '+1 month for each friend who upgrades'}</small>` : '<button class="btn btn-primary btn-sm" id="rf-unlock"><i class="ph ph-lock-simple"></i>Earn extra months on a paid plan</button>'}</div>
+            ${pro ? `<small>${proMonths() >= UPG_MONTHS_MAX ? 'Max reached. Added at your next renewal' : proMonths() ? `Added at your ${NEXT_INVOICE} renewal` : '+1 month for each friend who upgrades'}</small>` : '<button class="btn btn-primary btn-sm" id="rf-unlock"><i class="ph ph-lock-simple"></i>Get extra months with Pro</button>'}</div>
         </div>
       </div>
       <div class="sec-h" style="margin-top:40px"><h3>Your invites</h3><span class="muted">${rows.length} total</span></div>
@@ -3273,7 +3273,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   $$('[data-plan]').forEach(b => b.onclick = () => setPlan(b.dataset.plan));
   if (paid && mine) later(() => toast(pro
     ? `${esc(friendFirst())} upgraded to Pro. +1 month of Pro at your ${NEXT_INVOICE} renewal`
-    : `${esc(friendFirst())} upgraded to Pro. +${UPG_CREDITS.toLocaleString()} bonus credits`, 'ph-fill ph-crown-simple'), 350);
+    : `${esc(friendFirst())} upgraded to Pro. On Pro, you’d get +1 month of Pro`, 'ph-fill ph-crown-simple'), 350);
   else if (joined && mine) later(() => toast(mine.got
     ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
     : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the limit`, 'ph-fill ph-gift'), 350);
@@ -3343,7 +3343,7 @@ function notifItems() {
   const L = [];
   S.signups.forEach(s => L.push({ i: 'ph-user-plus', t: `<b>${esc(s.who)}</b> signed up from <b>${esc(S.tpl.title)}</b>`, m: '+200 credits', go: 'rewards', at: s.at }));
   S.refs.filter(r => r.status !== 'invited').forEach(r => L.push(r.status === 'upgraded'
-    ? { i: 'ph-crown-simple', t: `<b>${esc(r.who)}</b> upgraded to Pro`, m: isPro() ? `+1 month of Pro at your ${NEXT_INVOICE} renewal` : `+${UPG_CREDITS.toLocaleString()} bonus credits`, go: 'refer', at: r.at }
+    ? { i: 'ph-crown-simple', t: `<b>${esc(r.who)}</b> upgraded to Pro`, m: isPro() ? `+1 month of Pro at your ${NEXT_INVOICE} renewal` : 'Upgrade to Pro to earn extra months', go: 'refer', at: r.at }
     : { i: 'ph-paper-plane-tilt', t: `<b>${esc(r.who)}</b> joined with your referral link`, m: '+200 credits', go: 'refer', at: r.at }));
   if (mineInReview()) L.push({ i: 'ph-hourglass-medium', t: `<b>${esc(S.tpl.title)}</b> is waiting for approval on ${esc(S.company.name)}’s team page`, go: 'company', at: S.publishedAt + 1 });
   if (S.published) L.push({ i: 'ph-check-circle', t: `<b>${esc(S.tpl.title)}</b> is live on Community`, m: 'Share it to start earning', go: 'gallery', at: S.publishedAt });
@@ -3610,7 +3610,7 @@ const JOURNEYS = [
   { id: 'tb', group: 'team', label: 'From Share', hint: 'Pick Foursquare in the last publish step, claim the page there', fresh: true,
     init: s => { s.profile = JSON.parse(JSON.stringify(s.draft)); s.publishAs = 'team'; },
     steps: ['editor', 'share', 'mask', 'details', 'team-claim', 'live', 'gallery', 'template', 'company'] },
-  { id: 'f', label: 'Free inviter', group: 'refer', hint: 'Both get 200 credits. If the friend upgrades in 30 days, you get 1,000 bonus credits', fresh: true, plan: 'free',
+  { id: 'f', label: 'Free inviter', group: 'refer', hint: 'Both get 200 credits. Extra months for upgrades are shown as a Pro upsell', fresh: true, plan: 'free',
     steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined', 'ref-upgrade', 'refer-paid'] },
   { id: 'p', label: 'Pro inviter', group: 'refer', hint: 'Both get 200 credits. If the friend upgrades in 30 days, you get 1 extra month of Pro at the next renewal, up to 6', fresh: true, plan: 'pro',
     steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined', 'ref-upgrade', 'refer-paid'] },
