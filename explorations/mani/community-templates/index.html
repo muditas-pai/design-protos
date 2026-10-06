@@ -162,6 +162,25 @@
   .share-main { flex: 1; overflow: auto; padding: 23px 0 24px; display: flex; flex-direction: column; gap: 20px; }
   .share-main .pad { padding: 0 24px; }
   .divider { height: 1px; background: var(--line); box-shadow: 0 1px 0 rgba(255,255,255,.8); flex: none; }
+  .shc-top { display: flex; align-items: center; gap: 16px; }
+  .shc-top img { width: 120px; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); flex: none; }
+  .shc-top > div { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .shc-top b { font-size: 16px; font-weight: 500; } .shc-top > div > span { font-size: 13px; color: var(--t3); }
+  .shc-top .shc-live { display: flex; align-items: center; gap: 2px; margin-left: -6px; color: var(--green); font-weight: 500; }
+  .shc-det { display: flex; flex-direction: column; gap: 14px; }
+  .shc-h { display: flex; align-items: center; justify-content: space-between; } .shc-h b { font-weight: 500; }
+  .shc-h .link, .shc-note .link { display: inline-flex; align-items: center; gap: 4px; }
+  .shc-dl { display: grid; grid-template-columns: 110px 1fr; gap: 10px 16px; margin: 0; font-size: 13px; }
+  .shc-dl dt { color: var(--t3); } .shc-dl dd { margin: 0; }
+  .shc-dl .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .shc-note { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t2); padding: 10px 12px; border-radius: 6px; background: var(--bg2); }
+  .shc-note .link { margin-left: auto; white-space: nowrap; }
+  .shc-danger { display: flex; align-items: center; gap: 16px; }
+  .shc-danger > div { flex: 1; display: flex; flex-direction: column; gap: 2px; } .shc-danger b { font-weight: 500; } .shc-danger span { font-size: 13px; color: var(--t3); }
+  .shc-red { color: var(--red); }
+  .shc-how { display: flex; flex-direction: column; gap: 14px; } .shc-how > b { font-weight: 500; }
+  .shc-how > div { display: flex; gap: 12px; align-items: flex-start; } .shc-how i { font-size: 20px; color: var(--t2); margin-top: 1px; }
+  .shc-how span { display: flex; flex-direction: column; font-size: 13px; color: var(--t3); } .shc-how span b { color: var(--t1); font-weight: 500; font-size: 14px; }
   .live-dot { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
   .live-dot i { width: 10px; height: 10px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 4px rgba(34,197,94,.2); }
   .action-thumb { display: flex; border-radius: 6px; background: #FAFAFA; box-shadow: var(--e1); overflow: hidden; position: relative; }
@@ -1258,8 +1277,7 @@ function renderShare() {
       </div>
       <div class="r" style="flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;padding:24px">
         <button class="btn btn-outline btn-sm" data-go="gallery">View on Community</button>
-        <button class="btn btn-outline btn-sm" data-go="rewards">Rewards</button>
-        <button class="btn btn-sm btn-brand" id="publish-again">Publish again</button>
+        <button class="btn btn-sm btn-primary" data-go="share-community">Manage</button>
       </div>
     </div>` : `
     <div class="action-thumb">
@@ -1280,9 +1298,7 @@ function renderShare() {
     <div class="card" style="width:800px">
       <div class="share">
         <div class="share-nav">
-          <button><i class="ph ph-download-simple"></i>Export to Powerpoint</button>
-          <button><i class="ph ph-user-plus"></i>Invite to collaborate</button>
-          <button class="on"><i class="ph ph-share-fat"></i>Share externally</button>
+          ${shareNav('share')}
         </div>
         <div class="share-main">
           <div class="pad" style="display:flex;flex-direction:column;gap:20px">
@@ -1329,6 +1345,94 @@ function renderShare() {
   if (pa) pa.onclick = () => { S._firstTime = false; go('mask'); };
   const pn = $('#publish-now');
   if (pn) pn.onclick = () => { S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); };
+}
+
+const shareNav = on => [['', 'ph-download-simple', 'Export to Powerpoint'], ['', 'ph-user-plus', 'Invite to collaborate'], ['share', 'ph-share-fat', 'Share externally'], ['share-community', 'ph-slideshow', 'Publish to Community']]
+  .map(([r, i, l]) => `<button class="${r === on ? 'on' : ''}" ${r && r !== on ? `data-go="${r}"` : ''}><i class="ph ${i}"></i>${l}</button>`).join('');
+
+/* Share modal · Publish to Community tab: manage a live template (edit details, unpublish) or start publishing */
+function renderShareCommunity() {
+  const t = S.tpl, pub = S.published;
+  const st = S._shc || (S._shc = { edit: false, confirm: false, title: t.title, desc: t.desc, cat: t.cat, tags: t.tags.join(', ') });
+  const by = S.publishAs === 'team' ? S.company.name : P().name;
+  const stats = [['Views', viewsOf({ uses: S.uses })], ['Uses', S.uses], ['Sign ups', S.signups.length], ['Credits earned', (S.signups.length * 200).toLocaleString()]];
+  const body = pub ? `
+    <div class="pad shc-top">
+      <img src="${KPI[0].src}" alt="">
+      <div><b>${esc(t.title)}</b><span>${esc(t.cat)} · by ${esc(by)}</span>
+        <span class="shc-live"><span class="live-dot"><i></i></span>Live on Community</span></div>
+      <button class="btn btn-outline btn-sm" data-go="template"><i class="ph ph-arrow-square-out"></i>View</button>
+    </div>
+    <div class="pad"><div class="mg-stats">${stats.map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div></div>
+    <div class="pad" style="display:flex;gap:10px">
+      <input class="input" value="https://${tplUrl()}" readonly style="flex:1;height:40px">
+      <button class="btn btn-outline" id="shc-copy"><i class="ph ph-copy"></i>Copy link</button>
+    </div>
+    <div class="divider"></div>
+    <div class="pad shc-det">
+      <div class="shc-h"><b>Template details</b>${st.edit ? '' : '<button class="link" id="shc-edit"><i class="ph ph-pencil-simple"></i>Edit</button>'}</div>
+      ${st.edit ? `
+        <div class="field"><label class="label">Title</label><input class="input" id="shc-title" value="${esc(st.title)}" maxlength="60"></div>
+        <div class="field"><label class="label">Description</label><textarea class="input" id="shc-desc" rows="4">${esc(st.desc)}</textarea></div>
+        <div class="field"><label class="label">Category</label><div class="tags">${GALLERY_CATS.map(c => `<button class="chip sm ${st.cat === c ? 'on' : ''}" data-scat="${c}">${c}</button>`).join('')}</div></div>
+        <div class="field"><label class="label">Tags</label><input class="input" id="shc-tags" value="${esc(st.tags)}" placeholder="Comma separated"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-outline" id="shc-cancel">Cancel</button><button class="btn btn-primary" id="shc-save">Save changes</button></div>` : `
+        <dl class="shc-dl">
+          <dt>Title</dt><dd>${esc(t.title)}</dd>
+          <dt>Description</dt><dd class="clamp">${esc(t.desc)}</dd>
+          <dt>Category</dt><dd>${esc(t.cat)}</dd>
+          <dt>Tags</dt><dd>${t.tags.map(x => `<span class="pill">${esc(x)}</span>`).join(' ') || '<span style="color:var(--t3)">None</span>'}</dd>
+        </dl>
+        <div class="shc-note"><i class="ph ph-info"></i>Changes to the slides go live when you publish an update.<button class="link" id="shc-update">Publish update</button></div>`}
+    </div>
+    <div class="divider"></div>
+    <div class="pad">
+      ${st.confirm ? `<div class="co-danger" style="margin:0"><div><b>Unpublish “${esc(t.title)}”?</b><span>It leaves Community and your page. People who already used it keep their copy.</span></div><button class="btn btn-outline" id="shc-no">Cancel</button><button class="btn btn-danger" id="shc-yes">Unpublish</button></div>`
+        : `<div class="shc-danger"><div><b>Unpublish from Community</b><span>Remove it from Community and your page. You can publish it again any time.</span></div><button class="btn btn-outline shc-red" id="shc-unpub"><i class="ph ph-eye-slash"></i>Unpublish</button></div>`}
+    </div>` : `
+    <div class="pad">
+      <div class="action-thumb">
+        <div class="l">
+          <h4>${S.publishedAt ? 'Publish it again.<br>Keep earning.' : 'Publish to Community.<br>Earn rewards.'}</h4>
+          <button class="btn btn-sm btn-brand" id="shc-publish" style="align-self:flex-start">Publish now</button>
+        </div>
+        <div class="r">
+          <div class="rw"><b>200 credits</b><small>for every new sign up</small></div>
+          <div class="rw"><b>10% cash</b><small>from every new subscription</small></div>
+          <img class="coins" src="${A}coins.png" alt="">
+        </div>
+      </div>
+    </div>
+    <div class="pad shc-how">
+      <b>How it works</b>
+      ${[['ph-eye-slash', 'We hide private info', 'Names, emails and numbers are masked before it goes public.'], ['ph-globe-hemisphere-west', 'It goes live on Community', 'Anyone can start a deck from your template.'], ['ph-coins', 'You earn when they join', '200 credits per sign up, 10% cash on Pro.']].map(([i, h, d]) => `<div><i class="ph ${i}"></i><span><b>${h}</b>${d}</span></div>`).join('')}
+    </div>`;
+  openModal(`
+    <div class="f-head">Share “${esc(t.title)}” externally</div>
+    <div class="card" style="width:800px">
+      <div class="share">
+        <div class="share-nav">${shareNav('share-community')}</div>
+        <div class="share-main">${body}</div>
+      </div>
+    </div>`);
+  const rr = () => { const sc = $('.share-main').scrollTop; renderShareCommunity(); $('.share-main').scrollTop = sc; };
+  $('#shc-copy') && ($('#shc-copy').onclick = () => toast('Template link copied'));
+  $('#shc-edit') && ($('#shc-edit').onclick = () => { st.edit = true; st.confirm = false; rr(); });
+  $('#shc-cancel') && ($('#shc-cancel').onclick = () => { S._shc = null; rr(); });
+  $('#shc-title') && ($('#shc-title').oninput = e => { st.title = e.target.value; });
+  $('#shc-desc') && ($('#shc-desc').oninput = e => { st.desc = e.target.value; });
+  $('#shc-tags') && ($('#shc-tags').oninput = e => { st.tags = e.target.value; });
+  $$('[data-scat]').forEach(b => b.onclick = () => { st.cat = b.dataset.scat; $$('[data-scat]').forEach(x => x.classList.toggle('on', x === b)); });
+  $('#shc-save') && ($('#shc-save').onclick = () => {
+    if (!st.title.trim()) { $('#shc-title').style.boxShadow = 'inset 0 0 0 1px var(--red)'; $('#shc-title').focus(); return; }
+    t.title = st.title.trim(); t.desc = st.desc.trim(); t.cat = st.cat; t.tags = st.tags.split(',').map(x => x.trim()).filter(Boolean);
+    S._shc = null; save(); toast('Template updated on Community'); rr();
+  });
+  $('#shc-update') && ($('#shc-update').onclick = () => { S._shc = null; S._firstTime = false; go('mask'); });
+  $('#shc-unpub') && ($('#shc-unpub').onclick = () => { st.confirm = true; st.edit = false; rr(); });
+  $('#shc-no') && ($('#shc-no').onclick = () => { st.confirm = false; rr(); });
+  $('#shc-yes') && ($('#shc-yes').onclick = () => { S.published = false; S._shc = null; save(); toast('Template unpublished', 'ph ph-eye-slash'); renderShareCommunity(); renderFlow(); });
+  $('#shc-publish') && ($('#shc-publish').onclick = () => { S._shc = null; S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3113,7 +3217,7 @@ function renderCreator() {
    ═══════════════════════════════════════════════════════════ */
 const ROUTES = [
   ['A · Page first', [['dashboard', 'Dashboard'], ['community', 'Community page'], ['create-page', 'Create page'], ['my-page', 'Your page']]],
-  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['profile-setup', 'Create page'], ['team-claim', 'Claim team page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile'], ['manage', 'Manage template']]],
+  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['share-community', 'Community tab'], ['profile-setup', 'Create page'], ['team-claim', 'Claim team page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile'], ['manage', 'Manage template']]],
   ['Visitor signs up', [['template', 'Template link'], ['login', 'Sign up'], ['role', 'Role'], ['context', 'Your context'], ['generating', 'Generating'], ['present', 'Present'], ['visitor-editor', '200 credits']]],
   ['Rewards', [['notifs', 'Notifications'], ['rewards', 'Rewards'], ['redeem', 'Redeem cash']]],
   ['Creators', [['creator', 'Creator page']]],
@@ -3121,7 +3225,7 @@ const ROUTES = [
   ['Refer a friend', [['refer', 'Refer & earn'], ['ref-login', 'Friend signs up'], ['ref-setup', 'Select role'], ['ref-home', 'Friend gets 200'], ['ref-upgrade', 'Friend upgrades'], ['refer-joined', 'You see it'], ['refer-paid', 'You get 10%']]],
 ];
 const FLAT = ROUTES.flatMap(g => g[1].map(r => r[0]));
-const MODAL_ROUTES = ['share', 'profile-setup', 'mask', 'details', 'live', 'create-page', 'team-claim', 'ws-claim', 'redeem', 'manage'];
+const MODAL_ROUTES = ['share', 'share-community', 'profile-setup', 'mask', 'details', 'live', 'create-page', 'team-claim', 'ws-claim', 'redeem', 'manage'];
 let ROUTE = 'editor';
 
 function ensurePrereqs(r) {
@@ -3135,6 +3239,7 @@ function ensurePrereqs(r) {
   if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
   if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
   if (r === 'redeem') S._pay = null;
+  if (r === 'share-community') S._shc = null;
   if (S.journey === 'c' && (r === 'gallery' || r === 'creator')) {
     if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft));
     if (!S.published) { S.published = true; S.publishedAt = Date.now(); }
@@ -3159,7 +3264,7 @@ function renderRoute() {
   const r = ROUTE;
   if (MODAL_ROUTES.includes(r)) {
     if (r === 'manage' && S._mgFrom === 'rewards') renderRewards(); else if (r === 'manage' && S._mgFrom === 'profile') renderProfile(); else if (r === 'create-page' || r === 'manage') renderCommunity(); else if (r === 'ws-claim') renderWsSettings(); else if (r === 'redeem') renderRewards(); else renderPublisherEditor();
-    ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'profile-setup': () => renderPageModal({ from: 'share' }), 'team-claim': () => renderClaimModal({ from: 'share' }), 'ws-claim': () => renderClaimModal({ from: 'settings' }), redeem: () => renderPayout({ redeem: true }), manage: renderManage, mask: renderMask, details: renderDetails, live: renderLive })[r]();
+    ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'share-community': renderShareCommunity, 'profile-setup': () => renderPageModal({ from: 'share' }), 'team-claim': () => renderClaimModal({ from: 'share' }), 'ws-claim': () => renderClaimModal({ from: 'settings' }), redeem: () => renderPayout({ redeem: true }), manage: renderManage, mask: renderMask, details: renderDetails, live: renderLive })[r]();
   } else {
     closeModal();
     ({ dashboard: renderDashboard, community: renderCommunity, 'my-page': renderCommunity, editor: renderPublisherEditor, profile: renderProfile, template: renderTemplate, login: renderLogin, role: renderRole, context: renderContext, generating: renderGenerating, present: renderPresent, 'visitor-editor': renderVisitorEditor, rewards: renderRewards,
@@ -3197,6 +3302,9 @@ const JOURNEYS = [
     steps: ['dashboard', 'community', 'create-page', 'my-page', 'editor', 'share', 'mask', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
   { id: 'b', group: 'me', label: 'No page · from Share', hint: 'Publish from Share, create the page on the way', fresh: true,
     steps: ['editor', 'share', 'profile-setup', 'mask', 'details', 'live', 'gallery', 'template', 'profile'] },
+  { id: 'm', group: 'me', label: 'Edit or unpublish', hint: 'Template is live. Edit it or unpublish from the Publish to Community tab in Share', fresh: true,
+    init: s => { s.profile = JSON.parse(JSON.stringify(s.draft)); s.published = true; s.publishedAt = Date.now() - 2 * 864e5; s.uses = 38; s.signups = [{ who: 'Priya Raman', via: 'Google', role: 'Sales', at: Date.now() - 6e5 }, { who: 'Ken Ito', via: 'Email', role: 'Finance', at: Date.now() - 9e6 }]; },
+    steps: ['editor', 'share', 'share-community', 'template'] },
   { id: 'v', group: 'other', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['gallery', 'template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
   { id: 'r', group: 'other', label: 'Rewards', hint: 'Notifications, then Rewards in Settings, redeem to PayPal or bank', init: s => { s.plan = 'pro'; }, steps: ['notifs', 'rewards', 'redeem'] },
