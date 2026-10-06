@@ -1323,6 +1323,17 @@
   .sd-auth .form > p.sm { font-size: 14px; line-height: 20px; margin: 8px 0 32px; }
   .sd-invite { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 24px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgb(var(--brand-600) / .3); background: rgb(var(--brand-50) / .6); font-size: 14px; line-height: 20px; color: rgb(var(--ink-2)); }
   .sd-invite i { font-size: 20px; color: rgb(var(--brand-fg)); flex: none; } .sd-invite b { color: var(--t1); font-weight: 600; }
+  /* Friend's credits nudge (pages.md: floating nudge card) */
+  .sd-nudge { position: fixed; right: 24px; bottom: 24px; z-index: 55; width: min(360px, calc(100vw - 32px)); border-radius: 12px; border: 1px solid var(--line); background: rgb(var(--surface)); box-shadow: var(--shadow-dialog); overflow: visible; animation: sdNudge .4s cubic-bezier(.2,0,0,1) both; }
+  @keyframes sdNudge { from { opacity: 0; transform: translateY(16px); } }
+  .sd-nudge .hero { border-radius: 11px 11px 0 0; padding: 20px; display: flex; flex-direction: column; align-items: flex-start; color: #fff; background: linear-gradient(135deg, rgb(var(--brand-600) / .92), rgb(var(--brand-500) / .85)), url(assets/confetti.jpg) center/cover; }
+  .sd-nudge .hero b { font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -.02em; } .sd-nudge .hero span { font-size: 16px; font-weight: 500; } .sd-nudge .hero small { margin-top: 2px; font-size: 13px; opacity: .85; }
+  .sd-nudge .body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .sd-nudge .t { display: flex; flex-direction: column; } .sd-nudge .t b { font-weight: 600; } .sd-nudge .t small { font-size: 13px; color: rgb(var(--ink-3)); }
+  .sd-nudge .lnk { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 4px 0 12px; border-radius: 6px; border: 1px solid var(--line); background: rgb(var(--canvas)); } .sd-nudge .lnk span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: rgb(var(--ink-2)); }
+  .sd-nudge .sh { display: flex; gap: 8px; } .sd-nudge .sh .rf2-ic { width: 36px; height: 36px; font-size: 16px; }
+  .sd-nudge-x { position: absolute; right: 0; bottom: calc(100% + 8px); }
+  @media (max-width: 900px) { .sd-nudge { left: 16px; right: 16px; bottom: 16px; width: auto; } }
   @media (max-width: 900px) {
     .sd-top { padding: 0 16px; } .sd-proto, .sd-search kbd { display: none; } .sd-main { padding: 24px 16px 96px; }
     .rf-hero { grid-template-columns: 1fr; } .rf-hero .a { border-right: 0; border-bottom: 1px solid var(--line); } .rf-art { display: none; }
@@ -3138,6 +3149,7 @@ function renderVisitorEditor() {
     </div>`;
   $('#cr-x').onclick = () => $('#credits').remove();
   $('#cr-copy').onclick = () => toast('Referral link copied');
+  $$('[data-crs]').forEach(b => b.onclick = () => toast(`${b.dataset.crs} opens with your link`, 'ph ph-share-network'));
   $('#ed-share').onclick = () => toast('This is the visitor’s own copy now', 'ph ph-info');
 }
 
@@ -3347,12 +3359,13 @@ function setPlan(plan) {
 function renderRefHome() {
   creditFriend();
   $('#screen').innerHTML = friendHomeHTML() + `
-    <div class="credits fixed" id="credits">
-      <button class="x-out x-float" id="cr-x" aria-label="Close"><i class="ph ph-x"></i></button>
-      <div class="hero"><b>${REF_BONUS}</b><span>credits added!</span></div>
+    <div class="sd-nudge" id="credits">
+      <button class="x-out sd-nudge-x" id="cr-x" aria-label="Close"><i class="ph ph-x"></i></button>
+      <div class="hero"><b class="tabular">+${REF_BONUS}</b><span>credits added</span><small>Thanks to ${esc(P().name)}’s invite</small></div>
       <div class="body">
-        <div class="t">Invite friends and earn too</div>
-        <div class="ref-row"><span>presentations.ai/ref/${esc(friendHandle())}</span><button class="btn btn-primary btn-sm" id="cr-copy"><i class="ph ph-copy"></i>Copy</button></div>
+        <div class="t"><b>Invite friends, earn ${REF_BONUS} each</b><small>They get ${REF_BONUS} credits too</small></div>
+        <div class="lnk"><span>presentations.ai/ref/${esc(friendHandle())}</span><button class="btn btn-primary btn-sm" id="cr-copy"><i class="ph ph-copy"></i>Copy</button></div>
+        <div class="sh">${[['linkedin-logo', 'LinkedIn'], ['x-logo', 'X'], ['facebook-logo', 'Facebook'], ['whatsapp-logo', 'WhatsApp'], ['envelope-simple', 'Email']].map(([i, n]) => `<button class="sd-ib rf2-ic" data-crs="${n}" title="${n}" aria-label="Share via ${n}"><i class="ph ph-${i}"></i></button>`).join('')}</div>
       </div>
     </div>`;
   $('#cr-x').onclick = () => $('#credits').remove();
