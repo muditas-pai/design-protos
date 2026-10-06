@@ -1968,7 +1968,7 @@ function sdShell(active, main, topLeft = '', { friend = null, settings = false }
       <div class="sd-foot">
         <div class="sd-plan"><div class="r"><b>${paid ? 'Pro plan' : 'Free plan'}</b><small class="tabular">${credits.toLocaleString()} credits</small></div>
           ${paid ? '' : `<div class="sd-bar"><i style="width:${Math.min(100, credits / 20)}%"></i></div><small class="m">0 of 2 free decks</small><button class="btn btn-subtle btn-sm" style="width:100%">See plans</button>`}</div>
-        ${COMMUNITY_ONLY ? '' : nav('ph-gift', 'Refer &amp; earn', friend ? null : 'refer', badge('+' + REF_BONUS, 'good'))}
+        ${COMMUNITY_ONLY ? '' : nav('ph-gift', 'Refer &amp; earn', friend ? null : 'refer')}
         ${nav('ph-user-plus', 'Invite teammates', null)}
         ${nav('ph-gear-six', 'Settings', friend ? null : 'ws-settings')}
       </div>
@@ -3242,7 +3242,7 @@ const UPG_DAYS = 30, UPG_MONTHS_MAX = 6, NEXT_INVOICE = '5 Nov';
 const proMonths = () => Math.min(UPG_MONTHS_MAX, refRows().filter(r => r.status === 'upgraded').length);
 const upgReward = () => '+1 month of Pro';
 const REF_FAQ = [
-  ['Who can I invite?', 'Anyone new to Presentations.AI. They sign up with a work email and get their own workspace. They never join yours.'],
+  ['Who can I invite?', 'Anyone new to Presentations.AI. They get their own workspace. They never join yours.'],
   ['When do the credits land?', `When your friend makes their first deck. You both get ${REF_BONUS} credits then.`],
   ['Do template links count?', `Yes. Every template you publish carries your link. Sign ups from it count toward the same ${REF_MAX.toLocaleString()} credit limit.`],
   ['What counts as an upgrade?', `Your friend moves to any paid plan within ${UPG_DAYS} days of signing up. Later upgrades don’t count.`],
@@ -3257,7 +3257,8 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   const joinedN = rows.filter(r => r.status !== 'invited').length;
   const atMax = earned >= REF_MAX;
   const fresh = rows[0] && rows[0].at && Date.now() - rows[0].at < 8000;
-  const shown = rows.slice(0, 6);
+  const accepted = rows.filter(r => r.status !== 'invited');
+  const shown = accepted.slice(0, 6);
   const mine = rows.find(r => r.who === S.friend.name);
   const tog = `<div class="state-tog" title="Proto only: the inviter's plan"><button data-plan="free" class="${pro ? '' : 'on'}">Free inviter</button><button data-plan="pro" class="${pro ? 'on' : ''}">Pro inviter</button></div>
     <div class="state-tog" title="Proto only"><button data-rmax="0" class="${S.refMax ? '' : 'on'}">First invites</button><button data-rmax="1" class="${S.refMax ? 'on' : ''}">Max reached</button></div>`;
@@ -3277,7 +3278,6 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
           <button class="btn btn-primary btn-lg" id="rf-copy"><i class="ph ph-copy"></i>Copy link</button>
         </div>
         <div class="rf2-share"><span>Share via</span>${[['envelope-simple', 'Email'], ['linkedin-logo', 'LinkedIn'], ['x-logo', 'X'], ['facebook-logo', 'Facebook'], ['whatsapp-logo', 'WhatsApp']].map(([i, n]) => `<button class="sd-ib rf2-ic" data-share="${i}" title="${n}" aria-label="Share via ${n}"><i class="ph ph-${i}"></i></button>`).join('')}</div>
-        <small class="rf2-terms">Work email needed · Upgrades count within ${UPG_DAYS} days · Your template links count too · <u>Referral terms</u></small>
       </section>
       <div class="rf2-gets">
         <div><span class="sd-tile"><i class="ph ph-heart"></i></span><b>They get ${REF_BONUS} credits</b><small>And their own workspace</small></div>
@@ -3296,18 +3296,19 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
             ${pro ? `<small>${proMonths() >= UPG_MONTHS_MAX ? 'Max reached. Added at your next renewal' : proMonths() ? `Added at your ${NEXT_INVOICE} renewal` : '+1 month for each friend who upgrades'}</small>` : '<button class="btn btn-primary btn-sm" id="rf-unlock"><i class="ph ph-lock-simple"></i>Get extra months with Pro</button>'}</div>
         </div>
       </div>
-      <div class="sec-h" style="margin-top:40px"><h3>Your invites</h3><span class="muted">${rows.length} total</span></div>
+      <div class="sec-h" style="margin-top:40px"><h3>Friends who joined</h3><span class="muted">${accepted.length} total</span></div>
       <div class="brk rf-t"><table>
         <thead><tr><th>Friend</th><th>Status</th><th>Date</th><th style="text-align:right">Credits</th><th style="text-align:right">Upgrade reward</th></tr></thead>
         <tbody>${shown.map((r, n) => `<tr class="${n === 0 && fresh ? 'new' : ''}">
           <td><span class="rf-who">${r.status !== 'invited' ? avatar(24, { name: r.who }) : '<i class="ph ph-envelope-simple" style="font-size:18px;color:var(--t3);width:24px;text-align:center"></i>'}<span>${esc(r.who)}${r.via ? `<small>${esc(r.via)}</small>` : ''}</span></span></td>
           <td>${pill(r.status)}</td>
           <td>${r.when}</td><td class="got" style="text-align:right">${credCell(r)}</td><td class="got" style="text-align:right">${upCell(r)}</td></tr>`).join('')}
-          ${rows.length > shown.length ? `<tr><td colspan="5" class="muted">And ${rows.length - shown.length} more</td></tr>` : ''}
+          ${accepted.length > shown.length ? `<tr><td colspan="5" class="muted">And ${accepted.length - shown.length} more</td></tr>` : ''}
         </tbody>
       </table></div>
       <div class="sec-h" style="margin-top:48px"><h3>Questions</h3></div>
       <div class="faq">${REF_FAQ.filter(f => !f[2] || f[2] === (pro ? 'pro' : 'free')).map(([q, a]) => `<details><summary><span>${q}</span><i class="ph ph-caret-down"></i></summary><p>${a}</p></details>`).join('')}</div>
+      <small class="rf2-terms">By sharing your link, you agree to the <u>Referral terms</u>.</small>
     </div>`, tog);
   $('#rf-copy').onclick = () => toast('Referral link copied');
   $('#rf-unlock') && ($('#rf-unlock').onclick = openPricing);
