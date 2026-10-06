@@ -1302,6 +1302,23 @@
   .rf2-box .l > small { font-size: 13px; color: rgb(var(--ink-3)); } .rf2-box .btn { margin-top: 6px; }
   .rf2-box .blur { filter: blur(6px); user-select: none; }
   @media (max-width: 900px) { .rf2-pair { grid-template-columns: 1fr; } }
+  /* Pricing dialog (paywall pattern) */
+  .sd-pay { padding: 22px 24px 20px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 48px); overflow-y: auto; }
+  .sd-pay .h h2 { margin: 0; font-size: 24px; line-height: 32px; letter-spacing: -.015em; } .sd-pay .h p { margin: 4px 0 0; color: rgb(var(--ink-2)); }
+  .sd-pay .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px; border-radius: 12px; background: rgb(var(--sunken)); }
+  .sd-pay .facts > div { display: flex; gap: 8px; } .sd-pay .facts i { font-size: 18px; color: rgb(var(--brand-fg)); margin-top: 1px; } .sd-pay .facts span { display: flex; flex-direction: column; font-size: 13px; color: rgb(var(--ink-2)); } .sd-pay .facts b { color: var(--t1); font-weight: 600; font-size: 14px; }
+  .sd-pay .eb { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; } .sd-pay .eb span { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--ink-3)); } .sd-pay .eb small { font-size: 13px; color: rgb(var(--ink-3)); }
+  .sd-pay .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .sd-pay .plan { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; border-radius: 12px; border: 1px solid var(--line); background: rgb(var(--surface)); text-align: left; transition: border-color .15s var(--ease); }
+  .sd-pay .plan:hover { border-color: rgb(var(--ink-3) / .4); } .sd-pay .plan.on { border-color: rgb(var(--brand-600)); box-shadow: 0 0 0 3px rgb(var(--brand-600) / .2); }
+  .sd-pay .plan .top { width: 100%; display: flex; justify-content: space-between; align-items: center; } .sd-pay .plan .top b { font-size: 18px; font-weight: 600; }
+  .sd-pay .rd { width: 20px; height: 20px; border-radius: 999px; border: 2px solid var(--line); display: inline-flex; align-items: center; justify-content: center; } .sd-pay .plan.on .rd { background: rgb(var(--brand-600)); border-color: rgb(var(--brand-600)); color: #fff; font-size: 12px; }
+  .sd-pay .pr { font-size: 13px; color: rgb(var(--ink-2)); } .sd-pay .pr b { font-size: 24px; font-weight: 600; color: var(--t1); letter-spacing: -.015em; } .sd-pay .plan > small { font-size: 13px; color: rgb(var(--ink-2)); margin-top: -6px; } .sd-pay s { color: rgb(var(--ink-3)); }
+  .sd-pay .cr { width: 100%; padding: 6px 10px; border-radius: 6px; background: rgb(var(--sunken)); font-size: 13px; }
+  .sd-pay ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: rgb(var(--ink-2)); } .sd-pay li { display: flex; gap: 6px; } .sd-pay li i { color: rgb(var(--brand-fg)); margin-top: 2px; } .sd-pay li.hl { color: var(--t1); font-weight: 500; }
+  .sd-pay .other { display: flex; justify-content: space-between; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); font-size: 13px; color: rgb(var(--ink-2)); } .sd-pay .other b { color: var(--t1); font-weight: 600; }
+  .sd-pay .cta { display: flex; justify-content: space-between; align-items: center; } .sd-pay .renew { text-align: right; margin-top: -6px; font-size: 13px; color: rgb(var(--ink-3)); }
+  @media (max-width: 900px) { .sd-pay .plans, .sd-pay .facts { grid-template-columns: 1fr; } .sd-pay .cta { flex-direction: column-reverse; align-items: stretch; gap: 8px; } }
   @media (max-width: 900px) {
     .sd-top { padding: 0 16px; } .sd-proto, .sd-search kbd { display: none; } .sd-main { padding: 24px 16px 96px; }
     .rf-hero { grid-template-columns: 1fr; } .rf-hero .a { border-right: 0; border-bottom: 1px solid var(--line); } .rf-art { display: none; }
@@ -3264,7 +3281,7 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
       <div class="faq">${REF_FAQ.filter(f => !f[2] || f[2] === (pro ? 'pro' : 'free')).map(([q, a]) => `<details><summary><span>${q}</span><i class="ph ph-caret-down"></i></summary><p>${a}</p></details>`).join('')}</div>
     </div>`, tog);
   $('#rf-copy').onclick = () => toast('Referral link copied');
-  $('#rf-unlock') && ($('#rf-unlock').onclick = () => setPlan('pro'));
+  $('#rf-unlock') && ($('#rf-unlock').onclick = openPricing);
   $$('[data-share]').forEach(b => b.onclick = () => b.dataset.share === 'envelope-simple'
     ? toast('Your email opens with the invite and your link', 'ph ph-envelope-simple')
     : toast(`${b.title} opens with your link`, 'ph ph-share-network'));
@@ -3277,6 +3294,43 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   else if (joined && mine) later(() => toast(mine.got
     ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
     : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the limit`, 'ph-fill ph-gift'), 350);
+}
+
+/* v2 · Pricing dialog (pages.md: Plans on download / paywall), opened from the Pro upsell on Refer */
+const PLANS_SDS = [
+  { id: 'standard', name: 'Standard', mo: 8, yr: 96, credits: '2,000 credits a year · about 200 slides', feats: ['Everything in Basic', 'Twice the credits', 'Core AI models'] },
+  { id: 'pro', name: 'Pro', mo: 20, yr: 240, badge: 'Earns extra months', credits: '5,000 credits a year · about 500 slides', feats: ['+1 month of Pro for each friend who upgrades', 'Advanced AI models', 'Refresh, analytics and CRM'] },
+  { id: 'team', name: 'Team', mo: 41.58, yr: 499, was: 720, credits: '30,000 credits a year, shared · about 3,000 slides', feats: ['+1 month for each friend who upgrades', 'Unlimited members, no seat fee', 'Shared Brand Kit and templates'] },
+];
+function openPricing() {
+  let pick = 'pro';
+  const draw = () => {
+    const pl = PLANS_SDS.find(x => x.id === pick);
+    openModal(`<div class="sd-pay">
+      <div class="h"><h2>Get extra months of Pro</h2><p>On Pro, every friend who upgrades adds a month of Pro to your plan, up to ${UPG_MONTHS_MAX}. Your referral credits stay with you.</p></div>
+      <div class="facts">
+        <div><i class="ph ph-users-three"></i><span><b>${refRows().filter(r => r.status !== 'invited').length} friends joined</b>from your link</span></div>
+        <div><i class="ph ph-crown-simple"></i><span><b>${refRows().filter(r => r.status === 'upgraded').length} upgraded</b>would add ${Math.min(UPG_MONTHS_MAX, refRows().filter(r => r.status === 'upgraded').length)} month${refRows().filter(r => r.status === 'upgraded').length === 1 ? '' : 's'} on Pro</span></div>
+        <div><i class="ph ph-gift"></i><span><b>${refEarned().toLocaleString()} credits</b>earned so far, yours to keep</span></div>
+      </div>
+      <div class="eb"><span>Annual plans · 10 credits per new slide</span><small>US prices before tax · your local price is shown at checkout</small></div>
+      <div class="plans" role="radiogroup">${PLANS_SDS.map(x => `<button role="radio" aria-checked="${x.id === pick}" class="plan ${x.id === pick ? 'on' : ''}" data-pl="${x.id}">
+        <span class="top"><b>${x.name}</b><span class="rd">${x.id === pick ? '<i class="ph-bold ph-check"></i>' : ''}</span></span>
+        ${x.badge ? `<span class="sd-k brand">${x.badge}</span>` : ''}
+        <span class="pr"><b class="tabular">$${x.mo}</b> a month</span>
+        <small>${x.was ? `<s>$${x.was}</s> $${x.yr} first year, then $${x.was}` : `Billed $${x.yr} a year`}</small>
+        <span class="cr">${x.credits}</span>
+        <ul>${x.feats.map((f, i) => `<li class="${i === 0 && x.id !== 'standard' ? 'hl' : ''}"><i class="ph ph-check"></i>${f}</li>`).join('')}</ul>
+      </button>`).join('')}</div>
+      <div class="other"><span><b>Basic</b> · 1,000 credits</span><span>$48/yr</span></div>
+      <div class="cta"><button class="btn btn-ghost" id="pay-no">Not now</button><button class="btn btn-primary btn-lg" id="pay-go">Continue with ${pl.name} · $${pl.yr} a year</button></div>
+      <small class="renew">Renews at $${pl.was || pl.yr} a year unless cancelled.</small>
+    </div>`, { plain: true, width: 760, onClose: closeModal });
+    $$('[data-pl]').forEach(b => b.onclick = () => { pick = b.dataset.pl; draw(); });
+    $('#pay-no').onclick = closeModal;
+    $('#pay-go').onclick = () => { closeModal(); if (pick !== 'standard') setPlan('pro'); toast(pick === 'standard' ? 'You’re on Standard. Extra months come with Pro' : `You’re on ${pl.name}. Friends who upgrade now add a month of Pro`, 'ph-fill ph-crown-simple'); };
+  };
+  draw();
 }
 // Switch the inviter's plan (proto). The flow bar follows the matching journey.
 function setPlan(plan) {
