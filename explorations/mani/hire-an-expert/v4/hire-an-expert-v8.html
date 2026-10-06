@@ -596,8 +596,8 @@
   .upi-logos{display:flex;gap:6px;align-items:center}
   .upi-logos img{width:20px;height:20px;display:block}
 
-  #pay-screen .pfield{margin-bottom:20px}
-  #pay-screen .pfield label{display:block;font-size:14px;font-weight:500;line-height:1.43;color:#525252;margin-bottom:5px}
+    .pfield{margin-bottom:20px}
+    .pfield label{display:block;font-size:14px;font-weight:500;line-height:1.43;color:#525252;margin-bottom:5px}
   .pinput{width:100%;height:44px;padding:0 12px;border:0;border-radius:4px;background:#fff;
     box-shadow:0 1px 4px -1px rgba(11,15,20,.09), inset 0 0 0 1px rgba(11,15,20,.09);
     font:400 14px/1.43 'Inter',sans-serif;color:#171717;display:flex;align-items:center;gap:8px;transition:box-shadow .15s ease}
@@ -1127,6 +1127,7 @@
   const co = { name:'', n:16, h:72 };
   const upBox = document.getElementById('up-box'), upInput = document.getElementById('up-input');
   function startUpload(file){
+    if (upBox.classList.contains('busy')) return;
     co.name = file ? file.name : 'Quarterly Review.pptx';
     // Prototype: slide count estimated from file size (real product reads it from the file)
     co.n = file ? Math.min(60, Math.max(5, Math.round(file.size / 400000) || 12)) : 16;
@@ -1154,7 +1155,7 @@
     set('co-name', co.name); set('co-n', co.n); set('co-n2', co.n); set('co-rate', rate);
     set('co-gross', fmt(gross)); set('co-free', fmt(rate)); set('co-total', fmt(total)); set('co-pay', fmt(total));
     set('co-due', dueLabel(co.h)); set('co-due2', dueLabel(co.h));
-    set('co-start', co.h === 24 ? 'within 2 hours' : 'today');
+    set('co-start', co.h === 24 ? 'within 2 hours' : 'within 24 hours');
     document.getElementById('co-min').hidden = sub >= MIN;
     document.querySelectorAll('.speed-tab').forEach(t => { const on = +t.dataset.h === co.h; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); });
     const row = document.getElementById('co-total-row');
@@ -1170,21 +1171,28 @@
     document.body.classList.add('on-checkout');
     document.getElementById('co-page').setAttribute('aria-hidden','false');
     document.getElementById('co-page').scrollTop = 0;
-    if (location.hash !== '#checkout') history.pushState(null, '', '#checkout');
+    if (location.hash !== '#checkout') { history.pushState(null, '', '#checkout'); pushedCheckout = true; }
     renderCheckout();
   }
   function closeCheckoutView(){
     document.body.classList.remove('on-checkout');
     document.getElementById('co-page').setAttribute('aria-hidden','true');
   }
-  function leaveCheckout(){ if (location.hash === '#checkout') history.back(); else closeCheckoutView(); }
+  let pushedCheckout = false;
+  function leaveCheckout(){
+    if (pushedCheckout && location.hash === '#checkout') { pushedCheckout = false; history.back(); return; }
+    if (location.hash === '#checkout') history.replaceState(null, '', location.pathname + location.search);
+    closeCheckoutView();
+  }
   function confirmPay(){
+    if (location.hash === '#checkout') history.replaceState(null, '', location.pathname + location.search + '#done');
     document.getElementById('co-form').style.display = 'none';
     document.getElementById('co-done').style.display = 'block';
     document.getElementById('co-title').textContent = 'Order confirmed';
   }
   window.addEventListener('popstate', () => { if (location.hash === '#checkout') openCheckout(); else closeCheckoutView(); });
-  if (location.hash === '#checkout') openCheckout();
+  // #co-page sits after this script, so wait for the DOM before opening on a direct #checkout link
+  document.addEventListener('DOMContentLoaded', () => { if (location.hash === '#checkout') openCheckout(); });
 
   // ── Inline onboarding overlay ──────────────────────────────────
   function openOnboarding(url) {
@@ -1291,7 +1299,7 @@
         <div class="co-lines">
           <div class="co-line"><span><span id="co-n2">16</span> slides × $<span id="co-rate">25</span></span><b>$<span id="co-gross">400</span></b></div>
           <div class="co-line free"><span>1 slide free</span><b>−$<span id="co-free">25</span></b></div>
-          <div class="co-line" id="co-min" hidden><span>Minimum order</span><b>$149</b></div>
+          <div class="co-line" id="co-min" hidden><span>Minimum order applied</span><b>$149</b></div>
         </div>
         <div class="pay-total" id="co-total-row"><span>Total</span><span>$<span id="co-total">375</span></span></div>
         <div class="pay-trust">
