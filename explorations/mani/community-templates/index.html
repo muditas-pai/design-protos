@@ -175,6 +175,12 @@
   .shc-dl .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .shc-note { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t2); padding: 10px 12px; border-radius: 6px; background: var(--bg2); }
   .shc-note .link { margin-left: auto; white-space: nowrap; }
+  .shc-top .shc-live em { font-style: normal; color: var(--t3); font-weight: 400; margin-left: 4px; }
+  .shc-chg { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 6px; background: #FFF8E6; box-shadow: inset 0 0 0 1px #F5D98B; }
+  .shc-chg > i { font-size: 20px; color: #B7791F; } .shc-chg > div { flex: 1; display: flex; flex-direction: column; } .shc-chg b { font-weight: 500; } .shc-chg span { font-size: 13px; color: var(--t2); }
+  .shc-ok { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 6px; background: #ECFDF3; color: #067647; font-weight: 500; } .shc-ok i { font-size: 18px; }
+  .shc-ver { display: flex; flex-direction: column; } .shc-ver > div { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 13px; } .shc-ver > div + div { border-top: 1px solid var(--line); }
+  .shc-ver .vn { width: 32px; font-weight: 500; } .shc-ver small { margin-left: auto; color: var(--t3); font-size: 12px; } .shc-ver > div:first-child span:nth-child(2) { color: var(--green); }
   .shc-danger { display: flex; align-items: center; gap: 16px; }
   .shc-danger > div { flex: 1; display: flex; flex-direction: column; gap: 2px; } .shc-danger b { font-weight: 500; } .shc-danger span { font-size: 13px; color: var(--t3); }
   .shc-red { color: var(--red); }
@@ -1254,7 +1260,7 @@ function openModal(inner, { width, onClose = () => go('editor'), plain = false, 
 function closeModal() { $('#modal-root').innerHTML = ''; }
 
 function stepHead(title, backTo) {
-  const list = (S._firstTime ? ['profile-setup'] : []).concat(['mask', 'details'], S.publishAs === 'team' && (!S.company.on || ROUTE === 'team-claim') ? ['team-claim'] : []);
+  const list = S._upd === 'details' ? ['details'] : S._upd ? ['mask', 'details'] : (S._firstTime ? ['profile-setup'] : []).concat(['mask', 'details'], S.publishAs === 'team' && (!S.company.on || ROUTE === 'team-claim') ? ['team-claim'] : []);
   const idx = list.indexOf(ROUTE);
   return `<div class="f-head">
     ${backTo ? `<button class="back" data-go="${backTo}" aria-label="Back"><i class="ph ph-arrow-left"></i></button>` : ''}
@@ -1350,17 +1356,22 @@ function renderShare() {
 const shareNav = on => [['', 'ph-download-simple', 'Export to Powerpoint'], ['', 'ph-user-plus', 'Invite to collaborate'], ['share', 'ph-share-fat', 'Share externally'], ['share-community', 'ph-slideshow', 'Publish to Community']]
   .map(([r, i, l]) => `<button class="${r === on ? 'on' : ''}" ${r && r !== on ? `data-go="${r}"` : ''}><i class="ph ${i}"></i>${l}</button>`).join('');
 
+const updClose = () => { if (S._upd) { S._upd = null; save(); go('share-community'); } else go('editor'); };
+const publishUpdate = () => { S.version = (S.version || 1) + 1; S.updatedAt = Date.now(); S.slidesChanged = false; S._upd = null; save(); };
+const shortDate = ts => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
 /* Share modal · Publish to Community tab: manage a live template (edit details, unpublish) or start publishing */
 function renderShareCommunity() {
   const t = S.tpl, pub = S.published;
-  const st = S._shc || (S._shc = { edit: false, confirm: false, title: t.title, desc: t.desc, cat: t.cat, tags: t.tags.join(', ') });
+  const st = S._shc || (S._shc = { confirm: false });
   const by = S.publishAs === 'team' ? S.company.name : P().name;
   const stats = [['Views', viewsOf({ uses: S.uses })], ['Uses', S.uses], ['Sign ups', S.signups.length], ['Credits earned', (S.signups.length * 200).toLocaleString()]];
   const body = pub ? `
+    ${ROUTE === 'share-updated' ? `<div class="pad"><div class="shc-ok"><i class="ph-fill ph-check-circle"></i>Update is live. Community now shows version ${S.version}.</div></div>` : ''}
     <div class="pad shc-top">
       <img src="${KPI[0].src}" alt="">
       <div><b>${esc(t.title)}</b><span>${esc(t.cat)} · by ${esc(by)}</span>
-        <span class="shc-live"><span class="live-dot"><i></i></span>Live on Community</span></div>
+        <span class="shc-live"><span class="live-dot"><i></i></span>Live on Community<em>· Version ${S.version || 1}</em></span></div>
       <button class="btn btn-outline btn-sm" data-go="template"><i class="ph ph-arrow-square-out"></i>View</button>
     </div>
     <div class="pad"><div class="mg-stats">${stats.map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div></div>
@@ -1368,22 +1379,21 @@ function renderShareCommunity() {
       <input class="input" value="https://${tplUrl()}" readonly style="flex:1;height:40px">
       <button class="btn btn-outline" id="shc-copy"><i class="ph ph-copy"></i>Copy link</button>
     </div>
+    ${S.slidesChanged ? `<div class="pad"><div class="shc-chg"><i class="ph ph-pencil-line"></i><div><b>You edited this deck after publishing</b><span>Community still shows version ${S.version || 1}. Publish an update to replace it.</span></div><button class="btn btn-primary btn-sm" id="shc-update">Review and update</button></div></div>` : ''}
     <div class="divider"></div>
     <div class="pad shc-det">
-      <div class="shc-h"><b>Template details</b>${st.edit ? '' : '<button class="link" id="shc-edit"><i class="ph ph-pencil-simple"></i>Edit</button>'}</div>
-      ${st.edit ? `
-        <div class="field"><label class="label">Title</label><input class="input" id="shc-title" value="${esc(st.title)}" maxlength="60"></div>
-        <div class="field"><label class="label">Description</label><textarea class="input" id="shc-desc" rows="4">${esc(st.desc)}</textarea></div>
-        <div class="field"><label class="label">Category</label><div class="tags">${GALLERY_CATS.map(c => `<button class="chip sm ${st.cat === c ? 'on' : ''}" data-scat="${c}">${c}</button>`).join('')}</div></div>
-        <div class="field"><label class="label">Tags</label><input class="input" id="shc-tags" value="${esc(st.tags)}" placeholder="Comma separated"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-outline" id="shc-cancel">Cancel</button><button class="btn btn-primary" id="shc-save">Save changes</button></div>` : `
-        <dl class="shc-dl">
-          <dt>Title</dt><dd>${esc(t.title)}</dd>
-          <dt>Description</dt><dd class="clamp">${esc(t.desc)}</dd>
-          <dt>Category</dt><dd>${esc(t.cat)}</dd>
-          <dt>Tags</dt><dd>${t.tags.map(x => `<span class="pill">${esc(x)}</span>`).join(' ') || '<span style="color:var(--t3)">None</span>'}</dd>
-        </dl>
-        <div class="shc-note"><i class="ph ph-info"></i>Changes to the slides go live when you publish an update.<button class="link" id="shc-update">Publish update</button></div>`}
+      <div class="shc-h"><b>Template details</b><button class="link" id="shc-edit"><i class="ph ph-pencil-simple"></i>Edit</button></div>
+      <dl class="shc-dl">
+        <dt>Title</dt><dd>${esc(t.title)}</dd>
+        <dt>Description</dt><dd class="clamp">${esc(t.desc)}</dd>
+        <dt>Category</dt><dd>${esc(t.cat)}</dd>
+        <dt>Tags</dt><dd>${t.tags.map(x => `<span class="pill">${esc(x)}</span>`).join(' ') || '<span style="color:var(--t3)">None</span>'}</dd>
+      </dl>
+    </div>
+    <div class="divider"></div>
+    <div class="pad shc-det">
+      <div class="shc-h"><b>Versions</b></div>
+      <div class="shc-ver">${Array.from({ length: S.version || 1 }, (_, i) => (S.version || 1) - i).map((v, i) => `<div><span class="vn">v${v}</span><span>${i === 0 ? 'Live now' : 'Replaced'}</span><small>${v === 1 ? 'Published' : 'Updated'} ${shortDate(i === 0 ? (S.updatedAt || S.publishedAt) : v === 1 ? S.publishedAt : S.publishedAt + v * 864e5 / 3)}</small></div>`).join('')}</div>
     </div>
     <div class="divider"></div>
     <div class="pad">
@@ -1417,22 +1427,12 @@ function renderShareCommunity() {
     </div>`);
   const rr = () => { const sc = $('.share-main').scrollTop; renderShareCommunity(); $('.share-main').scrollTop = sc; };
   $('#shc-copy') && ($('#shc-copy').onclick = () => toast('Template link copied'));
-  $('#shc-edit') && ($('#shc-edit').onclick = () => { st.edit = true; st.confirm = false; rr(); });
-  $('#shc-cancel') && ($('#shc-cancel').onclick = () => { S._shc = null; rr(); });
-  $('#shc-title') && ($('#shc-title').oninput = e => { st.title = e.target.value; });
-  $('#shc-desc') && ($('#shc-desc').oninput = e => { st.desc = e.target.value; });
-  $('#shc-tags') && ($('#shc-tags').oninput = e => { st.tags = e.target.value; });
-  $$('[data-scat]').forEach(b => b.onclick = () => { st.cat = b.dataset.scat; $$('[data-scat]').forEach(x => x.classList.toggle('on', x === b)); });
-  $('#shc-save') && ($('#shc-save').onclick = () => {
-    if (!st.title.trim()) { $('#shc-title').style.boxShadow = 'inset 0 0 0 1px var(--red)'; $('#shc-title').focus(); return; }
-    t.title = st.title.trim(); t.desc = st.desc.trim(); t.cat = st.cat; t.tags = st.tags.split(',').map(x => x.trim()).filter(Boolean);
-    S._shc = null; save(); toast('Template updated on Community'); rr();
-  });
-  $('#shc-update') && ($('#shc-update').onclick = () => { S._shc = null; S._firstTime = false; go('mask'); });
-  $('#shc-unpub') && ($('#shc-unpub').onclick = () => { st.confirm = true; st.edit = false; rr(); });
+  $('#shc-edit') && ($('#shc-edit').onclick = () => { S._upd = 'details'; save(); go('details'); });
+  $('#shc-update') && ($('#shc-update').onclick = () => { S._upd = 'slides'; S._firstTime = false; save(); go('mask'); });
+  $('#shc-unpub') && ($('#shc-unpub').onclick = () => { st.confirm = true; rr(); });
   $('#shc-no') && ($('#shc-no').onclick = () => { st.confirm = false; rr(); });
   $('#shc-yes') && ($('#shc-yes').onclick = () => { S.published = false; S._shc = null; save(); toast('Template unpublished', 'ph ph-eye-slash'); renderShareCommunity(); renderFlow(); });
-  $('#shc-publish') && ($('#shc-publish').onclick = () => { S._shc = null; S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); });
+  $('#shc-publish') && ($('#shc-publish').onclick = () => { S._shc = null; S._upd = null; S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1832,7 +1832,7 @@ function renderMask() {
   const SPOT = { client: [3, 81, 30, 9], logo: [70, 4, 26, 12], revenue: [6, 22, 40, 16], team: [55, 70, 38, 12], quote: [8, 60, 50, 12] };
   const ICON = { client: 'ph-buildings', logo: 'ph-image-square', revenue: 'ph-currency-dollar', team: 'ph-users-three', quote: 'ph-quotes' };
   openModal(`
-    ${stepHead('Before publishing, mask sensitive data', S._firstTime ? 'profile-setup' : 'share')}
+    ${S._upd ? stepHead('Check the new slides for sensitive data', 'share-community') : stepHead('Before publishing, mask sensitive data', S._firstTime ? 'profile-setup' : 'share')}
     <div class="card" style="width:1112px">
       <div class="mk">
         <div class="mk-left">
@@ -1852,7 +1852,7 @@ function renderMask() {
         <button class="link" id="mask-skip" style="color:var(--t3);font-weight:400">Skip, publish without masking</button>
         <button class="btn btn-primary btn-lg" id="mask-continue"></button>
       </div>
-    </div>`, { height: 600 });
+    </div>`, { height: 600, onClose: updClose });
 
   let viewSlide = (MASK_META.find(m => m.key === S.maskSel) || MASK_META[0]).slide;
   const count = () => MASK_META.filter(m => S.mask[m.key].on).length;
@@ -1922,7 +1922,7 @@ function renderMask() {
 function renderDetails() {
   const t = S.tpl;
   openModal(`
-    ${stepHead('Confirm Template details', 'mask')}
+    ${S._upd ? stepHead('Update template details', S._upd === 'details' ? 'share-community' : 'mask') : stepHead('Confirm Template details', 'mask')}
     <div class="card" style="width:1112px">
       <div class="details">
         <div class="stack"><div class="stack-in"><div class="g g1"></div><div class="g g2"></div><div class="g g3"></div>${img(KPI[0].src)}</div></div>
@@ -1943,10 +1943,10 @@ function renderDetails() {
         </div>
       </div>
       <div class="f-foot">
-        <span class="note"><i class="ph ph-lock-simple"></i>Your deck and its live link stay private</span>
-        <button class="btn btn-primary btn-lg" id="d-publish" style="min-width:96px" ${t.title.trim() ? '' : 'disabled'}>${S.publishAs === 'team' && !S.company.on ? 'Claim page and publish' : 'Publish'}</button>
+        <span class="note"><i class="ph ${S._upd ? 'ph-info' : 'ph-lock-simple'}"></i>${S._upd ? 'People who already used it keep their copy' : 'Your deck and its live link stay private'}</span>
+        <button class="btn btn-primary btn-lg" id="d-publish" style="min-width:96px" ${t.title.trim() ? '' : 'disabled'}>${S._upd ? 'Publish update' : S.publishAs === 'team' && !S.company.on ? 'Claim page and publish' : 'Publish'}</button>
       </div>
-    </div>`, { height: 600 });
+    </div>`, { height: 600, onClose: updClose });
 
   const drawTags = () => {
     $('#d-tags').innerHTML = t.tags.map((g, i) => `<span class="chip">${esc(g)}<button class="x" data-rm="${i}" aria-label="Remove ${esc(g)}"><i class="ph ph-x"></i></button></span>`).join('') + (t.tags.length < 5 ? '<input id="tag-in" placeholder="+  Add tag" maxlength="20">' : '');
@@ -1965,6 +1965,11 @@ function renderDetails() {
   $('#d-editp') && ($('#d-editp').onclick = () => renderPageModal({ edit: true }));
   $$('[data-as]').forEach(b => b.onclick = () => { S.publishAs = b.dataset.as; save(); renderDetails(); });
   $('#d-publish').onclick = () => {
+    if (S._upd) {
+      const b = $('#d-publish'); b.innerHTML = '<span class="spin"></span>Updating'; b.disabled = true;
+      later(() => { if (!$('#d-publish')) return; publishUpdate(); go('share-updated'); }, 1000);
+      return;
+    }
     if (S.publishAs === 'team' && !S.company.on) { go('team-claim'); return; }
     const b = $('#d-publish');
     b.innerHTML = '<span class="spin"></span>Publishing'; b.disabled = true;
@@ -3217,7 +3222,7 @@ function renderCreator() {
    ═══════════════════════════════════════════════════════════ */
 const ROUTES = [
   ['A · Page first', [['dashboard', 'Dashboard'], ['community', 'Community page'], ['create-page', 'Create page'], ['my-page', 'Your page']]],
-  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['share-community', 'Community tab'], ['profile-setup', 'Create page'], ['team-claim', 'Claim team page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile'], ['manage', 'Manage template']]],
+  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['share-community', 'Community tab'], ['share-updated', 'Update live'], ['profile-setup', 'Create page'], ['team-claim', 'Claim team page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile'], ['manage', 'Manage template']]],
   ['Visitor signs up', [['template', 'Template link'], ['login', 'Sign up'], ['role', 'Role'], ['context', 'Your context'], ['generating', 'Generating'], ['present', 'Present'], ['visitor-editor', '200 credits']]],
   ['Rewards', [['notifs', 'Notifications'], ['rewards', 'Rewards'], ['redeem', 'Redeem cash']]],
   ['Creators', [['creator', 'Creator page']]],
@@ -3225,7 +3230,7 @@ const ROUTES = [
   ['Refer a friend', [['refer', 'Refer & earn'], ['ref-login', 'Friend signs up'], ['ref-setup', 'Select role'], ['ref-home', 'Friend gets 200'], ['ref-upgrade', 'Friend upgrades'], ['refer-joined', 'You see it'], ['refer-paid', 'You get 10%']]],
 ];
 const FLAT = ROUTES.flatMap(g => g[1].map(r => r[0]));
-const MODAL_ROUTES = ['share', 'share-community', 'profile-setup', 'mask', 'details', 'live', 'create-page', 'team-claim', 'ws-claim', 'redeem', 'manage'];
+const MODAL_ROUTES = ['share', 'share-community', 'share-updated', 'profile-setup', 'mask', 'details', 'live', 'create-page', 'team-claim', 'ws-claim', 'redeem', 'manage'];
 let ROUTE = 'editor';
 
 function ensurePrereqs(r) {
@@ -3239,7 +3244,10 @@ function ensurePrereqs(r) {
   if (needsPublish && !S.published) { S.published = true; S.publishedAt = Date.now(); }
   if (r === 'template') S._credited = false;   // a new visitor journey starts at the link
   if (r === 'redeem') S._pay = null;
-  if (r === 'share-community') S._shc = null;
+  if (r === 'share-community' || r === 'share-updated') { S._shc = null; if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft)); if (!S.published) { S.published = true; S.publishedAt = Date.now() - 2 * 864e5; } }
+  if (r === 'share-updated' && !S.updatedAt) publishUpdate();
+  if (S.journey === 'm' && S.published && (r === 'mask' || r === 'details') && !S._upd) S._upd = r === 'details' && !S.slidesChanged ? 'details' : 'slides';
+  if (['editor', 'share', 'live', 'gallery'].includes(r) || (S.journey !== 'm' && !['mask', 'details', 'team-claim'].includes(r))) S._upd = null;
   if (S.journey === 'c' && (r === 'gallery' || r === 'creator')) {
     if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft));
     if (!S.published) { S.published = true; S.publishedAt = Date.now(); }
@@ -3264,7 +3272,7 @@ function renderRoute() {
   const r = ROUTE;
   if (MODAL_ROUTES.includes(r)) {
     if (r === 'manage' && S._mgFrom === 'rewards') renderRewards(); else if (r === 'manage' && S._mgFrom === 'profile') renderProfile(); else if (r === 'create-page' || r === 'manage') renderCommunity(); else if (r === 'ws-claim') renderWsSettings(); else if (r === 'redeem') renderRewards(); else renderPublisherEditor();
-    ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'share-community': renderShareCommunity, 'profile-setup': () => renderPageModal({ from: 'share' }), 'team-claim': () => renderClaimModal({ from: 'share' }), 'ws-claim': () => renderClaimModal({ from: 'settings' }), redeem: () => renderPayout({ redeem: true }), manage: renderManage, mask: renderMask, details: renderDetails, live: renderLive })[r]();
+    ({ 'create-page': () => renderPageModal({ from: 'dashboard', edit: !!S.profile }), share: renderShare, 'share-community': renderShareCommunity, 'share-updated': renderShareCommunity, 'profile-setup': () => renderPageModal({ from: 'share' }), 'team-claim': () => renderClaimModal({ from: 'share' }), 'ws-claim': () => renderClaimModal({ from: 'settings' }), redeem: () => renderPayout({ redeem: true }), manage: renderManage, mask: renderMask, details: renderDetails, live: renderLive })[r]();
   } else {
     closeModal();
     ({ dashboard: renderDashboard, community: renderCommunity, 'my-page': renderCommunity, editor: renderPublisherEditor, profile: renderProfile, template: renderTemplate, login: renderLogin, role: renderRole, context: renderContext, generating: renderGenerating, present: renderPresent, 'visitor-editor': renderVisitorEditor, rewards: renderRewards,
@@ -3302,9 +3310,9 @@ const JOURNEYS = [
     steps: ['dashboard', 'community', 'create-page', 'my-page', 'editor', 'share', 'mask', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
   { id: 'b', group: 'me', label: 'No page · from Share', hint: 'Publish from Share, create the page on the way', fresh: true,
     steps: ['editor', 'share', 'profile-setup', 'mask', 'details', 'live', 'gallery', 'template', 'profile'] },
-  { id: 'm', group: 'me', label: 'Edit or unpublish', hint: 'Template is live. Edit it or unpublish from the Publish to Community tab in Share', fresh: true,
-    init: s => { s.profile = JSON.parse(JSON.stringify(s.draft)); s.published = true; s.publishedAt = Date.now() - 2 * 864e5; s.uses = 38; s.signups = [{ who: 'Priya Raman', via: 'Google', role: 'Sales', at: Date.now() - 6e5 }, { who: 'Ken Ito', via: 'Email', role: 'Finance', at: Date.now() - 9e6 }]; },
-    steps: ['editor', 'share', 'share-community', 'template'] },
+  { id: 'm', group: 'me', label: 'Edit or unpublish', hint: 'Template is live and you edited the deck. Update it, edit details or unpublish from the Publish to Community tab in Share', fresh: true,
+    init: s => { s.slidesChanged = true; s.profile = JSON.parse(JSON.stringify(s.draft)); s.published = true; s.publishedAt = Date.now() - 2 * 864e5; s.uses = 38; s.signups = [{ who: 'Priya Raman', via: 'Google', role: 'Sales', at: Date.now() - 6e5 }, { who: 'Ken Ito', via: 'Email', role: 'Finance', at: Date.now() - 9e6 }]; },
+    steps: ['editor', 'share', 'share-community', 'mask', 'details', 'share-updated', 'template'] },
   { id: 'v', group: 'other', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['gallery', 'template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
   { id: 'r', group: 'other', label: 'Rewards', hint: 'Notifications, then Rewards in Settings, redeem to PayPal or bank', init: s => { s.plan = 'pro'; }, steps: ['notifs', 'rewards', 'redeem'] },
