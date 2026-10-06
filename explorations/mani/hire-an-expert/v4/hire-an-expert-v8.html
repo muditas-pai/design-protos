@@ -811,6 +811,37 @@
   .ck-line.total b{font-weight:600}
   .ck-inc{font-size:13px;font-weight:500;color:#525252;margin-left:-16px}
   @media (max-width:420px){.ck-opt{font-size:12.5px;gap:5px}.ck-amt{font-size:38px}}
+
+  /* upload job card (shown instead of the dropzone while uploading) */
+  .up-job{display:none;padding:22px 22px 18px;border-radius:10px;background:#fff;border:1px solid rgba(10,25,37,.12);box-shadow:0 1px 2px rgba(10,25,37,.04),0 14px 34px -18px rgba(10,25,37,.3);text-align:left}
+  .up-card.busy .up-drop{display:none}
+  .up-card.busy .up-job{display:block;animation:tlFade .3s cubic-bezier(.22,1,.36,1) both}
+  .uj-row{display:flex;align-items:center;gap:14px}
+  .uj-fi{width:46px;height:46px;border-radius:8px;display:grid;place-items:center;font-size:24px;flex:none;background:#fff4f0;color:#d24726}
+  .uj-fi.pdf{background:#fdecec;color:#e5252a}.uj-fi.key{background:#eaf2ff;color:#1a7cf5}.uj-fi.zip{background:#f1edff;color:#7a5af8}
+  .uj-meta{flex:1;min-width:0}
+  .uj-meta b{display:block;font-size:15px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .uj-meta small{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);margin-top:2px;font-variant-numeric:tabular-nums}
+  .uj-meta small i{font-size:15px}
+  .uj-meta small .ok{color:var(--success)}
+  .uj-meta small .spin{animation:spin 1s linear infinite;color:var(--navy)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .uj-pct{font-size:14px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
+  .uj-x{width:32px;height:32px;border-radius:999px;border:0;background:none;display:grid;place-items:center;cursor:pointer;color:var(--ink3);font-size:16px;flex:none}
+  .uj-x:hover{background:var(--selected);color:var(--ink)}
+  .uj-bar{height:6px;border-radius:999px;background:#e8edf3;margin-top:16px;overflow:hidden}
+  .uj-bar i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#1f3a5f,var(--navy))}
+  .up-card.done .uj-bar i{background:var(--success)}
+  .uj-steps{list-style:none;display:flex;gap:18px;margin-top:14px;font-size:12.5px;color:var(--ink3)}
+  .uj-steps li{display:inline-flex;align-items:center;gap:6px}
+  .uj-steps span{width:8px;height:8px;border-radius:999px;background:#d5dbe3;transition:background .2s ease}
+  .uj-steps li.on{color:var(--ink)}
+  .uj-steps li.on span{background:var(--navy);box-shadow:0 0 0 3px rgba(10,25,37,.12)}
+  .uj-steps li.done{color:var(--ink2)}
+  .uj-steps li.done span{background:var(--success)}
+  /* idle dropzone polish */
+  .up-ic{width:48px;height:48px;border-radius:999px;display:grid!important;place-items:center;background:var(--selected);color:var(--navy);font-size:22px;margin:0 auto 14px;transition:transform .2s ease,background .2s ease}
+  .up-drop:hover .up-ic,.up-drop.is-drag .up-ic{transform:translateY(-3px);background:#e3ebf7}
   #co-page{display:none;position:fixed;inset:0;z-index:70;overflow:auto;background:linear-gradient(180deg,#d6e4ff 0,#e9f1ff 300px,#f5f7fb 560px)}
   body.on-checkout{overflow:hidden}
   body.on-checkout #co-page{display:block}
@@ -941,15 +972,24 @@
           <div class="up-meta">Supported formats: .pptx, .pdf, .key, .zip</div>
           <div class="up-meta">One file, up to 200 MB</div>
         </div>
-        <div class="up-busy">
-          <span class="fi"><i class="ph-fill ph-file-ppt"></i></span>
-          <div class="meta">
-            <b id="up-name">Deck.pptx</b><small id="up-status">Uploading…</small>
-            <div class="upbar"><i id="up-bar"></i></div>
-          </div>
-          <span class="up-pct" id="up-pct">0%</span>
-        </div>
       </label>
+      <div class="up-job" id="up-job" aria-live="polite">
+        <div class="uj-row">
+          <span class="uj-fi" id="up-fi"><i class="ph-fill ph-file-ppt"></i></span>
+          <div class="uj-meta">
+            <b id="up-name">Deck.pptx</b>
+            <small id="up-status">Uploading…</small>
+          </div>
+          <span class="uj-pct" id="up-pct">0%</span>
+          <button type="button" class="uj-x" id="up-cancel" aria-label="Cancel upload"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="uj-bar"><i id="up-bar"></i></div>
+        <ol class="uj-steps" id="uj-steps">
+          <li data-s="up"><span></span>Upload</li>
+          <li data-s="read"><span></span>Read slides</li>
+          <li data-s="go"><span></span>Checkout</li>
+        </ol>
+      </div>
     </div>
     <p class="up-pick">or <button type="button" id="open-pres">choose from your existing presentations</button></p>
     <div class="up-trust">
@@ -1407,23 +1447,53 @@
   const co = { name:'', n:16, h:72 };
   const upBox = document.getElementById('up-box'), upInput = document.getElementById('up-input');
   // name/n can be passed for decks picked from "Your presentations" or a Slides link
-  function startUpload(file, name, n){
-    if (upBox.classList.contains('busy')) return;
-    co.name = name || (file ? file.name : 'Quarterly Review.pptx');
-    // Prototype: slide count estimated from file size (real product reads it from the file)
-    co.n = n || (file ? Math.min(60, Math.max(5, Math.round(file.size / 400000) || 12)) : 16);
-    document.getElementById('up-name').textContent = co.name;
-    document.getElementById('up-status').textContent = file ? 'Uploading…' : 'Importing…';
-    const bar = document.getElementById('up-bar'), pct = document.getElementById('up-pct');
-    bar.style.width = '0'; pct.textContent = '0%';
-    upBox.classList.add('busy');
-    upBox.scrollIntoView({ behavior:'smooth', block:'center' });
-    requestAnimationFrame(() => requestAnimationFrame(() => bar.style.width = '100%'));
-    const t0 = performance.now();
-    (function tick(t){ const p = Math.min(100, Math.round((t - t0) / 13)); pct.textContent = p + '%'; if (p < 100) requestAnimationFrame(tick); })(t0);
-    setTimeout(() => { document.getElementById('up-status').innerHTML = '<i class="ph-fill ph-check-circle"></i>' + co.n + ' slides found'; }, 1300);
-    setTimeout(() => { upBox.classList.remove('busy'); upInput.value = ''; openCheckout(); }, 1900);
+  const upCard = upBox.closest('.up-card');
+  let upTimers = [], upRaf = 0;
+  const mb = b => (b / 1048576).toFixed(1) + ' MB';
+  function upStep(k){
+    const order = ['up','read','go'];
+    document.querySelectorAll('#uj-steps li').forEach(li => {
+      const i = order.indexOf(li.dataset.s), at = order.indexOf(k);
+      li.classList.toggle('done', i < at); li.classList.toggle('on', i === at);
+    });
   }
+  function resetUpload(){
+    upTimers.forEach(clearTimeout); upTimers = []; cancelAnimationFrame(upRaf);
+    upCard.classList.remove('busy','done'); upInput.value = '';
+  }
+  function startUpload(file){
+    if (upCard.classList.contains('busy')) return;
+    co.name = file ? file.name : 'Quarterly Review.pptx';
+    // Prototype: slide count estimated from file size (real product reads it from the file)
+    co.n = file ? Math.min(60, Math.max(5, Math.round(file.size / 400000) || 12)) : 16;
+    const size = file ? file.size : 4.2 * 1048576;
+    const ext = (co.name.split('.').pop() || '').toLowerCase();
+    const fi = document.getElementById('up-fi');
+    fi.className = 'uj-fi ' + (ext === 'pdf' ? 'pdf' : ext === 'key' ? 'key' : ext === 'zip' ? 'zip' : '');
+    fi.innerHTML = '<i class="ph-fill ' + (ext === 'pdf' ? 'ph-file-pdf' : ext === 'key' ? 'ph-presentation' : ext === 'zip' ? 'ph-file-zip' : 'ph-file-ppt') + '"></i>';
+    document.getElementById('up-name').textContent = co.name;
+    const status = document.getElementById('up-status'), bar = document.getElementById('up-bar'), pct = document.getElementById('up-pct');
+    bar.style.width = '0'; pct.textContent = '0%'; pct.style.visibility = '';
+    upCard.classList.add('busy'); upStep('up');
+    upCard.scrollIntoView({ behavior:'smooth', block:'center' });
+    const dur = 1600, t0 = performance.now();
+    (function tick(t){
+      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 2);
+      bar.style.width = (e * 100) + '%'; pct.textContent = Math.round(e * 100) + '%';
+      status.textContent = 'Uploading · ' + mb(size * e) + ' of ' + mb(size);
+      if (p < 1) upRaf = requestAnimationFrame(tick);
+      else {
+        upStep('read'); pct.style.visibility = 'hidden';
+        status.innerHTML = '<i class="ph-bold ph-circle-notch spin"></i>Reading your slides…';
+        upTimers.push(setTimeout(() => {
+          upCard.classList.add('done'); upStep('go');
+          status.innerHTML = '<i class="ph-fill ph-check-circle ok"></i>' + co.n + ' slides found · opening checkout';
+        }, 900));
+        upTimers.push(setTimeout(() => { resetUpload(); openCheckout(); }, 1700));
+      }
+    })(t0);
+  }
+  document.getElementById('up-cancel').addEventListener('click', resetUpload);
   upInput.addEventListener('change', () => { if (upInput.files[0]) startUpload(upInput.files[0]); });
 
   // Drop on the card, or anywhere on the page
@@ -1439,7 +1509,7 @@
   window.addEventListener('drop', e => {
     if (!hasFiles(e)) return;
     e.preventDefault(); dragDepth = 0; pageDrop.classList.remove('on'); upBox.classList.remove('is-drag');
-    if (!document.body.classList.contains('on-checkout') && e.dataTransfer.files[0]) startUpload(e.dataTransfer.files[0]);
+    if (!document.body.classList.contains('on-checkout') && !upCard.classList.contains('busy') && e.dataTransfer.files[0]) startUpload(e.dataTransfer.files[0]);
   });
 
   // Modal markup sits after this script, so wire it up once the DOM is ready
@@ -1479,7 +1549,9 @@
   pmGo.addEventListener('click', () => {
     if (!pmSel) return;
     closePres();
-    startUpload(null, pmSel.dataset.name, +pmSel.dataset.n);
+    // Already in their account, so no upload: go straight to checkout
+    co.name = pmSel.dataset.name; co.n = +pmSel.dataset.n;
+    openCheckout();
   });
   });
 
