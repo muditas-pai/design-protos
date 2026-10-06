@@ -109,6 +109,21 @@
   .about .h2 { margin-top: 26px; }
   .about .body { margin-top: 30px; }
 
+  /* ---------- flow: video stage + 3 progress tabs ---------- */
+  .flow-stage { position: relative; aspect-ratio: 1334 / 641; overflow: hidden; background: url("assets/flow-bg.jpg") center / cover no-repeat; }
+  /* videos are 1436x690 with a transparent surround; at ~101% width the screen lands at the Figma mock's size */
+  .flow-stage video { position: absolute; left: 50%; top: 50%; width: 101.2%; height: auto; transform: translate(-50%, -50%); opacity: 0; transition: opacity .4s ease; pointer-events: none; }
+  .flow-stage video.is-active { opacity: 1; }
+  .flow-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+  .flow-tab { display: flex; flex-direction: column; justify-content: space-between; gap: 32px; padding: 33px 0 0; text-align: left; }
+  .flow-tab + .flow-tab { border-left: 1px solid var(--line); }
+  .flow-tab .copy { padding: 0 13px; max-width: 326px; }
+  .flow-tab b { display: block; font-size: 14px; line-height: 21px; font-weight: 500; color: rgba(0,0,0,.75); text-transform: capitalize; }
+  .flow-tab span { display: block; margin-top: 2px; font-size: 14px; line-height: 21px; color: rgba(0,0,0,.5); transition: color .15s ease; }
+  .flow-tab:hover span, .flow-tab.is-active span { color: rgba(0,0,0,.62); }
+  .flow-track { height: 6px; background: #f9f9f9; overflow: hidden; }
+  .flow-fill { height: 100%; width: 0; background: linear-gradient(90deg, #0a1bd0 0%, #2a3ff5 55%, #c9cffd 100%); }
+
   /* ---------- product suite ---------- */
   .cards { display: grid; grid-template-columns: repeat(3, 1fr); }
   .card { display: flex; flex-direction: column; padding: 28px 24px 24px; border-top: 1px solid var(--line); }
@@ -291,6 +306,11 @@
     .marquee { max-width: 100%; width: 100%; }
     .cols-2, .cards, .badges, .problems, .ent { grid-template-columns: 1fr; }
     .cols-2 > * + *, .card:not(:nth-child(3n+1)), .badge + .badge, .problem + .problem, .ent > div + div { border-left: 0; border-top: 1px solid var(--line); }
+    .flow-stage { aspect-ratio: 3 / 2; }
+    .flow-stage video { width: 160%; }   /* screen fills ~96% of the stage width */
+    .flow-tabs { grid-template-columns: 1fr; }
+    .flow-tab + .flow-tab { border-left: 0; border-top: 1px solid var(--line); }
+    .flow-tab { padding-top: 24px; gap: 24px; }
     .badge { min-height: 0; padding: 32px 24px; }
     .section-head { padding: 56px 24px 48px; }
     .solution { height: auto; padding-bottom: 400px; }
@@ -315,6 +335,7 @@
   @media (max-width: 420px) { .nav .login { display: none; } }
   @media (prefers-reduced-motion: reduce) {
     .marquee-track { animation: none; }
+    .flow-fill { display: none; }
     html { scroll-behavior: auto; }
     * { transition: none !important; }
   }
@@ -382,6 +403,30 @@
         <span class="label">Team</span>
         <h2 class="h2">Built by a Team That Understands High-Stakes Presentations</h2>
         <p class="body">Presentations.AI is founded by Sumanth Raghavendra, Dhruv Saxena, Biju Abraham, Ravi Kasthuri, Saravanan Govindaraj and Ezhilkumar, and built by a 30-person team bringing two decades of enterprise software experience.</p>
+      </div>
+    </section>
+    <div class="divider"></div>
+
+    <!-- ============ FLOW: CREATE · EDIT · REFRESH ============ -->
+    <section class="flow bb" aria-label="How it works">
+      <div class="flow-stage">
+        <video src="assets/v-doc-to-deck.webm" muted playsinline preload="auto" class="is-active" aria-label="Turning a document into a deck"></video>
+        <video src="assets/v-edit-with-ai.webm" muted playsinline preload="metadata" aria-label="Editing slides with AI"></video>
+        <video src="assets/v-refresh.webm" muted playsinline preload="metadata" aria-label="Refreshing content and design"></video>
+      </div>
+      <div class="flow-tabs" role="tablist">
+        <button class="flow-tab is-active" type="button" role="tab" aria-selected="true">
+          <div class="copy"><b>Start with a document or prompt</b><span>Text, PDFs, Word docs, URLs, Google Docs, and Excel files. If you have content, there's nothing to prepare.</span></div>
+          <div class="flow-track"><div class="flow-fill"></div></div>
+        </button>
+        <button class="flow-tab" type="button" role="tab" aria-selected="false">
+          <div class="copy"><b>Edit with AI</b><span>Rewrite, expand, summarize, or change the tone. Explore alternative layouts, visuals, and diagrams with AI.</span></div>
+          <div class="flow-track"><div class="flow-fill"></div></div>
+        </button>
+        <button class="flow-tab" type="button" role="tab" aria-selected="false">
+          <div class="copy"><b>Refresh content and design</b><span>Refresh your content, tone, and visuals for a new audience. Keep your narrative and slide structure intact.</span></div>
+          <div class="flow-track"><div class="flow-fill"></div></div>
+        </button>
       </div>
     </section>
     <div class="divider"></div>
@@ -648,6 +693,40 @@
     els.forEach(e => e.classList.add('is-swapping'));
     setTimeout(() => { change(); els.forEach(e => e.classList.remove('is-swapping')); }, 180);
   };
+
+  // ---- flow: one video per tab, the tab's bottom bar tracks playback, then hand off to the next ----
+  (() => {
+    const videos = [...document.querySelectorAll('.flow-stage video')];
+    const tabs = [...document.querySelectorAll('.flow-tab')];
+    const fills = tabs.map(t => t.querySelector('.flow-fill'));
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let active = 0, inView = false, raf = 0;
+
+    const tick = () => {
+      const v = videos[active];
+      if (v.duration) fills[active].style.width = (v.currentTime / v.duration * 100) + '%';
+      raf = requestAnimationFrame(tick);
+    };
+    const play = () => { if (!inView || reduce) return; videos[active].play().catch(() => {}); cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); };
+    const pause = () => { videos[active].pause(); cancelAnimationFrame(raf); };
+
+    const select = i => {
+      pause();
+      fills.forEach(f => f.style.width = '0');
+      videos.forEach((v, j) => { v.classList.toggle('is-active', j === i); if (j !== i) v.currentTime = 0; });
+      tabs.forEach((t, j) => { t.classList.toggle('is-active', j === i); t.setAttribute('aria-selected', j === i); });
+      active = i;
+      videos[i].preload = 'auto';
+      videos[i].currentTime = 0;
+      videos[(i + 1) % videos.length].preload = 'auto';   // warm the next one
+      play();
+    };
+
+    videos.forEach((v, i) => v.addEventListener('ended', () => { if (i === active) select((i + 1) % videos.length); }));
+    tabs.forEach((t, i) => t.addEventListener('click', () => select(i)));
+    new IntersectionObserver(([e]) => { inView = e.isIntersecting; inView ? play() : pause(); }, { threshold: 0.35 })
+      .observe(document.querySelector('.flow-stage'));
+  })();
 
   // ---- dark block accordions (one open per feature) ----
   document.querySelectorAll('.acc').forEach(acc => {
