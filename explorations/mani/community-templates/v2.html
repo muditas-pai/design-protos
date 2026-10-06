@@ -1384,6 +1384,24 @@
   .sd-badge { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; margin-left: 6px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0; vertical-align: middle; cursor: default; }
   .sd-badge i { font-size: 14px; } .sd-badge.brand { background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); } .sd-badge.warn { background: rgb(254 243 199); color: rgb(180 83 9); } .sd-badge.good { background: rgb(220 252 231); color: rgb(21 128 61); }
   .sd-badge .sd-tip { left: 0; right: auto; width: 240px; white-space: normal; text-transform: none; font-weight: 500; }
+  /* v2 trust: permission tick, Deck Score gate, licence, report */
+  .mk-perm { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgb(var(--ink-2)); cursor: pointer; } .mk-perm input { width: 16px; height: 16px; accent-color: rgb(var(--brand-600)); }
+  .mk-perm[hidden] { display: none; } #mask-continue[disabled] { background: rgb(var(--sunken)); color: rgb(var(--ink-off)); box-shadow: none; cursor: not-allowed; }
+  .d-gate { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: rgb(var(--sunken)); }
+  .d-gate .ds { display: flex; gap: 10px; align-items: center; } .d-gate .sc { width: 40px; height: 40px; border-radius: 999px; background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .d-gate .ds > span:last-child { display: flex; flex-direction: column; } .d-gate b { font-weight: 600; font-size: 13px; } .d-gate small { font-size: 12px; color: rgb(var(--ink-3)); }
+  .lic { display: flex; gap: 8px; font-size: 12px; line-height: 16px; color: rgb(var(--ink-2)); } .lic i { font-size: 16px; color: rgb(var(--ink-3)); flex: none; }
+  .tp-trust { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .tp-trust .sd-badge { margin-left: 0; } .sd-badge.neutral { background: rgb(var(--sunken)); color: rgb(var(--ink-2)); }
+  .tp-trust .rep { font-size: 13px; font-weight: 400; color: rgb(var(--ink-3)); gap: 4px; } .tp-trust .rep:hover { color: rgb(185 28 28); }
+  .sd-rep .reasons { display: flex; flex-direction: column; gap: 8px; }
+  .sd-rep .reasons button { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); text-align: left; }
+  .sd-rep .reasons button.on { border-color: rgb(var(--brand-600)); background: rgb(var(--brand-50) / .5); }
+  .sd-rep .reasons .dot { width: 16px; height: 16px; border-radius: 999px; border: 2px solid var(--line); flex: none; } .sd-rep .reasons button.on .dot { border: 5px solid rgb(var(--brand-600)); }
+  .sd-rep .reasons span:last-child { display: flex; flex-direction: column; } .sd-rep small { font-size: 12px; color: rgb(var(--ink-3)); }
+  .cl-sup { margin-top: 12px; font-size: 13px; color: rgb(var(--ink-3)); text-align: center; }
+  .rf-rules2 { margin-top: 32px; padding: 16px 20px; border-radius: 12px; background: rgb(var(--sunken)); } .rf-rules2 b { font-weight: 600; }
+  .rf-rules2 ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: rgb(var(--ink-2)); }
   @media (max-width: 900px) {
     .sd-top { padding: 0 16px; } .sd-proto, .sd-search kbd { display: none; } .sd-main { padding: 24px 16px 96px; }
     .rf-hero { grid-template-columns: 1fr; } .rf-hero .a { border-right: 0; border-bottom: 1px solid var(--line); } .rf-art { display: none; }
@@ -1508,7 +1526,7 @@ const DEFAULT_STATE = () => ({
   mask: {
     client:  { on: true,  rep: 'Client Name' },
     logo:    { on: true,  rep: 'Logo' },
-    revenue: { on: true,  rep: '$0.0 ARR' },
+    revenue: { on: true,  rep: '[Revenue]' },
     team:    { on: false, rep: 'Team Member' },
     quote:   { on: true,  rep: 'Job title, company' },
   },
@@ -2331,7 +2349,7 @@ function renderMask() {
       </div>
       <div class="f-foot">
         <span class="note" id="mask-count"></span>
-        <button class="link" id="mask-skip" style="color:var(--t3);font-weight:400">Skip, publish without masking</button>
+        <label class="mk-perm" id="mk-perm" hidden><input type="checkbox" id="mk-perm-in" ${S.maskPerm ? 'checked' : ''}><span>I have permission to publish the items I’m not hiding</span></label>
         <button class="btn btn-primary btn-lg" id="mask-continue"></button>
       </div>
     </div>`, { height: 600, onClose: updClose });
@@ -2342,6 +2360,7 @@ function renderMask() {
     const n = count(), all = n === MASK_META.length;
     $('#mask-count').innerHTML = n ? `<i class="ph ph-shield-check"></i>${n} of ${MASK_META.length} hidden in the template` : '<i class="ph ph-warning" style="color:var(--amber)"></i>Nothing hidden. Everything goes out as it is.';
     $('#mask-continue').textContent = n ? `Hide ${n} item${n === 1 ? '' : 's'} and continue` : 'Continue without hiding';
+    const needPerm = n < MASK_META.length; $('#mk-perm').hidden = !needPerm; $('#mask-continue').disabled = needPerm && !S.maskPerm;
     $('#mk-all').textContent = all ? 'Show all' : 'Hide all';
   };
   const drawList = () => {
@@ -2395,7 +2414,7 @@ function renderMask() {
   drawList(); drawPreview();
   $('#mk-all').onclick = () => { const all = count() === MASK_META.length; MASK_META.forEach(m => { S.mask[m.key].on = !all; }); save(); drawList(); drawPreview(); };
   $('#mask-continue').onclick = () => { S.maskSkipped = count() === 0; save(); go('details'); };
-  $('#mask-skip').onclick = () => { S.maskSkipped = true; save(); toast('Skipped masking. Slides go out as they are.', 'ph ph-warning'); go('details'); };
+  $('#mk-perm-in').onchange = e => { S.maskPerm = e.target.checked; save(); drawFoot(); };
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2413,6 +2432,10 @@ function renderDetails() {
           <div class="field"><label class="label">Description</label><textarea class="textarea" id="d-desc" rows="3" maxlength="600">${esc(t.desc)}</textarea></div>
           <div class="field"><label class="label">Category <span class="hint">Where it shows on Community</span></label><div class="sel-wrap"><select class="input" id="d-cat">${GALLERY_CATS.map(c => `<option ${t.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select><i class="ph ph-caret-down"></i></div></div>
           <div class="field"><label class="label">Tags <span class="hint" id="d-tag-n"></span></label><div class="tags" id="d-tags"></div></div>
+          <div class="d-gate">
+            <div class="ds"><span class="sc tabular">${DECK_SCORE}</span><span><b>Deck Score ${DECK_SCORE} · will be featured</b><small>Templates scoring 75 or more are featured in the gallery.</small></span></div>
+            <div class="lic"><i class="ph ph-scroll"></i><span>Free to use and adapt, with credit to you. Unpublishing never removes copies people already made.</span></div>
+          </div>
           <div class="pub-pin">
           <div class="field"><label class="label">Publishing as</label>
             <div class="pub-as">
@@ -2425,7 +2448,7 @@ function renderDetails() {
         </div>
       </div>
       <div class="f-foot">
-        <span class="note"><i class="ph ${S._upd ? 'ph-info' : 'ph-lock-simple'}"></i>${S._upd ? 'People who already used it keep their copy' : 'Your deck and its live link stay private'}</span>
+        <span class="note"><i class="ph ${S._upd ? 'ph-info' : 'ph-shield-check'}"></i>${S._upd ? 'People who already used it keep their copy' : 'Every publish is checked automatically for unsafe content'}</span>
         <button class="btn btn-primary btn-lg" id="d-publish" style="min-width:96px" ${t.title.trim() ? '' : 'disabled'}>${S._upd ? 'Publish update' : S.publishAs === 'team' && !S.company.on ? 'Claim page and publish' : 'Publish'}</button>
       </div>
     </div>`, { height: 670, onClose: updClose });
@@ -2455,8 +2478,9 @@ function renderDetails() {
     }
     if (S.publishAs === 'team' && !S.company.on) { go('team-claim'); return; }
     const b = $('#d-publish');
-    b.innerHTML = '<span class="spin"></span>Publishing'; b.disabled = true;
-    later(() => { if (!$('#d-publish')) return; S.published = true; S.publishedAt = Date.now(); save(); go('live'); }, 1200);
+    b.innerHTML = '<span class="spin"></span>Checking content'; b.disabled = true;
+    later(() => { if ($('#d-publish')) $('#d-publish').innerHTML = '<span class="spin"></span>Publishing'; }, 800);
+    later(() => { if (!$('#d-publish')) return; S.published = true; S.publishedAt = Date.now(); save(); go('live'); }, 1600);
   };
 }
 
@@ -2649,7 +2673,7 @@ function renderGallery() {
       <div class="g-bar">
         <label class="g-search"><i class="ph ph-magnifying-glass"></i><input id="g-q" placeholder="Search templates or creators" value="${esc(S.gQ || '')}"></label>
         <div class="g-cats">${cats.map(c => `<button class="chip sm ${S.gCat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
-        <label class="g-sort">Sort<select id="g-sort"><option value="popular" ${S.gSort === 'popular' ? 'selected' : ''}>Most used</option><option value="new" ${S.gSort === 'new' ? 'selected' : ''}>Newest</option></select></label>
+        <label class="g-sort">Sort<select id="g-sort"><option value="popular" ${S.gSort === 'popular' ? 'selected' : ''}>Recommended</option><option value="new" ${S.gSort === 'new' ? 'selected' : ''}>Newest</option></select></label>
       </div>
       <div id="g-grid"></div>
       <div class="g-cta">
@@ -2661,7 +2685,8 @@ function renderGallery() {
     const q = (S.gQ || '').trim().toLowerCase();
     let list = galleryItems().filter(t => (S.gCat === 'All' || t.cat === S.gCat)
       && (!q || [t.title, t.cat, creatorOf(t).name].join(' ').toLowerCase().includes(q)));
-    list.sort((a, b) => S.gSort === 'new' ? a.age - b.age : b.uses - a.uses);
+    // Recommended weights uses and Deck Score, never how many templates a creator has published
+    list.sort((a, b) => S.gSort === 'new' ? a.age - b.age : (b.uses * scoreOf(b) / 100) - (a.uses * scoreOf(a) / 100));
     // Your new template stays first so you can find it right after publishing
     list.sort((a, b) => (b.mine ? 1 : 0) - (a.mine ? 1 : 0));
     hideHover();
@@ -2767,6 +2792,32 @@ function moreFromCommunity(cur) {
   return `<div class="sec-h"><h3>More from Community</h3><button class="link" data-go="gallery">See all <i class="ph ph-arrow-right"></i></button></div>
     <div class="tgrid">${list.map(gcard).join('')}</div>`;
 }
+
+/* Trust and quality: Deck Score, licence, report (v2) */
+const DECK_SCORE = 82;
+const scoreOf = t => t.mine ? DECK_SCORE : 60 + ((t.id || '').split('').reduce((n, c) => n + c.charCodeAt(0), 0) % 38);
+const tplFoot = sc => `<div class="tp-trust">
+    <span class="sd-badge ${sc >= 75 ? 'brand' : 'neutral'} has-tip" tabindex="0"><i class="ph-fill ph-gauge"></i>Deck Score ${sc}<span class="sd-tip">${sc >= 75 ? 'Scores 75 or more are featured in the gallery' : 'Below 75, not featured yet'}</span></span>
+    <div class="lic"><i class="ph ph-scroll"></i><span>Free to use and adapt, with credit to the creator.</span></div>
+    <button class="link rep" id="tp-report"><i class="ph ph-flag"></i>Report this template</button>
+  </div>`;
+const REPORT_REASONS = [['private', 'It shows private data', 'Reviewed within 24 hours'], ['copied', 'It copies someone else’s work', ''], ['impersonation', 'It pretends to be someone else', ''], ['spam', 'Spam or low quality', ''], ['unsafe', 'Unsafe or offensive content', '']];
+function bindReport(title) {
+  const b = $('#tp-report'); if (!b) return;
+  b.onclick = () => {
+    let pick = null;
+    const draw = () => {
+      openModal(`<div class="sd-pay sd-rep"><div class="h"><h2>Report “${esc(title)}”</h2><p>Tell us what’s wrong. The creator won’t see who reported it.</p></div>
+        <div class="reasons">${REPORT_REASONS.map(([k, l, n]) => `<button class="${pick === k ? 'on' : ''}" data-rr="${k}"><span class="dot"></span><span>${l}${n ? `<small>${n}</small>` : ''}</span></button>`).join('')}</div>
+        <div class="cta"><button class="btn btn-ghost" id="rr-no">Cancel</button><button class="btn btn-primary" id="rr-go" ${pick ? '' : 'disabled'}>Send report</button></div></div>`,
+        { plain: true, width: 480, onClose: () => { closeModal(); } });
+      $$('[data-rr]').forEach(x => x.onclick = () => { pick = x.dataset.rr; draw(); });
+      $('#rr-no').onclick = closeModal;
+      $('#rr-go').onclick = () => { closeModal(); toast(pick === 'private' ? 'Thanks. Privacy reports are reviewed within 24 hours' : 'Thanks. Our team will review it', 'ph-fill ph-flag'); };
+    };
+    draw();
+  };
+}
 function renderOtherTemplate(t) {
   const c = creatorOf(t);
   $('#screen').innerHTML = `<div class="page">
@@ -2781,12 +2832,14 @@ function renderOtherTemplate(t) {
           <button class="btn btn-primary btn-lg" id="ot-use" style="width:100%"><i class="ph ph-copy-simple"></i>Use this template</button>
           <div class="facts"><div><i class="ph ph-slideshow"></i>${OUTLINE[t.cat].length} slides</div><div><i class="ph ph-copy-simple"></i>${t.uses.toLocaleString()} uses</div><div><i class="ph ph-eye"></i>${viewsOf(t)} views</div><div><i class="ph ph-tag"></i>Free</div></div>
           <div class="desc">A ${t.cat.toLowerCase()} deck from ${esc(c.name.split(' ')[0])}. Keep the structure, swap in your content, and AI fits it to your brand.</div>
+          ${tplFoot(scoreOf(t))}
         </div>
       </div>
       ${moreFromCommunity(t)}
       ${catTilesHTML()}
     </div></div>`;
   $('#ot-use').onclick = () => toast('In this proto, the sign up flow runs from your own template', 'ph ph-info');
+  bindReport(t.title);
 }
 /* ═══════════════════════════════════════════════════════════
    W · TEAM GALLERY (workspace-level public page)
@@ -2906,10 +2959,11 @@ function renderClaimModal({ from = 'settings' } = {}) {
     </div>`;
   const body = st.step === 'email' ? `
       <h3>Confirm you work at ${esc(co.name)}</h3>
-      <p>Claim ${esc(co.name)}’s page with your <b>@${CO_DOMAIN}</b> email. After that, you and your teammates can post templates to it or to your own pages.</p>
+      <p>Claim ${esc(co.name)}’s page with your <b>@${CO_DOMAIN}</b> email. You become its admin, and the page gets a Verified domain badge. Teammates can then post templates to it or to their own pages.</p>
       <div class="field"><label class="label">Work email</label><input class="input" id="cl-email" value="${esc(st.email)}" autocomplete="off"></div>
       <div class="cl-err" id="cl-err"></div>
-      <button class="btn btn-primary btn-lg" id="cl-send" style="width:100%">Send code</button>`
+      <button class="btn btn-primary btn-lg" id="cl-send" style="width:100%">Send code</button>
+      <small class="cl-sup">Someone already claimed it by mistake? <a href="#" class="link" onclick="return false">Contact support</a></small>`
     : `
       <h3>Check your email</h3>
       <p>We sent a 6-digit code to <b>${esc(st.email)}</b>. <button class="link" id="cl-change">Change email</button></p>
@@ -2932,6 +2986,7 @@ function renderClaimModal({ from = 'settings' } = {}) {
     inp.oninput = () => { st.email = inp.value.trim(); err(''); inp.style.boxShadow = ''; };
     const send = () => {
       if (!/^\S+@\S+\.\S+$/.test(st.email)) { err('Enter a valid email'); inp.style.boxShadow = 'inset 0 0 0 1px var(--red)'; return; }
+      if (/@(gmail|yahoo|outlook|hotmail|icloud|proton|aol)\./i.test(st.email)) { err('Personal email addresses can’t claim a team page. Use your work email.'); inp.style.boxShadow = 'inset 0 0 0 1px var(--red)'; return; }
       if (!st.email.toLowerCase().endsWith('@' + CO_DOMAIN)) { err(`Use your @${CO_DOMAIN} email to claim this page`); inp.style.boxShadow = 'inset 0 0 0 1px var(--red)'; return; }
       st.step = 'code'; save(); renderClaimModal({ from }); toast(`Code sent to ${esc(st.email)}`, 'ph ph-envelope-simple');
     };
@@ -2947,7 +3002,7 @@ function renderClaimModal({ from = 'settings' } = {}) {
       const b = $('#cl-verify'); b.innerHTML = '<span class="spin"></span>Verifying'; b.disabled = true;
       later(() => {
         S.company.on = true; S.company.claimedBy = st.email; S._claim = null; save();
-        toast(`You now manage ${esc(co.name)}’s page`);
+        toast(`You’re the admin of ${esc(co.name)}’s page. Domain verified`);
         if (inShare) { S.published = true; S.publishedAt = Date.now(); save(); go('live'); } else go('company');
       }, 900);
     };
@@ -2967,7 +3022,7 @@ function renderCompany() {
     <div class="wrap">
       <div class="co-head">
         <img class="co-lg" src="${A}ws-foursquare.jpg" alt="">
-        <div class="who"><h1>${esc(co.name)} ${claimed ? '<span class="pill pro"><i class="ph-fill ph-seal-check" style="margin-right:3px"></i>Team</span>' : '<span class="pill soft-gray">Unclaimed</span>'}</h1>
+        <div class="who"><h1>${esc(co.name)} ${claimed ? `<span class="sd-badge good has-tip" tabindex="0"><i class="ph-fill ph-seal-check"></i>Verified domain<span class="sd-tip">Claimed with a verified @${CO_DOMAIN} email</span></span>` : ''}</h1>
           <div class="hd">presentations.ai/${esc(co.slug)}</div></div>
         <div class="acts">
           ${admin ? '<button class="btn btn-outline" data-go="ws-settings"><i class="ph ph-gear-six"></i>Edit gallery</button>' : ''}
@@ -3022,6 +3077,7 @@ function renderTemplate() {
           <div class="gift"><i class="ph-fill ph-gift"></i><span><b>New here?</b> Start from ${esc(first())}’s link and get <b>200 bonus credits</b> after your first deck.</span></div>
           <div class="facts"><div><i class="ph ph-slideshow"></i>${KPI.length} slides</div><div><i class="ph ph-copy-simple"></i>${S.uses} uses</div><div><i class="ph ph-eye"></i>${viewsOf({ uses: S.uses })} views</div><div><i class="ph ph-tag"></i>Free</div></div>
           <div class="desc">${esc(t.desc)}</div>
+          ${tplFoot(DECK_SCORE)}
         </div>
       </div>
       ${moreFromCommunity({ id: 'mine', cat: t.cat })}
@@ -3031,6 +3087,7 @@ function renderTemplate() {
   $('#v-prev').onclick = () => move(-1);
   $('#v-next').onclick = () => move(1);
   $$('[data-v]').forEach(b => b.onclick = () => { S.tplSlide = +b.dataset.v; save(); renderTemplate(); });
+  bindReport(t.title);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3242,6 +3299,7 @@ const REF_SEED_MAX = ['Marcus Lee', 'Sofia Alvarez', 'Ken Watanabe', 'Amara Okaf
   .map((who, i) => ({ who, status: 'joined', when: i < 2 ? `${i + 2} days ago` : `${i} weeks ago` }));
 const REF_SEED_PRO = [
   { who: 'sam@northwind.co', status: 'invited', when: 'Yesterday' },
+  { who: 'Ken Ito', status: 'signed', when: 'Today' },
   { who: 'Sofia Alvarez', status: 'joined', when: '4 days ago' },
   { who: 'Marcus Lee', status: 'upgraded', when: '2 weeks ago', upAt: 1 },
 ];
@@ -3260,7 +3318,7 @@ function refRows() {
   for (let i = rows.length - 1; i >= 0; i--) {
     const r = rows[i];
     if (r.status === 'upgraded') { r.ok = isPro() && (r.upAt || 0) >= (S.proSince || 0); r.mo = r.ok && months < 6; if (r.mo) months++; }
-    if (r.status === 'invited') { r.got = null; continue; }
+    if (r.status === 'invited' || r.status === 'signed') { r.got = null; continue; }
     r.got = Math.min(REF_BONUS, REF_MAX - total);
     total += r.got;
   }
@@ -3300,7 +3358,7 @@ const monthsTip = pro => pro
 const REF_FAQ = [
   ['Who can I invite?', 'Anyone new to Presentations.AI. They get their own workspace. They never join yours.'],
   ['When do the credits land?', `When your friend makes their first deck. You both get ${REF_BONUS} credits then.`],
-  ['Do template links count?', `Yes. Every template you publish carries your link. Sign ups from it count toward the same ${REF_MAX.toLocaleString()} credit limit.`],
+  ['Do template links count?', `Yes. Every template you publish carries your link. Sign ups from it count toward the same ${REF_MAX.toLocaleString()} credit yearly limit.`],
   ['What counts as an upgrade?', `Your friend moves to any paid plan within ${UPG_DAYS} days of signing up. Later upgrades don’t count.`],
   ['How do the free months work?', `Each friend who upgrades while you’re on a paid plan adds 1 free month to it. The months are added at your next renewal, so your next payment moves later. Up to ${UPG_MONTHS_MAX} months in total.`, 'pro'],
   ['What do I get when they upgrade?', `Free months come with any paid plan. You need to be on it when your friend upgrades; upgrades from before don’t count.`, 'free'],
@@ -3318,8 +3376,8 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   const mine = rows.find(r => r.who === S.friend.name);
   const tog = `<div class="state-tog" title="Proto only: the inviter's plan"><button data-plan="free" class="${pro ? '' : 'on'}">Free inviter</button><button data-plan="pro" class="${pro ? 'on' : ''}">Pro inviter</button></div>
     <div class="state-tog" title="Proto only"><button data-rmax="0" class="${S.refMax ? '' : 'on'}">First invites</button><button data-rmax="1" class="${S.refMax ? 'on' : ''}">Max reached</button></div>`;
-  const pill = s => `<span class="pill ${{ joined: 'soft-green', upgraded: 'pro', invited: 'soft-gray' }[s]}">${s === 'upgraded' ? 'Upgraded' : s === 'joined' ? 'Joined' : 'Invited'}</span>`;
-  const credCell = r => r.status === 'invited'
+  const pill = s => `<span class="pill ${{ signed: 'soft-gray', joined: 'soft-green', upgraded: 'pro', invited: 'soft-gray' }[s]}">${{ signed: 'Signed up', joined: 'First deck made', upgraded: 'Upgraded', invited: 'Invited' }[s]}</span>`;
+  const credCell = r => r.status === 'signed' ? '<span class="muted">After their first deck</span>' : r.status === 'invited'
     ? `<span class="muted">Waiting for sign up</span><button class="link rf-remind" data-remind="${esc(r.who)}">Send reminder</button>`
     : r.got > 0 ? `+${r.got}` : `0<small>Limit reached</small>`;
   const upCell = r => r.status === 'upgraded' ? (r.mo ? `<b class="up-r">${upgReward()}</b>` : r.ok ? '<span class="muted">Max reached</span>' : '<span class="muted">No reward, you weren’t on Pro</span>') : r.status === 'joined' && pro ? `<span class="muted">If they upgrade in ${UPG_DAYS} days</span>` : '';
@@ -3337,14 +3395,14 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
       </section>
       <div class="rf2-gets">
         <div><span class="sd-tile"><i class="ph ph-heart"></i></span><b>They get ${REF_BONUS} credits</b><small>And their own workspace</small></div>
-        <div><span class="sd-tile"><i class="ph ph-gift"></i></span><b>You get ${REF_BONUS} credits</b><small>Per friend, up to ${REF_MAX.toLocaleString()}</small></div>
+        <div><span class="sd-tile"><i class="ph ph-gift"></i></span><b>You get ${REF_BONUS} credits</b><small>Per friend, up to ${REF_MAX.toLocaleString()} a year</small></div>
         <div class="has-tip" tabindex="0"><span class="sd-tile"><i class="ph ph-crown-simple"></i></span><b>${pro ? '+1 free month' : 'Get free months'}${pro ? '' : ' <span class="sd-k brand">Pro</span>'}</b><small>${pro ? `On your plan when they upgrade, up to ${UPG_MONTHS_MAX}` : `+1 month for each friend who upgrades, up to ${UPG_MONTHS_MAX}`}</small><span class="sd-tip" role="tooltip">${monthsTip(pro)}</span></div>
       </div>
       <div class="rf2-pair">
         <div class="rf2-box">
-          <div class="l"><span class="t">Credits earned</span>
+          <div class="l"><span class="t">Credits earned this year</span>
             <b>${earned.toLocaleString()}<small>/ ${REF_MAX.toLocaleString()}</small></b>
-            <small>${atMax ? `Limit reached. Friends still get their ${REF_BONUS}` : `${Math.ceil((REF_MAX - earned) / REF_BONUS)} more friends to the limit`}</small></div>
+            <small>${atMax ? `Limit reached. Friends still get their ${REF_BONUS}` : `${Math.ceil((REF_MAX - earned) / REF_BONUS)} more friends to this year’s limit. Resets 1 Jan`}</small></div>
         </div>
         <div class="rf2-box has-tip ${pro ? '' : 'locked'}" tabindex="0"><span class="sd-tip" role="tooltip">${monthsTip(pro)}</span>
           <div class="l"><span class="t">Free months on your plan ${pro ? '' : '<span class="sd-k brand">Pro</span>'}</span>
@@ -3362,7 +3420,13 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
           ${accepted.length > shown.length ? `<tr><td colspan="${pro ? 5 : 4}" class="muted">And ${accepted.length - shown.length} more</td></tr>` : ''}
         </tbody>
       </table></div>
-      <div class="sec-h" style="margin-top:48px"><h3>Questions</h3></div>
+      <div class="rf-rules2"><b>How rewards work</b><ul>
+        <li>You both get ${REF_BONUS} credits when your friend makes their first deck.</li>
+        <li>You can earn up to ${REF_MAX.toLocaleString()} referral credits a year (10 friends). Template sign ups count too.</li>
+        <li>On a paid plan, each friend who upgrades within ${UPG_DAYS} days adds 1 free month at your next renewal, up to ${UPG_MONTHS_MAX}.</li>
+        <li>You need to be on a paid plan when they upgrade. Earlier upgrades don’t count.</li>
+      </ul></div>
+      <div class="sec-h" style="margin-top:40px"><h3>Questions</h3></div>
       <div class="faq">${REF_FAQ.filter(f => !f[2] || f[2] === (pro ? 'pro' : 'free')).map(([q, a]) => `<details><summary><span>${q}</span><i class="ph ph-caret-down"></i></summary><p>${a}</p></details>`).join('')}</div>
       <small class="rf2-terms">By sharing your link, you agree to the <u>Referral terms</u>.</small>
     </div>`, '');
