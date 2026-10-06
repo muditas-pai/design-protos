@@ -236,6 +236,7 @@
   .tags { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .tags input { border: 1px dashed var(--line2); border-radius: 18px; height: 36px; padding: 0 14px; width: 118px; outline: none; background: transparent; }
   .tags input::placeholder { color: var(--t4); }
+  .tags input.sm { height: 26px; font-size: 12px; width: 100px; padding: 0 10px; }
   .as-row { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 6px; background: var(--bg2); box-shadow: var(--e1); font-size: 13px; }
   .as-row .who { flex: 1; line-height: 1.35; }
   .as-row .who span { color: var(--t3); font-size: 12px; display: block; }
@@ -523,6 +524,9 @@
   .pub-as { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 12px; }
   .pub-as .lb { width: 100%; font-size: 12px; color: var(--t3); }
   .det-form .pub-as { margin-top: 0; }
+  .sel-wrap { position: relative; } .sel-wrap select { appearance: none; -webkit-appearance: none; width: 100%; padding-right: 36px; cursor: pointer; background: #fff; }
+  .sel-wrap > i { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--t3); }
+  #d-tag-n { display: inline-flex; align-items: center; gap: 4px; } #d-tag-n i { color: var(--brand); }
   .det-form .pub-pin { display: flex; flex-direction: column; gap: 10px; }
   .pub-as button { flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line2); text-align: left; min-width: 0; }
   .pub-as button img { width: 28px; height: 28px; border-radius: 6px; flex: none; }
@@ -1140,7 +1144,7 @@ const DEFAULT_STATE = () => ({
   tpl: {
     title: 'KPI Report',
     desc: "A KPI report deck template gives recurring performance reviews a fixed structure, so each cycle's numbers land in the same place and can be compared at a glance.\nIt separates the metrics that matter from the noise, forcing whoever builds it to lead with results rather than activity.\nAnd it saves the team from rebuilding slides every month, turning reporting into a fill-in exercise instead of a design project.",
-    tags: ['KPI', 'Monthly Report'],
+    tags: ['KPI', 'Monthly Report', 'Dashboard', 'Metrics', 'Business Review', 'Performance', 'Revenue', 'Quarterly', 'Charts'],
     cat: 'Reports',
     toCompany: true,
   },
@@ -1951,10 +1955,10 @@ function renderDetails() {
         <div class="det-form">
           <div class="field"><label class="label">Title</label><input class="input" id="d-title" value="${esc(t.title)}" maxlength="60"></div>
           <div class="field"><label class="label">Description</label><textarea class="textarea" id="d-desc" rows="3" maxlength="600">${esc(t.desc)}</textarea></div>
-          <div class="field"><label class="label">Category <span class="hint">Where it shows on Community</span></label><div class="tags" id="d-cat">${GALLERY_CATS.map(c => `<button class="chip sm ${t.cat === c ? 'on' : ''}" data-dcat="${c}">${c}</button>`).join('')}</div></div>
-          <div class="field"><label class="label">Tags</label><div class="tags" id="d-tags"></div></div>
+          <div class="field"><label class="label">Category <span class="hint">Where it shows on Community</span></label><div class="sel-wrap"><select class="input" id="d-cat">${GALLERY_CATS.map(c => `<option ${t.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select><i class="ph ph-caret-down"></i></div></div>
+          <div class="field"><label class="label">Tags <span class="hint" id="d-tag-n"></span></label><div class="tags" id="d-tags"></div></div>
           <div class="pub-pin">
-          <div class="field"><label class="label">Publishing as${S.publishAs === 'team' ? '' : '<button class="link" id="d-editp" type="button" style="font-size:12px;font-weight:400">Edit your page</button>'}</label>
+          <div class="field"><label class="label">Publishing as</label>
             <div class="pub-as">
               <button data-as="me" class="${S.publishAs !== 'team' ? 'on' : ''}">${avatar(28)}<span><b>${esc(P().name)}</b><small>Your page · @${esc(P().handle)}</small></span><i class="ph-fill ph-check-circle"></i></button>
               <button data-as="team" class="${S.publishAs === 'team' ? 'on' : ''}"><img src="${A}ws-foursquare.jpg" alt=""><span><b>${esc(S.company.name)}</b><small>${S.company.on ? 'Team page' : 'Not claimed yet'}</small></span><i class="ph-fill ph-check-circle"></i></button>
@@ -1971,7 +1975,8 @@ function renderDetails() {
     </div>`, { height: 670, onClose: updClose });
 
   const drawTags = () => {
-    $('#d-tags').innerHTML = t.tags.map((g, i) => `<span class="chip">${esc(g)}<button class="x" data-rm="${i}" aria-label="Remove ${esc(g)}"><i class="ph ph-x"></i></button></span>`).join('') + (t.tags.length < 5 ? '<input id="tag-in" placeholder="+  Add tag" maxlength="20">' : '');
+    $('#d-tags').innerHTML = t.tags.map((g, i) => `<span class="chip sm">${esc(g)}<button class="x" data-rm="${i}" aria-label="Remove ${esc(g)}"><i class="ph ph-x"></i></button></span>`).join('') + (t.tags.length < 13 ? '<input id="tag-in" class="sm" placeholder="+  Add tag" maxlength="20">' : '');
+    $('#d-tag-n').innerHTML = `<i class="ph-fill ph-sparkle"></i>Auto-generated from your slides · ${t.tags.length}/13`;
     $$('#d-tags [data-rm]').forEach(b => b.onclick = () => { t.tags.splice(+b.dataset.rm, 1); save(); drawTags(); });
     const inp = $('#tag-in');
     if (inp) inp.addEventListener('keydown', e => {
@@ -1980,7 +1985,7 @@ function renderDetails() {
     });
   };
   drawTags();
-  $$('[data-dcat]').forEach(b => b.onclick = () => { t.cat = b.dataset.dcat; save(); $$('[data-dcat]').forEach(x => x.classList.toggle('on', x === b)); });
+  $('#d-cat').onchange = e => { t.cat = e.target.value; save(); };
   $('#d-co') && ($('#d-co').onclick = () => { t.toCompany = !t.toCompany; save(); $('#d-co').classList.toggle('on', t.toCompany); });
   $('#d-title').oninput = e => { t.title = e.target.value; $('#d-publish').disabled = !t.title.trim(); save(); };
   $('#d-desc').oninput = e => { t.desc = e.target.value; save(); };
