@@ -887,6 +887,9 @@
   .bbar span { margin-left: 10px; flex: 1; font-size: 11px; color: var(--t3); background: #fff; border-radius: 4px; padding: 3px 8px; }
   .pp { padding-bottom: 18px; }
   .pp-cover { height: 110px; }
+  .more-row { display: flex; gap: 8px; align-items: center; } .more-row .input-group { flex: 1; }
+  .more-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .more-pick .chip i { font-size: 14px; margin-right: 4px; }
+  .more-add { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 13px; }
   .pp-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 0 18px; margin-top: -34px; position: relative; }
   .pp-head .avatar { border: 3px solid #fff; }
   .pp-head b { display: block; font-weight: 500; font-size: 16px; }
@@ -1486,9 +1489,12 @@ function profileFieldsHTML(d, editMode, { cover = false } = {}) {
           <div class="input-group"><span class="prefix" style="padding-right:8px"><i class="ph ph-x-logo"></i></span><input id="f-x" value="${esc(d.x)}" placeholder="x.com/you"></div>
           <div class="input-group"><span class="prefix" style="padding-right:8px"><i class="ph ph-globe-simple"></i></span><input id="f-website" value="${esc(d.website)}" placeholder="yoursite.com"></div>
         </div>
+        <div id="f-more" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
     </div>`;
 }
+const SOCIALS = { instagram: ['ph-instagram-logo', 'Instagram', 'instagram.com/you'], youtube: ['ph-youtube-logo', 'YouTube', 'youtube.com/@you'], github: ['ph-github-logo', 'GitHub', 'github.com/you'], dribbble: ['ph-dribbble-logo', 'Dribbble', 'dribbble.com/you'], behance: ['ph-behance-logo', 'Behance', 'behance.net/you'], medium: ['ph-medium-logo', 'Medium', 'medium.com/@you'], threads: ['ph-threads-logo', 'Threads', 'threads.net/@you'], tiktok: ['ph-tiktok-logo', 'TikTok', 'tiktok.com/@you'] };
+const moreLinkIcons = (p, tag = 'i') => (p.more || []).filter(m => m.v).map(m => `<i class="ph ${SOCIALS[m.k][0]}"></i>`).join('');
 // upd(): caller redraws its preview and save button. Guarded so late timers never touch a closed form.
 function bindProfileFields(d, editMode, upd) {
   const bind = (id, key, after) => $(id).addEventListener('input', e => { d[key] = e.target.value; after && after(); upd(); save(); });
@@ -1496,6 +1502,22 @@ function bindProfileFields(d, editMode, upd) {
   bind('#f-headline', 'headline');
   bind('#f-bio', 'bio', () => $('#bio-count').textContent = `${d.bio.length}/160`);
   bind('#f-linkedin', 'linkedin'); bind('#f-x', 'x'); bind('#f-website', 'website');
+  if (!d.more) d.more = [];
+  let picking = false;
+  const drawMore = focusKey => {
+    const box = $('#f-more'); if (!box) return;
+    const left = Object.keys(SOCIALS).filter(k => !d.more.some(m => m.k === k));
+    box.innerHTML = d.more.map((m, i) => `<div class="more-row"><div class="input-group"><span class="prefix" style="padding-right:8px"><i class="ph ${SOCIALS[m.k][0]}"></i></span><input data-more="${i}" value="${esc(m.v)}" placeholder="${SOCIALS[m.k][2]}"></div><button class="icon-btn" data-more-rm="${i}" aria-label="Remove ${SOCIALS[m.k][1]}"><i class="ph ph-x"></i></button></div>`).join('')
+      + (picking ? `<div class="more-pick">${left.map(k => `<button class="chip sm" data-more-add="${k}"><i class="ph ${SOCIALS[k][0]}"></i>${SOCIALS[k][1]}</button>`).join('')}<button class="link" id="more-cancel" style="font-size:13px">Cancel</button></div>`
+        : left.length ? `<button class="link more-add" id="more-open"><i class="ph ph-plus"></i>Add another link</button>` : '');
+    $$('#f-more [data-more]').forEach(inp => inp.addEventListener('input', e => { d.more[+inp.dataset.more].v = e.target.value; upd(); save(); }));
+    $$('#f-more [data-more-rm]').forEach(b => b.onclick = () => { d.more.splice(+b.dataset.moreRm, 1); upd(); save(); drawMore(); });
+    $$('#f-more [data-more-add]').forEach(b => b.onclick = () => { d.more.push({ k: b.dataset.moreAdd, v: '' }); picking = false; save(); drawMore(b.dataset.moreAdd); });
+    $('#more-open') && ($('#more-open').onclick = () => { picking = true; drawMore(); });
+    $('#more-cancel') && ($('#more-cancel').onclick = () => { picking = false; drawMore(); });
+    if (focusKey) $(`#f-more [data-more="${d.more.length - 1}"]`)?.focus();
+  };
+  drawMore();
   if (!editMode) $('#f-handle').addEventListener('input', e => {
     const clean = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     e.target.value = clean; d.handle = clean;
@@ -1712,7 +1734,7 @@ function pagePreviewHTML(p, templates = []) {
       <div class="pp-cover" style="background:${coverCSS(p)}"></div>
       <div class="pp-head">${avatar(64, p)}<div><b>${esc(p.name) || 'Your name'}</b><span>@${esc(p.handle) || 'handle'}${p.headline ? ` · ${esc(p.headline)}` : ''}</span></div></div>
       ${p.bio ? `<div class="pp-bio">${esc(p.bio)}</div>` : ''}
-      <div class="pp-tags">${p.topics.map(t => `<span>${t}</span>`).join('')}${p.linkedin ? '<i class="ph-fill ph-linkedin-logo"></i>' : ''}${p.x ? '<i class="ph ph-x-logo"></i>' : ''}${p.website ? '<i class="ph ph-globe-simple"></i>' : ''}</div>
+      <div class="pp-tags">${p.topics.map(t => `<span>${t}</span>`).join('')}${p.linkedin ? '<i class="ph-fill ph-linkedin-logo"></i>' : ''}${p.x ? '<i class="ph ph-x-logo"></i>' : ''}${p.website ? '<i class="ph ph-globe-simple"></i>' : ''}${moreLinkIcons(p)}</div>
       <div class="pp-sec">Templates</div>
       <div class="pp-grid">${tiles}</div>
     </div>
@@ -2068,7 +2090,7 @@ function renderProfile() {
       </div>
       <div class="prof-meta">
         <div><div class="bio">${esc(p.bio)}</div>
-          <div class="prof-links">${link('ph-linkedin-logo', p.linkedin, true)}${link('ph-x-logo', p.x)}${link('ph-globe-simple', p.website)}${p.topics.map(t => `<span class="chip sm">${t}</span>`).join('')}</div></div>
+          <div class="prof-links">${link('ph-linkedin-logo', p.linkedin, true)}${link('ph-x-logo', p.x)}${link('ph-globe-simple', p.website)}${(p.more || []).map(m => link(SOCIALS[m.k][0], m.v)).join('')}${p.topics.map(t => `<span class="chip sm">${t}</span>`).join('')}</div></div>
         <div class="stats">
           <div><b>${list.length}</b><span>Templates</span></div>
           <div><b>${totalUses.toLocaleString()}</b><span>Uses</span></div>
