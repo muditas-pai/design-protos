@@ -1377,6 +1377,13 @@
   .g-bar .g-cats { order: 3; flex: 0 0 100%; flex-wrap: wrap; overflow: visible; -webkit-mask-image: none; mask-image: none; gap: 6px; }
   .g-cats .chip { box-shadow: inset 0 0 0 1px var(--line); background: rgb(var(--surface)); }
   .g-cats .chip.on { box-shadow: none; }
+  /* Profile: icon-only socials, admin badges */
+  .prof-links .socs { display: inline-flex; gap: 6px; margin-right: 6px; }
+  .prof-links .soc { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--line); background: rgb(var(--surface)); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; color: var(--t1); gap: 0; }
+  .prof-links .soc:hover { background: rgb(var(--sunken)); }
+  .sd-badge { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; margin-left: 6px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0; vertical-align: middle; cursor: default; }
+  .sd-badge i { font-size: 14px; } .sd-badge.brand { background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); } .sd-badge.warn { background: rgb(254 243 199); color: rgb(180 83 9); } .sd-badge.good { background: rgb(220 252 231); color: rgb(21 128 61); }
+  .sd-badge .sd-tip { left: 0; right: auto; width: 240px; white-space: normal; text-transform: none; font-weight: 500; }
   @media (max-width: 900px) {
     .sd-top { padding: 0 16px; } .sd-proto, .sd-search kbd { display: none; } .sd-main { padding: 24px 16px 96px; }
     .rf-hero { grid-template-columns: 1fr; } .rf-hero .a { border-right: 0; border-bottom: 1px solid var(--line); } .rf-art { display: none; }
@@ -1495,7 +1502,7 @@ const DEFAULT_STATE = () => ({
   draft: {
     name: 'Joe Thomas', handle: 'joe-t', headline: 'Ops lead at Foursquare',
     bio: 'I build the decks my team runs on every month. Clean structure, no fluff.',
-    linkedin: 'linkedin.com/in/joethomas', x: '', website: '',
+    linkedin: 'linkedin.com/in/joethomas', x: 'x.com/joethomas', website: 'joethomas.co', more: [{ k: 'instagram', v: 'instagram.com/joethomas' }],
     topics: ['Business', 'Reports'], photo: null, cover: 'kpi',
   },
   mask: {
@@ -2510,12 +2517,21 @@ function tcard(t, owner = false) {
 /* ═══════════════════════════════════════════════════════════
    P6 · COMMUNITY PROFILE PAGE (owner + visitor view)
    ═══════════════════════════════════════════════════════════ */
+
+/* Profile badges, given by the Presentations.AI team (admin), not earned automatically */
+const BADGES = {
+  ambassador: { icon: 'ph-seal-check', label: 'Ambassador', tone: 'brand', why: 'Presentations.AI Ambassador. Given by the Presentations.AI team' },
+  top: { icon: 'ph-star', label: 'Top creator', tone: 'warn', why: 'Top creator. Given by the Presentations.AI team' },
+  early: { icon: 'ph-rocket-launch', label: 'Early adopter', tone: 'good', why: 'Early adopter. Given by the Presentations.AI team' },
+};
+const CREATOR_BADGES = { dana: ['top', 'ambassador'], priya: ['early'] };
+const badgesHTML = keys => keys.map(k => BADGES[k]).filter(Boolean).map(b => `<span class="sd-badge ${b.tone} has-tip" tabindex="0"><i class="ph-fill ${b.icon}"></i>${b.label}<span class="sd-tip">${b.why}</span></span>`).join('');
 function renderProfile() {
   const p = S.profile, v = S.visitorView;
   const list = myTemplates().filter(t => !v || t.status === 'live');
   const totalSignups = list.reduce((a, t) => a + t.signups, 0);
   const totalUses = list.reduce((a, t) => a + t.uses, 0);
-  const link = (icon, txt, fill) => txt ? `<a href="#" onclick="return false"><i class="${fill ? 'ph-fill' : 'ph'} ${icon}"></i>${esc(txt)}</a>` : '';
+  const link = (icon, txt, fill) => txt ? `<a href="#" class="soc" onclick="return false" title="${esc(txt)}" aria-label="${esc(txt)}"><i class="${fill ? 'ph-fill' : 'ph'} ${icon}"></i></a>` : '';
   $('#screen').innerHTML = `<div class="page">
     ${cNav(v)}
     ${v ? '<div class="viewer-bar"><i class="ph ph-eye"></i>You are viewing your profile as a visitor <button class="link" id="exit-visitor" style="margin-left:6px">Exit preview</button></div>' : ''}
@@ -2523,7 +2539,7 @@ function renderProfile() {
     <div class="wrap">
       <div class="prof-head">
         ${avatar(112, p)}
-        <div class="who"><h1>${esc(p.name)} ${S.published ? '<span class="pill pro"><i class="ph-fill ph-seal-check" style="margin-right:3px"></i>Creator</span>' : ''}</h1>
+        <div class="who"><h1>${esc(p.name)} ${badgesHTML(['ambassador'])}</h1>
           <div class="hd">@${esc(p.handle)}${p.headline ? ` · ${esc(p.headline)}` : ''}</div></div>
         <div class="acts">
           ${v ? ''
@@ -2533,7 +2549,7 @@ function renderProfile() {
       </div>
       <div class="prof-meta">
         <div><div class="bio">${esc(p.bio)}</div>
-          <div class="prof-links">${link('ph-linkedin-logo', p.linkedin, true)}${link('ph-x-logo', p.x)}${link('ph-globe-simple', p.website)}${(p.more || []).map(m => link(SOCIALS[m.k][0], m.v)).join('')}${p.topics.map(t => `<span class="chip sm">${t}</span>`).join('')}</div></div>
+          <div class="prof-links"><span class="socs">${link('ph-linkedin-logo', p.linkedin, true)}${link('ph-x-logo', p.x)}${link('ph-globe-simple', p.website)}${(p.more || []).map(m => link(SOCIALS[m.k][0], m.v)).join('')}</span>${p.topics.map(t => `<span class="chip sm">${t}</span>`).join('')}</div></div>
         <div class="stats" ${v ? 'hidden' : ''}>
           <div><b>${list.length}</b><span>Templates</span></div>
           <div><b>${totalUses.toLocaleString()}</b><span>Uses</span></div>
@@ -3610,13 +3626,13 @@ function renderCreator() {
     <div class="wrap">
       <div class="prof-head">
         ${avatar(112, c)}
-        <div class="who"><h1>${esc(c.name)} <span class="pill pro"><i class="ph-fill ph-seal-check" style="margin-right:3px"></i>Creator</span></h1>
+        <div class="who"><h1>${esc(c.name)} ${badgesHTML(CREATOR_BADGES[key] || [])}</h1>
           <div class="hd">@${esc(c.handle)} · ${esc(c.headline)}</div></div>
         <div class="acts">${followBtn(key, true)}<button class="btn btn-primary" id="cr-share"><i class="ph ph-share-network"></i>Share</button></div>
       </div>
       <div class="prof-meta">
         <div><div class="bio">${esc(c.name.split(' ')[0])} makes ${topics.map(x => x.toLowerCase()).join(', ')} decks and shares the best ones here.</div>
-          <div class="prof-links">${c.team && S.company.on ? `<a href="#" data-go="company"><img src="${A}ws-foursquare.jpg" alt="" style="width:18px;height:18px;border-radius:4px">${esc(S.company.name)}</a>` : ''}${topics.map(x => `<span class="chip sm">${x}</span>`).join('')}</div></div>
+          <div class="prof-links"><span class="socs">${['ph-linkedin-logo', 'ph-x-logo', 'ph-globe-simple', 'ph-dribbble-logo'].map((ic, i) => `<a href="#" class="soc" onclick="return false" aria-label="${esc(c.name)} on ${['LinkedIn', 'X', 'their website', 'Dribbble'][i]}"><i class="${i ? 'ph' : 'ph-fill'} ${ic}"></i></a>`).join('')}</span>${c.team && S.company.on ? `<a href="#" data-go="company"><img src="${A}ws-foursquare.jpg" alt="" style="width:18px;height:18px;border-radius:4px">${esc(S.company.name)}</a>` : ''}${topics.map(x => `<span class="chip sm">${x}</span>`).join('')}</div></div>
         <div class="stats" hidden>
           <div><b>${st.n}</b><span>Templates</span></div>
           <div><b>${st.uses.toLocaleString()}</b><span>Uses</span></div>
