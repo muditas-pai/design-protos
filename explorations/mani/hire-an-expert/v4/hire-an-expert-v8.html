@@ -787,6 +787,30 @@
     .ck-pane{padding:20px 16px}
     #co .f-row{flex-direction:column;gap:16px}
   }
+
+  /* left pane v2: delivery toggle + price */
+  .ck-toggle{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:999px;background:#e3eaf5;box-shadow:inset 0 1px 2px rgba(10,25,37,.06)}
+  .ck-thumb{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(10,25,37,.12),0 2px 8px -2px rgba(10,25,37,.14);transition:transform .32s cubic-bezier(.22,1,.36,1)}
+  .ck-toggle.is-24 .ck-thumb{transform:translateX(100%)}
+  .ck-opt{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;border:0;background:none;border-radius:999px;cursor:pointer;font:500 14px 'Inter',sans-serif;color:#525252;transition:color .2s ease;white-space:nowrap}
+  .ck-opt i{font-size:16px}
+  .ck-opt[aria-checked="true"]{color:#171717}
+  .ck-opt:focus-visible{outline:2px solid #005eff;outline-offset:2px}
+  .ck-price{margin-top:26px}
+  .ck-amt{font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1;color:#171717;font-variant-numeric:tabular-nums}
+  .ck-amt.tick{animation:ck-tick .35s cubic-bezier(.22,1,.36,1)}
+  @keyframes ck-tick{0%{opacity:.25;transform:translateY(6px)}100%{opacity:1;transform:none}}
+  .ck-per{font-size:14px;color:#525252;margin-top:8px}
+  .ck-lines{margin-top:22px;padding:16px 18px;border-radius:6px;background:#fff;border:1px solid #e5e5e5;display:grid;gap:10px}
+  .ck-line{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;color:#525252}
+  .ck-line span{display:inline-flex;align-items:center;gap:6px}
+  .ck-line b{color:#171717;font-weight:500;font-variant-numeric:tabular-nums}
+  .ck-line.free span i{color:#005eff;font-size:14px}
+  .ck-line.free b{color:#005eff}
+  .ck-line.total{border-top:1px solid #eee;padding-top:12px;margin-top:2px;font-size:14.5px;color:#171717;font-weight:500}
+  .ck-line.total b{font-weight:600}
+  .ck-inc{font-size:13px;font-weight:500;color:#525252;margin-left:-16px}
+  @media (max-width:420px){.ck-opt{font-size:12.5px;gap:5px}.ck-amt{font-size:38px}}
   #co-page{display:none;position:fixed;inset:0;z-index:70;overflow:auto;background:linear-gradient(180deg,#d6e4ff 0,#e9f1ff 300px,#f5f7fb 560px)}
   body.on-checkout{overflow:hidden}
   body.on-checkout #co-page{display:block}
@@ -1464,17 +1488,19 @@
     return d.toLocaleDateString('en-US',{weekday:'short'}) + ', ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   }
   function renderCheckout(){
-    const paid = co.n - 1, total = h => Math.max(MIN, paid * RATE[h]);
+    const rate = RATE[co.h], gross = co.n * rate, sub = gross - rate, total = Math.max(MIN, sub);
     const set = (id, v) => document.getElementById(id).textContent = v;
-    const setAll = (sel, v) => document.querySelectorAll(sel).forEach(e => e.textContent = v);
-    set('co-name', co.name); set('co-n', co.n); set('co-n2', co.n); set('co-n3', co.n);
-    setAll('.p72', fmt(total(72))); setAll('.p24', fmt(total(24)));
-    setAll('.d72', dueLabel(72)); setAll('.d24', dueLabel(24));
-    [72, 24].forEach(h => setAll('.s' + h, paid * RATE[h] < MIN ? 'Minimum order' : '1 slide free · save $' + RATE[h]));
-    set('co-pay', fmt(total(co.h)));
+    const amt = document.querySelector('.ck-amt');
+    if (document.getElementById('co-total').textContent !== fmt(total)) { amt.classList.remove('tick'); void amt.offsetWidth; amt.classList.add('tick'); }
+    set('co-total', fmt(total)); set('co-total2', fmt(total)); set('co-pay', fmt(total));
+    set('co-rate', rate); document.querySelectorAll('.r-rate').forEach(e => e.textContent = rate);
+    set('co-n', co.n); set('co-n3', co.n); set('co-gross', fmt(gross)); set('co-free', fmt(rate));
+    set('co-speed', 'ready by ' + dueLabel(co.h));
+    document.getElementById('co-min').style.display = sub >= MIN ? 'none' : '';
     set('co-due', dueLabel(co.h)); set('co-due2', dueLabel(co.h));
     set('co-start', co.h === 24 ? 'within 2 hours' : 'within 24 hours');
-    document.querySelectorAll('.ck-sel').forEach(c => { const on = +c.dataset.h === co.h; c.classList.toggle('is-sel', on); c.setAttribute('aria-checked', on); });
+    document.querySelector('.ck-toggle').classList.toggle('is-24', co.h === 24);
+    document.querySelectorAll('.ck-opt').forEach(o => o.setAttribute('aria-checked', +o.dataset.h === co.h));
   }
   function pickSpeed(h){ co.h = h; renderCheckout(); }
   function bump(d){ co.n = Math.min(60, Math.max(2, co.n + d)); renderCheckout(); }
@@ -1503,7 +1529,7 @@
   document.addEventListener('keydown', e => {
     if (!document.body.classList.contains('on-checkout')) return;
     if (e.key === 'Escape') leaveCheckout();
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('ck-sel')) { e.preventDefault(); pickSpeed(+e.target.dataset.h); }
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.classList && e.target.classList.contains('ck-opt')) { e.preventDefault(); pickSpeed(e.key === 'ArrowRight' ? 24 : 72); document.querySelector('.ck-opt[data-h="' + co.h + '"]').focus(); }
   });
   window.addEventListener('popstate', () => { if (location.hash === '#checkout') openCheckout(); else closeCheckoutView(); });
   // #co sits after this script, so wait for the DOM before opening on a direct #checkout link
@@ -1627,32 +1653,26 @@
       <div class="ck-pane ck-pane--left" id="ck-left">
         <div class="ck-title" id="ck-title">Hire an Expert</div>
 
-        <div class="ck-file">
-          <span class="fi"><i class="ph-fill ph-file-ppt"></i></span>
-          <div class="nm"><b id="co-name">Deck.pptx</b><small>Slides found in your deck</small></div>
-          <div class="ck-stepper" aria-label="Slide count"><button type="button" onclick="bump(-1)" aria-label="Fewer slides"><i class="ph ph-minus"></i></button><span id="co-n">16</span><button type="button" onclick="bump(1)" aria-label="More slides"><i class="ph ph-plus"></i></button></div>
+        <div class="ck-toggle" role="radiogroup" aria-label="Delivery speed">
+          <span class="ck-thumb" aria-hidden="true"></span>
+          <button type="button" class="ck-opt" role="radio" data-h="72" onclick="pickSpeed(72)"><i class="ph ph-clock"></i>72 hours delivery</button>
+          <button type="button" class="ck-opt" role="radio" data-h="24" onclick="pickSpeed(24)"><i class="ph ph-moon-stars"></i>Overnight delivery</button>
         </div>
 
-        <div class="ck-lbl">When do you need it?</div>
-        <div class="ck-sel" data-h="72" role="radio" tabindex="0" onclick="pickSpeed(72)">
-          <span class="ck-radio"></span>
-          <div class="sc-main">
-            <div class="sc-name">72 hours <i class="ph ph-clock"></i></div>
-            <div class="sc-desc">$25 a slide · ready by <span class="d72">Fri</span></div>
-          </div>
-          <div class="sc-price"><span class="off">$<span class="p72">375</span></span><div class="sc-save s72">1 slide free</div></div>
-        </div>
-        <div class="ck-sel" data-h="24" role="radio" tabindex="0" onclick="pickSpeed(24)">
-          <span class="ck-radio"></span>
-          <div class="sc-main">
-            <div class="sc-name">24 hours <i class="ph ph-rocket-launch"></i><span class="sc-tag">Fastest</span></div>
-            <div class="sc-desc">$40 a slide · ready by <span class="d24">Thu</span></div>
-          </div>
-          <div class="sc-price"><span class="off">$<span class="p24">600</span></span><div class="sc-save s24">1 slide free</div></div>
+        <div class="ck-price">
+          <div class="ck-amt">$<span id="co-total">375</span></div>
+          <div class="ck-per">$<span id="co-rate">25</span> a slide · <span id="co-speed">ready in 72 hours</span></div>
         </div>
 
-        <div class="ck-feats">
-          <div class="fl"><i class="ph ph-presentation-chart"></i><span><b id="co-n2">16</b> slides redesigned by an expert designer</span></div>
+        <div class="ck-lines">
+          <div class="ck-line"><span><span id="co-n">16</span> slides × $<span class="r-rate">25</span></span><b>$<span id="co-gross">400</span></b></div>
+          <div class="ck-line free"><span><i class="ph-fill ph-gift"></i>1 slide free</span><b>−$<span id="co-free">25</span></b></div>
+          <div class="ck-line" id="co-min" style="display:none"><span>Minimum order applied</span><b>$149</b></div>
+          <div class="ck-line total"><span>Total due today</span><b>$<span id="co-total2">375</span></b></div>
+        </div>
+
+        <div class="ck-feats"><div class="ck-inc">What's included</div>
+          <div class="fl"><i class="ph ph-presentation-chart"></i><span>Every slide redesigned by an expert designer</span></div>
           <div class="fl"><i class="ph ph-arrow-counter-clockwise"></i>1 round of revisions included</div>
           <div class="fl"><i class="ph ph-shield-check"></i>NDA-protected. Your deck stays private.</div>
           <div class="fl"><i class="ph ph-calendar-check"></i><span>Ready by <b id="co-due">Fri, 5:00 PM</b></span></div>
