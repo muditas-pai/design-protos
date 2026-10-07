@@ -99,10 +99,10 @@
   .row .nm { flex: 1 1 auto; min-width: 0; font-size: 15px; color: var(--ink); }
   .chip { flex: none; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
   .chip.earned { background: var(--green-soft); color: #15803d; }
-  .chip.earn { display: inline-flex; align-items: center; gap: 5px; background: var(--halo); color: var(--blue); }
-  .chip.earn i { font-size: 11px; }
-  .row .go { flex: none; width: 18px; font-size: 15px; color: var(--ink3); opacity: 0; transition: opacity .15s ease, transform .15s ease; }
-  .row.todo:hover .go { opacity: 1; transform: translateX(2px); }
+  .chip.earn { background: var(--halo); color: var(--blue); }
+  /* the arrow says the row is the action, so it stays put and only leans in on hover */
+  .row .go { flex: none; width: 18px; font-size: 15px; color: var(--ink3); transition: transform .15s ease, color .15s ease; }
+  .row.todo:hover .go { transform: translateX(3px); color: var(--ink); }
   .row { animation: row-in .34s cubic-bezier(.22,1,.36,1) backwards; }
   .row:nth-child(1) { animation-delay: .04s; } .row:nth-child(2) { animation-delay: .09s; }
   .row:nth-child(3) { animation-delay: .14s; } .row:nth-child(4) { animation-delay: .19s; }
@@ -128,8 +128,6 @@
   @keyframes fade-in { from { opacity: 0; } }
   @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
   .sheet { position: relative; margin: auto; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 44px -16px rgba(10,25,37,0.32); animation: rise .45s cubic-bezier(.2,.8,.2,1) backwards; }
-  .x { position: absolute; top: 0; left: calc(100% + 10px); width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px; background: #fff; color: var(--ink); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.12); }
-  .x:hover { background: #f0f2f5; }
 
   /* the plans step is the big pricing page, shown over this editor in a transparent frame.
      It brings its own scrim, so this layer adds no background of its own. */
@@ -138,8 +136,19 @@
   #l-plans:not([hidden]), #l-co:not([hidden]) { background: none; padding: 0; display: block; overflow: hidden; }
   #l-plans iframe, #l-co iframe { width: 100%; height: 100%; border: 0; background: transparent; }
 
+  /* confetti bursts from behind the card, once, as it lands */
+  .confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .confetti i { position: absolute; top: 50%; left: 50%; width: 9px; height: 14px; border-radius: 1px; opacity: 0; animation: pop 1.5s cubic-bezier(.16,.84,.44,1) forwards; }
+  @keyframes pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(0deg) scale(0.4); }
+    12% { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1); }
+  }
+
   /* what is left to do, straight after checkout. Same points as the top bar menu. */
   .won { width: 500px; padding: 28px 24px 24px; }
+  .won .close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: none; color: var(--ink3); font-size: 16px; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .won .close:hover { background: var(--soft); color: var(--ink); }
   .won .eyebrow { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 4px 11px; border-radius: 999px; background: var(--green-soft); color: #15803d; font-size: 11.5px; font-weight: 600; }
   .won .eyebrow i { font-size: 12px; }
   .won .t { margin: 14px 0 0 4px; font-size: 24px; font-weight: 500; letter-spacing: -0.018em; }
@@ -158,7 +167,6 @@
   @media (max-width: 1240px) { .bar .hide-sm { display: none; } }
   @media (max-width: 1180px) {
     .won { width: auto; max-width: 100%; }
-    .x { left: auto; right: 0; top: -40px; }
     .menu, .coach { left: 12px !important; right: 12px; width: auto; }
   }
 </style>
@@ -223,7 +231,7 @@
 
 <div class="layer" id="l-plans" hidden><iframe id="plans-frame" title="Choose a plan"></iframe></div>
 <div class="layer" id="l-co" hidden><iframe id="co-frame" title="Checkout"></iframe></div>
-<div class="layer" id="l-won" hidden><div class="sheet won" id="won"></div></div>
+<div class="layer" id="l-won" hidden><div class="confetti" id="confetti"></div><div class="sheet won" id="won"></div></div>
 
 <script>
   // the deck behind everything, the same five screens as the community flow
@@ -258,15 +266,16 @@
   ];
   const left = () => STEPS.filter((s) => !s.done).length;
   // the ones still to do lead, the finished ones sit under them
-  const rowsHTML = () => STEPS
+  let todoN = 0;
+  const rowsHTML = () => (todoN = 0, STEPS
     .map((s, i) => Object.assign({}, s, { n: i + 1 }))
     .sort((a, b) => (a.done === b.done ? a.n - b.n : (a.done ? 1 : -1)))
     .map((s) => s.done
-      ? '<div class="row done"><span class="mk"><i class="ph-bold ph-check"></i></span><span class="nm">' + s.t + '</span>' +
+      ? '<div class="row done"><span class="mk"><i class="ph ph-check"></i></span><span class="nm">' + s.t + '</span>' +
         '<span class="chip earned">Earned 50 credits</span></div>'
-      : '<button type="button" class="row todo"><span class="mk">' + s.n + '</span><span class="nm">' + s.t + '</span>' +
-        '<span class="chip earn"><i class="ph-fill ph-star-four"></i>Earn +50</span>' +
-        '<span class="go"><i class="ph ph-arrow-right"></i></span></button>').join('');
+      : '<button type="button" class="row todo"><span class="mk">' + (++todoN) + '</span><span class="nm">' + s.t + '</span>' +
+        '<span class="chip earn">Earn +50</span>' +
+        '<span class="go"><i class="ph ph-arrow-right"></i></span></button>').join(''));
 
   // ---- layers over the editor. Nothing navigates. ----------------------------------
   const L = { plans: document.getElementById('l-plans'), co: document.getElementById('l-co'), won: document.getElementById('l-won') };
@@ -304,6 +313,7 @@
     proBtn.querySelector('.lbl').innerHTML = '<i class="ph-fill ph-rocket-launch"></i>Get most out of ' + NAME[plan];
     drawMenu();
     document.getElementById('won').innerHTML =
+      '<button type="button" class="close" data-dismiss aria-label="Close"><i class="ph ph-x"></i></button>' +
       '<span class="eyebrow"><i class="ph-fill ph-check-circle"></i>Payment complete</span>' +
       '<div class="t">Get most out of ' + NAME[plan] + '</div>' +
       '<div class="s">' + NAME[plan] + ' is on from today. ' + CREDITS[plan] + ' credits are on your account, and ' +
@@ -312,6 +322,23 @@
       '<div class="acts"><button type="button" class="go" data-dismiss>Start creating</button>' +
       '<button type="button" class="later" data-dismiss>Not now</button></div>';
     openLayer('won');
+    burst();
+  };
+
+  // one burst of confetti behind the card, skipped when motion is turned down
+  const CONF = ['#005EFF', '#74A6FF', '#16a34a', '#C08E2A', '#f97316', '#111827'];
+  const burst = () => {
+    const box = document.getElementById('confetti');
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { box.innerHTML = ''; return; }
+    box.innerHTML = Array.from({ length: 44 }, (_, i) => {
+      const a = (Math.PI * 2 * i) / 44 + Math.random() * 0.3;
+      const d = 180 + Math.random() * 320;
+      return '<i style="background:' + CONF[i % CONF.length] +
+        ';--dx:' + Math.round(Math.cos(a) * d) + 'px' +
+        ';--dy:' + Math.round(Math.sin(a) * d * 0.72) + 'px' +
+        ';--rot:' + Math.round(Math.random() * 720 - 360) + 'deg' +
+        ';animation-delay:' + Math.round(Math.random() * 120) + 'ms"></i>';
+    }).join('');
   };
 
   // ---- the top bar menu and the coach mark ------------------------------------------
