@@ -163,6 +163,27 @@
   .files .icon-btn { width: 32px; height: 32px; }
   .files .icon-btn .ph { font-size: 16px; }
 
+  /* Deck screen */
+  .ed { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+  .ed-top { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; border-bottom: 1px solid rgb(var(--line)); background: rgb(var(--surface)); flex: none; }
+  .ed-t { min-width: 0; flex: 1; }
+  .ed-t b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ed-t small { display: block; font-size: 12px; color: rgb(var(--ink-3)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ed-acts { display: flex; align-items: center; gap: 8px; }
+  .ed-acts .stack .av { box-shadow: 0 0 0 2px rgb(var(--surface)); }
+  .ed-acts .btn .ph { font-size: 16px; }
+  .ed-note { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 13px; color: rgb(var(--ink-2)); background: rgb(var(--brand-50) / .6); border-bottom: 1px solid rgb(var(--line)); }
+  .ed-note .ph { font-size: 16px; color: rgb(var(--brand-fg)); }
+  .ed-body { flex: 1; min-height: 0; display: flex; }
+  .ed-rail { width: 168px; flex: none; overflow-y: auto; padding: 16px 12px 120px; border-right: 1px solid rgb(var(--line)); background: rgb(var(--surface)); display: flex; flex-direction: column; gap: 12px; }
+  .ed-rail button { display: flex; gap: 8px; align-items: flex-start; border: 0; background: none; padding: 0; cursor: pointer; color: rgb(var(--ink-3)); font-size: 12px; }
+  .ed-rail img { width: 120px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 1px rgb(var(--line)); }
+  .ed-rail button.on { color: rgb(var(--ink)); font-weight: 600; }
+  .ed-rail button.on img { box-shadow: 0 0 0 2px rgb(var(--brand-600)); }
+  .ed-canvas { flex: 1; min-width: 0; overflow: auto; padding: 32px 32px 120px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: rgb(var(--canvas)); }
+  .ed-slide { width: min(960px, 100%); aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 0 0 1px rgb(var(--line)), var(--sh-menu); }
+  .ed-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
   /* Menus */
   .pop { position: fixed; z-index: 80; width: 240px; }
   .pop .menu-item { width: 100%; border: 0; background: none; text-align: left; height: auto; min-height: 36px; padding: 8px 10px; }
@@ -345,6 +366,9 @@
     .share-nav { width: auto; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgb(var(--line)); padding: 8px 12px; scrollbar-width: none; }
     .action-thumb { flex-direction: column; } .action-thumb .l { width: auto; border-right: 0; border-bottom: 1px solid rgb(var(--line)); }
     .f-head .acc { display: none; }
+    .ed-acts .acc, .ed-acts .stack, .hide-sm { display: none; }
+    .ed-rail { display: none; }
+    .ed-canvas { padding: 16px 16px 160px; }
     .inv { flex-wrap: wrap; }
     .inv .input { flex-basis: 100%; }
     .inv select { flex: 1; }
@@ -562,10 +586,41 @@ function render() {
   else if (r === 'shared') page = pageShared();
   else if (r === 'trash') page = pageTrash();
   else if (r.startsWith('p/')) page = pageItem(r.slice(2));
+  else if (r.startsWith('d/')) { $('#app').className = 'app'; $('#app').innerHTML = pageDeck(r.slice(2)) + pbar(); save(); return; }
   else page = pageHome();
   $('#app').className = 'app';
   $('#app').innerHTML = sidebar() + `<div class="main">${topbar()}<main class="content">${page}</main></div>` + pbar();
   save();
+}
+
+/* ---------- Deck screen: Share sits in the top bar, same modal as everywhere ---------- */
+const SLIDES = ['ed-slide-1.jpg', 'ed-slide-2.jpg', 'ed-slide-3.jpg', 'ed-slide-5.jpg', 'kpi-07-mrr.jpg', 'kpi-04-marketing.jpg'];
+function pageDeck(id) {
+  const u = S.as, d = byId(id);
+  if (!d || (d.ws || 'f1') !== S.ws || !sees(u, d)) return `<div class="main"><main class="content">${empty('ph-lock-simple', 'You can’t open this deck', d && !d.deleted ? `${esc(d.name)} is not shared with you. Ask ${esc(fn(d.by))} to add you.` : 'It was moved or deleted.', '<button class="btn btn-secondary btn-sm" data-act="go" data-to="home">Go to Home</button>')}</main></div>`;
+  const g = grant(u, d), par = d.parent && byId(d.parent), back = par && sees(u, par) ? 'p/' + par.id : sees(u, d) && sharedWithMe(u).includes(d) ? 'shared' : 'home';
+  const n = Math.min(d.slides || 1, 6), slides = [d.thumb, ...SLIDES.filter(x => x !== d.thumb)].slice(0, n);
+  const cur = Math.min(S.slide || 0, n - 1);
+  const ppl = [...audience(chain(d)).ids].filter(x => S.people[x]);
+  return `<div class="ed">
+    <header class="ed-top">
+      <button class="icon-btn" data-act="go" data-to="${back}" aria-label="Back"><i class="ph ph-arrow-left"></i></button>
+      <div class="ed-t"><b>${esc(d.name)}</b><small>${par && sees(u, par) ? esc(par.name) + ' · ' : ''}${g === 'edit' ? `Edited ${esc(d.edited)}` : 'View only · you can comment and present'}</small></div>
+      <div class="ed-acts">
+        ${accChip(d, true)}
+        <span class="stack">${effAccess(d) === 'public' ? `<span class="av all" style="width:28px;height:28px" title="Everyone in ${wsName()}"><i class="ph ph-buildings" style="font-size:14px"></i></span>` : ''}${ppl.slice(0, 3).map(x => av(x, 28)).join('')}</span>
+        <button class="btn btn-ghost" data-act="soon" data-msg="Comments are not in this prototype."><i class="ph ph-chat-circle"></i><span class="hide-sm">Comment</span></button>
+        <button class="btn btn-secondary" data-act="soon" data-msg="Opens ${esc(d.name)} full screen."><i class="ph ph-play"></i><span class="hide-sm">Present</span></button>
+        <button class="btn btn-primary" data-act="share" data-id="${d.id}"><i class="ph ph-share-network"></i>Share</button>
+        <button class="icon-btn" data-act="menu" data-id="${d.id}" aria-label="More for ${esc(d.name)}"><i class="ph ph-dots-three"></i></button>
+      </div>
+    </header>
+    ${g === 'view' ? `<div class="ed-note"><i class="ph ph-eye"></i>You can view ${esc(d.name)}. To edit, ask ${esc(fn(d.by))} for Member access.</div>` : ''}
+    <div class="ed-body">
+      <aside class="ed-rail">${slides.map((x, i) => `<button class="${i === cur ? 'on' : ''}" data-act="slide" data-i="${i}" aria-label="Slide ${i + 1}"><span>${i + 1}</span><img src="${A}${x}" alt=""></button>`).join('')}</aside>
+      <main class="ed-canvas"><div class="ed-slide"><img src="${A}${slides[cur]}" alt="Slide ${cur + 1}"></div><small class="ink-3 t-caption">Slide ${cur + 1} of ${d.slides || n}</small></main>
+    </div>
+  </div>`;
 }
 
 /* ---------- Role banner ---------- */
@@ -1064,7 +1119,8 @@ document.addEventListener('click', e => {
     case 'tab': S.tab = t.dataset.tab; render(); break;
     case 'drawer': $('#app').classList.toggle('drawer'); break;
     case 'open': if (e.target.closest('.star, [data-act=menu]')) return; closeModal(); closePop();
-      toast(`Opens ${esc(it.name)} in the editor. ${grant(u, it) === 'edit' ? 'You can edit it.' : 'View only: you can comment and present.'}`, 'brand', 'ph-presentation'); break;
+      S.slide = 0; go('d/' + id); break;
+    case 'slide': S.slide = +t.dataset.i; render(); break;
     case 'star': e.stopPropagation(); { const l = S.starred[u] = S.starred[u] || []; const i = l.indexOf(id); i < 0 ? l.push(id) : l.splice(i, 1); render(); } break;
     case 'menu': e.stopPropagation(); if ($('#pop .pop')) { closePop(); break; } openPop(t, itemMenu(it)); break;
     case 'ws-menu': if ($('#pop .pop')) { closePop(); break; } openPop(t, wsMenu()); $('#pop .pop').style.left = t.getBoundingClientRect().left + 'px'; break;
@@ -1130,7 +1186,7 @@ document.addEventListener('click', e => {
       if (it.type === 'deck') {
         const owner = it.by !== u;
         deleteItem(it); toast(`${esc(it.name)} moved to Trash.${owner ? ` ${esc(fn(it.by))} is told and can restore it for 30 days.` : ' Restore it within 30 days.'}${it.widget ? ' Its widget link stopped.' : ''}`, 'good', 'ph-trash');
-        it.widget = false; render();
+        it.widget = false; if (route() === 'd/' + id) go(it.parent && sees(u, byId(it.parent)) ? 'p/' + it.parent : 'home'); else render();
       } else {
         const ds = descendants(it).filter(d => d.type === 'deck' && !d.deleted), ppl = new Set(ds.map(d => d.by)), wid = ds.filter(d => d.widget).length;
         confirmDlg(`Delete ${esc(it.name)}?`, `This deletes ${ds.length} ${ds.length === 1 ? 'deck' : 'decks'} by ${ppl.size} ${ppl.size === 1 ? 'person' : 'people'}${descendants(it).some(d => d.type === 'folder') ? ', and every folder inside' : ''}${it.files && it.files.length ? `, plus ${plural(it.files.length, 'knowledge file')}` : ''}. Each creator is told. You can restore it from Trash for 30 days.${wid ? ` ${wid} live ${wid === 1 ? 'widget' : 'widgets'} will stop.` : ''}`, `Delete ${TYPE[it.type]}`, 'del-go', id);
