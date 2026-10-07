@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspace sharing</title>
+<!-- Dashboard, projects, folders and the Share modal, built on Sharing rules v2 (explorations/mani/sharing-rules/v2). -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  body { min-height: 100vh; }
+  button { font: inherit; color: inherit; }
+  a { color: inherit; }
+  .ph, .ph-fill { font-size: 20px; line-height: 1; }
+
+  /* Shell */
+  .app { display: flex; min-height: 100vh; }
+  .side { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 4px; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .content { width: 100%; max-width: 1120px; margin: 0 auto; padding: 32px 24px 160px; }
+  .ws-sw { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px; border: 0; background: none; border-radius: var(--r-control); cursor: pointer; text-align: left; }
+  .ws-sw:hover { background: rgb(var(--sunken)); }
+  .ws-tile { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+  .ws-tile.team { background: #1baf7a; }
+  .ws-sw b { display: block; font-size: 14px; font-weight: 600; }
+  .ws-sw small { display: block; font-size: 12px; color: rgb(var(--ink-3)); }
+  .ws-sw .ph { margin-left: auto; font-size: 16px; color: rgb(var(--ink-3)); }
+  .side .new { width: 100%; margin: 12px 0 8px; }
+  .nav-item { width: 100%; border: 0; background: none; cursor: pointer; text-align: left; }
+  .nav-item .ph, .nav-item .ph-fill { font-size: 20px; }
+  .nav-item .ct { margin-left: auto; font-size: 12px; color: rgb(var(--ink-3)); font-variant-numeric: tabular-nums; }
+  .cap { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 4px; padding: 0 4px 0 10px; }
+  .cap .icon-btn { width: 28px; height: 28px; }
+  .cap .icon-btn .ph { font-size: 16px; }
+  .proj-row .acc-i { margin-left: auto; font-size: 14px; color: rgb(var(--ink-3)); }
+  .side-empty { padding: 6px 10px; font-size: 13px; color: rgb(var(--ink-3)); }
+  .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+  .plan-card { background: rgb(var(--cream)); border-radius: var(--r-card); padding: 12px; margin-bottom: 4px; }
+  .plan-card .row { display: flex; justify-content: space-between; font-size: 13px; }
+  .plan-card b { font-weight: 600; }
+  .plan-card small { display: block; margin-top: 8px; font-size: 12px; color: rgb(var(--ink-2)); }
+  .plan-card .progress { margin-top: 6px; }
+
+  .topbar { justify-content: flex-start; }
+  .search { display: flex; align-items: center; gap: 8px; height: 36px; flex: 1; max-width: 448px; padding: 0 12px; border: 1px solid rgb(var(--line)); background: rgb(var(--canvas)); border-radius: var(--r-control); color: rgb(var(--ink-3)); cursor: pointer; }
+  .search .ph { font-size: 16px; }
+  .search .kbd { margin-left: auto; }
+  .tb-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .credits { display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 13px; color: rgb(var(--ink-2)); }
+  .credits .progress { width: 48px; }
+  .credits b { color: rgb(var(--ink)); font-weight: 500; }
+  .bell { position: relative; }
+  .bell .dot { position: absolute; right: 6px; top: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: rgb(var(--brand-600)); color: #fff; font-size: 10px; line-height: 16px; text-align: center; font-weight: 600; }
+  .burger { display: none; }
+
+  /* Avatars */
+  .av { display: inline-grid; place-items: center; border-radius: 50%; background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); font-weight: 600; flex-shrink: 0; letter-spacing: 0; }
+  .av.own { background: rgb(var(--brand-600)); color: #fff; }
+  .av.ext { background: rgb(var(--sunken)); color: rgb(var(--ink-2)); }
+  .av.all { background: rgb(var(--good-bg)); color: rgb(var(--good)); }
+  .stack { display: flex; }
+  .stack .av { box-shadow: 0 0 0 2px rgb(var(--canvas)); }
+  .stack .av + .av { margin-left: -8px; }
+
+  /* Page header */
+  .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: rgb(var(--ink-3)); margin-bottom: 8px; }
+  .crumbs a { text-decoration: none; cursor: pointer; }
+  .crumbs a:hover { color: rgb(var(--ink)); }
+  .crumbs .ph { font-size: 12px; }
+  .ph-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .ph-head h1 { margin: 4px 0 0; }
+  .ph-eb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: rgb(var(--ink-3)); }
+  .ph-eb .ph { font-size: 16px; }
+  .ph-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .meta { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: rgb(var(--ink-2)); }
+  .acc { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: rgb(var(--ink-2)); }
+  .acc .ph { font-size: 14px; }
+  .acc.pill { height: 24px; padding: 0 8px; border-radius: 99px; background: rgb(var(--sunken)); }
+  .acc.pill.pub { background: rgb(var(--good-bg)); color: rgb(var(--good)); }
+  .sec-h { display: flex; align-items: center; justify-content: space-between; margin: 40px 0 12px; }
+  .sec-h h2 { margin: 0; }
+
+  .note { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-card); font-size: 13px; line-height: 18px; color: rgb(var(--ink-2)); background: rgb(var(--sunken)); }
+  .note .ph { font-size: 18px; color: rgb(var(--ink-3)); flex-shrink: 0; margin-top: 0; }
+  .note b { color: rgb(var(--ink)); font-weight: 600; }
+  .note.warn { background: rgb(var(--warn-bg)); color: rgb(var(--ink)); }
+  .note.warn .ph { color: rgb(var(--warn)); }
+  .note.good { background: rgb(var(--good-bg)); color: rgb(var(--ink)); }
+  .note.good .ph { color: rgb(var(--good)); }
+  .note.brand { background: rgb(var(--brand-50) / .6); border: 1px solid rgb(var(--brand-600) / .3); color: rgb(var(--ink)); }
+  .note.brand .ph { color: rgb(var(--brand-fg)); }
+  .note .acts { margin-top: 10px; display: flex; gap: 8px; }
+  .mt { margin-top: 24px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid rgb(var(--line)); margin-top: 40px; overflow-x: auto; scrollbar-width: none; }
+  .tabs button { position: relative; height: 40px; padding: 0 12px; border: 0; background: none; cursor: pointer; color: rgb(var(--ink-3)); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .tabs button:hover { color: rgb(var(--ink-2)); }
+  .tabs button.on { color: rgb(var(--ink)); font-weight: 500; }
+  .tabs button.on::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 99px; background: rgb(var(--brand-600)); }
+  .tabs .n { padding: 0 6px; border-radius: 99px; background: rgb(var(--sunken)); font-size: 12px; font-variant-numeric: tabular-nums; color: rgb(var(--ink-2)); }
+  .tab-body { margin-top: 20px; animation: fadeUp .18s var(--ease); }
+
+  /* Cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .deck { position: relative; border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); border-radius: var(--r-card); overflow: hidden; cursor: pointer; transition: box-shadow .2s var(--ease); animation: fadeUp .25s var(--ease) both; }
+  .deck:hover { box-shadow: var(--sh-menu); }
+  .thumb { position: relative; aspect-ratio: 16 / 9; border-bottom: 1px solid rgb(var(--line)); background: rgb(var(--sunken)); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .star { position: absolute; right: 10px; top: 10px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgb(var(--surface) / .9); box-shadow: var(--sh-menu); display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .15s var(--ease); }
+  .star .ph, .star .ph-fill { font-size: 16px; }
+  .star.on { opacity: 1; color: #eda100; }
+  .deck:hover .star, .star:focus-visible { opacity: 1; }
+  .wid { position: absolute; left: 10px; top: 10px; height: 24px; padding: 0 8px; border-radius: 99px; background: rgb(var(--surface) / .92); box-shadow: var(--sh-hairline); display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: rgb(var(--good)); }
+  .wid .ph { font-size: 14px; }
+  .db { display: flex; align-items: flex-start; gap: 8px; padding: 14px; }
+  .db .tx { flex: 1; min-width: 0; }
+  .db b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .db small { display: block; font-size: 13px; color: rgb(var(--ink-3)); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .db .acc { margin-top: 8px; }
+  .db .icon-btn { width: 32px; height: 32px; margin: -4px -6px 0 0; }
+
+  .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .pcard { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); border-radius: var(--r-card); cursor: pointer; transition: box-shadow .2s var(--ease); text-align: left; animation: fadeUp .25s var(--ease) both; }
+  .pcard:hover { box-shadow: var(--sh-menu); }
+  .pcard .top { display: flex; align-items: center; gap: 10px; }
+  .pcard .top .ph-fill { font-size: 24px; }
+  .pcard .top b { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pcard .top .icon-btn { width: 32px; height: 32px; margin: -6px -8px -6px 0; }
+  .pcard .bot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pcard small { font-size: 13px; color: rgb(var(--ink-3)); }
+  .pcard.add { border-style: dashed; background: rgb(var(--canvas)); color: rgb(var(--ink-3)); align-items: center; justify-content: center; flex-direction: row; min-height: 104px; font-size: 13px; }
+  .pcard.add:hover { color: rgb(var(--ink)); border-color: rgb(var(--ink-3) / .5); box-shadow: none; }
+
+  .empty { border: 1px dashed rgb(var(--line)); border-radius: var(--r-card); padding: 56px 24px; text-align: center; }
+  .empty .ic { width: 44px; height: 44px; border-radius: 50%; background: rgb(var(--sunken)); color: rgb(var(--ink-3)); display: inline-grid; place-items: center; }
+  .empty b { display: block; margin-top: 12px; font-weight: 600; }
+  .empty small { display: block; max-width: 400px; margin: 4px auto 0; font-size: 13px; color: rgb(var(--ink-3)); }
+  .empty .btn { margin-top: 16px; }
+
+  /* Table (Shared with me, Trash) */
+  .tbl { border: 1px solid rgb(var(--line)); border-radius: var(--r-card); background: rgb(var(--surface)); overflow-x: auto; }
+  .tbl table { width: 100%; min-width: 640px; border-collapse: collapse; }
+  .tbl th { text-align: left; padding: 10px 16px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--ink-3)); border-bottom: 1px solid rgb(var(--line)); }
+  .tbl td { padding: 10px 16px; border-bottom: 1px solid rgb(var(--line)); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl tbody tr { cursor: pointer; }
+  .tbl tbody tr:hover { background: rgb(var(--sunken) / .6); }
+  .tbl .nm { display: flex; align-items: center; gap: 12px; }
+  .tbl .nm img { width: 64px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; box-shadow: 0 0 0 1px rgb(var(--line)); }
+  .tbl .fic { width: 64px; height: 36px; border-radius: 4px; background: rgb(var(--sunken)); display: grid; place-items: center; }
+  .tbl .muted { color: rgb(var(--ink-3)); font-size: 13px; }
+  .tbl .who { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+
+  /* Menus */
+  .pop { position: fixed; z-index: 80; width: 240px; }
+  .pop .menu-item { width: 100%; border: 0; background: none; text-align: left; height: auto; min-height: 36px; padding: 8px 10px; }
+  .pop .menu-item .ph { font-size: 16px; }
+  .pop .menu-item.dis { cursor: not-allowed; color: rgb(var(--ink-off)); }
+  .pop .menu-item.dis:hover { background: none; color: rgb(var(--ink-off)); }
+  .pop .menu-item .why { display: block; font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); margin-top: 2px; }
+  .pop .menu-item.bad { color: rgb(var(--bad)); }
+  .pop .mi-t { display: flex; flex-direction: column; }
+  .pop hr { border: 0; height: 1px; background: rgb(var(--line)); margin: 4px 0; }
+  .pop .ey { padding: 8px 10px 4px; }
+  .pop .menu-item .chk { margin-left: auto; color: rgb(var(--brand-fg)); }
+
+  /* Notifications */
+  .np { width: min(380px, calc(100vw - 24px)); padding: 0; }
+  .np .hd { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgb(var(--line)); font-weight: 600; }
+  .np .ls { max-height: 420px; overflow-y: auto; padding: 6px; }
+  .np .it { display: flex; gap: 12px; padding: 10px; border-radius: var(--r-control); }
+  .np .it .ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--sunken)); color: rgb(var(--ink-3)); flex-shrink: 0; }
+  .np .it.new .ic { background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); }
+  .np .it .ic .ph { font-size: 16px; }
+  .np .it b { display: block; font-weight: 500; font-size: 14px; }
+  .np .it small { display: block; font-size: 13px; color: rgb(var(--ink-3)); margin-top: 2px; }
+  .np .it .acts { display: flex; gap: 8px; margin-top: 8px; }
+  .np .none { padding: 24px; text-align: center; color: rgb(var(--ink-3)); font-size: 13px; }
+
+  /* Modal: X floats outside the card, top right */
+  .mwrap { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px 64px; overflow-y: auto; }
+  .mwrap .scrim { animation: fade .18s var(--ease); backdrop-filter: blur(2px); }
+  .mcard { position: relative; width: 100%; max-width: 560px; margin: auto; background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: var(--r-dialog); box-shadow: var(--sh-dialog); animation: dlgIn .2s var(--ease); }
+  .mcard.sm { max-width: 440px; }
+  .mx { position: absolute; top: 0; right: -48px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgb(var(--surface)); box-shadow: var(--sh-menu); display: grid; place-items: center; cursor: pointer; color: rgb(var(--ink-2)); }
+  .mx:hover { color: rgb(var(--ink)); }
+  .mx .ph { font-size: 18px; }
+  .mh { padding: 20px 24px 8px; }
+  .mh h3 { margin: 0; overflow-wrap: anywhere; }
+  .mh p { margin: 4px 0 0; color: rgb(var(--ink-2)); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .mb { padding: 12px 24px 24px; }
+  .mf { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* Share modal */
+  .sh-tabs { margin: 4px 0 16px; }
+  .inv { display: flex; gap: 8px; position: relative; }
+  .inv .input { flex: 1; min-width: 0; }
+  .inv select { width: 136px; flex-shrink: 0; }
+  select.input { appearance: none; padding-right: 32px; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 256 256'%3E%3Cpath fill='%236c6c7c' d='M213.7 101.7l-80 80a8 8 0 0 1-11.4 0l-80-80a8 8 0 0 1 11.4-11.4L128 164.7l74.3-74.4a8 8 0 0 1 11.4 11.4Z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  select.input:disabled { cursor: default; opacity: 1; color: rgb(var(--ink-2)); background-image: none; }
+  .sug { position: absolute; left: 0; top: 40px; z-index: 5; width: calc(100% - 144px); max-height: 220px; overflow-y: auto; }
+  .sug .menu-item { width: 100%; border: 0; background: none; height: auto; padding: 6px 10px; }
+  .sug .menu-item small { display: block; font-size: 12px; color: rgb(var(--ink-3)); }
+  .hints { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .hints:empty { display: none; }
+  .ppl { list-style: none; margin: 4px 0 0; padding: 0; }
+  .ppl li { display: flex; align-items: center; gap: 12px; padding: 8px 0; animation: fadeUp .2s var(--ease); }
+  .ppl .tx { flex: 1; min-width: 0; }
+  .ppl .tx b { display: block; font-weight: 400; color: rgb(var(--ink)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ppl .tx b em { font-style: normal; color: rgb(var(--ink-3)); }
+  .ppl .tx small { display: block; font-size: 13px; color: rgb(var(--ink-3)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ppl .rl { font-size: 13px; color: rgb(var(--ink-3)); white-space: nowrap; }
+  .ppl select { width: 128px; }
+  .ppl .icon-btn { width: 32px; height: 32px; }
+  .ppl .icon-btn .ph { font-size: 16px; }
+  .ppl .badge { margin-left: 6px; vertical-align: 1px; }
+  .eyebrow.sp { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; }
+  .eyebrow .lnk { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13px; color: rgb(var(--brand-fg)); background: none; border: 0; cursor: pointer; padding: 0; }
+  .opts { margin-top: 8px; border: 1px solid rgb(var(--line)); border-radius: var(--r-card); overflow: hidden; }
+  .opt { display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 12px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .opt + .opt { border-top: 1px solid rgb(var(--line)); }
+  .opt:hover:not(.dis) { background: rgb(var(--sunken) / .6); }
+  .opt .oi { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--sunken)); color: rgb(var(--ink-2)); flex-shrink: 0; }
+  .opt .oi .ph { font-size: 18px; }
+  .opt .ot { flex: 1; min-width: 0; }
+  .opt .ot b { display: block; font-weight: 500; }
+  .opt .ot small { display: block; margin-top: 2px; font-size: 13px; color: rgb(var(--ink-3)); }
+  .opt .rad { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgb(var(--line)); margin-top: 9px; flex-shrink: 0; }
+  .opt.on { background: rgb(var(--brand-50) / .5); }
+  .opt.on .rad { border: 5px solid rgb(var(--brand-600)); }
+  .opt.on .oi { background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); }
+  .opt.on.pub .oi { background: rgb(var(--good-bg)); color: rgb(var(--good)); }
+  .opt.dis { cursor: not-allowed; }
+  .opt.dis .ot b { color: rgb(var(--ink-off)); }
+  .opt.dis .oi { color: rgb(var(--ink-off)); }
+  .opt.dis .rad { opacity: .5; }
+  .sh-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgb(var(--line)); }
+  .sh-foot small { font-size: 13px; color: rgb(var(--ink-3)); }
+  .gate { background: rgb(var(--cream)); border-radius: var(--r-card); padding: 16px; }
+  .gate b { display: block; font-weight: 600; }
+  .gate p { margin: 4px 0 12px; color: rgb(var(--ink-2)); font-size: 13px; line-height: 18px; }
+  .wl { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--good)); box-shadow: 0 0 0 4px rgb(var(--good-bg)); }
+  .wrow { display: flex; gap: 8px; margin-top: 12px; }
+  .wrow .input { flex: 1; min-width: 0; font-family: "Geist Mono", monospace; font-size: 13px; }
+  .facts { margin: 16px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .facts li { display: flex; gap: 8px; font-size: 13px; line-height: 18px; color: rgb(var(--ink-2)); }
+  .facts .ph { font-size: 16px; color: rgb(var(--ink-3)); flex-shrink: 0; }
+
+  /* Move dialog */
+  .dest { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; border: 1px solid rgb(var(--line)); border-radius: var(--r-card); padding: 6px; }
+  .dest button { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 0; background: none; border-radius: var(--r-control); cursor: pointer; text-align: left; color: rgb(var(--ink-2)); }
+  .dest button:hover { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+  .dest button.on { background: rgb(var(--brand-50)); color: rgb(var(--ink)); font-weight: 500; }
+  .dest button .acc { margin-left: auto; }
+  .dest button .ph-fill { font-size: 18px; }
+  .seg-acc { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+  /* Toasts */
+  .toasts { position: fixed; left: 50%; top: 64px; z-index: 90; width: min(420px, calc(100vw - 32px)); transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast { animation: toastIn .22s var(--ease); pointer-events: auto; }
+  .toast .ph { font-size: 20px; color: rgb(var(--good)); flex-shrink: 0; }
+  .toast.warn .ph { color: rgb(var(--warn)); }
+  .toast.brand .ph { color: rgb(var(--brand-fg)); }
+
+  /* Proto bar */
+  .pbar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 70; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 14px; background: rgb(var(--ink)); color: rgb(var(--canvas)); box-shadow: var(--sh-dialog); font-size: 13px; max-width: calc(100vw - 24px); flex-wrap: wrap; }
+  .pbar label { display: flex; align-items: center; gap: 8px; color: rgb(var(--canvas) / .7); }
+  .pbar select { height: 32px; border-radius: var(--r-control); border: 1px solid rgb(var(--canvas) / .2); background: rgb(var(--canvas) / .08); color: rgb(var(--canvas)); padding: 0 8px; font: inherit; cursor: pointer; }
+  .pbar select option { color: #14141f; }
+  .pbar .sw { width: 36px; height: 20px; border-radius: 99px; border: 0; background: rgb(var(--canvas) / .25); position: relative; cursor: pointer; padding: 0; }
+  .pbar .sw::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s var(--ease); }
+  .pbar .sw.on { background: rgb(var(--brand-600)); }
+  .pbar .sw.on::after { transform: translateX(16px); }
+  .pbar .rs { height: 32px; padding: 0 10px; border-radius: var(--r-control); border: 0; background: rgb(var(--canvas) / .12); color: rgb(var(--canvas)); cursor: pointer; }
+  .pbar .sep { width: 1px; height: 20px; background: rgb(var(--canvas) / .2); }
+
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes dlgIn { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
+
+  @media (max-width: 900px) {
+    .side { position: fixed; z-index: 75; left: 0; top: 0; width: min(300px, 85vw); transform: translateX(-100%); transition: transform .25s var(--ease); box-shadow: var(--sh-dialog); }
+    .app.drawer .side { transform: none; }
+    .app.drawer .drawer-scrim { display: block; }
+    .drawer-scrim { display: none; position: fixed; inset: 0; z-index: 74; background: rgb(var(--scrim) / .45); }
+    .burger { display: inline-flex; }
+    .credits { display: none; }
+  }
+  @media (max-width: 640px) {
+    .content { padding: 24px 16px 200px; }
+    .search .kbd, .search span { display: none; }
+    .search { flex: 0; max-width: none; }
+    .mwrap { padding: 64px 12px 12px; align-items: flex-end; }
+    .mx { top: -48px; right: 0; }
+    .inv { flex-wrap: wrap; }
+    .inv .input { flex-basis: 100%; }
+    .inv select { flex: 1; }
+    .sug { width: 100%; }
+    .ppl select { width: 112px; }
+    .ph-acts .stack { display: none; }
+    .pbar { bottom: 8px; gap: 8px; }
+    .pbar .sep { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="modal"></div>
+<div id="pop"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const KEY = 'ws-share-v1';
+const A = 'assets/';
+const BONUS_MAX = 2000, BONUS = 200;
+const TINT = ['#3427ff', '#eb6834', '#1baf7a', '#eda100'];
+
+/* Seed: workspace Formula One, Mani is the Owner (same example as Sharing rules v2) */
+function seed() {
+  const P = (id, name, parent, by, x = {}) => ({ id, type: parent ? 'folder' : 'project', name, parent, by, ...x });
+  const D = (id, name, parent, by, thumb, edited, slides, x = {}) => ({ id, type: 'deck', name, parent, by, thumb, edited, slides, ...x });
+  const m = (id, role, by) => ({ id, role, by, status: 'active' });
+  return {
+    as: 'mani', ws: 'f1', plan: 'free', membersInvite: true, tab: 'recent', bonus: 400, seq: 1,
+    people: {
+      mani: { name: 'Mani', email: 'mani@formulaone.co', role: 'owner' },
+      sara: { name: 'Sara Khan', email: 'sara@formulaone.co', role: 'admin' },
+      bala: { name: 'Bala Murugan', email: 'bala@formulaone.co', role: 'member' },
+      madhu: { name: 'Madhu Rao', email: 'madhu@formulaone.co', role: 'member' },
+      sumanth: { name: 'Sumanth', email: 'sumanth@formulaone.co', role: 'member' },
+      sarana: { name: 'Sarana Devi', email: 'sarana@formulaone.co', role: 'member' },
+      ravi: { name: 'Ravi Iyer', email: 'ravi@formulaone.co', role: 'viewer' },
+      priya: { name: 'Priya Nair', email: 'priya@agency.studio', role: 'guest' },
+    },
+    items: [
+      P('sales', 'Sales', null, 'mani', { access: 'public', color: 0 }),
+      D('q4', 'Q4 Pitch', 'sales', 'mani', 'kpi-01-cover.jpg', '2 hours ago', 12, { widget: true }),
+      D('pipe', 'Pipeline review', 'sales', 'bala', 'kpi-07-mrr.jpg', 'yesterday', 9),
+      P('ent', 'Enterprise', 'sales', 'bala'),
+      D('acme', 'Acme proposal', 'ent', 'bala', 'tpl-digital.jpg', '3 days ago', 14),
+      P('mkt', 'Marketing', null, 'sara', { access: 'shared', color: 1, people: [m('bala', 'member', 'sara'), m('madhu', 'member', 'sara')] }),
+      P('q1', 'Q1', 'mkt', 'sara', { access: 'shared', people: [m('priya', 'viewer', 'sara')] }),
+      D('q1p', 'Q1 Pitch', 'q1', 'sara', 'kpi-04-marketing.jpg', '4 days ago', 10, { access: 'public' }),
+      D('q1c', 'Q1 campaign plan', 'q1', 'madhu', 'ed-slide-2.jpg', 'last week', 8),
+      D('brand', 'Brand playbook', 'mkt', 'sara', 'tpl-brand-playbook.jpg', '2 weeks ago', 16),
+      P('lead', 'Leadership', null, 'mani', { access: 'shared', color: 2, people: [m('madhu', 'member', 'mani'), m('sarana', 'member', 'mani')] }),
+      D('board', 'Board update', 'lead', 'mani', 'ed-slide-1.jpg', 'today', 11, { people: [m('sumanth', 'viewer', 'mani')] }),
+      D('hire', 'Hiring plan', 'lead', 'madhu', 'ed-slide-3.jpg', '5 days ago', 6),
+      P('drafts', 'Mani’s drafts', null, 'mani', { access: 'private', color: 3 }),
+      D('q4d', 'Q4 Pitch, rough cut', 'drafts', 'mani', 'ed-slide-5.jpg', 'just now', 7),
+      P('ops', 'Operations', null, 'bala', { access: 'public', color: 2 }),
+      D('opsw', 'Weekly ops review', 'ops', 'bala', 'tpl-q2-product.jpg', 'yesterday', 8),
+      D('vend', 'Vendor scorecard', 'ops', 'sumanth', 'ed-slide-2.jpg', '3 days ago', 5),
+      P('client', 'Client work', null, 'mani', { ws: 'studio', access: 'private', color: 0 }),
+      D('retail', 'Retail pitch', 'client', 'mani', 'tpl-digital.jpg', 'yesterday', 9, { ws: 'studio', widget: true }),
+    ],
+    starred: { mani: ['q4'] },
+    reqs: [],
+    notifs: {
+      mani: [{ ic: 'ph-buildings', t: 'Sara made Q1 Pitch public', s: 'It is in Shared with me. The rest of Q1 stays private.', when: '4d', go: 'q1p' }],
+      sumanth: [{ ic: 'ph-share-network', t: 'Mani shared Board update with you', s: 'Can view · Leadership stays private', when: '1h', go: 'board', unread: true }],
+      priya: [{ ic: 'ph-share-network', t: 'Sara shared Q1 with you', s: 'Can view · Only this folder', when: '2d', go: 'q1', unread: true }],
+      bala: [{ ic: 'ph-share-network', t: 'Sara added you to Marketing', s: 'Can edit', when: '1w', go: 'mkt' }],
+    },
+  };
+}
+let S;
+try { S = JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch (e) { S = seed(); }
+const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+/* ---------- Rules engine (Sharing rules v2) ---------- */
+const R = { private: 0, shared: 1, public: 2 }, RN = ['private', 'shared', 'public'];
+const wsName = () => S.ws === 'f1' ? 'Formula One' : 'Mani Studio';
+const items = () => S.items.filter(i => (i.ws || 'f1') === S.ws);
+const byId = id => S.items.find(i => i.id === id);
+const kids = id => items().filter(i => i.parent === id && !i.deleted);
+const chain = it => { const a = []; let n = it; while (n) { a.push(n); n = n.parent ? byId(n.parent) : null; } return a; };
+const descendants = it => { const out = []; const walk = n => S.items.filter(i => i.parent === n.id).forEach(c => { out.push(c); walk(c); }); walk(it); return out; };
+const role = u => S.ws === 'studio' ? (u === 'mani' ? 'owner' : null) : S.people[u]?.role;
+const isAdmin = u => ['owner', 'admin'].includes(role(u));
+const isMem = u => ['owner', 'admin', 'member'].includes(role(u));
+const fn = u => (S.people[u]?.name || u).split(' ')[0];
+const nm = u => S.people[u]?.name || u;
+const TYPE = { project: 'project', folder: 'folder', deck: 'deck' };
+const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', guest: 'Guest', invited: 'Invited' };
+// Most open level wins down the tree: an inner item can be more open, never more private.
+const effAccess = it => RN[Math.max(...chain(it).map(n => n.access ? R[n.access] : 0))];
+
+// What can person u do with item it? 'edit' | 'view' | null. Private stays private, even for the Owner and Admins.
+function grant(u, it) {
+  if (!it || it.deleted) return null;
+  let g = 0;
+  for (const n of chain(it)) {
+    if (n.by === u) g = 2;
+    const p = (n.people || []).find(q => q.id === u && q.status === 'active');
+    if (p) g = Math.max(g, p.role === 'member' ? 2 : 1);
+    if (n.access === 'public') { if (isMem(u)) g = 2; else if (role(u) === 'viewer') g = Math.max(g, 1); }
+  }
+  if (!isMem(u)) g = Math.min(g, 1);
+  return g === 2 ? 'edit' : g === 1 ? 'view' : null;
+}
+const sees = (u, it) => !!grant(u, it);
+// Everyone who can open it, by name (creators and people added on the way down)
+function audience(nodes) {
+  const ids = new Set(); let pub = false;
+  nodes.forEach(n => { ids.add(n.by); (n.people || []).filter(p => p.status === 'active').forEach(p => ids.add(p.id)); if (n.access === 'public') pub = true; });
+  return { ids, pub };
+}
+function accInfo(it) {
+  const a = effAccess(it);
+  if (a === 'public') return { ic: 'ph-buildings', t: 'Everyone in ' + wsName(), k: 'public' };
+  if (a === 'shared') { const n = audience(chain(it)).ids.size; return { ic: 'ph-users', t: `Shared with ${n} ${n === 1 ? 'person' : 'people'}`, k: 'shared' }; }
+  return { ic: 'ph-lock-simple', t: it.by === S.as ? 'Only you' : 'Private', k: 'private' };
+}
+const accChip = (it, pill) => { const a = accInfo(it); return `<span class="acc ${pill ? 'pill' : ''} ${pill && a.k === 'public' ? 'pub' : ''}"><i class="ph ${a.ic}"></i>${esc(a.t)}</span>`; };
+const topProjects = u => items().filter(i => i.type === 'project' && !i.deleted && sees(u, i));
+// Shared with me: shared with you by name, or open to you while the folder around it is not
+function sharedWithMe(u) {
+  return items().filter(i => !i.deleted && i.by !== u && sees(u, i) && (
+    (i.people || []).some(p => p.id === u && p.status === 'active') || (i.parent && !sees(u, byId(i.parent)))
+  ));
+}
+function sharedBy(u, it) {
+  const p = (it.people || []).find(q => q.id === u);
+  if (p) return p.by;
+  return it.by;
+}
+const canManage = (u, it) => it.by === u || (isAdmin(u) && sees(u, it));
+const canLeave = (u, it) => it.by !== u && (it.people || []).some(p => p.id === u) && effAccess(it) !== 'public';
+const deckCount = it => it.type === 'deck' ? 1 : descendants(it).filter(d => d.type === 'deck' && !d.deleted).length;
+const membersCount = () => Object.keys(S.people).filter(k => isMem(k)).length;
+const viewersCount = () => Object.keys(S.people).filter(k => role(k) === 'viewer').length;
+const solo = () => S.ws === 'studio';
+const planName = () => solo() ? 'Pro' : S.plan === 'team' ? 'Team' : 'Free';
+
+/* ---------- Helpers ---------- */
+const ini = n => n.split(/[\s.@]+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+const av = (u, sz = 32) => `<span class="av ${role(u) === 'owner' ? 'own' : ['guest', 'invited'].includes(role(u)) ? 'ext' : ''}" style="width:${sz}px;height:${sz}px;font-size:${sz < 30 ? 10 : 12}px" title="${esc(nm(u))}">${esc(ini(nm(u)))}</span>`;
+const folderIc = it => `<i class="ph-fill ${it.type === 'deck' ? 'ph-presentation' : 'ph-folder'}" style="color:${TINT[(chain(it).at(-1).color || 0) % 4]}"></i>`;
+function toast(msg, tone = 'good', icon) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + tone;
+  t.innerHTML = `<i class="ph ${icon || (tone === 'warn' ? 'ph-warning' : tone === 'brand' ? 'ph-info' : 'ph-check-circle')}"></i><span>${msg}</span>`;
+  $('#toasts').appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+function notify(u, n) { if (u === undefined) return; (S.notifs[u] = S.notifs[u] || []).unshift({ ...n, when: 'now', unread: true }); }
+const route = () => (location.hash.slice(1) || 'home');
+const go = r => { closePop(); if (location.hash.slice(1) === r) render(); else location.hash = r; };
+
+/* ---------- Shell ---------- */
+function sidebar() {
+  const u = S.as, projs = topProjects(u), sw = sharedWithMe(u).length, r = route();
+  const canCreate = isMem(u);
+  const nav = (ic, label, to, ct) => `<button class="nav-item" data-act="go" data-to="${to}" ${r === to ? 'aria-current="page"' : ''}><i class="ph ${ic}"></i>${label}${ct ? `<span class="ct">${ct}</span>` : ''}</button>`;
+  const cur = r.startsWith('p/') ? chain(byId(r.slice(2)) || {}).at(-1)?.id : null;
+  const credits = solo() ? '2,000' : S.plan === 'team' ? '12,000' : '1,240';
+  return `<aside class="sidebar side">
+    <button class="ws-sw" data-act="ws-menu"><span class="ws-tile ${solo() ? 'brand-gradient' : 'team'}">${solo() ? 'M' : 'F'}</span><span><b>${wsName()}</b><small>${planName()} · ${solo() ? '1 member' : `${plural(membersCount(), 'member')}, ${plural(viewersCount(), 'viewer')}`}</small></span><i class="ph ph-caret-up-down"></i></button>
+    ${canCreate ? `<button class="btn btn-primary new" data-act="new-deck-home"><i class="ph ph-plus"></i>New deck</button>` : '<div style="height:12px"></div>'}
+    ${nav('ph-house', 'Home', 'home')}
+    ${nav('ph-share-network', 'Shared with me', 'shared', sw)}
+    ${nav('ph-trash', 'Trash', 'trash')}
+    <div class="cap"><span class="eyebrow">Projects</span>${canCreate ? '<button class="icon-btn" data-act="new-project" aria-label="New project"><i class="ph ph-plus"></i></button>' : ''}</div>
+    ${projs.length ? projs.map(p => `<button class="nav-item proj-row" data-act="go" data-to="p/${p.id}" ${cur === p.id ? 'aria-current="page"' : ''}><i class="ph-fill ph-folder" style="color:${TINT[(p.color || 0) % 4]}"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span><i class="ph ${accInfo(p).ic} acc-i" title="${esc(accInfo(p).t)}"></i></button>`).join('')
+      : `<div class="side-empty">${role(u) === 'guest' ? 'You see only what people share with you. Find it in Shared with me.' : 'No projects yet'}</div>`}
+    <div class="side-foot">
+      <div class="plan-card"><div class="row"><b>${planName()} plan</b><span class="ink-3 tabular">${credits} credits</span></div>
+        ${S.plan === 'free' && !solo() ? `<div class="progress"><span style="width:${S.bonus / BONUS_MAX * 100}%"></span></div><small>${S.bonus.toLocaleString()} of 2,000 invite credits earned</small>` : `<small>${solo() ? 'Just you. Team adds people.' : 'One shared credit pool'}</small>`}</div>
+      ${isMem(u) ? `<button class="nav-item" data-act="share-ws"><i class="ph ph-user-plus"></i>Invite to ${wsName()}</button>` : ''}
+      <button class="nav-item" data-act="soon" data-msg="Settings are not in this prototype."><i class="ph ph-gear-six"></i>Settings</button>
+    </div>
+  </aside><div class="drawer-scrim" data-act="drawer"></div>`;
+}
+function topbar() {
+  const n = (S.notifs[S.as] || []).filter(x => x.unread).length;
+  const credits = solo() ? '2,000' : S.plan === 'team' ? '12,000' : '1,240';
+  return `<header class="topbar">
+    <button class="icon-btn burger" data-act="drawer" aria-label="Menu"><i class="ph ph-list"></i></button>
+    <button class="search" data-act="soon" data-msg="Search is not in this prototype."><i class="ph ph-magnifying-glass"></i><span>Search decks, settings, actions</span><span class="kbd">⌘K</span></button>
+    <div class="tb-right">
+      <div class="credits"><div class="progress"><span style="width:62%"></span></div><b class="tabular">${credits}</b>credits</div>
+      <button class="icon-btn bell" data-act="notifs" aria-label="Notifications"><i class="ph ph-bell"></i>${n ? `<span class="dot">${n}</span>` : ''}</button>
+      ${av(S.as, 32)}
+    </div>
+  </header>`;
+}
+function render() {
+  const r = route();
+  let page;
+  if (r === 'home') page = pageHome();
+  else if (r === 'shared') page = pageShared();
+  else if (r === 'trash') page = pageTrash();
+  else if (r.startsWith('p/')) page = pageItem(r.slice(2));
+  else page = pageHome();
+  $('#app').className = 'app';
+  $('#app').innerHTML = sidebar() + `<div class="main">${topbar()}<main class="content">${page}</main></div>` + pbar();
+  save();
+}
+
+/* ---------- Role banner ---------- */
+function roleNote() {
+  const u = S.as, r = role(u);
+  if (r === 'viewer') return `<div class="note brand mt"><i class="ph ph-eye"></i><div><b>You are a Viewer in ${wsName()}.</b> You can open, comment on and present every public project. Creating, editing, inviting and downloading need a Member.</div></div>`;
+  if (r === 'guest') return `<div class="note brand mt"><i class="ph ph-eye"></i><div><b>You are a guest in ${wsName()}.</b> You see only what people shared with you: ${sharedWithMe(u).map(i => esc(i.name)).join(', ') || 'nothing yet'}. Public projects stay hidden.</div></div>`;
+  return '';
+}
+
+/* ---------- Home ---------- */
+function pageHome() {
+  const u = S.as;
+  const projs = topProjects(u);
+  const decks = items().filter(d => d.type === 'deck' && sees(u, d));
+  const starred = (S.starred[u] || []).map(byId).filter(d => d && (d.ws || 'f1') === S.ws && sees(u, d));
+  const sw = sharedWithMe(u);
+  const tab = S.tab;
+  const tabs = [['recent', 'Recent', 0], ['starred', 'Starred', starred.length], ['shared', 'Shared with me', sw.length]];
+  let body;
+  if (tab === 'starred') body = starred.length ? `<div class="grid">${starred.map(deckCard).join('')}</div>` : empty('ph-star', 'No starred decks yet', 'Star decks you open often. They show up here.');
+  else if (tab === 'shared') body = sharedTable(sw);
+  else body = decks.length ? `<div class="grid">${decks.map(deckCard).join('')}</div>` : empty('ph-presentation', 'No decks yet', role(u) === 'guest' ? 'When someone shares a deck with you, it shows up here.' : 'Start a deck, or ask a teammate to share one.');
+  return `
+    <div class="ph-head"><div><div class="ph-eb"><i class="ph ph-house"></i>${wsName()}</div><h1 class="t-display">Home</h1></div>
+      ${isMem(u) ? `<div class="ph-acts"><button class="btn btn-secondary" data-act="share-ws"><i class="ph ph-user-plus"></i>Invite</button><button class="btn btn-primary" data-act="new-deck-home"><i class="ph ph-plus"></i>New deck</button></div>` : ''}</div>
+    ${roleNote()}
+    ${projs.length || isMem(u) ? `<div class="sec-h"><h2 class="t-heading">Projects</h2><span class="ink-3 t-caption">${projs.length} you can open</span></div>
+    <div class="pgrid">${projs.map(projCard).join('')}${isMem(u) ? `<button class="pcard add" data-act="new-project"><i class="ph ph-plus"></i>New project</button>` : ''}</div>` : ''}
+    <div class="tabs">${tabs.map(([k, l, n]) => `<button class="${tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${l}${n ? `<span class="n">${n}</span>` : ''}</button>`).join('')}</div>
+    <div class="tab-body">${body}</div>`;
+}
+function projCard(p, i = 0) {
+  const ppl = [...audience(chain(p)).ids].filter(x => S.people[x]);
+  const n = deckCount(p);
+  const sub = kids(p.id).filter(k => k.type !== 'deck' && sees(S.as, k)).length;
+  return `<div class="pcard" data-act="go" data-to="p/${p.id}" style="animation-delay:${Math.min(i, 6) * 30}ms">
+    <div class="top">${folderIc(p)}<b>${esc(p.name)}</b><button class="icon-btn" data-act="menu" data-id="${p.id}" aria-label="More for ${esc(p.name)}"><i class="ph ph-dots-three"></i></button></div>
+    <small>${n} ${n === 1 ? 'deck' : 'decks'}${sub ? ` · ${sub} ${sub === 1 ? 'folder' : 'folders'}` : ''} · by ${p.by === S.as ? 'you' : esc(fn(p.by))}</small>
+    <div class="bot">${accChip(p, true)}<span class="stack">${effAccess(p) === 'public' ? `<span class="av all" style="width:24px;height:24px;font-size:10px" title="Everyone in ${wsName()}"><i class="ph ph-buildings" style="font-size:12px"></i></span>` : ppl.slice(0, 4).map(x => av(x, 24)).join('')}</span></div>
+  </div>`;
+}
+function deckCard(d, i = 0) {
+  const u = S.as, par = d.parent && byId(d.parent), pv = par && sees(u, par);
+  const st = (S.starred[u] || []).includes(d.id);
+  return `<article class="deck" data-act="open" data-id="${d.id}" style="animation-delay:${Math.min(i, 6) * 30}ms">
+    <div class="thumb"><img src="${A}${d.thumb}" alt="">${d.widget ? '<span class="wid"><i class="ph ph-globe-simple"></i>Widget on</span>' : ''}
+      <button class="star ${st ? 'on' : ''}" data-act="star" data-id="${d.id}" aria-label="${st ? 'Unstar' : 'Star'}"><i class="${st ? 'ph-fill' : 'ph'} ph-star"></i></button></div>
+    <div class="db"><div class="tx"><b>${esc(d.name)}</b><small>${pv ? esc(par.name) + ' · ' : ''}Edited ${esc(d.edited)}${grant(u, d) === 'view' ? ' · Can view' : ''}</small>${accChip(d)}</div>
+      <button class="icon-btn" data-act="menu" data-id="${d.id}" aria-label="More for ${esc(d.name)}"><i class="ph ph-dots-three"></i></button></div>
+  </article>`;
+}
+const empty = (ic, t, s, btn = '') => `<div class="empty"><span class="ic"><i class="ph ${ic}"></i></span><b>${t}</b><small>${s}</small>${btn}</div>`;
+function sharedTable(list) {
+  const u = S.as;
+  if (!list.length) return empty('ph-share-network', 'Nothing shared with you yet', 'Folders and decks people share with you by name show up here, with who shared them.');
+  return `<div class="tbl"><table><thead><tr><th>Name</th><th>Shared by</th><th>You can</th><th></th></tr></thead><tbody>
+    ${list.map(i => `<tr data-act="${i.type === 'deck' ? 'open' : 'go'}" data-id="${i.id}" data-to="p/${i.id}">
+      <td><div class="nm">${i.type === 'deck' ? `<img src="${A}${i.thumb}" alt="">` : `<span class="fic">${folderIc(i)}</span>`}<div><b style="font-weight:500">${esc(i.name)}</b><div class="muted">${i.type === 'deck' ? 'Deck' : i.type === 'project' ? 'Project' : 'Folder'} · ${accInfo(i).t}</div></div></div></td>
+      <td><div class="who">${av(sharedBy(u, i), 24)}${esc(nm(sharedBy(u, i)))}</div></td>
+      <td class="muted">${grant(u, i) === 'edit' ? 'Edit' : 'View, comment, present'}</td>
+      <td style="text-align:right"><button class="icon-btn" data-act="menu" data-id="${i.id}" aria-label="More"><i class="ph ph-dots-three"></i></button></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function pageShared() {
+  return `<div class="ph-head"><div><div class="ph-eb"><i class="ph ph-share-network"></i>${wsName()}</div><h1 class="t-display">Shared with me</h1></div></div>
+    <p class="ink-2" style="margin:8px 0 24px">Folders and decks shared with you, and who shared them. You see only these, not the folders around them.</p>
+    ${sharedTable(sharedWithMe(S.as))}`;
+}
+function pageTrash() {
+  const u = S.as;
+  const list = items().filter(i => i.deleted && !i.deletedWith && (i.by === u || i.deleted.by === u));
+  return `<div class="ph-head"><div><div class="ph-eb"><i class="ph ph-trash"></i>${wsName()}</div><h1 class="t-display">Trash</h1></div></div>
+    <p class="ink-2" style="margin:8px 0 24px">Items stay here for 30 days, then they are deleted for good. You see what you deleted and what you created.</p>
+    ${list.length ? `<div class="tbl"><table><thead><tr><th>Name</th><th>Deleted by</th><th>Removed in</th><th></th></tr></thead><tbody>
+      ${list.map(i => `<tr><td><div class="nm">${i.type === 'deck' ? `<img src="${A}${i.thumb}" alt="" style="opacity:.7">` : `<span class="fic">${folderIc(i)}</span>`}<b style="font-weight:500">${esc(i.name)}</b></div></td>
+        <td><div class="who">${av(i.deleted.by, 24)}${i.deleted.by === u ? 'You' : esc(nm(i.deleted.by))}</div></td><td class="muted tabular">30 days</td>
+        <td style="text-align:right"><button class="btn btn-secondary btn-sm" data-act="restore" data-id="${i.id}">Restore</button></td></tr>`).join('')}
+    </tbody></table></div>` : empty('ph-trash', 'Trash is empty', 'Deleted decks and projects wait here for 30 days. Restore one from this page.')}`;
+}
+
+/* ---------- Project or folder page ---------- */
+function pageItem(id) {
+  const u = S.as, it = byId(id);
+  if (!it || (it.ws || 'f1') !== S.ws || !sees(u, it) || it.type === 'deck') {
+    return empty('ph-lock-simple', 'You can’t open this', it && !it.deleted ? `${esc(it.name)} is not shared with ${u === S.as ? 'you' : fn(u)}. Ask its creator to add you.` : 'It was moved or deleted.', '<button class="btn btn-secondary btn-sm" data-act="go" data-to="home">Go to Home</button>');
+  }
+  const g = grant(u, it);
+  const ch = chain(it).reverse();
+  let start = ch.length - 1;
+  while (start > 0 && sees(u, ch[start - 1])) start--;
+  const crumbs = [start === 0 ? `<a data-act="go" data-to="home">${wsName()}</a>` : `<a data-act="go" data-to="shared">Shared with me</a>`]
+    .concat(ch.slice(start, -1).map(n => `<a data-act="go" data-to="p/${n.id}">${esc(n.name)}</a>`))
+    .join('<i class="ph ph-caret-right"></i>');
+  const ppl = [...audience(chain(it)).ids].filter(x => S.people[x]);
+  const subs = kids(id).filter(k => k.type !== 'deck' && sees(u, k));
+  const decks = kids(id).filter(k => k.type === 'deck' && sees(u, k));
+  const viewer = g === 'view';
+  const parent = it.parent && byId(it.parent);
+  return `
+    <div class="crumbs">${crumbs}<i class="ph ph-caret-right"></i><span>${esc(it.name)}</span></div>
+    <div class="ph-head"><div style="min-width:0"><div class="ph-eb"><i class="ph ph-folder"></i>${it.type === 'project' ? 'Project' : 'Folder'}</div><h1 class="t-display">${esc(it.name)}</h1></div>
+      <div class="ph-acts"><span class="stack">${effAccess(it) === 'public' ? `<span class="av all" style="width:32px;height:32px" title="Everyone in ${wsName()}"><i class="ph ph-buildings" style="font-size:16px"></i></span>` : ''}${ppl.slice(0, 4).map(x => av(x, 32)).join('')}</span>
+        <button class="btn btn-secondary" data-act="share" data-id="${id}"><i class="ph ph-share-network"></i>Share</button>
+        ${viewer ? '' : `<button class="btn btn-primary" data-act="new-deck" data-id="${id}"><i class="ph ph-plus"></i>New deck here</button>`}
+        <button class="icon-btn" data-act="menu" data-id="${id}" aria-label="More for ${esc(it.name)}"><i class="ph ph-dots-three"></i></button></div></div>
+    <div class="meta">${accChip(it, true)}<span>${decks.length + subs.length ? `${decks.length} ${decks.length === 1 ? 'deck' : 'decks'}${subs.length ? ` · ${subs.length} ${subs.length === 1 ? 'folder' : 'folders'}` : ''}` : 'Empty'} · Created by ${it.by === u ? 'you' : esc(nm(it.by))}${parent && effAccess(parent) === effAccess(it) && !it.access ? ` · Follows ${esc(parent.name)}` : ''}</span></div>
+    ${viewer ? `<div class="note mt"><i class="ph ph-eye"></i><div>You can view ${esc(it.name)}: open, comment and present. To edit or invite, ask ${esc(fn(it.by))} for Member access.</div></div>` : ''}
+    ${subs.length || !viewer ? `<div class="sec-h"><h2 class="t-heading">Folders</h2></div>
+    <div class="pgrid">${subs.map(projCard).join('')}${viewer ? '' : `<button class="pcard add" data-act="new-folder" data-id="${id}"><i class="ph ph-plus"></i>New folder</button>`}</div>` : ''}
+    <div class="sec-h"><h2 class="t-heading">Decks</h2></div>
+    ${decks.length ? `<div class="grid">${decks.map(deckCard).join('')}</div>` : empty('ph-folder-open', `${esc(it.name)} has no decks yet`, viewer ? 'Decks added here show up for you too.' : `Move decks here from their menu, or start one. New decks follow ${esc(it.name)} sharing.`)}`;
+}
+
+/* ---------- Menus ---------- */
+function closePop() { $('#pop').innerHTML = ''; }
+function openPop(anchor, html, cls = '') {
+  closePop();
+  const r = anchor.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'pop menu ' + cls;
+  el.innerHTML = html;
+  $('#pop').appendChild(el);
+  const w = el.offsetWidth, h = el.offsetHeight;
+  let left = Math.min(r.right - w, innerWidth - w - 12); left = Math.max(12, left);
+  let top = r.bottom + 6; if (top + h > innerHeight - 12) top = Math.max(12, r.top - h - 6);
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+}
+const mi = (ic, label, act, id, why, bad) => why
+  ? `<div class="menu-item dis"><i class="ph ${ic}"></i><span class="mi-t">${label}<span class="why">${why}</span></span></div>`
+  : `<button class="menu-item ${bad ? 'bad' : ''}" data-act="${act}" data-id="${id}"><i class="ph ${ic}"></i>${label}</button>`;
+function itemMenu(it) {
+  const u = S.as, g = grant(u, it), edit = g === 'edit', cr = fn(it.by);
+  const rows = [mi('ph-share-network', 'Share', 'share', it.id)];
+  if (it.type === 'deck') {
+    rows.push(mi('ph-pencil-simple', 'Rename', 'rename', it.id, edit ? '' : 'Viewers can’t rename'));
+    rows.push(mi('ph-copy', 'Duplicate', 'dup', it.id, edit ? '' : 'Viewers can’t duplicate'));
+    rows.push(mi('ph-folder-simple-dashed', 'Move to…', 'move', it.id, edit ? '' : 'Viewers can’t move decks'));
+    rows.push(mi('ph-download-simple', 'Download', 'download', it.id, edit ? '' : 'Viewers can’t download or export'));
+  } else {
+    rows.push(mi('ph-pencil-simple', 'Rename', 'rename', it.id, canManage(u, it) ? '' : `Only ${cr} or an Admin`));
+    if (it.type === 'folder') rows.push(mi('ph-folder-simple-dashed', 'Move to…', 'move', it.id, edit ? '' : 'Viewers can’t move folders'));
+  }
+  if (canLeave(u, it)) rows.push('<hr>' + mi('ph-sign-out', 'Leave', 'leave', it.id));
+  else if (it.by !== u && effAccess(it) === 'public' && (it.people || []).some(p => p.id === u)) rows.push('<hr>' + mi('ph-sign-out', 'Leave', '', it.id, `Public ${TYPE[it.type]}s can’t be left`));
+  if (it.type === 'deck') rows.push('<hr>' + mi('ph-trash', 'Move to Trash', 'del', it.id, edit ? '' : 'Viewers can’t delete', true));
+  else rows.push('<hr>' + mi('ph-trash', `Delete ${TYPE[it.type]}`, 'del', it.id, canManage(u, it) ? '' : `Only ${cr} or an Admin`, true));
+  return rows.join('');
+}
+function wsMenu() {
+  const opts = [['f1', 'Formula One', S.plan === 'team' ? 'Team' : 'Free', 'team', 'F'], ['studio', 'Mani Studio', 'Pro · just you', 'brand-gradient', 'M']]
+    .filter(o => o[0] === 'f1' || S.as === 'mani');
+  return `<div class="eyebrow ey">Workspaces</div>${opts.map(([k, n, p, c, l]) => `<button class="menu-item" data-act="ws" data-ws="${k}"><span class="ws-tile ${c}" style="width:24px;height:24px;font-size:12px;border-radius:6px">${l}</span><span class="mi-t" style="color:rgb(var(--ink))">${n}<span class="why">${p}</span></span>${S.ws === k ? '<i class="ph ph-check chk"></i>' : ''}</button>`).join('')}
+    <hr><div class="menu-item dis" style="color:rgb(var(--ink-3))"><i class="ph ph-info"></i><span class="mi-t">Workspaces are fully separate<span class="why">Own decks, people and credits. Decks can’t move between them.</span></span></div>`;
+}
+function notifPanel() {
+  const list = S.notifs[S.as] || [];
+  return `<div class="hd">Notifications<button class="eyebrow lnk" data-act="read-all" style="background:none;border:0;cursor:pointer">Mark all as read</button></div>
+    <div class="ls">${list.length ? list.map((n, i) => `<div class="it ${n.unread ? 'new' : ''}"><span class="ic"><i class="ph ${n.ic}"></i></span><div style="flex:1;min-width:0"><b>${esc(n.t)}</b><small>${esc(n.s)}</small>
+      ${n.req && reqById(n.req)?.status === 'pending' ? `<div class="acts"><button class="btn btn-primary btn-sm" data-act="approve" data-req="${n.req}">Approve</button><button class="btn btn-ghost btn-sm" data-act="decline" data-req="${n.req}">Decline</button></div>` : n.req ? `<small>${reqById(n.req)?.status === 'approved' ? 'Approved' : 'Declined'}</small>` : ''}
+      ${n.restore && byId(n.restore)?.deleted ? `<div class="acts"><button class="btn btn-secondary btn-sm" data-act="restore" data-id="${n.restore}">Restore</button></div>` : ''}
+      ${n.go && sees(S.as, byId(n.go)) ? `<div class="acts"><button class="btn btn-ghost btn-sm" data-act="${byId(n.go).type === 'deck' ? 'open' : 'go'}" data-id="${n.go}" data-to="p/${n.go}">Open</button></div>` : ''}
+      </div><span class="t-micro ink-3">${n.when}</span></div>`).join('') : '<div class="none">You’re all caught up.</div>'}</div>`;
+}
+const reqById = id => S.reqs.find(r => r.id === id);
+
+/* ---------- Modal ---------- */
+function openModal(html, cls = '') {
+  $('#modal').innerHTML = `<div class="mwrap"><div class="scrim" data-act="close"></div><div class="mcard ${cls}" role="dialog" aria-modal="true"><button class="mx" data-act="close" aria-label="Close"><i class="ph ph-x"></i></button>${html}</div></div>`;
+}
+function closeModal() { $('#modal').innerHTML = ''; S.sh = null; S.mv = null; }
+
+/* ---------- Share modal ---------- */
+function openShare(id) { S.sh = { id: id || null, tab: 'people', email: '', role: id ? 'viewer' : 'member', pick: null, conf: null, wconf: false }; renderShare(); }
+function personByInput(v) {
+  v = v.trim().toLowerCase(); if (!v) return null;
+  return Object.keys(S.people).find(k => S.people[k].email.toLowerCase() === v) || null;
+}
+// Member invites from Members wait for approval when "Members can invite" is off. Viewer invites never wait.
+const needsRequest = (pid, r) => r === 'member' && !isAdmin(S.as) && !S.membersInvite && !(pid && isMem(pid));
+function inviteHints() {
+  const sh = S.sh, it = sh.id && byId(sh.id), v = sh.email.trim(), pid = personByInput(v);
+  const who = pid ? fn(pid) : v.includes('@') ? v.split('@')[0].replace(/^./, c => c.toUpperCase()) : 'They';
+  const ws = wsName(), kind = it ? TYPE[it.type] : '';
+  const out = [];
+  const note = (cls, ic, t) => out.push(`<div class="note ${cls}"><i class="ph ${ic}"></i><div>${t}</div></div>`);
+  if (pid && it && audience(chain(it)).ids.has(pid)) { note('', 'ph-info', `${esc(nm(pid))} already has access. The higher role wins.`); return out.join(''); }
+  if (pid && !it && (isMem(pid) || role(pid) === sh.role)) { note('', 'ph-info', `${esc(nm(pid))} is already in ${ws}.`); return out.join(''); }
+  if (!it) {
+    if (sh.role === 'member') note('', 'ph-info', `${esc(who)} sees and edits every public project, and can create decks.`);
+    else note('', 'ph-info', `${esc(who)} sees every public project, read-only. They can comment and present. No credits used.`);
+  } else if (sh.role === 'member') {
+    if (!pid || role(pid) === 'guest') note('warn', 'ph-warning', `<b>${esc(who)} will join ${ws} and see all public projects.</b> To share only this ${kind}, choose Viewer.`);
+    else if (role(pid) === 'viewer') note('warn', 'ph-warning', `<b>${esc(who)} becomes a Member of ${ws}</b> and can edit every public project. No bonus credits, the account already exists.`);
+    else note('', 'ph-info', `${esc(who)} can edit this ${kind}${it.type === 'deck' ? '' : ' and everything inside it, including new decks'}.`);
+  } else note('', 'ph-info', `${esc(who)} sees only this ${kind}${it.type === 'deck' ? '' : ' and what is inside it'}, read-only. They can comment and present.`);
+  if (needsRequest(pid, sh.role)) note('', 'ph-hourglass-medium', `Members can invite is off, so ${reqTo()} approve Member invites first. Viewer invites still go out straight away.`);
+  if (sh.role === 'member' && !pid && v.includes('@') && S.plan === 'free') note('good', 'ph-coins', `+200 credits to the shared pool when ${esc(who)} creates an account, verifies their email and joins. ${S.bonus.toLocaleString()} of 2,000 earned.`);
+  return out.join('');
+}
+const reqTo = () => 'Mani and Sara';
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+function peopleRows(it) {
+  const u = S.as, m = new Map(), rk = { creator: 3, member: 2, viewer: 1 };
+  const add = (id, r, from, p) => { const c = m.get(id); if (!c || rk[r] > rk[c.r]) m.set(id, { id, r, from, p }); };
+  chain(it).forEach((n, i) => { add(n.by, 'creator', i ? n : null); (n.people || []).forEach(p => add(p.id, p.role, i ? n : null, p)); });
+  return [...m.values()].sort((a, b) => (a.from ? 1 : 0) - (b.from ? 1 : 0) || rk[b.r] - rk[a.r]).map(x => {
+    const mine = x.id === u;
+    const canEditRow = !x.from && x.r !== 'creator' && (canManage(u, it) || x.p?.by === u) && grant(u, it) === 'edit';
+    const sub = x.from ? `${x.r === 'creator' ? 'Created' : 'From'} ${esc(x.from.name)}` : esc(S.people[x.id]?.email || '');
+    const badge = x.p?.status === 'pending' ? '<span class="badge badge-neutral">Waiting for approval</span>' : x.p?.status === 'invited' ? '<span class="badge badge-warn">Invited</span>' : '';
+    const right = x.r === 'creator' ? `<span class="rl">${x.from ? 'Can edit' : 'Creator'}</span>`
+      : canEditRow ? `<select class="input" data-act="role-row" data-pid="${x.id}" aria-label="Role for ${esc(nm(x.id))}"><option value="member" ${x.r === 'member' ? 'selected' : ''}>Can edit</option><option value="viewer" ${x.r === 'viewer' ? 'selected' : ''}>Can view</option></select>
+        <button class="icon-btn" data-act="rm-row" data-pid="${x.id}" aria-label="Remove ${esc(nm(x.id))}"><i class="ph ph-x"></i></button>`
+      : `<span class="rl">${x.r === 'member' ? 'Can edit' : 'Can view'}</span>`;
+    return `<li>${av(x.id, 32)}<div class="tx"><b>${esc(nm(x.id))}${mine ? ' <em>(you)</em>' : ''}${badge}</b><small>${sub}</small></div>${right}</li>`;
+  }).join('');
+}
+function accessOpts(it) {
+  const u = S.as, par = it.parent && byId(it.parent), pr = par ? R[effAccess(par)] : 0, cur = R[effAccess(it)];
+  const ws = wsName(), kind = TYPE[it.type];
+  const D = {
+    private: ['ph-lock-simple', 'Private', `Only ${it.by === u ? 'you' : fn(it.by)}. Not even the Owner or Admins.`],
+    shared: ['ph-users', 'Shared', 'Only the people above.'],
+    public: ['ph-buildings', `Everyone in ${ws}`, 'Members can edit, Viewers can view. New joiners see it too.'],
+  };
+  return RN.map(k => {
+    let why = '';
+    if (grant(u, it) !== 'edit') why = 'Only people who can edit can change this.';
+    else if (R[k] < pr) why = `${par.name} is ${effAccess(par) === 'public' ? 'open to everyone' : 'shared'}, so this ${kind} is too. To make it more private, move it out of ${par.name}.`;
+    else if (R[k] < cur && it.by !== u) why = `Only ${fn(it.by)} can make this more private.`;
+    return { k, ic: D[k][0], t: D[k][1], s: why || D[k][2], dis: !!why, on: R[k] === cur };
+  });
+}
+function renderShare() {
+  const sh = S.sh, u = S.as, it = sh.id && byId(sh.id);
+  const g = it ? grant(u, it) : (isMem(u) ? 'edit' : 'view');
+  const kind = it ? TYPE[it.type] : 'workspace';
+  const head = it
+    ? `<div class="mh"><h3 class="t-title">Share “${esc(it.name)}”</h3><p>${it.type === 'project' ? 'Project' : it.type === 'folder' ? 'Folder' : 'Deck'} · ${accChip(it)}</p></div>`
+    : `<div class="mh"><h3 class="t-title">Invite to ${wsName()}</h3><p>${planName()} · ${plural(membersCount(), 'member')}, ${plural(viewersCount(), 'viewer')}</p></div>`;
+  const tabs = it && it.type === 'deck' ? `<div class="segmented sh-tabs"><button aria-pressed="${sh.tab === 'people'}" data-act="sh-tab" data-tab="people">People</button><button aria-pressed="${sh.tab === 'widget'}" data-act="sh-tab" data-tab="widget">Widget link</button></div>` : '';
+  let body;
+  if (sh.tab === 'widget' && it) body = widgetTab(it, g);
+  else {
+    let form;
+    if (solo()) form = `<div class="gate"><b>Inviting people is on Team</b><p>Basic, Pro and Gold are for one person. Your widget link still works on every plan. Team keeps your decks and adds one shared credit pool.</p><button class="btn btn-primary btn-sm" data-act="soon" data-msg="Opens Team plans. Everything in Mani Studio carries over.">See Team</button></div>`;
+    else if (g !== 'edit') form = `<div class="note"><i class="ph ph-eye"></i><div>You can view this ${kind}. Viewers can’t invite anyone.${it ? ` Ask ${esc(fn(it.by))} for Member access.` : ''}</div></div>`;
+    else {
+      const pid = personByInput(sh.email);
+      form = `<form class="inv" data-act="invite-form" autocomplete="off">
+          <input class="input" id="sh-email" placeholder="Add people by name or email" value="${esc(sh.email)}" aria-label="Email">
+          <select class="input" id="sh-role" aria-label="Role"><option value="member" ${sh.role === 'member' ? 'selected' : ''}>Member</option><option value="viewer" ${sh.role === 'viewer' ? 'selected' : ''}>Viewer</option></select>
+          <button class="btn btn-primary" id="sh-go" type="submit" ${sh.email.trim() ? '' : 'disabled'}>${needsRequest(pid, sh.role) ? 'Send request' : 'Invite'}</button>
+          <div class="sug menu" id="sh-sug" hidden></div>
+        </form>
+        <div class="hints" id="sh-hints">${inviteHints()}</div>`;
+    }
+    const list = it ? peopleRows(it) : wsRows();
+    body = `${form}
+      <div class="eyebrow sp">People with access</div><ul class="ppl">${list}</ul>
+      ${it ? accessBlock(it) : ''}
+      <div class="sh-foot"><small>${it ? 'Changes apply right away, even if the deck is open.' : 'Invites expire after 14 days. Resend restarts the clock.'}</small>
+        ${it ? '<button class="btn btn-primary" data-act="copy" data-msg="Link copied. Only people with access can open it."><i class="ph ph-link"></i>Copy link</button>' : '<button class="btn btn-secondary" data-act="close">Done</button>'}</div>`;
+  }
+  openModal(head + `<div class="mb">${tabs}${body}</div>`);
+  bindInvite();
+}
+function wsRows() {
+  const u = S.as;
+  return Object.keys(S.people).filter(k => role(k)).sort((a, b) => ['owner', 'admin', 'member', 'invited', 'viewer', 'guest'].indexOf(role(a)) - ['owner', 'admin', 'member', 'invited', 'viewer', 'guest'].indexOf(role(b))).map(k => {
+    const r = role(k), p = S.people[k];
+    const only = r === 'guest' ? items().filter(i => (i.people || []).some(x => x.id === k)).map(i => i.name) : [];
+    const editable = isAdmin(u) && r !== 'owner' && k !== u && r !== 'guest';
+    return `<li>${av(k, 32)}<div class="tx"><b>${esc(p.name)}${k === u ? ' <em>(you)</em>' : ''}${p.pending ? '<span class="badge badge-neutral">Waiting for approval</span>' : p.invited ? '<span class="badge badge-warn">Invited</span>' : ''}</b><small>${r === 'guest' ? `Only: ${esc(only.join(', ') || 'nothing yet')}` : esc(p.email)}</small></div>
+      ${editable ? `<select class="input" data-act="ws-role" data-pid="${k}" aria-label="Role for ${esc(p.name)}">${['admin', 'member', 'viewer'].map(x => `<option value="${x}" ${r === x ? 'selected' : ''}>${ROLE_LABEL[x]}</option>`).join('')}</select>` : `<span class="rl">${r === 'guest' ? 'Viewer' : ROLE_LABEL[r]}</span>`}</li>`;
+  }).join('');
+}
+function accessBlock(it) {
+  const sh = S.sh;
+  if (solo()) return `<div class="eyebrow sp">General access</div><div class="note" style="margin-top:8px"><i class="ph ph-lock-simple"></i><div>Only you. Mani Studio is a one-person workspace. Share it outside with the widget link.</div></div>`;
+  const opts = accessOpts(it);
+  const par = it.parent && byId(it.parent);
+  let extra = '';
+  if (sh.conf) extra = `<div class="note warn" style="margin-top:10px"><i class="ph ph-warning"></i><div><b>${esc(sh.conf.msg)}</b> It applies right away, even if the ${TYPE[it.type]} is open.<div class="acts"><button class="btn btn-danger btn-sm" data-act="acc-confirm">${sh.conf.k === 'private' ? 'Make private' : 'Change access'}</button><button class="btn btn-ghost btn-sm" data-act="acc-cancel">Keep as is</button></div></div></div>`;
+  else if (par && R[effAccess(it)] > R[effAccess(par)]) extra = `<div class="note" style="margin-top:10px"><i class="ph ph-info"></i><div>This ${TYPE[it.type]} is more open than ${esc(par.name)}. People who get it through here see only this ${TYPE[it.type]}, in Shared with me. The rest of ${esc(par.name)} stays as it is.</div></div>`;
+  return `<div class="eyebrow sp">General access${par ? `<span class="t-caption ink-3" style="text-transform:none;letter-spacing:0;font-weight:400">Inside ${esc(par.name)} · ${esc(accInfo(par).t)}</span>` : ''}</div>
+    <div class="opts" role="radiogroup" aria-label="General access">${opts.map(o => `<button class="opt ${o.on ? 'on' : ''} ${o.k === 'public' ? 'pub' : ''} ${o.dis && !o.on ? 'dis' : ''}" role="radio" aria-checked="${o.on}" ${o.dis && !o.on ? 'aria-disabled="true"' : `data-act="acc" data-k="${o.k}"`}>
+      <span class="oi"><i class="ph ${o.ic}"></i></span><span class="ot"><b>${esc(o.t)}</b><small>${esc(o.s)}</small></span><span class="rad"></span></button>`).join('')}</div>${extra}`;
+}
+function widgetTab(it, g) {
+  const sh = S.sh, edit = g === 'edit';
+  const url = `https://app.presentations.ai/w/${it.id}-${(it.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')).replace(/-$/, '')}`;
+  const facts = `<ul class="facts">
+    <li><i class="ph ph-globe-simple"></i>Anyone with the link can watch and present, with no sign up. Post it anywhere.</li>
+    <li><i class="ph ph-file-ppt"></i>Viewers can buy a PowerPoint copy. They pay, you pay nothing. Export can’t be turned off.</li>
+    <li><i class="ph ph-lock-simple"></i>Making this deck private keeps the widget live. Deleting the deck turns it off for good.</li></ul>`;
+  if (it.widget) return `<div class="wl"><span class="live-dot"></span>Widget link is on</div>
+    <div class="wrow"><input class="input" value="${url}" readonly aria-label="Widget link"><button class="btn btn-primary" data-act="copy" data-msg="Widget link copied. Anyone with it can watch."><i class="ph ph-copy"></i>Copy</button></div>
+    ${facts}
+    <div class="sh-foot"><small>${edit ? 'Anyone who can edit can turn it off.' : 'Only people who can edit can turn it off.'}</small>${edit ? '<button class="btn btn-secondary" data-act="widget-off"><i class="ph ph-link-break"></i>Turn off</button>' : ''}</div>`;
+  return `<div class="wl" style="color:rgb(var(--ink-2))"><i class="ph ph-globe-simple"></i>Widget link is off</div>
+    ${facts}
+    ${sh.wconf ? `<div class="note warn" style="margin-top:16px"><i class="ph ph-warning"></i><div><b>Anyone with this link can view it and buy a PowerPoint copy.</b> Don’t turn it on for sensitive decks.<div class="acts"><button class="btn btn-primary btn-sm" data-act="widget-on">Turn on</button><button class="btn btn-ghost btn-sm" data-act="widget-cancel">Cancel</button></div></div></div>` : ''}
+    <div class="sh-foot"><small>${edit ? 'Free on every plan.' : 'Only people who can edit can turn it on. You can copy it once it is on.'}</small>${edit && !sh.wconf ? '<button class="btn btn-primary" data-act="widget-ask"><i class="ph ph-globe-simple"></i>Turn on widget link</button>' : ''}</div>`;
+}
+function bindInvite() {
+  const inp = $('#sh-email'), sel = $('#sh-role');
+  if (!inp) return;
+  const refresh = () => {
+    S.sh.email = inp.value; S.sh.role = sel.value;
+    $('#sh-hints').innerHTML = inviteHints();
+    const pid = personByInput(inp.value);
+    $('#sh-go').disabled = !inp.value.trim();
+    $('#sh-go').textContent = needsRequest(pid, sel.value) ? 'Send request' : 'Invite';
+    const q = inp.value.trim().toLowerCase(), it = S.sh.id && byId(S.sh.id);
+    const has = it ? audience(chain(it)).ids : new Set(Object.keys(S.people).filter(k => role(k) && role(k) !== 'guest'));
+    const list = q && !pid ? Object.keys(S.people).filter(k => !has.has(k) && (S.people[k].name.toLowerCase().includes(q) || S.people[k].email.includes(q))) : [];
+    const sug = $('#sh-sug');
+    sug.hidden = !list.length;
+    sug.innerHTML = list.map(k => `<button type="button" class="menu-item" data-act="pick" data-pid="${k}">${av(k, 24)}<span class="mi-t" style="color:rgb(var(--ink))">${esc(nm(k))}<small>${esc(S.people[k].email)} · ${ROLE_LABEL[role(k)]}</small></span></button>`).join('');
+  };
+  inp.oninput = refresh; sel.onchange = refresh;
+  if (S.sh.focus) { inp.focus(); S.sh.focus = false; }
+}
+function doInvite() {
+  const sh = S.sh, u = S.as, it = sh.id && byId(sh.id);
+  const v = sh.email.trim().toLowerCase();
+  let pid = personByInput(v);
+  if (!pid && !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(v)) { toast('Use a full email, like arjun@acme.com.', 'warn'); return; }
+  const r = sh.role, req = needsRequest(pid, r);
+  const isNew = !pid;
+  if (isNew) {
+    pid = 'p' + (S.seq++);
+    const name = v.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    S.people[pid] = { name, email: v, role: r === 'member' ? 'invited' : 'guest', invited: true, pending: req };
+  }
+  const who = fn(pid);
+  if (!it && !isNew && (isMem(pid) || role(pid) === r)) { toast(`${esc(nm(pid))} is already in ${wsName()}.`, 'brand'); return; }
+  if (!it && isNew) S.people[pid].role = 'invited';
+  if (it) {
+    if (audience(chain(it)).ids.has(pid)) { toast(`${esc(nm(pid))} already has access.`, 'brand'); return; }
+    it.people = it.people || [];
+    it.people.push({ id: pid, role: r, by: u, status: req ? 'pending' : isNew ? 'invited' : 'active' });
+    if (effAccess(it) === 'private') it.access = 'shared';
+  }
+  if (req) {
+    const id = 'r' + (S.seq++);
+    S.reqs.push({ id, kind: 'invite', from: u, pid, item: it ? it.id : null, role: r, status: 'pending' });
+    ['mani', 'sara'].forEach(a => notify(a, { ic: 'ph-user-plus', t: `${fn(u)} wants to invite ${who} as a Member`, s: `${it ? it.name + ' · ' : ''}${S.people[pid].email} · Expires in 30 days`, req: id }));
+    toast(`Request sent to ${reqTo()}. You’ll see Pending here until they answer.`, 'brand', 'ph-hourglass-medium');
+  } else {
+    if (!isNew && r === 'member' && role(pid) === 'viewer') { S.people[pid].role = 'member'; toast(`${esc(who)} is now a Member of ${wsName()}. No bonus credits, the account already exists.`); }
+    else if (!isNew && role(pid) === 'guest') { S.people[pid].role = r; toast(`${esc(who)} is now ${r === 'member' ? 'a Member' : 'a Viewer'} of ${wsName()} and sees all public projects.`); }
+    else if (isNew) toast(`Invite sent to ${esc(S.people[pid].email)}. It expires in 14 days.`);
+    else toast(`${esc(who)} can now ${r === 'member' ? 'edit' : 'view'} ${it ? esc(it.name) : wsName()}. We emailed them.`);
+    if (!isNew && it) notify(pid, { ic: 'ph-share-network', t: `${fn(u)} shared ${it.name} with you`, s: r === 'member' ? 'Can edit' : 'Can view', go: it.id });
+  }
+  sh.email = ''; sh.focus = true;
+  renderShare(); render();
+}
+function applyAccess(it, k) {
+  const ws = wsName(), was = effAccess(it);
+  if (k === 'private') { it.access = 'private'; (it.people || []).forEach(p => notify(p.id, { ic: 'ph-lock-simple', t: `You lost access to ${it.name}`, s: `${fn(it.by)} made it private` })); it.people = []; }
+  else it.access = k;
+  const par = it.parent && byId(it.parent);
+  if (k === 'public') toast(par && R[effAccess(par)] < 2 ? `Everyone in ${ws} can open ${esc(it.name)}. They find it in Shared with me. The rest of ${esc(par.name)} stays as it is.` : `Everyone in ${ws} can now open ${esc(it.name)}.`);
+  else if (k === 'shared') toast(was === 'public' ? `${esc(it.name)} is now shared with the people above only.` : `Add people above to share ${esc(it.name)}.`, 'brand');
+  else toast(`${esc(it.name)} is private. Only you can open it.`, 'good', 'ph-lock-simple');
+}
+
+/* ---------- Move ---------- */
+function openMove(id) { S.mv = { id, to: null }; renderMove(); }
+function moveImpact(it, dest) {
+  const before = audience(chain(it)), after = audience([it, ...chain(dest)]), ws = wsName();
+  const lines = [];
+  if (!before.pub && after.pub) lines.push(`Everyone in ${ws} will get access.`);
+  if (before.pub && !after.pub) lines.push('Workspace members will lose access. Only people added by name keep it.');
+  const lost = [...before.ids].filter(x => !after.ids.has(x) && x !== S.as && !(after.pub && isMem(x)));
+  if (lost.length) lines.push(`${lost.map(fn).join(', ')} will lose access.`);
+  const gained = [...after.ids].filter(x => !before.ids.has(x) && x !== S.as && !(before.pub && isMem(x)));
+  if (gained.length) lines.push(`${gained.map(fn).join(', ')} will get access.`);
+  if (it.access && R[it.access] < R[effAccess(dest)]) lines.push(`It becomes ${effAccess(dest) === 'public' ? `open to everyone in ${ws}` : 'shared'}, like ${dest.name}. Nothing inside a folder can be more private than the folder.`);
+  return lines;
+}
+function renderMove() {
+  const u = S.as, it = byId(S.mv.id);
+  const banned = new Set([it.id, ...descendants(it).map(d => d.id)]);
+  const dests = [];
+  const walk = (pid, depth) => items().filter(i => i.parent === pid && i.type !== 'deck' && !i.deleted).forEach(c => {
+    if (!sees(u, c) || banned.has(c.id)) return;
+    dests.push({ c, depth, ok: grant(u, c) === 'edit' && c.id !== it.parent });
+    walk(c.id, depth + 1);
+  });
+  walk(null, 0);
+  const dest = S.mv.to && byId(S.mv.to);
+  const lines = dest ? moveImpact(it, dest) : [];
+  openModal(`<div class="mh"><h3 class="t-title">Move “${esc(it.name)}”</h3><p>Access follows the folder it sits in.</p></div>
+    <div class="mb"><div class="dest">${dests.map(({ c, depth, ok }) => `<button ${ok ? `data-act="mv-pick" data-id="${c.id}"` : 'disabled style="opacity:.5;cursor:not-allowed"'} class="${S.mv.to === c.id ? 'on' : ''}" style="padding-left:${10 + depth * 20}px">${folderIc(c)}${esc(c.name)}${c.id === it.parent ? ' <span class="ink-3 t-caption">(here now)</span>' : ''}<span class="acc"><i class="ph ${accInfo(c).ic}"></i></span></button>`).join('') || '<div class="side-empty">No folders you can edit</div>'}</div>
+      ${dest ? (lines.length ? `<div class="note warn" style="margin-top:12px"><i class="ph ph-warning"></i><div>${lines.map(l => `<div>${esc(l)}</div>`).join('')}</div></div>` : `<div class="note" style="margin-top:12px"><i class="ph ph-check-circle"></i><div>Same people keep access. Nothing else changes.</div></div>`) : ''}
+      <div class="mf"><button class="btn btn-ghost" data-act="close">Cancel</button><button class="btn btn-primary" data-act="mv-go" ${dest ? '' : 'disabled'}>Move here</button></div></div>`, 'sm');
+}
+
+/* ---------- Small dialogs ---------- */
+function confirmDlg(title, body, btn, act, id, danger = true) {
+  openModal(`<div class="mh"><h3 class="t-title">${title}</h3></div><div class="mb"><p class="ink-2" style="margin:0">${body}</p>
+    <div class="mf"><button class="btn btn-ghost" data-act="close">Cancel</button><button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-act="${act}" data-id="${id}">${btn}</button></div></div>`, 'sm');
+}
+function nameDlg(title, sub, val, act, id, extra = '') {
+  openModal(`<div class="mh"><h3 class="t-title">${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div><div class="mb"><form data-act="${act}" data-id="${id || ''}"><input class="input" id="nm-in" value="${esc(val)}" maxlength="60" style="height:40px;font-size:16px">${extra}
+    <div class="mf"><button type="button" class="btn btn-ghost" data-act="close">Cancel</button><button class="btn btn-primary" type="submit">${act === 'rename-go' ? 'Save' : 'Create'}</button></div></form></div>`, 'sm');
+  setTimeout(() => { const i = $('#nm-in'); i.focus(); i.select(); }, 30);
+}
+
+/* ---------- Proto bar ---------- */
+function pbar() {
+  const who = [['mani', 'Mani · Owner'], ['sara', 'Sara · Admin'], ['bala', 'Bala · Member'], ['sumanth', 'Sumanth · Member'], ['ravi', 'Ravi · Viewer'], ['priya', 'Priya · Q1 only']];
+  return `<div class="pbar" role="region" aria-label="Prototype controls">
+    <label>View as <select data-act="as">${who.map(([k, l]) => `<option value="${k}" ${S.as === k ? 'selected' : ''} ${solo() && k !== 'mani' ? 'disabled' : ''}>${l}</option>`).join('')}</select></label>
+    <span class="sep"></span>
+    <label>Plan <select data-act="plan"><option value="free" ${!solo() && S.plan === 'free' ? 'selected' : ''}>Formula One · Free</option><option value="team" ${!solo() && S.plan === 'team' ? 'selected' : ''}>Formula One · Team</option><option value="pro" ${solo() ? 'selected' : ''}>Mani Studio · Pro</option></select></label>
+    <span class="sep"></span>
+    <label>Members can invite <button class="sw ${S.membersInvite ? 'on' : ''}" data-act="mi-tog" aria-pressed="${S.membersInvite}" aria-label="Members can invite"></button></label>
+    <button class="rs" data-act="reset">Reset</button>
+  </div>`;
+}
+
+/* ---------- Events ---------- */
+function deleteItem(it) {
+  const u = S.as, all = [it, ...descendants(it)];
+  all.forEach((n, i) => { if (!n.deleted) { n.deleted = { by: u }; if (i) n.deletedWith = it.id; } });
+  const creators = new Set(all.filter(n => n.type === 'deck').map(n => n.by));
+  creators.forEach(c => { if (c !== u) notify(c, { ic: 'ph-trash', t: `${fn(u)} deleted ${it.name}`, s: 'You can restore it for 30 days', restore: it.id }); });
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!e.target.closest('.pop') && !(t && ['menu', 'ws-menu', 'notifs'].includes(t.dataset.act))) closePop();
+  if (!t) return;
+  const act = t.dataset.act, id = t.dataset.id, it = id && byId(id), u = S.as;
+  if (t.tagName === 'SELECT' || t.tagName === 'FORM') return;
+  if (act !== 'drawer') $('#app').classList.remove('drawer');
+  switch (act) {
+    case 'go': e.preventDefault(); e.stopPropagation(); closeModal(); go(t.dataset.to); break;
+    case 'tab': S.tab = t.dataset.tab; render(); break;
+    case 'drawer': $('#app').classList.toggle('drawer'); break;
+    case 'open': if (e.target.closest('.star, [data-act=menu]')) return; closeModal(); closePop();
+      toast(`Opens ${esc(it.name)} in the editor. ${grant(u, it) === 'edit' ? 'You can edit it.' : 'View only: you can comment and present.'}`, 'brand', 'ph-presentation'); break;
+    case 'star': e.stopPropagation(); { const l = S.starred[u] = S.starred[u] || []; const i = l.indexOf(id); i < 0 ? l.push(id) : l.splice(i, 1); render(); } break;
+    case 'menu': e.stopPropagation(); if ($('#pop .pop')) { closePop(); break; } openPop(t, itemMenu(it)); break;
+    case 'ws-menu': if ($('#pop .pop')) { closePop(); break; } openPop(t, wsMenu()); $('#pop .pop').style.left = t.getBoundingClientRect().left + 'px'; break;
+    case 'notifs': if ($('#pop .pop')) { closePop(); break; } openPop(t, notifPanel(), 'np'); (S.notifs[u] || []).forEach(n => n.unread = false); save(); setTimeout(() => { const b = $('.bell .dot'); if (b) b.remove(); }); break;
+    case 'read-all': (S.notifs[u] || []).forEach(n => n.unread = false); closePop(); render(); break;
+    case 'ws': closePop(); S.ws = t.dataset.ws; if (S.ws === 'studio') S.as = 'mani'; go('home'); break;
+    case 'share': closePop(); openShare(id); break;
+    case 'share-ws': closePop(); openShare(null); break;
+    case 'close': closeModal(); render(); break;
+    case 'soon': case 'copy': closePop(); toast(t.dataset.msg, act === 'copy' ? 'good' : 'brand'); break;
+    case 'sh-tab': S.sh.tab = t.dataset.tab; S.sh.wconf = false; renderShare(); break;
+    case 'pick': S.sh.email = S.people[t.dataset.pid].email; S.sh.focus = true; renderShare(); break;
+    case 'rm-row': { const sit = byId(S.sh.id), pid = t.dataset.pid; sit.people = sit.people.filter(p => p.id !== pid); if (!sit.people.length && sit.access === 'shared' && !(sit.parent && effAccess(byId(sit.parent)) !== 'private')) sit.access = 'private'; notify(pid, { ic: 'ph-lock-simple', t: `You lost access to ${sit.name}`, s: `${fn(u)} removed you` }); toast(`${esc(fn(pid))} lost access to ${esc(sit.name)} right away.`); renderShare(); render(); } break;
+    case 'acc': {
+      const sit = byId(S.sh.id), k = t.dataset.k, cur = effAccess(sit);
+      if (k === cur) break;
+      if (R[k] < R[cur]) {
+        const named = (sit.people || []).filter(p => p.status !== 'pending').map(p => fn(p.id));
+        const msg = k === 'private'
+          ? (cur === 'public' ? `Workspace members${named.length ? ` and ${named.join(', ')}` : ''} will lose access.` : `${named.join(', ') || 'People added here'} will lose access.`)
+          : 'Workspace members will lose access. Only the people above keep it.';
+        S.sh.conf = { k, msg }; renderShare();
+      } else { applyAccess(sit, k); S.sh.conf = null; renderShare(); render(); }
+    } break;
+    case 'acc-confirm': applyAccess(byId(S.sh.id), S.sh.conf.k); S.sh.conf = null; renderShare(); render(); break;
+    case 'acc-cancel': S.sh.conf = null; renderShare(); break;
+    case 'widget-ask': S.sh.wconf = true; renderShare(); break;
+    case 'widget-cancel': S.sh.wconf = false; renderShare(); break;
+    case 'widget-on': { const sit = byId(S.sh.id); sit.widget = true; S.sh.wconf = false; toast(`Widget link is on for ${esc(sit.name)}. Anyone with it can watch.`); renderShare(); render(); } break;
+    case 'widget-off': { const sit = byId(S.sh.id); sit.widget = false; toast('Widget link is off. The old link stops working now.', 'good', 'ph-link-break'); renderShare(); render(); } break;
+    case 'approve': case 'decline': {
+      const r = reqById(t.dataset.req); if (!r || r.status !== 'pending') break;
+      r.status = act === 'approve' ? 'approved' : 'declined';
+      const rit = r.item && byId(r.item), entry = rit && (rit.people || []).find(p => p.id === r.pid);
+      const fresh = S.people[r.pid].invited;
+      if (act === 'approve') {
+        S.people[r.pid].pending = false;
+        if (entry) { entry.status = fresh ? 'invited' : 'active'; if (r.kind === 'upgrade') entry.role = 'member'; }
+        if (!fresh) S.people[r.pid].role = 'member';
+      } else if (r.kind === 'invite') { if (rit) rit.people = rit.people.filter(p => p.id !== r.pid); if (fresh) delete S.people[r.pid]; }
+      notify(r.from, { ic: act === 'approve' ? 'ph-check-circle' : 'ph-x-circle', t: `${fn(u)} ${act === 'approve' ? 'approved' : 'declined'} your ${r.kind === 'upgrade' ? 'request' : 'invite'}`, s: `${S.people[r.pid]?.email || 'The person'}${rit ? ' · ' + rit.name : ''}` });
+      toast(act === 'approve' ? `Approved. The invite is on its way. ${fn(r.from)} is told.` : `Declined. ${fn(r.from)} is told.`);
+      closePop(); render();
+    } break;
+    case 'restore': { if (!it) break; [it, ...descendants(it)].forEach(n => { if (n.deletedWith === it.id || n === it) { delete n.deleted; delete n.deletedWith; } }); if (it.type === 'deck') it.widget = false; toast(`${esc(it.name)} restored.${it.type === 'deck' ? ' Its widget link stays off.' : ''}`); closePop(); render(); } break;
+    case 'rename': closePop(); nameDlg(`Rename ${TYPE[it.type]}`, '', it.name, 'rename-go', id); break;
+    case 'dup': {
+      closePop();
+      const par = byId(it.parent);
+      const copy = { ...it, id: 'd' + (S.seq++), name: it.name + ' (copy)', by: u, edited: 'just now', people: [], widget: false, access: undefined };
+      let where = par.name;
+      if (grant(u, par) !== 'edit') { let mine = items().find(i => i.type === 'project' && i.by === u && i.access === 'private'); if (!mine) { mine = { id: 'p' + (S.seq++), type: 'project', name: `${fn(u)}’s drafts`, parent: null, by: u, access: 'private', color: 3, ws: S.ws }; S.items.push(mine); } copy.parent = mine.id; where = mine.name; }
+      S.items.push(copy); toast(`Copy added to ${esc(where)}. Only the slides are copied: no invites, comments or widget.`); render();
+    } break;
+    case 'download': closePop(); toast(`Downloading ${esc(it.name)}.pptx. Only you see it in Downloads.`); break;
+    case 'move': closePop(); openMove(id); break;
+    case 'mv-pick': S.mv.to = id; renderMove(); break;
+    case 'mv-go': { const mit = byId(S.mv.id), dest = byId(S.mv.to); const was = mit.parent; mit.parent = dest.id; if (mit.access && R[mit.access] < R[effAccess(dest)]) delete mit.access; closeModal(); toast(`${esc(mit.name)} moved to ${esc(dest.name)}.`); if (route() === 'p/' + mit.id || route() === 'p/' + was) render(); else render(); } break;
+    case 'leave': closePop(); confirmDlg(`Leave ${esc(it.name)}?`, `You lose access to ${esc(it.name)} and everything inside it right away. ${esc(fn(it.by))} can add you again.`, 'Leave', 'leave-go', id); break;
+    case 'leave-go': it.people = it.people.filter(p => p.id !== u); closeModal(); toast(`You left ${esc(it.name)}.`); go(route() === 'p/' + id ? 'home' : route()); break;
+    case 'del': {
+      closePop();
+      if (it.type === 'deck') {
+        const owner = it.by !== u;
+        deleteItem(it); toast(`${esc(it.name)} moved to Trash.${owner ? ` ${esc(fn(it.by))} is told and can restore it for 30 days.` : ' Restore it within 30 days.'}${it.widget ? ' Its widget link stopped.' : ''}`, 'good', 'ph-trash');
+        it.widget = false; render();
+      } else {
+        const ds = descendants(it).filter(d => d.type === 'deck' && !d.deleted), ppl = new Set(ds.map(d => d.by)), wid = ds.filter(d => d.widget).length;
+        confirmDlg(`Delete ${esc(it.name)}?`, `This deletes ${ds.length} ${ds.length === 1 ? 'deck' : 'decks'} by ${ppl.size} ${ppl.size === 1 ? 'person' : 'people'}${descendants(it).some(d => d.type === 'folder') ? ', and every folder inside' : ''}. Each creator is told. You can restore it from Trash for 30 days.${wid ? ` ${wid} live ${wid === 1 ? 'widget' : 'widgets'} will stop.` : ''}`, `Delete ${TYPE[it.type]}`, 'del-go', id);
+      }
+    } break;
+    case 'del-go': { descendants(it).forEach(d => { if (d.type === 'deck') d.widget = false; }); deleteItem(it); closeModal(); toast(`${esc(it.name)} moved to Trash. Restore it within 30 days.`, 'good', 'ph-trash'); go(route().startsWith('p/') ? (it.parent ? 'p/' + it.parent : 'home') : route()); } break;
+    case 'new-project': closePop(); nameDlg('New project', 'Who can open it? You can change this later from Share.', '', 'np-go', '', `<div class="seg-acc"><label class="opt on" style="border:1px solid rgb(var(--line));border-radius:var(--r-card)"><span class="oi"><i class="ph ph-lock-simple"></i></span><span class="ot"><b>Private</b><small>Only you, until you share it.</small></span><input type="radio" name="npa" value="private" checked></label><label class="opt pub" style="border:1px solid rgb(var(--line));border-radius:var(--r-card)"><span class="oi"><i class="ph ph-buildings"></i></span><span class="ot"><b>Everyone in ${wsName()}</b><small>${solo() ? 'Mani Studio is just you.' : 'Members can edit, Viewers can view.'}</small></span><input type="radio" name="npa" value="public" ${solo() ? 'disabled' : ''}></label></div>`); $$('[name=npa]').forEach(r => r.onchange = () => $$('.seg-acc .opt').forEach(o => o.classList.toggle('on', o.querySelector('input').checked))); break;
+    case 'new-folder': nameDlg('New folder', `Inside ${esc(it.name)}. It follows ${esc(it.name)} sharing: ${esc(accInfo(it).t)}.`, '', 'nf-go', id); break;
+    case 'new-deck': { const d = { id: 'd' + (S.seq++), type: 'deck', name: 'Untitled deck', parent: id, by: u, thumb: 'ed-slide-1.jpg', edited: 'just now', slides: 1, ws: S.ws }; S.items.push(d); toast(`Untitled deck added to ${esc(it.name)}. It follows ${esc(it.name)} sharing.`, 'good', 'ph-presentation'); render(); } break;
+    case 'new-deck-home': toast('Opens the deck builder. New decks start in your private space until you move them.', 'brand', 'ph-presentation'); break;
+    case 'mi-tog': S.membersInvite = !S.membersInvite; toast(S.membersInvite ? 'Members can invite is on. Member invites go out straight away.' : 'Members can invite is off. Member invites from Members wait for Mani or Sara.', 'brand'); render(); break;
+    case 'reset': try { sessionStorage.removeItem(KEY); } catch (er) {} S = seed(); closeModal(); go('home'); break;
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act, u = S.as;
+  if (act === 'as') { S.as = t.value; S.tab = 'recent'; const r = route(); if (r.startsWith('p/') && !sees(S.as, byId(r.slice(2)))) go('home'); else render(); toast(`Viewing as ${esc(nm(S.as))}, ${ROLE_LABEL[role(S.as)]}${role(S.as) === 'guest' ? ' (Viewer of Q1 only)' : ''}.`, 'brand', 'ph-user-switch'); }
+  if (act === 'plan') { if (t.value === 'pro') { S.ws = 'studio'; S.as = 'mani'; } else { S.ws = 'f1'; S.plan = t.value; } go('home'); }
+  if (act === 'role-row') {
+    const sit = byId(S.sh.id), pid = t.dataset.pid, p = sit.people.find(x => x.id === pid), nv = t.value;
+    if (nv === 'member' && !isMem(pid) && needsRequest(pid, 'member')) { t.value = p.role; const id = 'r' + (S.seq++); S.reqs.push({ id, kind: 'upgrade', from: u, pid, item: sit.id, role: 'member', status: 'pending' }); ['mani', 'sara'].forEach(a => notify(a, { ic: 'ph-user-plus', t: `${fn(u)} wants to make ${fn(pid)} a Member`, s: `${sit.name} · Expires in 30 days`, req: id })); toast(`Request sent to ${reqTo()}. ${esc(fn(pid))} stays a Viewer until they approve.`, 'brand', 'ph-hourglass-medium'); return; }
+    p.role = nv;
+    if (nv === 'member' && ['guest', 'viewer'].includes(role(pid))) { S.people[pid].role = 'member'; toast(`${esc(fn(pid))} is now a Member of ${wsName()} and sees all public projects. No bonus credits, the account already exists.`); }
+    else toast(`${esc(fn(pid))} can now ${nv === 'member' ? 'edit' : 'only view'} ${esc(sit.name)}.`);
+    renderShare(); render();
+  }
+  if (act === 'ws-role') { S.people[t.dataset.pid].role = t.value; toast(`${esc(fn(t.dataset.pid))} is now ${t.value === 'admin' ? 'an Admin' : 'a ' + ROLE_LABEL[t.value]}.${t.value === 'viewer' ? ' Bonus credits already earned stay.' : ''}`); renderShare(); render(); }
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('[data-act]'); if (!f) return;
+  e.preventDefault();
+  const act = f.dataset.act, u = S.as, v = ($('#nm-in')?.value || '').trim();
+  if (act === 'invite-form') { S.sh.email = $('#sh-email').value; S.sh.role = $('#sh-role').value; if (S.sh.email.trim()) doInvite(); return; }
+  if (!v) { toast('Add a name first.', 'warn'); return; }
+  if (act === 'rename-go') { const it = byId(f.dataset.id); it.name = v; closeModal(); toast('Renamed.'); render(); }
+  if (act === 'np-go') { const acc = document.querySelector('[name=npa]:checked').value; const id = 'p' + (S.seq++); S.items.push({ id, type: 'project', name: v, parent: null, by: u, access: acc, color: S.seq % 4, ws: S.ws }); closeModal(); toast(acc === 'private' ? `${esc(v)} created. Only you can open it until you share it.` : `${esc(v)} created. Everyone in ${wsName()} can open it.`); go('p/' + id); }
+  if (act === 'nf-go') { const id = 'f' + (S.seq++); S.items.push({ id, type: 'folder', name: v, parent: f.dataset.id, by: u, ws: S.ws }); closeModal(); toast(`${esc(v)} created inside ${esc(byId(f.dataset.id).name)}.`); go('p/' + id); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#pop .pop')) closePop(); else if ($('#modal').innerHTML) { closeModal(); render(); } } });
+window.addEventListener('hashchange', render);
+// ?as=bala&plan=team&s=p/mkt opens a view directly (links for review)
+(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('plan') === 'pro') { S.ws = 'studio'; S.as = 'mani'; } else if (['free', 'team'].includes(q.get('plan'))) { S.ws = 'f1'; S.plan = q.get('plan'); }
+  if (q.get('as') && S.people[q.get('as')]) S.as = q.get('as');
+  if (q.get('s')) { location.hash = q.get('s'); }
+  render();
+})();
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+    const React = (await import('https://esm.sh/react@18')).default;
+    const { createRoot } = await import('https://esm.sh/react-dom@18/client');
+    const { Agentation } = await import('https://esm.sh/agentation@3?deps=react@18,react-dom@18');
+    createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+  }
+</script>
+</body>
+</html>
