@@ -63,6 +63,11 @@
   .btn--out:hover { background: #f4f6f8; border-color: #23303B; color: #23303B; }
   body.students .tab.is-prem { display: none; }
 
+  /* ?embed=1: the picker is being shown over another screen, so it brings no background of its
+     own and no proto switch. The scrim stays, that is what dims the screen behind. */
+  body.embed { background: none; background-color: transparent; }
+  body.embed .tier-bar { display: none; }
+
   .closed-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff; font-size: 14px; }
   .closed-note button { padding: 9px 18px; border: 0; border-radius: 4px; background: #fff; color: #171717; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
   body.is-closed .dp-stack { display: none; }
@@ -516,6 +521,10 @@
   const buyBtn = document.getElementById('btn-buy');
   // tier 1: trial + 20% off on buy. tier 2: no trial, full price until the "before you go" offer.
   const params = new URLSearchParams(location.search);
+  // embedded in another screen: the host owns what happens on close and on buy
+  const EMBED = params.get('embed') === '1';
+  if (EMBED) document.body.classList.add('embed');
+  const toHost = (type, data) => { try { parent.postMessage(Object.assign({ type: type }, data || {}), '*'); } catch (e) {} };
   const tierParam = params.get('tier');
   let tier = tierParam === '1' ? 1 : tierParam === '3' ? 3 : tierParam === '4' ? 4 : tierParam === '5' ? 5 : 2;
   let offer = false; // tier 2 only: set when the user tries to close
@@ -619,6 +628,7 @@
       paint(true); startTimer();
       return;
     }
+    if (EMBED) { toHost('picker-close'); return; }
     document.body.classList.add('is-closed');
   });
   document.getElementById('reopen').addEventListener('click', () => setTier(tier));
@@ -671,7 +681,11 @@
   const BACK = '&from=trial-choose-plan-sep-2026-v6.html&tier=' + tier;
   document.getElementById('btn-export').addEventListener('click', () => { location.href = 'checkout-buy-sep-2026.html?plan=single&off=0' + BACK; });
   document.getElementById('btn-trial').addEventListener('click', () => { location.href = 'checkout-trial-sep-2026.html?plan=' + plan + BACK; });
-  buyBtn.addEventListener('click', () => { location.href = 'checkout-buy-sep-2026.html?plan=' + plan + (tier === 2 || tier === 5 ? '&off=' + (offer ? 20 : 0) : '') + '&from=trial-choose-plan-sep-2026-v6.html&tier=' + tier; });
+  buyBtn.addEventListener('click', () => {
+    const off = tier === 2 || tier === 5 ? (offer ? 20 : 0) : 0;
+    if (EMBED) { toHost('pick-plan', { plan: plan, off: off }); return; }
+    location.href = 'checkout-buy-sep-2026.html?plan=' + plan + (tier === 2 || tier === 5 ? '&off=' + off : '') + '&from=trial-choose-plan-sep-2026-v6.html&tier=' + tier;
+  });
 </script>
 
 <div id="agentation-root"></div>
