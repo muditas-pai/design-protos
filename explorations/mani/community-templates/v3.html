@@ -2067,7 +2067,7 @@ function sdTemplatesRow() {
 function renderDashboard() {
   const p = P();
   const next = REFER_ONLY
-    ? `<div class="sd-alert" data-go="refer"><span class="sd-tile"><i class="ph ph-gift"></i></span><div><b>Refer your friends, earn credits</b><small>You both get ${REF_BONUS} credits when a friend signs up. ${S.plan === 'pro' ? 'If they upgrade, you get 1,000 more credits.' : 'On a paid plan, you also get 1,000 credits when they upgrade.'}</small></div><button class="btn btn-outline">Invite friends</button></div>`
+    ? `<div class="sd-alert" data-go="refer"><span class="sd-tile"><i class="ph ph-gift"></i></span><div><b>Refer your friends, earn credits</b><small>You both get ${REF_BONUS} credits when a friend signs up and makes their first deck. ${S.plan === 'pro' ? 'If they upgrade, you get 1,000 more credits.' : 'On a paid plan, you also get 1,000 credits when they upgrade.'}</small></div><button class="btn btn-outline">Invite friends</button></div>`
     : S.profile
     ? `<div class="sd-alert" data-go="community"><span class="sd-tile"><i class="ph ph-users-three"></i></span><div><b>Your community page is live</b><small>presentations.ai/@${esc(S.profile.handle)} · publish a deck from Share to add it there.</small></div><button class="btn btn-outline">Open page</button></div>`
     : `<div class="sd-alert" data-go="create-page"><span class="sd-tile"><i class="ph ph-users-three"></i></span><div><b>Create your community page</b><small>Publish decks as free templates. You earn ${REF_BONUS} credits for every sign up from them.</small></div><button class="btn btn-outline">Create page</button></div>`;
@@ -3285,7 +3285,6 @@ function renderRewards() { renderRefer({ inSettings: true }); }
    Friend signs up with the inviter's link and gets their own
    workspace with 200 credits.
    Free inviter: 200 credits per friend, up to 2,000.
-   Pro inviter: 10% of the friend's first payment, in cash.
    ═══════════════════════════════════════════════════════════ */
 const REF_BONUS = 200, REF_MAX = 2000, REF_CUT = 0.1;
 const PRO_PLANS = [
@@ -3310,7 +3309,7 @@ const friendFirst = () => (S.friend.name || '').trim().split(/\s+/)[0] || 'Your 
 const friendHandle = () => (S.friend.name || 'you').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'you';
 
 // Newest first. Free: credits worked out oldest first so the 2,000 cap applies in order.
-// Pro: cash is 10% of the first payment, only once the friend upgrades.
+// Paid inviter: 1,000 credits per upgrade, up to UPG_MAX a year.
 function refRows() {
   const seed = S.refMax ? REF_SEED_MAX : REF_SEED_PRO;
   const fromTpl = REFER_ONLY ? [] : S.signups.map(x => ({ who: x.who, status: 'joined', when: 'Recently', via: `Signed up from ${S.tpl.title}`, at: x.at }));
@@ -3348,7 +3347,7 @@ function upgradeFriend(pay) {
 
 /* F1 · Refer & earn page (inviter). v2 reward model, no cash:
    - Sign up: you both get 200 credits. Inviter capped at 2,000, one limit across invite links and template links.
-   - Friend upgrades within 7 days of signing up: Free inviter gets nothing extra (sees a Pro upsell), paid inviter gets 1,000 credits once the friend's first payment goes through (up to 10 upgrades, 10,000 credits, a year).
+   - Friend upgrades within 7 days of signing up: Free inviter gets nothing extra (sees a Pro upsell), paid inviter gets 1,000 credits once the friend stays paid 30 days (no refunds) (up to 10 upgrades, 10,000 credits, a year).
    v3: replaces v2's "+1 free month at next renewal" with 1,000 credits. */
 const UPG_DAYS = 7, UPG_CREDITS = 1000, UPG_MAX = 10, UPG_CAP = UPG_CREDITS * UPG_MAX;
 const proMonths = () => refRows().filter(r => r.mo).length;   // upgrades that earned credits
@@ -3356,14 +3355,14 @@ const upgEarned = () => isPro() ? proMonths() * UPG_CREDITS : 0;
 const upgReward = () => `+${UPG_CREDITS.toLocaleString()} credits`;
 const planLabel = () => S.planName || 'Pro';
 const monthsTip = pro => pro
-  ? `Each friend who upgrades adds ${UPG_CREDITS.toLocaleString()} credits to your ${planLabel()} plan, once their first payment goes through. Up to ${UPG_CAP.toLocaleString()} a year.`
+  ? `Each friend who upgrades adds ${UPG_CREDITS.toLocaleString()} credits to your ${planLabel()} plan, once they stay paid for 30 days. Up to ${UPG_CAP.toLocaleString()} a year.`
   : `On any paid plan, each friend who upgrades adds ${UPG_CREDITS.toLocaleString()} credits to your account, up to ${UPG_CAP.toLocaleString()} a year.`;
 const REF_FAQ = [
   ['Who can I invite?', 'Anyone new to Presentations.AI. They get their own workspace. They never join yours.'],
   ['When do the credits land?', `When your friend makes their first deck. You both get ${REF_BONUS} credits then.`],
   ['Do template links count?', `Yes. Every template you publish carries your link. Sign ups from it count toward the same ${REF_MAX.toLocaleString()} credit yearly limit.`],
   ['What counts as an upgrade?', `Your friend moves to any paid plan within ${UPG_DAYS} days of signing up. Later upgrades don’t count.`],
-  ['How do the upgrade credits work?', `Each friend who upgrades while you’re on a paid plan adds ${UPG_CREDITS.toLocaleString()} credits to your account, once their first payment goes through. Up to ${UPG_CAP.toLocaleString()} a year.`, 'pro'],
+  ['How do the upgrade credits work?', `Each friend who upgrades while you’re on a paid plan adds ${UPG_CREDITS.toLocaleString()} credits to your account, once they stay paid for 30 days. Refunded payments don’t count, and your plan needs to be active when the credits land. Up to ${UPG_CAP.toLocaleString()} a year.`, 'pro'],
   ['What do I get when they upgrade?', `${UPG_CREDITS.toLocaleString()} credits per upgrade come with any paid plan. You need to be on it when your friend upgrades; upgrades from before don’t count.`, 'free'],
 ];
 function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rewards' } = {}) {
@@ -3383,13 +3382,13 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   const credCell = r => r.status === 'signed' ? '<span class="muted">After their first deck</span>' : r.status === 'invited'
     ? `<span class="muted">Waiting for sign up</span><button class="link rf-remind" data-remind="${esc(r.who)}">Send reminder</button>`
     : r.got > 0 ? `+${r.got}` : `0<small>Limit reached</small>`;
-  const upCell = r => r.status === 'upgraded' ? (r.mo ? `<b class="up-r">${upgReward()}</b>` : r.ok ? '<span class="muted">Limit reached</span>' : '<span class="muted">No reward, you weren’t on Pro</span>') : r.status === 'joined' && pro ? `<span class="muted">If they upgrade in ${UPG_DAYS} days</span>` : '';
+  const upCell = r => r.status === 'upgraded' ? (r.mo ? `<b class="up-r">${upgReward()}</b>` : r.ok ? '<span class="muted">Limit reached</span>' : '<span class="muted">No reward, you weren’t on a paid plan</span>') : r.status === 'joined' && pro ? `<span class="muted">If they upgrade in ${UPG_DAYS} days</span>` : '';
   const shell = (main, top) => inSettings ? settingsShell('rewards', main, top) : dashShell('refer', main, top);
   $('#screen').innerHTML = shell(`
     <div class="rwrap rf-wrap rf2">
       <section class="rf2-top">
         <h1>Refer friends, earn credits</h1>
-        <p>You both get ${REF_BONUS} credits when a friend signs up with your link.</p>
+        <p>You both get ${REF_BONUS} credits when a friend signs up with your link and makes their first deck.</p>
         <div class="rf2-link">
           <div class="sd-ig"><i class="ph ph-link-simple"></i><input value="${esc(refUrl())}" readonly aria-label="Your referral link"></div>
           <button class="btn btn-primary btn-lg" id="rf-copy"><i class="ph ph-copy"></i>Copy link</button>
@@ -3426,8 +3425,10 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
       <div class="rf-rules2"><b>How rewards work</b><ul>
         <li>You both get ${REF_BONUS} credits when your friend makes their first deck.</li>
         <li>You can earn up to ${REF_MAX.toLocaleString()} referral credits a year (10 friends). Template sign ups count too.</li>
-        <li>On a paid plan, each friend who upgrades within ${UPG_DAYS} days adds ${UPG_CREDITS.toLocaleString()} credits once their first payment goes through, up to ${UPG_CAP.toLocaleString()} a year.</li>
-        <li>You need to be on a paid plan when they upgrade. Earlier upgrades don’t count.</li>
+        <li>On a paid plan, each friend who upgrades within ${UPG_DAYS} days adds ${UPG_CREDITS.toLocaleString()} credits once they stay paid for 30 days, up to ${UPG_CAP.toLocaleString()} a year. Refunds don’t count.</li>
+        <li>You need to be on a paid plan when they upgrade and when the credits land. Earlier upgrades don’t count.</li>
+        <li>New accounts only. Your own accounts, people who join your workspace and links posted on coupon sites don’t count.</li>
+        <li>If a friend opens more than one link, the last one they opened in 30 days counts.</li>
       </ul></div>
       <div class="sec-h" style="margin-top:40px"><h3>Questions</h3></div>
       <div class="faq">${REF_FAQ.filter(f => !f[2] || f[2] === (pro ? 'pro' : 'free')).map(([q, a]) => `<details><summary><span>${q}</span><i class="ph ph-caret-down"></i></summary><p>${a}</p></details>`).join('')}</div>
@@ -3442,8 +3443,8 @@ function renderRefer({ joined = false, paid = false, inSettings = ROUTE === 'rew
   $$('[data-rmax]').forEach(b => b.onclick = () => { S.refMax = b.dataset.rmax === '1'; save(); renderRefer(); });
   $$('[data-plan]').forEach(b => b.onclick = () => setPlan(b.dataset.plan));
   if (paid && mine) later(() => toast(pro
-    ? (mine.mo ? `${esc(friendFirst())} upgraded to Pro. +${UPG_CREDITS.toLocaleString()} credits` : `${esc(friendFirst())} upgraded to Pro. You’re at the ${UPG_CAP.toLocaleString()} credit limit`)
-    : `${esc(friendFirst())} upgraded to Pro. Upgrade credits only count while you’re on a paid plan`, 'ph-fill ph-crown-simple'), 350);
+    ? (mine.mo ? `${esc(friendFirst())} upgraded. +${UPG_CREDITS.toLocaleString()} credits after 30 paid days` : `${esc(friendFirst())} upgraded. You’re at the ${UPG_CAP.toLocaleString()} credit limit`)
+    : `${esc(friendFirst())} upgraded. Upgrade credits only count while you’re on a paid plan`, 'ph-fill ph-crown-simple'), 350);
   else if (joined && mine) later(() => toast(mine.got
     ? `${esc(friendFirst())} joined with your link. +${mine.got} credits`
     : `${esc(friendFirst())} joined and got ${REF_BONUS} credits. You’re at the limit`, 'ph-fill ph-gift'), 350);
@@ -3554,7 +3555,7 @@ function notifItems() {
   const L = [];
   S.signups.forEach(s => L.push({ i: 'ph-user-plus', t: `<b>${esc(s.who)}</b> signed up from <b>${esc(S.tpl.title)}</b>`, m: '+200 credits', go: 'rewards', at: s.at }));
   S.refs.filter(r => r.status !== 'invited').forEach(r => L.push(r.status === 'upgraded'
-    ? { i: 'ph-crown-simple', t: `<b>${esc(r.who)}</b> upgraded to Pro`, m: refRows().find(x => x.who === r.who)?.mo ? `+${UPG_CREDITS.toLocaleString()} credits` : 'No upgrade credits, you weren’t on Pro', go: 'refer', at: r.at }
+    ? { i: 'ph-crown-simple', t: `<b>${esc(r.who)}</b> upgraded to a paid plan`, m: refRows().find(x => x.who === r.who)?.mo ? `+${UPG_CREDITS.toLocaleString()} credits` : 'No upgrade credits, you weren’t on a paid plan', go: 'refer', at: r.at }
     : { i: 'ph-paper-plane-tilt', t: `<b>${esc(r.who)}</b> joined with your referral link`, m: '+200 credits', go: 'refer', at: r.at }));
   if (mineInReview()) L.push({ i: 'ph-hourglass-medium', t: `<b>${esc(S.tpl.title)}</b> is waiting for approval on ${esc(S.company.name)}’s team page`, go: 'company', at: S.publishedAt + 1 });
   if (S.published) L.push({ i: 'ph-check-circle', t: `<b>${esc(S.tpl.title)}</b> is live on Community`, m: 'Share it to start earning', go: 'gallery', at: S.publishedAt });
