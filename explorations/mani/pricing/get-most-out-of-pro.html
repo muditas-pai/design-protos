@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Get most out of Pro, editor top bar</title>
+<title>Free to Pro, all on the editor</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
 <style>
-  /* The editor key screen runs underneath, untouched, in a frame. This proto only adds the middle
-     of its top bar: the plan button with a light running round it, the trial pill, and the menu
-     that button opens. Activate Now hands over to the plan picker, v5.1. */
+  /* One screen the whole way. A free user upgrades from the editor top bar, the plans open over
+     the editor, checkout opens over the editor, and what is left to do lands in the top bar menu.
+     Nothing navigates: every step is a layer on this page. */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --ink: #171717; --ink2: #525252; --ink3: #737373;
     --line: #e5e5e5; --line2: #ececec; --soft: #fafbfc;
     --blue: #005EFF; --blue-soft: #eef4ff; --halo: #e6efff;
     --green: #16a34a; --green-soft: #e7f6ec;
+    --gold: #C08E2A; --gold-line: #e7d6ab; --gold-bg: linear-gradient(180deg, #fffdf6 0%, #fdf5e4 100%);
   }
   html, body { height: 100%; }
   body { font-family: 'Inter', sans-serif; color: var(--ink); background: #f4f5f7; -webkit-font-smoothing: antialiased; overflow: hidden; }
@@ -24,7 +25,7 @@
   /* the editor runs underneath, its own bar hidden behind ours */
   .editor { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
 
-  /* the editor top bar, drawn here so the offer timer is off it */
+  /* the editor top bar, drawn here so there is no offer timer on it */
   .bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 20; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--line2); }
   .grp { display: flex; align-items: center; height: 36px; padding: 0 3px; border-radius: 8px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); }
   .grp .sp { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
@@ -35,21 +36,31 @@
   .tb i { font-size: 15px; }
   .tb--dark { background: var(--ink); color: #fff; }
   .tb--dark:hover { background: #000; }
-  .deck { max-width: 180px; padding: 0 10px; font-size: 13.5px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .deck { max-width: 180px; padding: 0 10px; font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .av { display: flex; align-items: center; gap: 4px; padding: 0 6px 0 3px; }
   .av .f { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: #f97316; color: #fff; font-size: 11px; font-weight: 600; }
   .av .n { font-size: 12px; font-weight: 600; color: var(--ink2); }
   .gap { flex: 1 1 auto; }
 
-  /* the light running round the button */
+  /* free: credits and the one upgrade action, no plan button */
+  .cred-grp .c { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 13.5px; white-space: nowrap; }
+  .cred-grp .c i { font-size: 14px; color: var(--blue); }
+  .act { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px; border: 0; border-radius: 6px; background: var(--blue); color: #fff; font: 600 13.5px 'Inter', sans-serif; cursor: pointer; transition: background .15s ease, transform .12s ease; }
+  .act i { font-size: 14px; }
+  .act:hover { background: #0052e0; }
+  .act:active { transform: scale(0.97); }
+  /* paid: the credits chip goes, the plan button arrives */
+  .pro-wrap { display: none; }
+  body.paid .pro-wrap { display: block; }
+  body.paid .cred-grp { display: none; }
+
+  /* the light running round the plan button */
   .pro-wrap { position: relative; padding: 1.5px; border-radius: 9.5px; overflow: hidden; box-shadow: 0 1px 2px rgba(10,25,37,0.1); }
   .pro-wrap::before { content: ''; position: absolute; inset: -60%; background: conic-gradient(from 0deg, rgba(0,94,255,0) 0deg, rgba(0,94,255,0) 230deg, #74A6FF 290deg, #005EFF 330deg, rgba(0,94,255,0) 360deg); animation: spin 2.6s linear infinite; }
   @keyframes spin { to { transform: rotate(1turn); } }
-  /* and a slow breath under it, so the button is noticed without moving */
-  .pro-wrap::after { content: ''; position: absolute; inset: 0; border-radius: 9.5px; box-shadow: 0 0 0 0 rgba(0,94,255,0.4); animation: breathe 3.2s ease-in-out infinite; pointer-events: none; }
+  .pro-wrap::after { content: ''; position: absolute; inset: 0; border-radius: 9.5px; animation: breathe 3.2s ease-in-out infinite; pointer-events: none; }
   @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,94,255,0.32); } 55% { box-shadow: 0 0 0 7px rgba(0,94,255,0); } }
-
-  .pro-btn { position: relative; display: flex; align-items: center; height: 36px; padding: 0; border: 0; border-radius: 8px; background: var(--blue-soft); font-family: inherit; cursor: pointer; }
+  .pro-btn { position: relative; display: flex; align-items: center; height: 36px; border: 0; border-radius: 8px; background: var(--blue-soft); font-family: inherit; cursor: pointer; }
   .pro-btn .lbl { display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 14px; font-size: 14px; font-weight: 500; color: var(--ink); }
   .pro-btn .lbl i { font-size: 16px; color: var(--blue); }
   .pro-btn .sep { width: 1px; height: 36px; background: rgba(0,94,255,0.16); }
@@ -57,45 +68,34 @@
   .pro-btn:hover { background: #e4eeff; }
   .pro-btn[aria-expanded="true"] .car { transform: rotate(180deg); }
 
-  /* credits and the one upgrade action. No countdown next to it. */
-  .cred-grp .c { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 13.5px; color: var(--ink); white-space: nowrap; }
-  .cred-grp .c i { font-size: 14px; color: var(--blue); }
-  .act { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px; border: 0; border-radius: 6px; background: var(--blue); color: #fff; font: 600 13.5px 'Inter', sans-serif; cursor: pointer; transition: background .15s ease, transform .12s ease; }
-  .act i { font-size: 14px; }
-  .act:hover { background: #0052e0; }
-  .act:active { transform: scale(0.97); }
-
   /* the menu the plan button opens */
-  .menu { position: fixed; top: 56px; z-index: 21; width: 420px; padding: 10px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 18px 40px -12px rgba(10,25,37,0.3); transform-origin: top left; animation: menu-in .26s cubic-bezier(.2,.8,.2,1) backwards; }
+  .menu { position: fixed; top: 56px; z-index: 21; width: 430px; padding: 10px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08), 0 18px 40px -12px rgba(10,25,37,0.3); transform-origin: top left; animation: menu-in .26s cubic-bezier(.2,.8,.2,1) backwards; }
   .menu[hidden] { display: none; }
   @keyframes menu-in { from { opacity: 0; transform: translateY(-8px) scale(0.97); } }
-  .menu .row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 8px; background: none; border: 0; width: 100%; font-family: inherit; text-align: left; cursor: default; }
-  .menu .row.todo { cursor: pointer; transition: background .15s ease; }
-  .menu .row.todo:hover { background: var(--soft); }
-  .menu .row .mk { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 999px; font-size: 14px; font-weight: 600; }
-  .menu .row.done .mk { background: var(--green); color: #fff; font-size: 18px; }
-  .menu .row.todo .mk { background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink2); }
-  .menu .row .nm { flex: 1 1 auto; min-width: 0; font-size: 15px; color: var(--ink); }
-  .menu .row.done .nm { color: var(--ink); }
-  .menu .chip { flex: none; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
-  .menu .chip.earned { background: var(--green-soft); color: #15803d; }
-  .menu .chip.earn { display: inline-flex; align-items: center; gap: 5px; background: var(--halo); color: var(--blue); }
-  .menu .chip.earn i { font-size: 11px; }
-  .menu .row .go { flex: none; width: 18px; font-size: 15px; color: var(--ink3); opacity: 0; transition: opacity .15s ease, transform .15s ease; }
-  .menu .row.todo:hover .go { opacity: 1; transform: translateX(2px); }
-  .menu .row { animation: row-in .34s cubic-bezier(.22,1,.36,1) backwards; }
-  .menu .row:nth-child(1) { animation-delay: .04s; } .menu .row:nth-child(2) { animation-delay: .09s; }
-  .menu .row:nth-child(3) { animation-delay: .14s; } .menu .row:nth-child(4) { animation-delay: .19s; }
+  .row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; border: 0; border-radius: 8px; background: none; font-family: inherit; text-align: left; }
+  .row.todo { cursor: pointer; transition: background .15s ease; }
+  .row.todo:hover { background: var(--soft); }
+  .row .mk { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 999px; font-size: 14px; font-weight: 600; }
+  .row.done .mk { background: var(--green); color: #fff; font-size: 18px; }
+  .row.todo .mk { background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink2); }
+  .row .nm { flex: 1 1 auto; min-width: 0; font-size: 15px; color: var(--ink); }
+  .chip { flex: none; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .chip.earned { background: var(--green-soft); color: #15803d; }
+  .chip.earn { display: inline-flex; align-items: center; gap: 5px; background: var(--halo); color: var(--blue); }
+  .chip.earn i { font-size: 11px; }
+  .row .go { flex: none; width: 18px; font-size: 15px; color: var(--ink3); opacity: 0; transition: opacity .15s ease, transform .15s ease; }
+  .row.todo:hover .go { opacity: 1; transform: translateX(2px); }
+  .row { animation: row-in .34s cubic-bezier(.22,1,.36,1) backwards; }
+  .row:nth-child(1) { animation-delay: .04s; } .row:nth-child(2) { animation-delay: .09s; }
+  .row:nth-child(3) { animation-delay: .14s; } .row:nth-child(4) { animation-delay: .19s; }
   @keyframes row-in { from { opacity: 0; transform: translateY(8px); } }
 
   .dim { position: fixed; inset: 0; z-index: 19; }
   .dim[hidden] { display: none; }
-
-  /* once the plan is paid for, the credits and upgrade chip goes and the button speaks for the plan */
-  body.paid .cred-grp { display: none; }
+  body.coaching .dim { background: rgba(10,25,37,0.3); }
 
   /* the coach mark sits under the menu and points back at the button */
-  .coach { position: fixed; z-index: 22; width: 292px; padding: 16px 18px; border-radius: 10px; background: var(--ink); color: #fff; box-shadow: 0 14px 30px -10px rgba(10,25,37,0.5); animation: coach-in .36s .2s cubic-bezier(.2,.8,.2,1) backwards; }
+  .coach { position: fixed; z-index: 22; width: 300px; padding: 16px 18px; border-radius: 10px; background: var(--ink); color: #fff; box-shadow: 0 14px 30px -10px rgba(10,25,37,0.5); animation: coach-in .36s .2s cubic-bezier(.2,.8,.2,1) backwards; }
   .coach[hidden] { display: none; }
   @keyframes coach-in { from { opacity: 0; transform: translateY(-8px); } }
   .coach::after { content: ''; position: absolute; top: -5px; left: 26px; width: 12px; height: 12px; background: var(--ink); transform: rotate(45deg); border-radius: 2px; }
@@ -103,48 +103,100 @@
   .coach p { margin-top: 6px; font-size: 13px; line-height: 1.45; color: rgba(255,255,255,0.78); }
   .coach button { margin-top: 14px; height: 32px; padding: 0 16px; border: 0; border-radius: 6px; background: #fff; color: var(--ink); font: 600 12.5px 'Inter', sans-serif; cursor: pointer; }
   .coach button:hover { background: #ececec; }
-  body.coaching .dim { background: rgba(10,25,37,0.3); }
 
-  /* the post payment modal */
-  .won-scrim { position: fixed; inset: 0; z-index: 44; display: flex; align-items: center; justify-content: center; padding: 28px; background: rgba(10,25,37,0.5); animation: fade-in .25s ease backwards; }
-  .won-scrim[hidden] { display: none; }
+  /* ---- every step after this is a layer over the same editor ---- */
+  .layer { position: fixed; inset: 0; z-index: 44; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10,25,37,0.5); overflow-y: auto; animation: fade-in .25s ease backwards; }
+  .layer[hidden] { display: none; }
   @keyframes fade-in { from { opacity: 0; } }
-  @keyframes won-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
-  .won { position: relative; width: 460px; padding: 28px 28px 24px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 44px -16px rgba(10,25,37,0.32); animation: won-in .45s cubic-bezier(.2,.8,.2,1) backwards; }
-  .won .eyebrow { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; background: var(--green-soft); color: #15803d; font-size: 11.5px; font-weight: 600; }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
+  .sheet { position: relative; margin: auto; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.09), 0 24px 44px -16px rgba(10,25,37,0.32); animation: rise .45s cubic-bezier(.2,.8,.2,1) backwards; }
+  .x { position: absolute; top: 0; left: calc(100% + 10px); width: 30px; height: 30px; border: 0; border-radius: 999px; background: #fff; color: var(--ink); font-size: 15px; display: grid; place-items: center; cursor: pointer; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 4px 12px rgba(10,25,37,0.12); }
+  .x:hover { background: #f0f2f5; }
+
+  /* plans */
+  .plans { width: 1120px; padding: 30px 28px 32px; }
+  .ph { text-align: center; margin-bottom: 24px; }
+  .ph .t { font-size: 26px; font-weight: 500; letter-spacing: -0.016em; }
+  .ph .s { margin-top: 7px; font-size: 13.5px; color: var(--ink2); }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
+  .pc { position: relative; display: flex; flex-direction: column; padding: 24px; border: 1px solid var(--line); border-radius: 10px; background: #fff; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+  .pc:hover { border-color: #cfd6e0; box-shadow: 0 4px 16px -6px rgba(10,25,37,0.16); transform: translateY(-2px); }
+  .pc.gold { border-color: var(--gold-line); background: var(--gold-bg); }
+  .pc .tag { position: absolute; top: -10px; right: 18px; padding: 3px 10px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 600; box-shadow: 0 2px 6px rgba(0,94,255,0.3); }
+  .pc .nm { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+  .pc .nm i { font-size: 19px; color: var(--ink3); }
+  .pc.gold .nm i { color: var(--gold); }
+  .pc .desc { margin-top: 8px; min-height: 40px; font-size: 13.5px; line-height: 1.45; color: var(--ink2); }
+  .pc .amt { margin-top: 18px; display: flex; align-items: baseline; gap: 10px; }
+  .pc .amt b { font-size: 38px; font-weight: 500; line-height: 1; letter-spacing: -0.028em; }
+  .pc .amt span { font-size: 12.5px; line-height: 1.35; color: var(--ink2); }
+  .btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 44px; border: 0; border-radius: 8px; background: var(--blue); color: #fff; font: 600 14px 'Inter', sans-serif; cursor: pointer; transition: filter .15s ease, transform .12s ease, background .15s ease; }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:active { transform: scale(0.985); }
+  .btn--out { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px #d4d4d4; }
+  .btn--out:hover { filter: none; background: var(--soft); box-shadow: inset 0 0 0 1px #a3a3a3; }
+  .btn--gold { background: linear-gradient(100deg, #E8C070 0%, #D8AA48 48%, #C08E2A 100%); }
+  .btn--dark { background: var(--ink); }
+  .btn--dark:hover { filter: none; background: #000; }
+  .pc .btn { margin-top: 18px; }
+  .cred { display: flex; align-items: center; gap: 9px; margin-top: 22px; }
+  .cred > i { font-size: 17px; }
+  .cred b { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+  .cred span { font-size: 13.5px; color: var(--ink2); }
+  .cred .x5 { margin-left: 2px; padding: 2px 8px; border-radius: 999px; background: var(--halo); color: var(--blue); font-size: 11.5px; font-weight: 600; }
+  .feats { list-style: none; margin-top: 15px; display: flex; flex-direction: column; gap: 12px; }
+  .feats li { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: #333; }
+  .feats li i { font-size: 16px; color: var(--ink3); flex: none; }
+  .feats .lead { font-weight: 500; color: var(--ink); }
+  .feats .lead i { color: var(--blue); }
+  .layer:not([hidden]) .pc { animation: rise .45s cubic-bezier(.22,1,.36,1) backwards; }
+  .pc:nth-child(1) { animation-delay: .1s; } .pc:nth-child(2) { animation-delay: .16s; } .pc:nth-child(3) { animation-delay: .22s; }
+
+  /* checkout */
+  .co { width: 820px; display: grid; grid-template-columns: 320px 1fr; }
+  .co-l { padding: 26px 24px; border-right: 1px solid var(--line2); background: var(--soft); border-radius: 10px 0 0 10px; }
+  .co-r { padding: 26px 24px; }
+  .co h2 { font-size: 19px; font-weight: 500; letter-spacing: -0.012em; }
+  .co .sum { margin-top: 18px; }
+  .co .sum .l { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; font-size: 13.5px; color: var(--ink2); }
+  .co .sum .l b { font-weight: 500; color: var(--ink); }
+  .co .sum .tot { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; }
+  .co .sum .tot b { font-size: 22px; font-weight: 500; letter-spacing: -0.015em; }
+  .co .cred { margin-top: 16px; }
+  .fld { margin-top: 14px; }
+  .fld label { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink2); }
+  .fld input, .fld select { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: 400 14px 'Inter', sans-serif; color: var(--ink); }
+  .fld input:focus, .fld select:focus { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 3px var(--halo); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .co .btn { margin-top: 20px; }
+  .legal { margin-top: 12px; font-size: 11.5px; line-height: 1.5; color: var(--ink3); }
+
+  /* what is left to do, straight after checkout. Same points as the top bar menu. */
+  .won { width: 500px; padding: 28px 24px 24px; }
+  .won .eyebrow { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 4px 11px; border-radius: 999px; background: var(--green-soft); color: #15803d; font-size: 11.5px; font-weight: 600; }
   .won .eyebrow i { font-size: 12px; }
-  .won .t { margin-top: 14px; font-size: 24px; font-weight: 500; letter-spacing: -0.018em; }
-  .won .s { margin-top: 8px; font-size: 13.5px; line-height: 1.5; color: var(--ink2); }
-  .won ul { list-style: none; margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
-  .won li { display: flex; align-items: flex-start; gap: 12px; animation: row-in .45s cubic-bezier(.22,1,.36,1) backwards; }
-  .won li:nth-child(1) { animation-delay: .16s; } .won li:nth-child(2) { animation-delay: .22s; }
-  .won li:nth-child(3) { animation-delay: .28s; } .won li:nth-child(4) { animation-delay: .34s; }
-  .won li:nth-child(5) { animation-delay: .40s; }
-  .won li i { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 7px; background: var(--halo); color: var(--blue); font-size: 16px; }
-  .won li b { display: block; font-size: 13.5px; font-weight: 500; }
-  .won li span { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--ink2); }
-  .won .acts { margin-top: 24px; display: flex; gap: 10px; }
+  .won .t { margin: 14px 0 0 4px; font-size: 24px; font-weight: 500; letter-spacing: -0.018em; }
+  .won .s { margin: 8px 4px 0; font-size: 13.5px; line-height: 1.5; color: var(--ink2); }
+  .won .list { margin-top: 18px; }
+  .won .acts { margin: 22px 4px 0; display: flex; gap: 10px; }
   .won .acts button { height: 44px; border: 0; border-radius: 8px; font: 600 14px 'Inter', sans-serif; cursor: pointer; }
   .won .acts .go { flex: 1; background: var(--blue); color: #fff; }
   .won .acts .go:hover { background: #0052e0; }
   .won .acts .later { flex: none; width: 104px; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px #d4d4d4; }
   .won .acts .later:hover { background: var(--soft); }
 
-  /* the picker opens over the editor in its own frame */
-  .pick { position: fixed; inset: 0; z-index: 40; display: none; }
-  .pick.is-open { display: block; }
-  .pick iframe { width: 100%; height: 100%; border: 0; }
-  .pick .x { position: fixed; top: 18px; right: 18px; z-index: 41; width: 32px; height: 32px; border: 0; border-radius: 999px; background: #fff; color: var(--ink); font-size: 16px; display: grid; place-items: center; cursor: pointer; box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 6px 18px -6px rgba(10,25,37,0.4); }
-  .pick .x:hover { background: #f0f2f5; }
-
   @media (prefers-reduced-motion: reduce) {
-    .pro-wrap::before, .pro-wrap::after, .menu, .menu .row, .coach, .won, .won li { animation: none; }
+    .pro-wrap::before, .pro-wrap::after, .menu, .row, .coach, .layer, .sheet, .pc { animation: none; }
   }
-  @media (max-width: 1240px) {
-    .bar .hide-sm { display: none; }
-    .menu { left: 12px !important; right: 12px; width: auto; }
-    .coach { left: 12px !important; right: 12px; width: auto; }
-    .won { width: 100%; }
+  @media (max-width: 1240px) { .bar .hide-sm { display: none; } }
+  @media (max-width: 1180px) {
+    .plans { width: auto; max-width: 100%; }
+    .cards { grid-template-columns: 1fr; }
+    .co { width: auto; max-width: 100%; grid-template-columns: 1fr; }
+    .co-l { border-right: 0; border-bottom: 1px solid var(--line2); border-radius: 10px 10px 0 0; }
+    .won { width: auto; max-width: 100%; }
+    .x { left: auto; right: 0; top: -40px; }
+    .menu, .coach { left: 12px !important; right: 12px; width: auto; }
   }
 </style>
 </head>
@@ -170,7 +222,7 @@
 
   <div class="grp cred-grp">
     <span class="c"><i class="ph-fill ph-star-four"></i>Credits: 160 left</span>
-    <button type="button" class="act" id="activate"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button>
+    <button type="button" class="act" id="upgrade"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button>
   </div>
 
   <div class="grp av hide-sm"><span class="f">M</span><span class="n">+2</span></div>
@@ -192,9 +244,9 @@
 <div class="menu" id="menu" hidden></div>
 <div class="coach" id="coach" hidden></div>
 
-<div class="won-scrim" id="won-scrim" hidden><div class="won" id="won"></div></div>
-
-<div class="pick" id="pick"><iframe id="pick-frame" title="Choose a plan"></iframe><button type="button" class="x" id="pick-close" aria-label="Close"><i class="ph ph-x"></i></button></div>
+<div class="layer" id="l-plans" hidden><div class="sheet plans" id="plans"></div></div>
+<div class="layer" id="l-co" hidden><div class="sheet co" id="co"></div></div>
+<div class="layer" id="l-won" hidden><div class="sheet won" id="won"></div></div>
 
 <script>
   // The editor key screen is not ours to change, so its refine panel is hidden from this side
@@ -210,39 +262,113 @@
     } catch (err) { /* cross origin, leave the editor as it is */ }
   });
 
-  // Steps worth 50 credits each. The ones still to do lead the list, the finished ones sit
-  // under them and say what they earned. On trial there are four, on a paid plan three.
-  const TRIAL_STEPS = [
-    { t: 'Set up your Brand Kit', done: true },
-    { t: 'Create using a template', done: true },
-    { t: 'Create a project', done: false },
-    { t: 'Invite a team member', done: false },
+  // ---- plans, the same numbers and points as the tier 2 picker ----------------------
+  const PLANS = [
+    { key: 'pro', name: 'Pro', icon: 'ph-rocket-launch', price: 20, year: 240, credits: '5,000', btn: 'btn--out',
+      desc: 'Everything you need for pro presentations',
+      feats: [['ph-sparkle', 'Advanced AI models'], ['ph-paint-brush-broad', 'Brand Kit'], ['ph-strategy', 'Research and planning'], ['ph-chart-bar', 'Analytics']] },
+    { key: 'gold', name: 'Gold', icon: 'ph-sketch-logo', price: 50, year: 600, credits: '25,000', x: '5x Pro', tag: 'Best for you', btn: 'btn--gold',
+      desc: 'For high stakes, high volume presentation work', lead: 'Everything in Pro, plus',
+      feats: [['ph-sparkle', 'Frontier AI models'], ['ph-paint-brush-broad', 'Advanced brand controls'], ['ph-book-open', 'Shared project knowledge'], ['ph-gauge', 'Priority AI generation']] },
+    { key: 'team', name: 'Team', icon: 'ph-users-three', price: 60, year: 720, credits: '30,000', btn: 'btn--dark',
+      desc: 'One workspace for everyone who creates presentations', lead: 'Everything in Gold, plus',
+      feats: [['ph-users-three', 'Unlimited collaborators'], ['ph-paint-brush-broad', 'Shared Brand Kit'], ['ph-sparkle', 'Frontier AI models and agents'], ['ph-chart-bar', 'Team analytics'], ['ph-headset', 'Priority support']] },
   ];
-  const PAID_STEPS = [
+  const byKey = (k) => PLANS.find((p) => p.key === k) || PLANS[0];
+
+  // ---- the steps. One list, used by the modal after checkout and by the top bar menu ----
+  const STEPS = [
     { t: 'Set up your Brand Kit', done: true },
     { t: 'Create using a template', done: true },
     { t: 'Create a project and add knowledge', done: false },
+    { t: 'Invite a team member', done: false },
   ];
-  const menu = document.getElementById('menu'), dim = document.getElementById('dim'), proBtn = document.getElementById('pro-btn');
-  const coach = document.getElementById('coach');
-  let steps = TRIAL_STEPS;
-  const left = () => steps.filter((s) => !s.done).length;
-  const stepsHTML = () => steps
+  const left = () => STEPS.filter((s) => !s.done).length;
+  // the ones still to do lead, the finished ones sit under them
+  const rowsHTML = () => STEPS
     .map((s, i) => Object.assign({}, s, { n: i + 1 }))
     .sort((a, b) => (a.done === b.done ? a.n - b.n : (a.done ? 1 : -1)))
     .map((s) => s.done
       ? '<div class="row done"><span class="mk"><i class="ph-bold ph-check"></i></span><span class="nm">' + s.t + '</span>' +
         '<span class="chip earned">Earned 50 credits</span></div>'
-      : '<button type="button" class="row todo"><span class="mk">' + s.n + '</span>' +
-        '<span class="nm">' + s.t + '</span><span class="chip earn"><i class="ph-fill ph-star-four"></i>Earn +50</span>' +
+      : '<button type="button" class="row todo"><span class="mk">' + s.n + '</span><span class="nm">' + s.t + '</span>' +
+        '<span class="chip earn"><i class="ph-fill ph-star-four"></i>Earn +50</span>' +
         '<span class="go"><i class="ph ph-arrow-right"></i></span></button>').join('');
-  const drawMenu = () => { menu.innerHTML = stepsHTML(); };
-  drawMenu();
 
-  // a step is work in the editor, so picking one closes the menu and leaves you in it
-  menu.addEventListener('click', (e) => { if (e.target.closest('.row.todo')) closeMenu(); });
+  // ---- layers over the editor. Nothing navigates. ----------------------------------
+  const L = { plans: document.getElementById('l-plans'), co: document.getElementById('l-co'), won: document.getElementById('l-won') };
+  const closeLayers = () => Object.keys(L).forEach((k) => { L[k].hidden = true; });
+  const openLayer = (k) => { closeLayers(); L[k].hidden = false; };
+  Object.keys(L).forEach((k) => L[k].addEventListener('click', (e) => { if (e.target === L[k] && k !== 'won') L[k].hidden = true; }));
 
-  // the menu hangs from the left edge of the button
+  // plans, over the editor
+  const cred = (p) => '<div class="cred"><i class="ph-fill ph-star-four"></i><b>' + p.credits + '</b><span>Credits</span>' +
+    (p.x ? '<span class="x5">' + p.x + '</span>' : '') + '</div>';
+  const feats = (p) => '<ul class="feats">' + (p.lead ? '<li class="lead"><i class="ph ph-arrow-bend-down-right"></i>' + p.lead + '</li>' : '') +
+    p.feats.map((f) => '<li><i class="ph ' + f[0] + '"></i>' + f[1] + '</li>').join('') + '</ul>';
+  document.getElementById('plans').innerHTML =
+    '<div class="ph"><div class="t">Choose the plan that fits your work</div>' +
+      '<div class="s">Per month, billed annually. Change or cancel whenever you like</div></div>' +
+    '<div class="cards">' + PLANS.map((p) =>
+      '<div class="pc' + (p.key === 'gold' ? ' gold' : '') + '">' + (p.tag ? '<span class="tag">' + p.tag + '</span>' : '') +
+      '<div class="nm">' + p.name + '<i class="ph ' + p.icon + '"></i></div>' +
+      '<div class="desc">' + p.desc + '</div>' +
+      '<div class="amt"><b>$' + p.price + '</b><span>per month<br />billed annually</span></div>' +
+      '<button type="button" class="btn ' + p.btn + '" data-buy="' + p.key + '">' + (p.key === 'team' ? 'Get Team' : 'Buy ' + p.name) + '</button>' +
+      cred(p) + feats(p) + '</div>').join('') + '</div>' +
+    '<button type="button" class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button>';
+
+  // checkout, over the editor
+  const co = document.getElementById('co');
+  const openCheckout = (k) => {
+    const p = byKey(k);
+    co.innerHTML =
+      '<div class="co-l"><h2>' + p.name + '</h2>' + cred(p) +
+        '<div class="sum">' +
+          '<div class="l"><span>Plan</span><b>' + p.name + ', annual</b></div>' +
+          '<div class="l"><span>Per month</span><b>$' + p.price + '</b></div>' +
+          '<div class="l tot"><span>Billed today</span><b>$' + p.year + '</b></div>' +
+        '</div>' +
+        '<div class="legal">Renews at $' + p.year + ' a year unless cancelled. You can cancel anytime</div>' +
+      '</div>' +
+      '<div class="co-r"><h2>Payment</h2>' +
+        '<div class="fld"><label>Card number</label><input value="4242 4242 4242 4242" inputmode="numeric" /></div>' +
+        '<div class="two"><div class="fld"><label>Expiry</label><input value="04 / 29" /></div>' +
+        '<div class="fld"><label>CVC</label><input value="123" /></div></div>' +
+        '<div class="fld"><label>Name on card</label><input value="Mani Vasakan" /></div>' +
+        '<div class="two"><div class="fld"><label>Country</label><select><option>India</option><option>United States</option><option>United Kingdom</option></select></div>' +
+        '<div class="fld"><label>ZIP code</label><input value="600001" /></div></div>' +
+        '<button type="button" class="btn" data-pay="' + p.key + '">Pay $' + p.year + '</button>' +
+        '<div class="legal">By paying you agree to the Terms of Service and the Refund Policy</div>' +
+      '</div>' +
+      '<button type="button" class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button>';
+    openLayer('co');
+  };
+
+  // what is left to do, straight after checkout. The same points the menu will hold.
+  let plan = 'pro';
+  const NAME = { pro: 'Pro', gold: 'Gold', team: 'Team' };
+  const paid = (k) => {
+    plan = NAME[k] ? k : 'pro';
+    const p = byKey(plan);
+    document.body.classList.add('paid');
+    proBtn.querySelector('.lbl').innerHTML = '<i class="ph-fill ph-rocket-launch"></i>Get most out of ' + p.name;
+    drawMenu();
+    document.getElementById('won').innerHTML =
+      '<span class="eyebrow"><i class="ph-fill ph-check-circle"></i>Payment complete</span>' +
+      '<div class="t">Get most out of ' + p.name + '</div>' +
+      '<div class="s">' + p.name + ' is on from today. ' + p.credits + ' credits are on your account, and ' +
+      left() + ' steps left add 50 credits each.</div>' +
+      '<div class="list">' + rowsHTML() + '</div>' +
+      '<div class="acts"><button type="button" class="go" data-dismiss>Start creating</button>' +
+      '<button type="button" class="later" data-dismiss>Not now</button></div>';
+    openLayer('won');
+  };
+
+  // ---- the top bar menu and the coach mark ------------------------------------------
+  const menu = document.getElementById('menu'), dim = document.getElementById('dim'), coach = document.getElementById('coach');
+  const proBtn = document.getElementById('pro-btn');
+  const drawMenu = () => { menu.innerHTML = rowsHTML(); };
   const place = () => {
     const r = proBtn.getBoundingClientRect();
     menu.style.left = Math.max(12, r.left) + 'px';
@@ -258,74 +384,12 @@
   proBtn.addEventListener('click', () => { menu.hidden ? openMenu() : closeMenu(); });
   dim.addEventListener('click', closeMenu);
   addEventListener('resize', () => { if (!menu.hidden) place(); });
+  // a step is work in the editor, so picking one closes the menu and leaves you in it
+  menu.addEventListener('click', (e) => { if (e.target.closest('.row.todo')) closeMenu(); });
 
-  // the plan picker opens over the editor, v5.1
-  const pick = document.getElementById('pick'), pickFrame = document.getElementById('pick-frame');
-  const openPick = () => { pickFrame.src = 'trial-choose-plan-sep-2026-v5.1.html?tier=2'; pick.classList.add('is-open'); closeMenu(); };
-  const closePick = () => { pick.classList.remove('is-open'); pickFrame.src = 'about:blank'; };
-  document.getElementById('activate').addEventListener('click', openPick);
-  document.getElementById('pick-close').addEventListener('click', closePick);
-  addEventListener('message', (e) => {
-    if (!e.data) return;
-    if (e.data.type === 'checkout-close') closePick();
-    if (e.data.type === 'checkout-paid') { closePick(); paid(e.data.plan); }
-  });
-
-  // ---- after payment ----------------------------------------------------------------
-  // The same five points fill the modal and, from then on, this button's menu, so the
-  // promise and the place to find it match.
-  const TOP5 = {
-    pro: [
-      ['ph-sparkle', 'Advanced AI models', 'On every deck you make'],
-      ['ph-paint-brush-broad', 'Brand Kit', 'Your fonts, colours and logo on every slide'],
-      ['ph-strategy', 'Research and planning', 'We read your sources before we write'],
-      ['ph-chart-bar', 'Analytics', 'See which slides people spend time on'],
-      ['ph-microsoft-powerpoint-logo', 'PowerPoint and PDF export', 'Editable, with no watermark'],
-    ],
-    gold: [
-      ['ph-sparkle', 'Frontier AI models', 'The strongest models we offer'],
-      ['ph-paint-brush-broad', 'Advanced brand controls', 'Lock type, colour and layout across a deck'],
-      ['ph-book-open', 'Shared project knowledge', 'Every deck reads from the same sources'],
-      ['ph-gauge', 'Priority AI generation', 'Your decks go to the front of the queue'],
-      ['ph-rocket-launch', 'Everything in Pro', 'Brand Kit, research, analytics and exports'],
-    ],
-    team: [
-      ['ph-users-three', 'Unlimited collaborators', 'Seats are included, not counted'],
-      ['ph-paint-brush-broad', 'Shared Brand Kit', 'One brand for everyone in the workspace'],
-      ['ph-book-open', 'Shared project knowledge', 'Every deck reads from the same sources'],
-      ['ph-sparkle', 'Frontier AI models and agents', 'The strongest models we offer'],
-      ['ph-chart-bar', 'Team analytics', 'See how your team\u2019s decks are read'],
-    ],
-  };
-  const NAME = { pro: 'Pro', gold: 'Gold', team: 'Team' };
-  const CREDITS = { pro: '5,000', gold: '25,000', team: '30,000' };
-  let plan = 'pro';
-  const wonScrim = document.getElementById('won-scrim'), won = document.getElementById('won');
-
-  // payment went through: the trial pill goes, the button speaks for the plan, the modal says what it adds
-  const paid = (p) => {
-    plan = NAME[p] ? p : 'pro';
-    document.body.classList.add('paid');
-    closeMenu();
-    proBtn.querySelector('.lbl').innerHTML = '<i class="ph-fill ph-rocket-launch"></i>Get most out of ' + NAME[plan];
-    steps = PAID_STEPS;
-    drawMenu();
-    won.innerHTML =
-      '<span class="eyebrow"><i class="ph-fill ph-check-circle"></i>Payment complete</span>' +
-      '<div class="t">Get more out of ' + NAME[plan] + '</div>' +
-      '<div class="s">' + NAME[plan] + ' is on from today. ' + CREDITS[plan] + ' credits are on your account. Here are the five things it adds.</div>' +
-      '<ul>' + TOP5[plan].map((f) => '<li><i class="ph ' + f[0] + '"></i><div><b>' + f[1] + '</b><span>' + f[2] + '</span></div></li>').join('') + '</ul>' +
-      '<div class="acts"><button type="button" class="go" id="won-go">Start creating</button>' +
-      '<button type="button" class="later" id="won-later">Not now</button></div>';
-    wonScrim.hidden = false;
-    document.getElementById('won-go').addEventListener('click', dismissWon);
-    document.getElementById('won-later').addEventListener('click', dismissWon);
-  };
-
-  // the modal closes, the menu opens and the coach mark points back at the button
   const dismissWon = () => {
-    wonScrim.hidden = true;
-    coach.innerHTML = '<b>We\u2019ve got you covered</b>' +
+    L.won.hidden = true;
+    coach.innerHTML = '<b>We’ve got you covered</b>' +
       '<p>Open this menu anytime to see what ' + NAME[plan] + ' covers. ' +
       (left() === 1 ? '1 step left adds 50 credits.' : left() + ' steps left add 50 credits each.') + '</p>' +
       '<button type="button" id="coach-ok">Got it</button>';
@@ -335,16 +399,30 @@
     place();
     document.getElementById('coach-ok').addEventListener('click', closeMenu);
   };
+
+  // ---- one place for every click in the layers ---------------------------------------
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close]')) { closeLayers(); return; }
+    const buy = e.target.closest('[data-buy]');
+    if (buy) { openCheckout(buy.dataset.buy); return; }
+    const pay = e.target.closest('[data-pay]');
+    if (pay) { closeLayers(); paid(pay.dataset.pay); return; }
+    if (e.target.closest('[data-dismiss]')) dismissWon();
+  });
+  document.getElementById('upgrade').addEventListener('click', () => { closeMenu(); openLayer('plans'); });
   addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (pick.classList.contains('is-open')) { closePick(); return; }
+    if (!L.plans.hidden || !L.co.hidden) { closeLayers(); return; }
     if (!menu.hidden) closeMenu();
   });
 
-  // ?menu=1 opens the menu on load, ?paid=pro|gold|team jumps to the post payment step
+  // ?step=plans|checkout|paid opens straight on that layer, so each one is linkable
   const q = new URLSearchParams(location.search);
-  if (NAME[q.get('paid')]) paid(q.get('paid'));
-  else if (q.get('menu') === '1') openMenu();
+  const step = q.get('step'), want = NAME[q.get('plan')] ? q.get('plan') : 'pro';
+  if (step === 'plans') openLayer('plans');
+  else if (step === 'checkout') openCheckout(want);
+  else if (step === 'paid') paid(want);
+  else if (q.get('menu') === '1') { document.body.classList.add('paid'); drawMenu(); openMenu(); }
 </script>
 
 <div id="agentation-root"></div>
