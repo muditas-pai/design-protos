@@ -153,6 +153,16 @@
   .tbl .muted { color: rgb(var(--ink-3)); font-size: 13px; }
   .tbl .who { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 
+  .files { list-style: none; margin: 0; padding: 0 16px; border: 1px solid rgb(var(--line)); border-radius: var(--r-card); background: rgb(var(--surface)); }
+  .files li { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+  .files li + li { border-top: 1px solid rgb(var(--line)); }
+  .files .fi { width: 36px; height: 36px; border-radius: var(--r-control); background: rgb(var(--sunken)); display: grid; place-items: center; flex-shrink: 0; }
+  .files .tx { flex: 1; min-width: 0; }
+  .files b { display: block; font-weight: 500; }
+  .files small { display: block; font-size: 13px; color: rgb(var(--ink-3)); }
+  .files .icon-btn { width: 32px; height: 32px; }
+  .files .icon-btn .ph { font-size: 16px; }
+
   /* Menus */
   .pop { position: fixed; z-index: 80; width: 240px; }
   .pop .menu-item { width: 100%; border: 0; background: none; text-align: left; height: auto; min-height: 36px; padding: 8px 10px; }
@@ -324,11 +334,12 @@ const TINT = ['#3427ff', '#eb6834', '#1baf7a', '#eda100'];
 
 /* Seed: workspace Formula One, Mani is the Owner (same example as Sharing rules v2) */
 function seed() {
-  const P = (id, name, parent, by, x = {}) => ({ id, type: parent ? 'folder' : 'project', name, parent, by, ...x });
+  const P = (id, name, parent, by, x = {}) => ({ id, type: 'folder', name, parent, by, ...x });
+  const PJ = (id, name, by, x = {}) => ({ id, type: 'project', name, parent: null, by, ...x });
   const D = (id, name, parent, by, thumb, edited, slides, x = {}) => ({ id, type: 'deck', name, parent, by, thumb, edited, slides, ...x });
   const m = (id, role, by) => ({ id, role, by, status: 'active' });
   return {
-    as: 'mani', ws: 'f1', plan: 'free', membersInvite: true, tab: 'recent', bonus: 400, seq: 1,
+    as: 'mani', ws: 'f1', plan: 'team', membersInvite: true, tab: 'recent', bonus: 400, seq: 1,
     people: {
       mani: { name: 'Mani', email: 'mani@formulaone.co', role: 'owner' },
       sara: { name: 'Sara Khan', email: 'sara@formulaone.co', role: 'admin' },
@@ -358,6 +369,13 @@ function seed() {
       P('ops', 'Operations', null, 'bala', { access: 'public', color: 2 }),
       D('opsw', 'Weekly ops review', 'ops', 'bala', 'tpl-q2-product.jpg', 'yesterday', 8),
       D('vend', 'Vendor scorecard', 'ops', 'sumanth', 'ed-slide-2.jpg', '3 days ago', 5),
+      PJ('launch', 'Q4 Launch', 'mani', { access: 'public', color: 1, files: [['Launch brief.pdf', 'mani'], ['Pricing sheet.xlsx', 'sara'], ['Brand voice.docx', 'mani']], brief: 'Launch date is 12 November 2026. Use the new prices from Pricing sheet.xlsx on every deck.' }),
+      D('keynote', 'Launch keynote', 'launch', 'mani', 'tpl-q2-product.jpg', 'today', 18),
+      D('press', 'Press briefing', 'launch', 'sara', 'ed-slide-3.jpg', 'yesterday', 8),
+      P('emea', 'EMEA rollout', 'launch', 'madhu'),
+      D('emead', 'EMEA launch plan', 'emea', 'madhu', 'kpi-07-mrr.jpg', '2 days ago', 9),
+      PJ('acmep', 'Acme account', 'bala', { access: 'shared', color: 2, people: [m('sumanth', 'member', 'bala'), m('madhu', 'viewer', 'bala')], files: [['Acme RFP.pdf', 'bala'], ['Call notes.docx', 'sumanth']], brief: 'Acme buys for 40 stores. Keep the tone formal and use their RFP numbers.' }),
+      D('qbr', 'Acme QBR', 'acmep', 'bala', 'tpl-digital.jpg', 'today', 12),
       P('client', 'Client work', null, 'mani', { ws: 'studio', access: 'private', color: 0 }),
       D('retail', 'Retail pitch', 'client', 'mani', 'tpl-digital.jpg', 'yesterday', 9, { ws: 'studio', widget: true }),
     ],
@@ -378,7 +396,9 @@ const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(S)); } cat
 /* ---------- Rules engine (Sharing rules v2) ---------- */
 const R = { private: 0, shared: 1, public: 2 }, RN = ['private', 'shared', 'public'];
 const wsName = () => S.ws === 'f1' ? 'Formula One' : 'Mani Studio';
-const items = () => S.items.filter(i => (i.ws || 'f1') === S.ws);
+// Projects (decks + folders + knowledge files) are on Gold and Team. Folders are free on every plan.
+const teamPlan = () => S.ws === 'f1' && S.plan === 'team';
+const items = () => S.items.filter(i => (i.ws || 'f1') === S.ws && (teamPlan() || chain(i).at(-1).type !== 'project'));
 const byId = id => S.items.find(i => i.id === id);
 const kids = id => items().filter(i => i.parent === id && !i.deleted);
 const chain = it => { const a = []; let n = it; while (n) { a.push(n); n = n.parent ? byId(n.parent) : null; } return a; };
@@ -421,6 +441,7 @@ function accInfo(it) {
 }
 const accChip = (it, pill) => { const a = accInfo(it); return `<span class="acc ${pill ? 'pill' : ''} ${pill && a.k === 'public' ? 'pub' : ''}"><i class="ph ${a.ic}"></i>${esc(a.t)}</span>`; };
 const topProjects = u => items().filter(i => i.type === 'project' && !i.deleted && sees(u, i));
+const topFolders = u => items().filter(i => i.type === 'folder' && !i.parent && !i.deleted && sees(u, i));
 // Shared with me: shared with you by name, or open to you while the folder around it is not
 function sharedWithMe(u) {
   return items().filter(i => !i.deleted && i.by !== u && sees(u, i) && (
@@ -443,7 +464,7 @@ const planName = () => solo() ? 'Pro' : S.plan === 'team' ? 'Team' : 'Free';
 /* ---------- Helpers ---------- */
 const ini = n => n.split(/[\s.@]+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 const av = (u, sz = 32) => `<span class="av ${role(u) === 'owner' ? 'own' : ['guest', 'invited'].includes(role(u)) ? 'ext' : ''}" style="width:${sz}px;height:${sz}px;font-size:${sz < 30 ? 10 : 12}px" title="${esc(nm(u))}">${esc(ini(nm(u)))}</span>`;
-const folderIc = it => `<i class="ph-fill ${it.type === 'deck' ? 'ph-presentation' : 'ph-folder'}" style="color:${TINT[(chain(it).at(-1).color || 0) % 4]}"></i>`;
+const folderIc = it => `<i class="ph-fill ${it.type === 'deck' ? 'ph-presentation' : it.type === 'project' ? 'ph-cube' : 'ph-folder'}" style="color:${TINT[(chain(it).at(-1).color || 0) % 4]}"></i>`;
 function toast(msg, tone = 'good', icon) {
   const t = document.createElement('div');
   t.className = 'toast ' + tone;
@@ -456,8 +477,9 @@ const route = () => (location.hash.slice(1) || 'home');
 const go = r => { closePop(); if (location.hash.slice(1) === r) render(); else location.hash = r; };
 
 /* ---------- Shell ---------- */
+const sideRow = (p, cur) => `<button class="nav-item proj-row" data-act="go" data-to="p/${p.id}" ${cur === p.id ? 'aria-current="page"' : ''}>${folderIc(p)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span><i class="ph ${accInfo(p).ic} acc-i" title="${esc(accInfo(p).t)}"></i></button>`;
 function sidebar() {
-  const u = S.as, projs = topProjects(u), sw = sharedWithMe(u).length, r = route();
+  const u = S.as, projs = topProjects(u), folds = topFolders(u), sw = sharedWithMe(u).length, r = route();
   const canCreate = isMem(u);
   const nav = (ic, label, to, ct) => `<button class="nav-item" data-act="go" data-to="${to}" ${r === to ? 'aria-current="page"' : ''}><i class="ph ${ic}"></i>${label}${ct ? `<span class="ct">${ct}</span>` : ''}</button>`;
   const cur = r.startsWith('p/') ? chain(byId(r.slice(2)) || {}).at(-1)?.id : null;
@@ -468,9 +490,11 @@ function sidebar() {
     ${nav('ph-house', 'Home', 'home')}
     ${nav('ph-share-network', 'Shared with me', 'shared', sw)}
     ${nav('ph-trash', 'Trash', 'trash')}
-    <div class="cap"><span class="eyebrow">Projects</span>${canCreate ? '<button class="icon-btn" data-act="new-project" aria-label="New project"><i class="ph ph-plus"></i></button>' : ''}</div>
-    ${projs.length ? projs.map(p => `<button class="nav-item proj-row" data-act="go" data-to="p/${p.id}" ${cur === p.id ? 'aria-current="page"' : ''}><i class="ph-fill ph-folder" style="color:${TINT[(p.color || 0) % 4]}"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span><i class="ph ${accInfo(p).ic} acc-i" title="${esc(accInfo(p).t)}"></i></button>`).join('')
-      : `<div class="side-empty">${role(u) === 'guest' ? 'You see only what people share with you. Find it in Shared with me.' : 'No projects yet'}</div>`}
+    <div class="cap"><span class="eyebrow">Projects</span>${canCreate && teamPlan() ? '<button class="icon-btn" data-act="new-project" aria-label="New project"><i class="ph ph-plus"></i></button>' : ''}</div>
+    ${!teamPlan() ? `<button class="nav-item" data-act="new-project"><i class="ph ph-cube"></i>Create project<span class="badge badge-brand" style="margin-left:auto">${solo() ? 'Gold' : 'Team'}</span></button>`
+      : projs.length ? projs.map(p => sideRow(p, cur)).join('') : `<div class="side-empty">${role(u) === 'guest' ? 'None shared with you' : 'No projects yet'}</div>`}
+    <div class="cap"><span class="eyebrow">Folders</span>${canCreate ? '<button class="icon-btn" data-act="new-top-folder" aria-label="New folder"><i class="ph ph-plus"></i></button>' : ''}</div>
+    ${folds.length ? folds.map(p => sideRow(p, cur)).join('') : `<div class="side-empty">${role(u) === 'guest' ? 'You see only what people share with you. Find it in Shared with me.' : 'No folders yet'}</div>`}
     <div class="side-foot">
       <div class="plan-card"><div class="row"><b>${planName()} plan</b><span class="ink-3 tabular">${credits} credits</span></div>
         ${S.plan === 'free' && !solo() ? `<div class="progress"><span style="width:${S.bonus / BONUS_MAX * 100}%"></span></div><small>${S.bonus.toLocaleString()} of 2,000 invite credits earned</small>` : `<small>${solo() ? 'Just you. Team adds people.' : 'One shared credit pool'}</small>`}</div>
@@ -516,7 +540,7 @@ function roleNote() {
 /* ---------- Home ---------- */
 function pageHome() {
   const u = S.as;
-  const projs = topProjects(u);
+  const projs = topProjects(u), folds = topFolders(u);
   const decks = items().filter(d => d.type === 'deck' && sees(u, d));
   const starred = (S.starred[u] || []).map(byId).filter(d => d && (d.ws || 'f1') === S.ws && sees(u, d));
   const sw = sharedWithMe(u);
@@ -530,8 +554,11 @@ function pageHome() {
     <div class="ph-head"><div><div class="ph-eb"><i class="ph ph-house"></i>${wsName()}</div><h1 class="t-display">Home</h1></div>
       ${isMem(u) ? `<div class="ph-acts"><button class="btn btn-secondary" data-act="share-ws"><i class="ph ph-user-plus"></i>Invite</button><button class="btn btn-primary" data-act="new-deck-home"><i class="ph ph-plus"></i>New deck</button></div>` : ''}</div>
     ${roleNote()}
-    ${projs.length || isMem(u) ? `<div class="sec-h"><h2 class="t-heading">Projects</h2><span class="ink-3 t-caption">${projs.length} you can open</span></div>
-    <div class="pgrid">${projs.map(projCard).join('')}${isMem(u) ? `<button class="pcard add" data-act="new-project"><i class="ph ph-plus"></i>New project</button>` : ''}</div>` : ''}
+    ${teamPlan() && (projs.length || isMem(u)) ? `<div class="sec-h"><h2 class="t-heading">Projects</h2><span class="ink-3 t-caption">Decks, folders and knowledge files AI uses</span></div>
+    <div class="pgrid">${projs.map(projCard).join('')}${isMem(u) ? `<button class="pcard add" data-act="new-project"><i class="ph ph-plus"></i>New project</button>` : ''}</div>`
+      : !teamPlan() && isMem(u) ? `<div class="note brand mt"><i class="ph ph-cube"></i><div><b>Projects are on ${solo() ? 'Gold' : 'Team'}.</b> A project keeps decks, folders and knowledge files together, so AI uses the same facts in every deck. Folders stay free.<div class="acts"><button class="btn btn-secondary btn-sm" data-act="new-project">See ${solo() ? 'Gold' : 'Team'}</button></div></div></div>` : ''}
+    ${folds.length || isMem(u) ? `<div class="sec-h"><h2 class="t-heading">Folders</h2><span class="ink-3 t-caption">Free on every plan</span></div>
+    <div class="pgrid">${folds.map(projCard).join('')}${isMem(u) ? `<button class="pcard add" data-act="new-top-folder"><i class="ph ph-plus"></i>New folder</button>` : ''}</div>` : ''}
     <div class="tabs">${tabs.map(([k, l, n]) => `<button class="${tab === k ? 'on' : ''}" data-act="tab" data-tab="${k}">${l}${n ? `<span class="n">${n}</span>` : ''}</button>`).join('')}</div>
     <div class="tab-body">${body}</div>`;
 }
@@ -541,7 +568,7 @@ function projCard(p, i = 0) {
   const sub = kids(p.id).filter(k => k.type !== 'deck' && sees(S.as, k)).length;
   return `<div class="pcard" data-act="go" data-to="p/${p.id}" style="animation-delay:${Math.min(i, 6) * 30}ms">
     <div class="top">${folderIc(p)}<b>${esc(p.name)}</b><button class="icon-btn" data-act="menu" data-id="${p.id}" aria-label="More for ${esc(p.name)}"><i class="ph ph-dots-three"></i></button></div>
-    <small>${n} ${n === 1 ? 'deck' : 'decks'}${sub ? ` · ${sub} ${sub === 1 ? 'folder' : 'folders'}` : ''} · by ${p.by === S.as ? 'you' : esc(fn(p.by))}</small>
+    <small>${plural(n, 'deck')}${sub ? ` · ${plural(sub, 'folder')}` : ''}${p.files ? ` · ${plural(p.files.length, 'file')}` : ''} · by ${p.by === S.as ? 'you' : esc(fn(p.by))}</small>
     <div class="bot">${accChip(p, true)}<span class="stack">${effAccess(p) === 'public' ? `<span class="av all" style="width:24px;height:24px;font-size:10px" title="Everyone in ${wsName()}"><i class="ph ph-buildings" style="font-size:12px"></i></span>` : ppl.slice(0, 4).map(x => av(x, 24)).join('')}</span></div>
   </div>`;
 }
@@ -604,17 +631,28 @@ function pageItem(id) {
   const parent = it.parent && byId(it.parent);
   return `
     <div class="crumbs">${crumbs}<i class="ph ph-caret-right"></i><span>${esc(it.name)}</span></div>
-    <div class="ph-head"><div style="min-width:0"><div class="ph-eb"><i class="ph ph-folder"></i>${it.type === 'project' ? 'Project' : 'Folder'}</div><h1 class="t-display">${esc(it.name)}</h1></div>
+    <div class="ph-head"><div style="min-width:0"><div class="ph-eb"><i class="ph ${it.type === 'project' ? 'ph-cube' : 'ph-folder'}"></i>${it.type === 'project' ? 'Project' : 'Folder'}</div><h1 class="t-display">${esc(it.name)}</h1></div>
       <div class="ph-acts"><span class="stack">${effAccess(it) === 'public' ? `<span class="av all" style="width:32px;height:32px" title="Everyone in ${wsName()}"><i class="ph ph-buildings" style="font-size:16px"></i></span>` : ''}${ppl.slice(0, 4).map(x => av(x, 32)).join('')}</span>
         <button class="btn btn-secondary" data-act="share" data-id="${id}"><i class="ph ph-share-network"></i>Share</button>
         ${viewer ? '' : `<button class="btn btn-primary" data-act="new-deck" data-id="${id}"><i class="ph ph-plus"></i>New deck here</button>`}
         <button class="icon-btn" data-act="menu" data-id="${id}" aria-label="More for ${esc(it.name)}"><i class="ph ph-dots-three"></i></button></div></div>
     <div class="meta">${accChip(it, true)}<span>${decks.length + subs.length ? `${decks.length} ${decks.length === 1 ? 'deck' : 'decks'}${subs.length ? ` · ${subs.length} ${subs.length === 1 ? 'folder' : 'folders'}` : ''}` : 'Empty'} · Created by ${it.by === u ? 'you' : esc(nm(it.by))}${parent && effAccess(parent) === effAccess(it) && !it.access ? ` · Follows ${esc(parent.name)}` : ''}</span></div>
     ${viewer ? `<div class="note mt"><i class="ph ph-eye"></i><div>You can view ${esc(it.name)}: open, comment and present. To edit or invite, ask ${esc(fn(it.by))} for Member access.</div></div>` : ''}
+    ${it.type === 'project' ? knowledge(it, viewer) : ''}
     ${subs.length || !viewer ? `<div class="sec-h"><h2 class="t-heading">Folders</h2></div>
     <div class="pgrid">${subs.map(projCard).join('')}${viewer ? '' : `<button class="pcard add" data-act="new-folder" data-id="${id}"><i class="ph ph-plus"></i>New folder</button>`}</div>` : ''}
     <div class="sec-h"><h2 class="t-heading">Decks</h2></div>
     ${decks.length ? `<div class="grid">${decks.map(deckCard).join('')}</div>` : empty('ph-folder-open', `${esc(it.name)} has no decks yet`, viewer ? 'Decks added here show up for you too.' : `Move decks here from their menu, or start one. New decks follow ${esc(it.name)} sharing.`)}`;
+}
+
+const FILE_IC = { pdf: ['ph-file-pdf', 'bad'], xlsx: ['ph-file-xls', 'good'], docx: ['ph-file-doc', 'brand-fg'] };
+function knowledge(it, viewer) {
+  const files = it.files || [];
+  return `<div class="sec-h"><h2 class="t-heading">Knowledge</h2>${viewer ? '' : `<button class="btn btn-secondary btn-sm" data-act="add-file" data-id="${it.id}"><i class="ph ph-upload-simple"></i>Add file</button>`}</div>
+    ${it.brief ? `<div class="note" style="margin-bottom:12px"><i class="ph ph-note"></i><div><b>Project brief.</b> ${esc(it.brief)}</div></div>` : ''}
+    ${files.length ? `<ul class="files">${files.map(([f, by], i) => { const x = FILE_IC[f.split('.').pop()] || ['ph-file', 'ink-3']; return `<li><span class="fi" style="color:rgb(var(--${x[1] === 'brand-fg' ? 'brand-fg' : x[1]}))"><i class="ph ${x[0]}"></i></span><div class="tx"><b>${esc(f)}</b><small>Added by ${by === S.as ? 'you' : esc(fn(by))}</small></div>${viewer ? '' : `<button class="icon-btn" data-act="rm-file" data-id="${it.id}" data-i="${i}" aria-label="Remove ${esc(f)}"><i class="ph ph-x"></i></button>`}</li>`; }).join('')}</ul>
+      <p class="t-caption ink-3" style="margin:8px 0 0">AI uses these files in every deck in ${esc(it.name)}. They follow ${esc(it.name)} sharing.</p>`
+      : `<div class="empty" style="padding:32px 24px"><b style="margin:0">No knowledge files yet</b><small>Add briefs, price lists or notes. AI uses them in every deck here.</small></div>`}`;
 }
 
 /* ---------- Menus ---------- */
@@ -697,8 +735,8 @@ function inviteHints() {
   } else if (sh.role === 'member') {
     if (!pid || role(pid) === 'guest') note('warn', 'ph-warning', `<b>${esc(who)} will join ${ws} and see all public projects.</b> To share only this ${kind}, choose Viewer.`);
     else if (role(pid) === 'viewer') note('warn', 'ph-warning', `<b>${esc(who)} becomes a Member of ${ws}</b> and can edit every public project. No bonus credits, the account already exists.`);
-    else note('', 'ph-info', `${esc(who)} can edit this ${kind}${it.type === 'deck' ? '' : ' and everything inside it, including new decks'}.`);
-  } else note('', 'ph-info', `${esc(who)} sees only this ${kind}${it.type === 'deck' ? '' : ' and what is inside it'}, read-only. They can comment and present.`);
+    else note('', 'ph-info', `${esc(who)} can edit this ${kind}${it.type === 'deck' ? '' : it.type === 'project' ? ', its decks, folders and knowledge files, including new ones' : ' and everything inside it, including new decks'}.`);
+  } else note('', 'ph-info', `${esc(who)} sees only this ${kind}${it.type === 'deck' ? '' : it.type === 'project' ? ', its decks, folders and knowledge files' : ' and what is inside it'}, read-only. They can comment and present.`);
   if (needsRequest(pid, sh.role)) note('', 'ph-hourglass-medium', `Members can invite is off, so ${reqTo()} approve Member invites first. Viewer invites still go out straight away.`);
   if (sh.role === 'member' && !pid && v.includes('@') && S.plan === 'free') note('good', 'ph-coins', `+200 credits to the shared pool when ${esc(who)} creates an account, verifies their email and joins. ${S.bonus.toLocaleString()} of 2,000 earned.`);
   return out.join('');
@@ -907,6 +945,11 @@ function renderMove() {
 }
 
 /* ---------- Small dialogs ---------- */
+function newTopDlg(type) {
+  const kind = type === 'project' ? 'project' : 'folder';
+  nameDlg(`New ${kind}`, type === 'project' ? 'Decks, folders and knowledge files in one place. Who can open it? You can change this later from Share.' : 'Who can open it? You can change this later from Share.', '', 'np-go', type, `<div class="seg-acc"><label class="opt on" style="border:1px solid rgb(var(--line));border-radius:var(--r-card)"><span class="oi"><i class="ph ph-lock-simple"></i></span><span class="ot"><b>Private</b><small>Only you, until you share it.</small></span><input type="radio" name="npa" value="private" checked></label><label class="opt pub" style="border:1px solid rgb(var(--line));border-radius:var(--r-card)"><span class="oi"><i class="ph ph-buildings"></i></span><span class="ot"><b>Everyone in ${wsName()}</b><small>${solo() ? 'Mani Studio is just you.' : 'Members can edit, Viewers can view.'}</small></span><input type="radio" name="npa" value="public" ${solo() ? 'disabled' : ''}></label></div>`);
+  $$('[name=npa]').forEach(r => r.onchange = () => $$('.seg-acc .opt').forEach(o => o.classList.toggle('on', o.querySelector('input').checked)));
+}
 function confirmDlg(title, body, btn, act, id, danger = true) {
   openModal(`<div class="mh"><h3 class="t-title">${title}</h3></div><div class="mb"><p class="ink-2" style="margin:0">${body}</p>
     <div class="mf"><button class="btn btn-ghost" data-act="close">Cancel</button><button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-act="${act}" data-id="${id}">${btn}</button></div></div>`, 'sm');
@@ -1001,7 +1044,7 @@ document.addEventListener('click', e => {
       const par = byId(it.parent);
       const copy = { ...it, id: 'd' + (S.seq++), name: it.name + ' (copy)', by: u, edited: 'just now', people: [], widget: false, access: undefined };
       let where = par.name;
-      if (grant(u, par) !== 'edit') { let mine = items().find(i => i.type === 'project' && i.by === u && i.access === 'private'); if (!mine) { mine = { id: 'p' + (S.seq++), type: 'project', name: `${fn(u)}’s drafts`, parent: null, by: u, access: 'private', color: 3, ws: S.ws }; S.items.push(mine); } copy.parent = mine.id; where = mine.name; }
+      if (grant(u, par) !== 'edit') { let mine = items().find(i => i.type === 'folder' && !i.parent && i.by === u && i.access === 'private'); if (!mine) { mine = { id: 'p' + (S.seq++), type: 'folder', name: `${fn(u)}’s drafts`, parent: null, by: u, access: 'private', color: 3, ws: S.ws }; S.items.push(mine); } copy.parent = mine.id; where = mine.name; }
       S.items.push(copy); toast(`Copy added to ${esc(where)}. Only the slides are copied: no invites, comments or widget.`); render();
     } break;
     case 'download': closePop(); toast(`Downloading ${esc(it.name)}.pptx. Only you see it in Downloads.`); break;
@@ -1018,11 +1061,18 @@ document.addEventListener('click', e => {
         it.widget = false; render();
       } else {
         const ds = descendants(it).filter(d => d.type === 'deck' && !d.deleted), ppl = new Set(ds.map(d => d.by)), wid = ds.filter(d => d.widget).length;
-        confirmDlg(`Delete ${esc(it.name)}?`, `This deletes ${ds.length} ${ds.length === 1 ? 'deck' : 'decks'} by ${ppl.size} ${ppl.size === 1 ? 'person' : 'people'}${descendants(it).some(d => d.type === 'folder') ? ', and every folder inside' : ''}. Each creator is told. You can restore it from Trash for 30 days.${wid ? ` ${wid} live ${wid === 1 ? 'widget' : 'widgets'} will stop.` : ''}`, `Delete ${TYPE[it.type]}`, 'del-go', id);
+        confirmDlg(`Delete ${esc(it.name)}?`, `This deletes ${ds.length} ${ds.length === 1 ? 'deck' : 'decks'} by ${ppl.size} ${ppl.size === 1 ? 'person' : 'people'}${descendants(it).some(d => d.type === 'folder') ? ', and every folder inside' : ''}${it.files && it.files.length ? `, plus ${plural(it.files.length, 'knowledge file')}` : ''}. Each creator is told. You can restore it from Trash for 30 days.${wid ? ` ${wid} live ${wid === 1 ? 'widget' : 'widgets'} will stop.` : ''}`, `Delete ${TYPE[it.type]}`, 'del-go', id);
       }
     } break;
     case 'del-go': { descendants(it).forEach(d => { if (d.type === 'deck') d.widget = false; }); deleteItem(it); closeModal(); toast(`${esc(it.name)} moved to Trash. Restore it within 30 days.`, 'good', 'ph-trash'); go(route().startsWith('p/') ? (it.parent ? 'p/' + it.parent : 'home') : route()); } break;
-    case 'new-project': closePop(); nameDlg('New project', 'Who can open it? You can change this later from Share.', '', 'np-go', '', `<div class="seg-acc"><label class="opt on" style="border:1px solid rgb(var(--line));border-radius:var(--r-card)"><span class="oi"><i class="ph ph-lock-simple"></i></span><span class="ot"><b>Private</b><small>Only you, until you share it.</small></span><input type="radio" name="npa" value="private" checked></label><label class="opt pub" style="border:1px solid rgb(var(--line));border-radius:var(--r-card)"><span class="oi"><i class="ph ph-buildings"></i></span><span class="ot"><b>Everyone in ${wsName()}</b><small>${solo() ? 'Mani Studio is just you.' : 'Members can edit, Viewers can view.'}</small></span><input type="radio" name="npa" value="public" ${solo() ? 'disabled' : ''}></label></div>`); $$('[name=npa]').forEach(r => r.onchange = () => $$('.seg-acc .opt').forEach(o => o.classList.toggle('on', o.querySelector('input').checked))); break;
+    case 'new-project': closePop();
+      if (!teamPlan()) { openModal(`<div class="mh"><h3 class="t-title">Projects are on ${solo() ? 'Gold' : 'Team'}</h3><p>A project keeps decks, folders and knowledge files together. AI uses the same briefs and numbers in every deck inside it.</p></div>
+        <div class="mb"><p class="ink-2" style="margin:0">${solo() ? 'Gold adds projects to Mani Studio. Your folders and decks stay as they are.' : `${wsName()} has ${membersCount() + viewersCount()} people, so Team is the plan that fits. Folders stay free on every plan.`}</p>
+        <div class="mf"><button class="btn btn-ghost" data-act="close">Not now</button><button class="btn btn-primary" data-act="soon" data-msg="Opens ${solo() ? 'Gold' : 'Team'} plans. No change happens until you confirm.">See ${solo() ? 'Gold' : 'Team'}</button></div></div>`, 'sm'); break; }
+      newTopDlg('project'); break;
+    case 'new-top-folder': closePop(); newTopDlg('folder'); break;
+    case 'add-file': { const f = ['Customer quotes.docx', 'Q3 numbers.xlsx', 'Style guide.pdf'][(it.files || []).length % 3]; (it.files = it.files || []).push([f, u]); toast(`${f} added. AI uses it in every deck in ${esc(it.name)}.`); render(); } break;
+    case 'rm-file': { const [f] = it.files.splice(+t.dataset.i, 1); toast(`${esc(f[0])} removed from ${esc(it.name)}. Decks already made keep their slides.`); render(); } break;
     case 'new-folder': nameDlg('New folder', `Inside ${esc(it.name)}. It follows ${esc(it.name)} sharing: ${esc(accInfo(it).t)}.`, '', 'nf-go', id); break;
     case 'new-deck': { const d = { id: 'd' + (S.seq++), type: 'deck', name: 'Untitled deck', parent: id, by: u, thumb: 'ed-slide-1.jpg', edited: 'just now', slides: 1, ws: S.ws }; S.items.push(d); toast(`Untitled deck added to ${esc(it.name)}. It follows ${esc(it.name)} sharing.`, 'good', 'ph-presentation'); render(); } break;
     case 'new-deck-home': toast('Opens the deck builder. New decks start in your private space until you move them.', 'brand', 'ph-presentation'); break;
@@ -1052,7 +1102,7 @@ document.addEventListener('submit', e => {
   if (act === 'invite-form') { S.sh.email = $('#sh-email').value; S.sh.role = $('#sh-role').value; if (S.sh.email.trim()) doInvite(); return; }
   if (!v) { toast('Add a name first.', 'warn'); return; }
   if (act === 'rename-go') { const it = byId(f.dataset.id); it.name = v; closeModal(); toast('Renamed.'); render(); }
-  if (act === 'np-go') { const acc = document.querySelector('[name=npa]:checked').value; const id = 'p' + (S.seq++); S.items.push({ id, type: 'project', name: v, parent: null, by: u, access: acc, color: S.seq % 4, ws: S.ws }); closeModal(); toast(acc === 'private' ? `${esc(v)} created. Only you can open it until you share it.` : `${esc(v)} created. Everyone in ${wsName()} can open it.`); go('p/' + id); }
+  if (act === 'np-go') { const acc = document.querySelector('[name=npa]:checked').value; const type = f.dataset.id === 'project' ? 'project' : 'folder'; const id = 'p' + (S.seq++); S.items.push({ id, type, name: v, parent: null, by: u, access: acc, color: S.seq % 4, ws: S.ws, ...(type === 'project' ? { files: [] } : {}) }); closeModal(); toast(acc === 'private' ? `${esc(v)} created. Only you can open it until you share it.` : `${esc(v)} created. Everyone in ${wsName()} can open it.`); go('p/' + id); }
   if (act === 'nf-go') { const id = 'f' + (S.seq++); S.items.push({ id, type: 'folder', name: v, parent: f.dataset.id, by: u, ws: S.ws }); closeModal(); toast(`${esc(v)} created inside ${esc(byId(f.dataset.id).name)}.`); go('p/' + id); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#pop .pop')) closePop(); else if ($('#modal').innerHTML) { closeModal(); render(); } } });
