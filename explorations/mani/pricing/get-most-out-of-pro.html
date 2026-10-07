@@ -133,42 +133,10 @@
 
   /* the plans step is the big pricing page, shown over this editor in a transparent frame.
      It brings its own scrim, so this layer adds no background of its own. */
-  #l-plans:not([hidden]) { background: none; padding: 0; display: block; overflow: hidden; }
-  #l-plans iframe { width: 100%; height: 100%; border: 0; background: transparent; }
-
-  /* buttons and the credits line, shared with checkout */
-  .btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 44px; border: 0; border-radius: 8px; background: var(--blue); color: #fff; font: 600 14px 'Inter', sans-serif; cursor: pointer; transition: filter .15s ease, transform .12s ease, background .15s ease; }
-  .btn:hover { filter: brightness(1.06); }
-  .btn:active { transform: scale(0.985); }
-  .btn--out { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px #d4d4d4; }
-  .btn--out:hover { filter: none; background: var(--soft); box-shadow: inset 0 0 0 1px #a3a3a3; }
-  .btn--gold { background: linear-gradient(100deg, #E8C070 0%, #D8AA48 48%, #C08E2A 100%); }
-  .btn--dark { background: var(--ink); }
-  .btn--dark:hover { filter: none; background: #000; }
-  .cred { display: flex; align-items: center; gap: 9px; margin-top: 22px; }
-  .cred > i { font-size: 17px; }
-  .cred b { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
-  .cred span { font-size: 13.5px; color: var(--ink2); }
-  .cred .x5 { margin-left: 2px; padding: 2px 8px; border-radius: 999px; background: var(--halo); color: var(--blue); font-size: 11.5px; font-weight: 600; }
-
-  /* checkout */
-  .co { width: 820px; display: grid; grid-template-columns: 320px 1fr; }
-  .co-l { padding: 26px 24px; border-right: 1px solid var(--line2); background: var(--soft); border-radius: 10px 0 0 10px; }
-  .co-r { padding: 26px 24px; }
-  .co h2 { font-size: 19px; font-weight: 500; letter-spacing: -0.012em; }
-  .co .sum { margin-top: 18px; }
-  .co .sum .l { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; font-size: 13.5px; color: var(--ink2); }
-  .co .sum .l b { font-weight: 500; color: var(--ink); }
-  .co .sum .tot { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; }
-  .co .sum .tot b { font-size: 22px; font-weight: 500; letter-spacing: -0.015em; }
-  .co .cred { margin-top: 16px; }
-  .fld { margin-top: 14px; }
-  .fld label { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 500; color: var(--ink2); }
-  .fld input, .fld select { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: 400 14px 'Inter', sans-serif; color: var(--ink); }
-  .fld input:focus, .fld select:focus { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 3px var(--halo); }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .co .btn { margin-top: 20px; }
-  .legal { margin-top: 12px; font-size: 11.5px; line-height: 1.5; color: var(--ink3); }
+  /* the pricing page and the checkout are both shown over this editor in transparent frames,
+     so the layer they sit in adds no background or padding of its own */
+  #l-plans:not([hidden]), #l-co:not([hidden]) { background: none; padding: 0; display: block; overflow: hidden; }
+  #l-plans iframe, #l-co iframe { width: 100%; height: 100%; border: 0; background: transparent; }
 
   /* what is left to do, straight after checkout. Same points as the top bar menu. */
   .won { width: 500px; padding: 28px 24px 24px; }
@@ -189,8 +157,6 @@
   }
   @media (max-width: 1240px) { .bar .hide-sm { display: none; } }
   @media (max-width: 1180px) {
-    .co { width: auto; max-width: 100%; grid-template-columns: 1fr; }
-    .co-l { border-right: 0; border-bottom: 1px solid var(--line2); border-radius: 10px 10px 0 0; }
     .won { width: auto; max-width: 100%; }
     .x { left: auto; right: 0; top: -40px; }
     .menu, .coach { left: 12px !important; right: 12px; width: auto; }
@@ -256,7 +222,7 @@
 <div class="coach" id="coach" hidden></div>
 
 <div class="layer" id="l-plans" hidden><iframe id="plans-frame" title="Choose a plan"></iframe></div>
-<div class="layer" id="l-co" hidden><div class="sheet co" id="co"></div></div>
+<div class="layer" id="l-co" hidden><iframe id="co-frame" title="Checkout"></iframe></div>
 <div class="layer" id="l-won" hidden><div class="sheet won" id="won"></div></div>
 
 <script>
@@ -279,13 +245,9 @@
     drawStrip();
   });
 
-  // ---- the numbers checkout and the top bar need. The points live on the pricing page. ----
-  const PLANS = [
-    { key: 'pro',  name: 'Pro',  price: 20, year: 240, credits: '5,000' },
-    { key: 'gold', name: 'Gold', price: 50, year: 600, credits: '25,000', x: '5x Pro' },
-    { key: 'team', name: 'Team', price: 60, year: 720, credits: '30,000' },
-  ];
-  const byKey = (k) => PLANS.find((p) => p.key === k) || PLANS[0];
+  // ---- the numbers the top bar needs. Prices and points live on the pricing page. ----
+  const NAME = { pro: 'Pro', gold: 'Gold', team: 'Team' };
+  const CREDITS = { pro: '5,000', gold: '25,000', team: '30,000' };
 
   // ---- the steps. One list, used by the modal after checkout and by the top bar menu ----
   const STEPS = [
@@ -322,52 +284,29 @@
   addEventListener('message', (e) => {
     if (!e.data) return;
     if (e.data.type === 'picker-close') { closeLayers(); plansFrame.src = 'about:blank'; }
-    if (e.data.type === 'pick-plan') { plansFrame.src = 'about:blank'; openCheckout(e.data.plan); }
+    if (e.data.type === 'pick-plan') { plansFrame.src = 'about:blank'; openCheckout(e.data.plan, e.data.off); }
+    if (e.data.type === 'checkout-close') { closeLayers(); coFrame.src = 'about:blank'; }
+    if (e.data.type === 'checkout-paid') { coFrame.src = 'about:blank'; paid(e.data.plan); }
   });
 
-  const cred = (p) => '<div class="cred"><i class="ph-fill ph-star-four"></i><b>' + p.credits + '</b><span>Credits</span>' +
-    (p.x ? '<span class="x5">' + p.x + '</span>' : '') + '</div>';
-
-  // checkout, over the editor
-  const co = document.getElementById('co');
-  const openCheckout = (k) => {
-    const p = byKey(k);
-    co.innerHTML =
-      '<div class="co-l"><h2>' + p.name + '</h2>' + cred(p) +
-        '<div class="sum">' +
-          '<div class="l"><span>Plan</span><b>' + p.name + ', annual</b></div>' +
-          '<div class="l"><span>Per month</span><b>$' + p.price + '</b></div>' +
-          '<div class="l tot"><span>Billed today</span><b>$' + p.year + '</b></div>' +
-        '</div>' +
-        '<div class="legal">Renews at $' + p.year + ' a year unless cancelled. You can cancel anytime</div>' +
-      '</div>' +
-      '<div class="co-r"><h2>Payment</h2>' +
-        '<div class="fld"><label>Card number</label><input value="4242 4242 4242 4242" inputmode="numeric" /></div>' +
-        '<div class="two"><div class="fld"><label>Expiry</label><input value="04 / 29" /></div>' +
-        '<div class="fld"><label>CVC</label><input value="123" /></div></div>' +
-        '<div class="fld"><label>Name on card</label><input value="Mani Vasakan" /></div>' +
-        '<div class="two"><div class="fld"><label>Country</label><select><option>India</option><option>United States</option><option>United Kingdom</option></select></div>' +
-        '<div class="fld"><label>ZIP code</label><input value="600001" /></div></div>' +
-        '<button type="button" class="btn" data-pay="' + p.key + '">Pay $' + p.year + '</button>' +
-        '<div class="legal">By paying you agree to the Terms of Service and the Refund Policy</div>' +
-      '</div>' +
-      '<button type="button" class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button>';
+  // the real checkout, the same one the pricing page opens, over this editor
+  const coFrame = document.getElementById('co-frame');
+  const openCheckout = (k, off) => {
+    coFrame.src = 'checkout-buy-sep-2026.html?plan=' + (NAME[k] ? k : 'pro') + '&off=' + (off || 0);
     openLayer('co');
   };
 
   // what is left to do, straight after checkout. The same points the menu will hold.
   let plan = 'pro';
-  const NAME = { pro: 'Pro', gold: 'Gold', team: 'Team' };
   const paid = (k) => {
     plan = NAME[k] ? k : 'pro';
-    const p = byKey(plan);
     document.body.classList.add('paid');
-    proBtn.querySelector('.lbl').innerHTML = '<i class="ph-fill ph-rocket-launch"></i>Get most out of ' + p.name;
+    proBtn.querySelector('.lbl').innerHTML = '<i class="ph-fill ph-rocket-launch"></i>Get most out of ' + NAME[plan];
     drawMenu();
     document.getElementById('won').innerHTML =
       '<span class="eyebrow"><i class="ph-fill ph-check-circle"></i>Payment complete</span>' +
-      '<div class="t">Get most out of ' + p.name + '</div>' +
-      '<div class="s">' + p.name + ' is on from today. ' + p.credits + ' credits are on your account, and ' +
+      '<div class="t">Get most out of ' + NAME[plan] + '</div>' +
+      '<div class="s">' + NAME[plan] + ' is on from today. ' + CREDITS[plan] + ' credits are on your account, and ' +
       left() + ' steps left add 50 credits each.</div>' +
       '<div class="list">' + rowsHTML() + '</div>' +
       '<div class="acts"><button type="button" class="go" data-dismiss>Start creating</button>' +
@@ -410,15 +349,9 @@
     document.getElementById('coach-ok').addEventListener('click', closeMenu);
   };
 
-  // ---- one place for every click in the layers ---------------------------------------
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-close]')) { closeLayers(); return; }
-    const buy = e.target.closest('[data-buy]');
-    if (buy) { openCheckout(buy.dataset.buy); return; }
-    const pay = e.target.closest('[data-pay]');
-    if (pay) { closeLayers(); paid(pay.dataset.pay); return; }
-    if (e.target.closest('[data-dismiss]')) dismissWon();
-  });
+  // the pricing page and the checkout close and buy for themselves, so the only click left
+  // to catch here is the one that dismisses the step list
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-dismiss]')) dismissWon(); });
   document.getElementById('upgrade').addEventListener('click', () => { closeMenu(); openPlans(); });
   addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
