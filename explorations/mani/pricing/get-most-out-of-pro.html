@@ -59,12 +59,10 @@
   @keyframes menu-in { from { opacity: 0; transform: translateY(-8px) scale(0.97); } }
   .menu .row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 8px; background: none; border: 0; width: 100%; font-family: inherit; text-align: left; cursor: default; }
   .menu .row.todo { cursor: pointer; transition: background .15s ease; }
-  .menu .row.todo:hover, .menu .row.is-next { background: var(--soft); }
+  .menu .row.todo:hover { background: var(--soft); }
   .menu .row .mk { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 999px; font-size: 14px; font-weight: 600; }
   .menu .row.done .mk { background: var(--green); color: #fff; font-size: 18px; }
   .menu .row.todo .mk { background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink2); }
-  /* after payment the rows list what the plan covers, so the marks carry the feature icon */
-  .menu .row .mk.feat { background: var(--halo); color: var(--blue); font-size: 17px; }
   .menu .row .nm { flex: 1 1 auto; min-width: 0; font-size: 15px; color: var(--ink); }
   .menu .row.done .nm { color: var(--ink); }
   .menu .chip { flex: none; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -72,7 +70,7 @@
   .menu .chip.earn { display: inline-flex; align-items: center; gap: 5px; background: var(--halo); color: var(--blue); }
   .menu .chip.earn i { font-size: 11px; }
   .menu .row .go { flex: none; width: 18px; font-size: 15px; color: var(--ink3); opacity: 0; transition: opacity .15s ease, transform .15s ease; }
-  .menu .row.is-next .go, .menu .row.todo:hover .go { opacity: 1; transform: translateX(2px); }
+  .menu .row.todo:hover .go { opacity: 1; transform: translateX(2px); }
   .menu .row { animation: row-in .34s cubic-bezier(.22,1,.36,1) backwards; }
   .menu .row:nth-child(1) { animation-delay: .04s; } .menu .row:nth-child(2) { animation-delay: .09s; }
   .menu .row:nth-child(3) { animation-delay: .14s; } .menu .row:nth-child(4) { animation-delay: .19s; }
@@ -165,24 +163,37 @@
 <div class="pick" id="pick"><iframe id="pick-frame" title="Choose a plan"></iframe><button type="button" class="x" id="pick-close" aria-label="Close"><i class="ph ph-x"></i></button></div>
 
 <script>
-  // Four steps, each worth 50 credits. Done ones say what they earned, the next one is the
-  // row that is open, the rest wait their turn.
-  const STEPS = [
+  // Steps worth 50 credits each. The ones still to do lead the list, the finished ones sit
+  // under them and say what they earned. On trial there are four, on a paid plan three.
+  const TRIAL_STEPS = [
     { t: 'Set up your Brand Kit', done: true },
     { t: 'Create using a template', done: true },
     { t: 'Create a project', done: false },
     { t: 'Invite a team member', done: false },
   ];
+  const PAID_STEPS = [
+    { t: 'Set up your Brand Kit', done: true },
+    { t: 'Create using a template', done: true },
+    { t: 'Create a project and add knowledge', done: false },
+  ];
   const menu = document.getElementById('menu'), dim = document.getElementById('dim'), proBtn = document.getElementById('pro-btn');
   const coach = document.getElementById('coach');
-  const next = STEPS.findIndex((s) => !s.done);
-  const stepsHTML = () => STEPS.map((s, i) => s.done
-    ? '<div class="row done"><span class="mk"><i class="ph-bold ph-check"></i></span><span class="nm">' + s.t + '</span>' +
-      '<span class="chip earned">Earned 50 credits</span></div>'
-    : '<button type="button" class="row todo' + (i === next ? ' is-next' : '') + '"><span class="mk">' + (i + 1) + '</span>' +
-      '<span class="nm">' + s.t + '</span><span class="chip earn"><i class="ph-fill ph-star-four"></i>Earn +50</span>' +
-      '<span class="go"><i class="ph ph-arrow-right"></i></span></button>').join('');
-  menu.innerHTML = stepsHTML();
+  let steps = TRIAL_STEPS;
+  const left = () => steps.filter((s) => !s.done).length;
+  const stepsHTML = () => steps
+    .map((s, i) => Object.assign({}, s, { n: i + 1 }))
+    .sort((a, b) => (a.done === b.done ? a.n - b.n : (a.done ? 1 : -1)))
+    .map((s) => s.done
+      ? '<div class="row done"><span class="mk"><i class="ph-bold ph-check"></i></span><span class="nm">' + s.t + '</span>' +
+        '<span class="chip earned">Earned 50 credits</span></div>'
+      : '<button type="button" class="row todo"><span class="mk">' + s.n + '</span>' +
+        '<span class="nm">' + s.t + '</span><span class="chip earn"><i class="ph-fill ph-star-four"></i>Earn +50</span>' +
+        '<span class="go"><i class="ph ph-arrow-right"></i></span></button>').join('');
+  const drawMenu = () => { menu.innerHTML = stepsHTML(); };
+  drawMenu();
+
+  // a step is work in the editor, so picking one closes the menu and leaves you in it
+  menu.addEventListener('click', (e) => { if (e.target.closest('.row.todo')) closeMenu(); });
 
   // the menu hangs from the left edge of the button
   const place = () => {
@@ -250,9 +261,8 @@
     document.body.classList.add('paid');
     closeMenu();
     proBtn.querySelector('.lbl').innerHTML = '<i class="ph-fill ph-rocket-launch"></i>Get most out of ' + NAME[plan];
-    menu.innerHTML = TOP5[plan].map((f) =>
-      '<div class="row"><span class="mk feat"><i class="ph ' + f[0] + '"></i></span>' +
-      '<span class="nm">' + f[1] + '</span></div>').join('');
+    steps = PAID_STEPS;
+    drawMenu();
     won.innerHTML =
       '<span class="eyebrow"><i class="ph-fill ph-check-circle"></i>Payment complete</span>' +
       '<div class="t">Get more out of ' + NAME[plan] + '</div>' +
@@ -269,7 +279,8 @@
   const dismissWon = () => {
     wonScrim.hidden = true;
     coach.innerHTML = '<b>We\u2019ve got you covered</b>' +
-      '<p>Open this menu anytime to see what ' + NAME[plan] + ' covers.</p>' +
+      '<p>Open this menu anytime to see what ' + NAME[plan] + ' covers. ' +
+      (left() === 1 ? '1 step left adds 50 credits.' : left() + ' steps left add 50 credits each.') + '</p>' +
       '<button type="button" id="coach-ok">Got it</button>';
     openMenu();
     coach.hidden = false;
