@@ -15,6 +15,9 @@
   }
 }
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap">
 <style>
 /* Chat create flow (ChatFlowScreenV8, redesign branch on madhu_ui_v2), rebuilt to compare type sizes.
    Values from config/tailwind/pai.tailwind.config.js. The size tabs swap the four text tokens below together:
@@ -36,7 +39,12 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { font-family: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; background: rgb(var(--canvas)); color: rgb(var(--ink)); -webkit-font-smoothing: antialiased; }
+/* Font dropdown: System is what the app ships today (pai config); the others are candidates. */
+:root { --font: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+:root[data-font="poppins"] { --font: Poppins, -apple-system, system-ui, sans-serif; }
+:root[data-font="inter"] { --font: Inter, -apple-system, system-ui, sans-serif; }
+:root[data-font="geist"] { --font: Geist, -apple-system, system-ui, sans-serif; }
+body { font-family: var(--font); background: rgb(var(--canvas)); color: rgb(var(--ink)); -webkit-font-smoothing: antialiased; }
 .body { font-size: var(--body); line-height: var(--body-lh); }
 .cap { font-size: var(--cap); line-height: var(--cap-lh); }
 .ttl { font-size: var(--title); line-height: var(--title-lh); letter-spacing: -.015em; }
@@ -199,6 +207,9 @@ header .in { max-width: 1024px; height: 56px; margin: 0 auto; padding: 0 24px; d
 .proto .tag { font-size: 11px; opacity: .7; }
 .proto .sep { width: 1px; height: 18px; margin: 0 4px; background: rgb(255 255 255 / .18); }
 .proto .replay { color: #fff; }
+.proto .fontpick { display: inline-flex; align-items: center; gap: 8px; color: rgb(255 255 255 / .72); padding-left: 4px; }
+.proto select { height: 30px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .18); background: rgb(255 255 255 / .08); color: #fff; font: inherit; padding: 0 28px 0 10px; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.proto select option { color: rgb(20 20 31); }
 @media (prefers-reduced-motion: reduce) { .shimmer-text { animation: none; color: rgb(var(--ink-2)); background: none; } }
 </style>
 </head>
@@ -219,6 +230,8 @@ header .in { max-width: 1024px; height: 56px; margin: 0 auto; padding: 0 24px; d
 
 <nav class="proto" aria-label="Font size">
   <div class="tabs" role="tablist" id="tabs"></div>
+  <span class="sep"></span>
+  <label class="fontpick"><span>Font</span><select id="fontsel" aria-label="Font"></select></label>
   <span class="sep"></span>
   <a href="?all" id="allbtn" class="replay">All screens</a>
   <button type="button" class="replay" id="replay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>Replay</button>
@@ -241,15 +254,31 @@ if (ALL_VIEW) {
 }
 // Size: from the hash (#13 / #14 / #15 / #16), default 14 = current.
 const SIZES = [["13", "Old"], ["14", "Current"], ["15", ""], ["16", ""]];
-const size = SIZES.some(([s]) => "#" + s === location.hash) ? location.hash.slice(1) : "14";
+// Hash = "#<size>-<font>", e.g. #15-inter. Both default to what the app ships: 14px, System.
+const FONTS = [["system", "System"], ["poppins", "Poppins"], ["inter", "Inter"], ["geist", "Geist"]];
+const [hashSize, hashFont] = location.hash.slice(1).split("-");
+const size = SIZES.some(([s]) => s === hashSize) ? hashSize : "14";
+const font = FONTS.some(([f]) => f === hashFont) ? hashFont : "system";
 document.documentElement.dataset.size = size;
+document.documentElement.dataset.font = font;
+const hashNow = () => "#" + document.documentElement.dataset.size + "-" + document.documentElement.dataset.font;
 document.getElementById("tabs").innerHTML = SIZES.map(([s, tag]) => `<button type="button" role="tab" data-size="${s}" aria-selected="${s === size}">${s}px${tag ? ` <span class="tag">${tag}</span>` : ""}</button>`).join("");
 // Size tabs apply live to whatever is on screen (no reload); in the all-screens view they also reach every frame.
 function setSize(sz) {
   document.documentElement.dataset.size = sz;
   document.querySelectorAll("#tabs [data-size]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.size === sz)));
-  history.replaceState(null, "", location.pathname + location.search + "#" + sz);
+  history.replaceState(null, "", location.pathname + location.search + hashNow());
   document.querySelectorAll("iframe").forEach((f) => { try { f.contentDocument.documentElement.dataset.size = sz; } catch (e) {} });
+}
+function setFont(f) {
+  document.documentElement.dataset.font = f;
+  history.replaceState(null, "", location.pathname + location.search + hashNow());
+  document.querySelectorAll("iframe").forEach((fr) => { try { fr.contentDocument.documentElement.dataset.font = f; } catch (e) {} });
+}
+{
+  const sel = document.getElementById("fontsel");
+  sel.innerHTML = FONTS.map(([f, label]) => `<option value="${f}"${f === font ? " selected" : ""}>${label}</option>`).join("");
+  sel.addEventListener("change", () => setFont(sel.value));
 }
 document.getElementById("tabs").addEventListener("click", (e) => {
   const b = e.target.closest("[data-size]");
@@ -259,7 +288,7 @@ document.getElementById("replay").onclick = () => location.reload();
 {
   const all = document.getElementById("allbtn");
   if (new URLSearchParams(location.search).has("all")) { all.textContent = "Single screen"; all.href = location.pathname; }
-  all.addEventListener("click", (e) => { e.preventDefault(); location.href = all.getAttribute("href") + "#" + document.documentElement.dataset.size; });
+  all.addEventListener("click", (e) => { e.preventDefault(); location.href = all.getAttribute("href") + hashNow(); });
 }
 
 // ?screen=1..4 jumps straight to one moment and holds there (used by the all-screens view):
