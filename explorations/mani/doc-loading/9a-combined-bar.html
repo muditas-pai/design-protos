@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bottom · count</title>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* The status card lives in the floater's own slot (24px under the slide, 46px tall) with the floater's chrome, so the
+   bottom of the screen never jumps: when the deck is ready it narrows to the floater's width and becomes the floater. */
+.ls { position: relative; width: 460px; max-width: 100%; height: 46px; display: flex; align-items: center; gap: 10px; padding: 4px 14px 4px 5px; border-radius: var(--r-card); border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); box-shadow: var(--sh-menu); overflow: hidden; font-size: 13px; line-height: 18px; color: rgb(var(--ink-3)); transition: width .32s var(--ease), padding .32s var(--ease); animation: lsIn .25s var(--ease) both; }
+@keyframes lsIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ls .lead { width: 36px; height: 36px; flex: none; border-radius: var(--r-control); background: rgb(var(--sunken)); display: inline-flex; align-items: center; justify-content: center; transition: background .2s var(--ease); }
+.ls.done .lead { background: rgb(var(--good-bg)); }
+.ls .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ls .txt b { color: rgb(var(--ink)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ls .step { font-size: 12px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ls .step.swap { animation: stepIn .22s var(--ease) both; }
+@keyframes stepIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.ls .count { flex: none; font-variant-numeric: tabular-nums; color: rgb(var(--ink-2)); font-weight: 500; }
+.ls.done .txt b { color: rgb(var(--good)); }
+.ls.morph > * { opacity: 0; transition: opacity .15s var(--ease); }
+.thumb.next { box-shadow: 0 0 0 1px rgb(var(--brand-600) / .5); }
+/* 9a: thin bar along the bottom edge of the card */
+.ls .edge { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgb(var(--line)); }
+.ls .edge > span { display: block; height: 100%; width: 0; background: rgb(var(--brand-600)); transition: width .35s var(--ease), background .2s var(--ease); }
+.ls.done .edge > span { background: rgb(var(--good)); }
+/* 9b: one segment per slide */
+.ls .segs { flex: none; display: flex; gap: 3px; }
+.ls .segs i { width: 12px; height: 6px; border-radius: 9999px; background: rgb(var(--line)); transition: background .2s var(--ease); }
+.ls .segs i.on { background: rgb(var(--brand-600)); }
+.ls .segs i.cur { background: rgb(var(--brand-600) / .35); animation: pulse 1s var(--ease) infinite alternate; }
+@keyframes pulse { to { background: rgb(var(--brand-600) / .6); } }
+.ls.done .segs i { background: rgb(var(--good)); animation: none; }
+/* 9c: ring with percentage */
+.ls .ring { transform: rotate(-90deg); }
+.ls .ring circle { fill: none; stroke-width: 2.5; }
+.ls .ring .trk { stroke: rgb(var(--line)); }
+.ls .ring .val { stroke: rgb(var(--brand-600)); stroke-linecap: round; transition: stroke-dashoffset .35s var(--ease); }
+</style>
+</head>
+<body>
+<script src="shared.js"></script>
+<script>
+const L = Loader, ui = L.mount({ index: 1, label: "9a", name: "Bottom · count", topRight: L.SKELETON_RIGHT });
+const MODE = "bar";
+ui.thumbs.forEach((t) => t.classList.add("pending", "shimmer"));
+ui.canvas.innerHTML = `<div class="shimmer" style="position:absolute;inset:0"></div>`;
+const CHECK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--good))" stroke-width="2"><path d="m5 12 5 5 9-10"/></svg>`;
+const C = 2 * Math.PI * 7;
+const lead = MODE === "ring"
+  ? `<svg class="ring" width="18" height="18" viewBox="0 0 18 18"><circle class="trk" cx="9" cy="9" r="7"/><circle class="val" cx="9" cy="9" r="7" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg>`
+  : `<span class="spinner"></span>`;
+const tail = MODE === "bar" ? `<span class="count" data-n>0/8</span>`
+  : MODE === "segments" ? `<span class="segs" aria-hidden="true">${L.SLIDES.map(() => "<i></i>").join("")}</span>`
+  : `<span class="count" data-n>0%</span>`;
+const card = document.createElement("div");
+card.className = "ls";
+card.setAttribute("role", "status");
+card.setAttribute("aria-live", "polite");
+card.innerHTML = `<span class="lead">${lead}</span><span class="txt"><b>Opening ${L.DECK_TITLE}</b><span class="step" data-t></span></span>${tail}`;
+ui.floater.appendChild(card);
+const $ = (s) => card.querySelector(s);
+let lastStep = "";
+const set = (step, pct, landed) => {
+  if (step !== lastStep) {
+    const el = $("[data-t]");
+    el.textContent = step;
+    el.classList.remove("swap"); void el.offsetWidth; el.classList.add("swap");
+    lastStep = step;
+  }
+  if (MODE === "bar") $("[data-n]").textContent = `${landed}/8`;
+  if (MODE === "segments") card.querySelectorAll(".segs i").forEach((s, j) => { s.className = j < landed ? "on" : j === landed && pct > 12 && landed < 8 ? "cur" : ""; });
+  if (MODE === "ring") { $(".val").style.strokeDashoffset = C * (1 - pct / 100); $("[data-n]").textContent = Math.round(pct) + "%"; }
+};
+// Width the card narrows to before it becomes the floater (measured off-screen).
+const floaterWidth = () => {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;left:-9999px";
+  probe.innerHTML = L.FLOATER;
+  document.body.appendChild(probe);
+  const w = probe.firstElementChild.getBoundingClientRect().width;
+  probe.remove();
+  return w;
+};
+(async () => {
+  set("Reading 8 slides", 5, 0);
+  await L.wait(900);
+  set("Updating fonts and layouts", 12, 0);
+  await L.wait(1000);
+  for (let i = 0; i < 8; i++) {
+    ui.thumbs[i].classList.add("next");
+    set(i === 0 ? "Getting the first slide ready" : `Loading slide ${i + 1} of 8`, 12 + (i / 8) * 88, i);
+    await L.wait(i === 0 ? 800 : 420);
+    ui.thumbs[i].classList.remove("next");
+    L.showThumb(ui, i);
+    if (i === 0) L.showCanvas(ui, 0);
+  }
+  card.classList.add("done");
+  set("All 8 slides loaded", 100, 8);
+  $(".txt b").textContent = `${L.DECK_TITLE} is ready`;
+  $(".lead").innerHTML = CHECK;
+  L.setReadyBar(ui, { floater: false });
+  await L.wait(1100);
+  card.classList.add("morph");
+  card.style.width = floaterWidth() + "px";
+  await L.wait(330);
+  L.showFloater(ui);
+})();
+</script>
+  <div id="agentation-root"></div>
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { Agentation } from 'agentation';
+    createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+  </script>
+</body>
+</html>

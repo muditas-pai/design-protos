@@ -1,0 +1,135 @@
+/* Shared editor frame for the "opening an old deck" loading explorations. Tokens only (tokens.css). */
+html, body { height: 100%; margin: 0; }
+body { background: rgb(var(--canvas)); color: rgb(var(--ink)); overflow: hidden; }
+
+.app { display: grid; grid-template-rows: 56px 1fr; height: calc(100vh - 52px); }
+
+/* Top bar: matches the redesign header (TopMenu renderRedesignHeader on madhu_ui_v2). */
+.bar { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid rgb(var(--line)); background: rgb(var(--surface)); position: relative; }
+.icon-btn { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-control); color: rgb(var(--ink-2)); background: transparent; border: 0; padding: 0; cursor: pointer; transition: background-color .15s var(--ease), color .15s var(--ease); }
+.icon-btn:hover:not(:disabled) { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+.icon-btn:disabled { opacity: .4; cursor: default; }
+.icon-btn svg { width: 20px; height: 20px; }
+.bar .sep { width: 1px; height: 24px; background: rgb(var(--line)); margin: 0 4px; }
+.bar .title { height: 36px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; color: rgb(var(--ink)); padding: 0 8px; border-radius: var(--r-control); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.bar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.bar .ghost-pill { height: 36px; border-radius: var(--r-control); }
+.bar .meta { font-size: 13px; color: rgb(var(--ink-3)); white-space: nowrap; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-upgrade { border-color: rgb(var(--brand-600)); color: rgb(var(--brand-fg)); }
+.btn-upgrade:hover { background: rgb(var(--brand-50)); }
+.meter { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-radius: var(--r-control); font-size: 13px; color: rgb(var(--ink-2)); }
+.meter .trk { position: relative; width: 48px; height: 6px; border-radius: 9999px; background: rgb(var(--line)); overflow: hidden; }
+.meter .trk span { position: absolute; inset: 0 auto 0 0; width: 62%; border-radius: inherit; background: rgb(var(--brand-600)); }
+.meter b { font-weight: 500; color: rgb(var(--ink)); font-variant-numeric: tabular-nums; }
+
+/* Body: rail (208px, SlideRail redesign) + stage */
+.body { display: grid; grid-template-columns: 208px 1fr; min-height: 0; }
+.rail { border-right: 1px solid rgb(var(--line)); background: rgb(var(--surface)); overflow-y: auto; display: flex; flex-direction: column; }
+.rail-head { position: sticky; top: 0; z-index: 2; background: rgb(var(--surface)); padding: 8px 8px 12px; }
+.rail-head .btn { width: 100%; }
+.rail-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 8px 12px 4px; }
+.thumb-row { display: flex; gap: 8px; align-items: flex-start; }
+.thumb-row .num { width: 14px; flex: none; font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); text-align: right; padding-top: 2px; font-variant-numeric: tabular-nums; }
+.thumb-row.cur .num { color: rgb(var(--brand-fg)); font-weight: 600; }
+.thumb { position: relative; flex: 1; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: rgb(var(--surface)); box-shadow: 0 0 0 1px rgb(var(--line)); }
+.thumb.active { box-shadow: 0 0 0 2px rgb(var(--surface)), 0 0 0 4px rgb(var(--brand-600)); }
+.thumb.pending { background: rgb(var(--sunken)); }
+/* Unloaded thumbs shimmer (the shared .shimmer gradient; this beats .thumb.pending's flat fill). */
+.thumb.shimmer { background: linear-gradient(100deg, rgb(var(--sunken)) 30%, rgb(var(--line)), rgb(var(--sunken)) 70%); background-size: 300% 100%; animation: shimmer 1.4s linear infinite; }
+
+/* Stage: top-aligned like the redesign canvas. 20px top, "Slide n of m" row (20px), 12px, slide, 24px, floater (46px). */
+.stage { position: relative; display: flex; flex-direction: column; align-items: center; padding: 20px 24px 24px; min-width: 0; min-height: 0; }
+.frame { width: min(100%, calc((100vh - 52px - 56px - 20px - 20px - 12px - 24px - 46px - 24px) * 16 / 9)); display: flex; flex-direction: column; }
+.counter-row { height: 20px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: rgb(var(--ink-3)); font-variant-numeric: tabular-nums; }
+.counter-row .icon-btn svg { width: 16px; height: 16px; }
+.canvas { position: relative; margin-top: 12px; width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: rgb(var(--surface)); box-shadow: 0 0 0 1px rgb(var(--line)), var(--sh-menu); }
+.floater-slot { margin-top: 24px; height: 46px; display: flex; justify-content: center; position: relative; }
+.floater { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--r-card); border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); box-shadow: var(--sh-menu); }
+.floater .vsep { width: 1px; height: 24px; margin: 0 2px; background: rgb(var(--line)); }
+.floater .btn-ghost svg.brand { color: rgb(var(--brand-fg)); }
+/* While the deck loads it is view-only: the slide and rail don't respond to clicks. */
+.app.loading .canvas, .app.loading .rail-list { pointer-events: none; cursor: default; }
+.fab { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 9999px; background: rgb(var(--ink)); color: rgb(var(--canvas)); display: flex; align-items: center; justify-content: center; box-shadow: var(--sh-menu); }
+
+/* Mock slides: everything sized in container units so thumbs and canvas share one renderer.
+   Deck theme (the user's content, not UI): cream #F7F3EC, charcoal #1F1D1A, terracotta #C8553D, sage #6B8F71, sand #E9DFCF. */
+.slide { position: absolute; inset: 0; container-type: inline-size; background: #F7F3EC; color: #1F1D1A; font-family: Geist, ui-sans-serif, system-ui, sans-serif; }
+.slide .pad { position: absolute; inset: 6.4cqw 7cqw 5.6cqw; display: flex; flex-direction: column; }
+.slide .kicker { display: inline-flex; align-items: center; gap: 1cqw; font-size: 1.35cqw; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #C8553D; margin-bottom: 1.4cqw; }
+.slide .kicker::before { content: ""; width: 2.4cqw; height: .25cqw; background: currentColor; }
+.slide h2 { margin: 0; font-size: 3.9cqw; line-height: 1.12; font-weight: 600; letter-spacing: -.025em; max-width: 80%; }
+.slide p { margin: 1.8cqw 0 0; font-size: 1.8cqw; line-height: 1.5; color: #6E665C; max-width: 70%; }
+.slide .foot { margin-top: auto; display: flex; justify-content: space-between; font-size: 1.3cqw; letter-spacing: .04em; color: rgb(247 243 236 / .55); border-top: .12cqw solid rgb(247 243 236 / .18); padding-top: 1.4cqw; }
+
+.slide.dark { background: #1F1D1A; color: #F7F3EC; }
+.slide.dark p { color: rgb(247 243 236 / .7); }
+.slide.dark .kicker { color: #E08A6E; }
+.k-cover .cover-grid { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr; gap: 4cqw; align-items: center; }
+.k-cover h2 { font-size: 6.2cqw; line-height: 1.02; max-width: none; }
+.cover-art { position: relative; height: 100%; }
+.cover-art i { position: absolute; border-radius: 50%; }
+.cover-art i:nth-child(1) { width: 22cqw; height: 22cqw; right: 2cqw; top: 6%; background: #C8553D; }
+.cover-art i:nth-child(2) { width: 14cqw; height: 14cqw; right: 15cqw; bottom: 8%; background: #6B8F71; mix-blend-mode: screen; opacity: .9; }
+.cover-art i:nth-child(3) { width: 9cqw; height: 9cqw; right: 0; bottom: 14%; border: .35cqw solid #E9DFCF; }
+.k-close .close-wrap { margin: auto 0; }
+.k-close h2 { font-size: 5.6cqw; }
+
+.slide .stats { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4cqw; }
+.slide .stat { background: #fff; border-radius: 1.4cqw; padding: 2.4cqw; display: flex; flex-direction: column; gap: .5cqw; box-shadow: 0 .1cqw .3cqw rgb(31 29 26 / .06); }
+.slide .stat b { font-size: 5.4cqw; line-height: 1; font-weight: 600; letter-spacing: -.03em; }
+.slide .stat span { font-size: 1.6cqw; color: #6E665C; margin-top: .6cqw; }
+.slide .stat em { font-style: normal; font-size: 1.35cqw; font-weight: 600; color: #4E7355; }
+.slide .stat:first-child { background: #1F1D1A; color: #F7F3EC; }
+.slide .stat:first-child span { color: rgb(247 243 236 / .65); }
+.slide .stat:first-child em { color: #9DC0A2; }
+
+.slide .chart { margin-top: auto; height: 60%; display: flex; align-items: stretch; gap: 2.2cqw; border-bottom: .15cqw solid #D9CFBF; }
+.slide .chart .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: .8cqw; position: relative; }
+.slide .chart i { width: 100%; border-radius: .8cqw .8cqw 0 0; background: #E9DFCF; }
+.slide .chart i.hot { background: #C8553D; }
+.slide .chart .val { font-size: 1.35cqw; font-weight: 600; color: #1F1D1A; }
+.slide .chart .lab { position: absolute; bottom: -2.6cqw; font-size: 1.3cqw; color: #6E665C; }
+
+.slide .deals { margin-top: auto; display: flex; flex-direction: column; gap: 1.1cqw; }
+.slide .deal { display: grid; grid-template-columns: auto 1fr auto 9cqw; align-items: center; gap: 1.8cqw; background: #fff; border-radius: 1.2cqw; padding: 1.3cqw 2cqw; box-shadow: 0 .1cqw .3cqw rgb(31 29 26 / .06); }
+.slide .deal .mono { width: 3.6cqw; height: 3.6cqw; border-radius: .9cqw; background: #E9DFCF; display: flex; align-items: center; justify-content: center; font-size: 1.6cqw; font-weight: 600; }
+.slide .deal b { display: block; font-size: 1.75cqw; font-weight: 600; }
+.slide .deal div span { font-size: 1.35cqw; color: #6E665C; }
+.slide .deal .tag { font-size: 1.2cqw; font-weight: 600; color: #4E7355; background: #E3ECE4; border-radius: 9999px; padding: .4cqw 1.2cqw; }
+.slide .deal strong { font-size: 2cqw; font-weight: 600; text-align: right; letter-spacing: -.02em; }
+
+.slide svg.line { margin-top: auto; width: 100%; height: 52%; overflow: visible; }
+.slide .months { display: flex; justify-content: space-between; margin-top: 1cqw; font-size: 1.3cqw; color: #6E665C; }
+
+.slide .risks { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2cqw; }
+.slide .risk { background: #fff; border-radius: 1.4cqw; padding: 2.2cqw; display: flex; flex-direction: column; gap: 1cqw; min-height: 20cqw; box-shadow: 0 .1cqw .3cqw rgb(31 29 26 / .06); }
+.slide .risk .lvl { align-self: flex-start; font-size: 1.2cqw; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #8A6A2E; background: #F3E6C8; border-radius: 9999px; padding: .4cqw 1.1cqw; }
+.slide .risk .lvl.hi { color: #9E3B26; background: #F6DCD3; }
+.slide .risk b { font-size: 2cqw; line-height: 1.25; font-weight: 600; }
+.slide .risk > span:last-child { font-size: 1.5cqw; line-height: 1.45; color: #6E665C; margin-top: auto; }
+
+.slide .plan { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4cqw; }
+.slide .plan .step { border-top: .3cqw solid #1F1D1A; padding-top: 1.8cqw; display: flex; flex-direction: column; gap: .8cqw; }
+.slide .plan .step:first-child { border-color: #C8553D; }
+.slide .plan .n { font-size: 1.4cqw; font-weight: 600; color: #C8553D; letter-spacing: .08em; }
+.slide .plan b { font-size: 2.6cqw; font-weight: 600; letter-spacing: -.02em; }
+.slide .plan .step > span:last-child { font-size: 1.7cqw; line-height: 1.45; color: #6E665C; }
+
+/* Skeleton */
+.sk { background: rgb(var(--sunken)); border-radius: var(--r-control); }
+.shimmer { background: linear-gradient(100deg, rgb(var(--sunken)) 30%, rgb(var(--line)), rgb(var(--sunken)) 70%); background-size: 300% 100%; animation: shimmer 1.4s linear infinite; }
+
+/* Proto footer (not part of the design): a 52px strip under the editor with version tabs + Replay, centred */
+.proto { position: fixed; left: 0; right: 0; bottom: 0; height: 52px; z-index: 100; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 12px; background: rgb(20 20 31); border-top: 1px solid rgb(255 255 255 / .08); color: #fff; font-size: 12px; line-height: 16px; white-space: nowrap; overflow-x: auto; }
+.proto-tabs { display: flex; gap: 2px; }
+.proto a, .proto button { color: rgb(255 255 255 / .72); text-decoration: none; background: transparent; border: 0; border-radius: 8px; height: 30px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 500; cursor: pointer; transition: background-color .15s var(--ease), color .15s var(--ease); }
+.proto a:hover, .proto button:hover { background: rgb(255 255 255 / .1); color: #fff; }
+.proto a[aria-selected="true"] { background: #fff; color: rgb(20 20 31); }
+.proto-n { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; background: rgb(255 255 255 / .14); font-size: 11px; font-weight: 600; }
+.proto a[aria-selected="true"] .proto-n { background: rgb(var(--brand-600)); color: #fff; }
+.proto-sep { width: 1px; height: 18px; margin: 0 2px; background: rgb(255 255 255 / .18); }
+.proto-replay { color: #fff !important; }
+
+.fade-in { animation: fadeIn .3s var(--ease) both; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
