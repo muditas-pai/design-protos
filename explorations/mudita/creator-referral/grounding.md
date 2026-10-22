@@ -11,9 +11,26 @@ account with a personal referral link and earns credits per signup.
 ## Flow (one modal)
 
 ```
-Intro ──► Pick a video ──► Add your face ──► Making ──► Share ──► Creator page
- what/why   template grid     photo + consent   ~2 min     download,     stats, link,
- +50/signup + fixed script    (gates the CTA)   can close   link, caption  make another
+Intro ──► Pick a video ──► Add your face ──► Making ──► Share ──┐
+ what/why   template grid     photo + consent   ~2 min     download,│ "Track my signups"
+ +200/first + fixed script    (gates the CTA)   can close   link,    ▼
+ deck                                                       caption  Refer & earn page
+```
+
+Tracking lives on the existing Refer & earn page
+(https://app.presentations.ai/#/referandearn), not in the modal. `refer-and-earn.html` is
+that page rebuilt from `pitchdeckdoclist` `ReferAndEarn.jsx` (as of 14 Oct 2026) with the
+creator pieces added:
+
+```
+Refer & earn
+├── Hero (cream)          existing link + share buttons │ NEW creator card in the empty right half
+│                                                       │   no videos: HardLaunch clip + "Make my video"
+│                                                       │   has videos: signups from videos + "Make another"
+├── Stat cards            credits meter splits link vs videos (NEW legend)
+├── Your videos           NEW, only once a video exists: thumb, made date, signups, download
+├── Your invites          "Came from" gets a "Your video" badge + platform + which video
+└── How rewards work      NEW bullet: video signups count as referrals
 ```
 
 The right-hand phone is the throughline: template creator → dashed "your face" slot →
@@ -21,9 +38,9 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
 
 ## Prototype decisions (placeholders, confirm before eng)
 
-- **50 credits per signup**, no cap. Number is invented.
-- **A signup counts when the person makes their first deck**, not on account creation
-  (fraud guard). Pending vs credited shows on the creator page.
+- **Credits follow the existing referral programme**: 200 credits when a friend makes their
+  first deck, same link (`?ref=`). The modal originally said 50 per signup, no cap; aligned
+  22 Oct 2026.
 - **Scripts are fixed.** Users endorse the product in words they did not write, so the
   script is shown before they commit.
 - **Caption changes per platform.** TikTok/Instagram captions cannot hold a tappable link,
@@ -38,6 +55,12 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   so the blurred "Your face" box is a fixed position.
 
 ## Open questions
+
+- **The 2,000-credit yearly cap is 10 friends.** A creator video that works hits it fast,
+  and then the reward stops. Do creators get a separate or higher cap?
+- **Attribution:** to show "Your video" and which video in the invites table, each video
+  needs its own link (e.g. `?ref=<code>&v=<video-id>`) or a UTM. Caption + bio link
+  must carry it.
 
 - Voice: HardLaunch matches a voice to the new face. Is it the user's voice, the template
   creator's, or synthetic? Followers who know the user will notice. Changes the consent copy.
