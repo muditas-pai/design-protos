@@ -37,6 +37,18 @@
   .cap a.eyebrow:hover, .cap a.eyebrow[aria-current] { color: rgb(var(--ink)); }
   .proj-row .acc-i { margin-left: auto; font-size: 14px; color: rgb(var(--ink-3)); }
   .side-empty { padding: 6px 10px; font-size: 13px; color: rgb(var(--ink-3)); }
+  .tree-row { display: flex; align-items: center; }
+  .tree-row .nav-item { flex: 1; min-width: 0; }
+  .tree-tg { width: 20px; height: 28px; flex: none; display: grid; place-items: center; border: 0; background: none; color: rgb(var(--ink-3)); cursor: pointer; border-radius: 4px; padding: 0; }
+  .tree-tg:hover { color: rgb(var(--ink)); }
+  .tree-tg .ph { font-size: 12px; }
+  .tree-sp { width: 20px; flex: none; }
+  .join-card { display: flex; align-items: center; gap: 16px; padding: 16px 18px; margin-top: 16px; border: 1px solid rgb(var(--line)); border-radius: var(--r-card); background: rgb(var(--surface)); }
+  .join-card .oi { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 10px; background: rgb(var(--brand) / .08); color: rgb(var(--brand)); font-size: 20px; }
+  .join-card .tx { flex: 1; min-width: 0; }
+  .join-card .tx b { display: block; font-size: 15px; }
+  .join-card .tx small { color: rgb(var(--ink-2)); font-size: 13px; }
+  @media (max-width: 640px) { .join-card { flex-wrap: wrap; } }
   .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
   .plan-card { background: rgb(var(--cream)); border-radius: var(--r-card); padding: 12px; margin-bottom: 4px; }
   .plan-card .row { display: flex; justify-content: space-between; font-size: 13px; }
@@ -847,7 +859,7 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const KEY = 'ws-share-v3page-1';
+const KEY = 'ws-share-v3page-2';
 const A = 'assets/';
 const BONUS_MAX = 2000, BONUS = 200;
 const TINT = ['#3427ff', '#eb6834', '#1baf7a', '#eda100'];
@@ -881,9 +893,9 @@ function seed() {
       D('renewd', 'Renewal playbook', 'renew', 'bala', 'ed-slide-2.jpg', 'last week', 7),
       D('acme', 'Acme proposal', 'ent', 'bala', 'tpl-digital.jpg', '3 days ago', 14),
       P('mkt', 'Marketing', null, 'bala', { access: 'shared', color: 1, people: [m('madhu', 'member', 'bala')] }),
-      P('q1', 'Q1', 'mkt', 'bala', { access: 'shared', people: [m('deepthi', 'viewer', 'bala')] }),
+      P('q1', 'Q1', 'mkt', 'bala'),
       D('q1p', 'Q1 Pitch', 'q1', 'bala', 'kpi-04-marketing.jpg', '4 days ago', 10, { access: 'public' }),
-      D('q1c', 'Q1 campaign plan', 'q1', 'madhu', 'ed-slide-2.jpg', 'last week', 8),
+      D('q1c', 'Q1 campaign plan', 'q1', 'madhu', 'ed-slide-2.jpg', 'last week', 8, { access: 'shared', people: [m('deepthi', 'viewer', 'madhu')] }),
       P('q2', 'Q2', 'mkt', 'bala'),
       D('q2d', 'Q2 launch plan', 'q2', 'madhu', 'kpi-07-mrr.jpg', '3 days ago', 10),
       D('brand', 'Brand playbook', 'mkt', 'bala', 'tpl-brand-playbook.jpg', '2 weeks ago', 16),
@@ -930,7 +942,7 @@ function seed() {
     notifs: {
       mani: [{ ic: 'ph-warning', t: 'Formula One has used 80% of its credits', s: 'Buy more or turn on auto top-up so nobody runs out mid-deck.', when: '1h', unread: true, only: 'team', cr80: true }, { ic: 'ph-buildings', t: 'Bala made Q1 Pitch public', s: 'It is in Shared with me. The rest of Q1 stays private.', when: '4d', go: 'q1p' }],
       sumanth: [{ ic: 'ph-share-network', t: 'Mani shared Board update with you', s: 'Can view · Leadership stays private', when: '1h', go: 'board', unread: true }],
-      deepthi: [{ ic: 'ph-share-network', t: 'Bala shared Q1 with you', s: 'Can view · Only this folder', when: '2d', go: 'q1', unread: true }],
+      deepthi: [{ ic: 'ph-share-network', t: 'Madhu shared Q1 campaign plan with you', s: 'Can view · Only this deck', when: '2d', go: 'q1c', unread: true }],
     },
   };
 }
@@ -1043,7 +1055,18 @@ const go = r => { closePop(); if (location.hash.slice(1) === r) render(); else l
 
 /* ---------- Shell ---------- */
 const sideRow = (p, cur) => `<button class="nav-item proj-row" data-act="go" data-to="p/${p.id}" ${cur === p.id ? 'aria-current="page"' : ''}>${folderIc(p)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span><i class="ph ${accInfo(p).ic} acc-i" title="${esc(accInfo(p).t)}"></i></button>`;
-// Projects and folders in the sidebar, for Members and up. Viewers get Home and Settings only.
+// v3: workspace Viewers see public projects and folders as a tree, read-only. Limited access sees only what's shared with them.
+const treeKids = (u, p) => items().filter(i => i.parent === p.id && i.type !== 'deck' && !i.deleted && sees(u, i));
+function sideTree(u, p, cur, d = 0) {
+  const ks = treeKids(u, p), open = (S.tree || {})[p.id];
+  return `<div class="tree-row" style="padding-left:${d * 14}px">${ks.length ? `<button class="tree-tg" data-act="tree" data-id="${p.id}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(p.name)}" aria-expanded="${!!open}"><i class="ph ph-caret-${open ? 'down' : 'right'}"></i></button>` : '<span class="tree-sp"></span>'}${sideRow(p, cur)}</div>${open ? ks.map(k => sideTree(u, k, cur, d + 1)).join('') : ''}`;
+}
+function sideViewer(u, r, cur, projs, folds) {
+  if (role(u) === 'guest') { const l = sharedWithMe(u);
+    return `<div class="cap"><span class="eyebrow">Shared with you</span></div>${l.length ? l.map(i => i.type === 'deck' ? `<button class="nav-item proj-row" data-act="open" data-id="${i.id}">${folderIc(i)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.name)}</span></button>` : sideRow(i, cur)).join('') : '<div class="side-empty">Nothing yet</div>'}`; }
+  return `${teamPlan() ? `<div class="cap"><a class="eyebrow" data-act="go" data-to="projects" ${r === 'projects' ? 'aria-current="page"' : ''}>Projects</a></div>${projs.length ? projs.map(p => sideTree(u, p, cur)).join('') : '<div class="side-empty">No projects yet</div>'}` : ''}
+    <div class="cap"><a class="eyebrow" data-act="go" data-to="folders" ${r === 'folders' ? 'aria-current="page"' : ''}>Folders</a></div>${folds.length ? folds.map(p => sideTree(u, p, cur)).join('') : '<div class="side-empty">No folders yet</div>'}`;
+}
 function sideLists(u, r, cur, projs, folds) {
   return `    <div class="cap"><a class="eyebrow" data-act="go" data-to="projects" ${r === 'projects' ? 'aria-current="page"' : ''}>Projects</a>${teamPlan() ? '<button class="icon-btn" data-act="new-project" aria-label="New project"><i class="ph ph-plus"></i></button>' : ''}</div>
     ${!teamPlan() ? `<button class="nav-item" data-act="new-project"><i class="ph ph-cube"></i>Create project<span class="badge badge-brand" style="margin-left:auto">${solo() ? 'Gold' : 'Team'}</span></button>`
@@ -1067,7 +1090,7 @@ function sidebar() {
     ${canCreate ? `<button class="nav-item" data-act="soon" data-msg="Templates are not in this prototype."><i class="ph ph-stack"></i>Templates</button>
     <button class="nav-item" data-act="${freeWs() ? 'brand-kit' : 'soon'}" data-msg="Brand Kit is not in this prototype."><i class="ph ph-swatches"></i>Brand Kit${freeWs() ? `<span class="badge badge-brand" style="margin-left:auto">${solo() ? 'Pro' : 'Team'}</span>` : ''}</button>
     <button class="nav-item" data-act="soon" data-msg="Hire an expert is not in this prototype."><i class="ph ph-pen-nib"></i>Hire an expert</button>` : ''}
-    ${canCreate ? sideLists(u, r, cur, projs, folds) : ''}
+    ${canCreate ? sideLists(u, r, cur, projs, folds) : sideViewer(u, r, cur, projs, folds)}
     <div class="side-foot">
       ${canCreate ? sidePlan(credits) : ''}
       ${isMem(u) ? `<button class="nav-item" data-act="share-ws"><i class="ph ph-user-plus"></i>Invite teammates</button>` : ''}
@@ -1172,7 +1195,11 @@ function pageDeck(id) {
 
 /* ---------- Role banner ---------- */
 function roleNote() {
-  const r = role(S.as);
+  const u = S.as, r = role(u);
+  if ((r === 'viewer' || r === 'guest') && !solo()) {
+    const sent = S.reqs.some(x => x.kind === 'join' && x.from === u && x.status === 'pending');
+    return `<div class="join-card"><span class="oi"><i class="ph ph-users-three"></i></span><div class="tx"><b>${r === 'guest' ? `Want to see more of ${esc(wsName())}?` : `You’re a Viewer in ${esc(wsName())}`}</b><small>${sent ? `Request sent to ${reqTo()}. You’ll get a notification when they answer.` : r === 'guest' ? 'Members see every public project and folder, and make their own decks.' : 'Become a Member to create, edit and share decks.'}</small></div>${sent ? '<span class="badge badge-neutral">Request pending</span>' : '<button class="btn btn-primary btn-sm" data-act="join-req">Request membership</button>'}</div>`;
+  }
   if (r === 'viewer') return `<div class="note mt"><i class="ph ph-eye"></i><div>View, comment and present. To edit, ask an Admin.</div></div>`;
   if (r === 'guest') return `<div class="note mt"><i class="ph ph-eye"></i><div>You can view what people share with you: comment and present, no editing.</div></div>`;
   return '';
@@ -1353,22 +1380,23 @@ const mi = (ic, label, act, id, why, bad) => why
   ? `<div class="menu-item dis"><i class="ph ${ic}"></i><span class="mi-t">${label}<span class="why">${why}</span></span></div>`
   : `<button class="menu-item ${bad ? 'bad' : ''}" data-act="${act}" data-id="${id}"><i class="ph ${ic}"></i>${label}</button>`;
 function itemMenu(it) {
-  const u = S.as, g = grant(u, it), edit = g === 'edit', cr = fn(it.by);
+  const u = S.as, g = grant(u, it), edit = g === 'edit';
+  // v3: only show what this person can do
   const rows = [mi('ph-share-network', 'Share', 'share', it.id)];
+  const add = (ok, ic, label, act, bad, hr) => { if (ok) rows.push((hr ? '<hr>' : '') + mi(ic, label, act, it.id, '', bad)); };
   if (it.type === 'deck') {
-    rows.push(mi('ph-pencil-simple', 'Rename', 'rename', it.id, edit ? '' : 'Viewers can’t rename'));
-    rows.push(mi('ph-copy', 'Duplicate', 'dup', it.id, edit ? '' : 'Viewers can’t duplicate'));
-    rows.push(mi('ph-folder-simple-dashed', 'Move to…', 'move', it.id, edit ? '' : 'Viewers can’t move decks'));
-    rows.push(mi('ph-download-simple', 'Download', 'download', it.id, edit ? '' : 'Viewers can’t download or export'));
-    rows.push(mi('ph-clock-counter-clockwise', 'Version history', '', it.id, 'Coming later'));
+    add(edit, 'ph-pencil-simple', 'Rename', 'rename');
+    add(edit, 'ph-copy', 'Duplicate', 'dup');
+    add(edit, 'ph-folder-simple-dashed', 'Move to…', 'move');
+    add(edit, 'ph-download-simple', 'Download', 'download');
+    if (edit) rows.push(mi('ph-clock-counter-clockwise', 'Version history', '', it.id, 'Coming later'));
   } else {
-    rows.push(mi('ph-pencil-simple', 'Rename', 'rename', it.id, canManage(u, it) ? '' : `Only ${cr} or an Admin`));
-    if (it.type === 'folder') rows.push(mi('ph-folder-simple-dashed', 'Move to…', 'move', it.id, edit ? '' : 'Viewers can’t move folders'));
+    add(canManage(u, it), 'ph-pencil-simple', 'Rename', 'rename');
+    add(it.type === 'folder' && edit, 'ph-folder-simple-dashed', 'Move to…', 'move');
   }
-  if (canLeave(u, it)) rows.push('<hr>' + mi('ph-sign-out', 'Leave', 'leave', it.id));
-  else if (it.by !== u && effAccess(it) === 'public' && (it.people || []).some(p => p.id === u)) rows.push('<hr>' + mi('ph-sign-out', 'Leave', '', it.id, `Public ${TYPE[it.type]}s can’t be left`));
-  if (it.type === 'deck') rows.push('<hr>' + mi('ph-trash', 'Move to Trash', 'del', it.id, edit ? '' : 'Viewers can’t delete', true));
-  else rows.push('<hr>' + mi('ph-trash', `Delete ${TYPE[it.type]}`, 'del', it.id, canManage(u, it) ? '' : `Only ${cr} or an Admin`, true));
+  add(canLeave(u, it), 'ph-sign-out', 'Leave', 'leave', false, true);
+  if (it.type === 'deck') add(edit, 'ph-trash', 'Move to Trash', 'del', true, true);
+  else add(canManage(u, it), 'ph-trash', `Delete ${TYPE[it.type]}`, 'del', true, true);
   return rows.join('');
 }
 // Plan and head count are for the Owner and Admins. Members see the plan and their role, Viewers only their role.
@@ -1842,7 +1870,7 @@ function setNotifs() {
 function pendingRows() {
   const rows = S.reqs.filter(r => r.status === 'pending').map(r => {
     const rit = r.item && byId(r.item), cr = r.kind === 'credits';
-    const t = cr ? `${fn(r.from)} wants to buy ${r.amt.toLocaleString()} credits` : r.kind === 'upgrade' ? `${fn(r.from)} wants to make ${fn(r.pid)} a Member` : `${fn(r.from)} wants to invite ${S.people[r.pid]?.email} as a Member`;
+    const t = cr ? `${fn(r.from)} wants to buy ${r.amt.toLocaleString()} credits` : r.kind === 'join' ? `${fn(r.from)} asked to become a Member` : r.kind === 'upgrade' ? `${fn(r.from)} wants to make ${fn(r.pid)} a Member` : `${fn(r.from)} wants to invite ${S.people[r.pid]?.email} as a Member`;
     const s = cr ? `${r.note ? `“${esc(r.note)}” · ` : ''}Charged to Visa ending 4417 if you approve` : `${rit ? esc(rit.name) + ' · ' : ''}Expires in 30 days`;
     return `<div class="srow">${av(r.from, 32)}<div class="tx"><b>${esc(t)}</b><small>${s}</small></div><button class="btn btn-ghost btn-sm" data-act="${cr ? 'cr-no' : 'decline'}" data-req="${r.id}">Decline</button><button class="btn btn-primary btn-sm" data-act="${cr ? 'cr-ok' : 'approve'}" data-req="${r.id}">Approve</button></div>`;
   });
@@ -1860,7 +1888,7 @@ function setRequests() {
 // Access column: what a person can open, in one phrase
 function accessOf(k) {
   const r = role(k);
-  if (r === 'guest') { const only = items().filter(i => (i.people || []).some(x => x.id === k)).map(i => i.name); return `Only ${only.join(', ') || 'nothing yet'}, view only`; }
+  if (r === 'guest') return 'Limited access';
   if (r === 'viewer') return 'All public, view only';
   if (r === 'invited') return 'Joins as Member';
   return 'All public, can edit';
@@ -1880,7 +1908,7 @@ function setMembers() {
   const upPending = k => S.reqs.some(r => r.kind === 'upgrade' && r.pid === k && !r.item && r.status === 'pending');
   const mkMem = k => !adm && role(u) === 'member' && ['viewer', 'guest'].includes(role(k)) ? (upPending(k) ? '<span class="badge badge-neutral">Request pending</span>' : `<button class="btn btn-secondary btn-sm" data-act="mk-mem" data-pid="${k}">Make Member</button>`) : '';
   const more = (k, kind) => adm && role(k) !== 'owner' && k !== u ? `<button class="icon-btn" data-act="mem-menu" data-pid="${k}" data-kind="${kind}" aria-label="More for ${esc(nm(k))}"><i class="ph ph-dots-three"></i></button>` : '';
-  const memRows = joined.filter(inRole).map(k => `<tr data-name="${esc((nm(k) + ' ' + S.people[k].email).toLowerCase())}"><td><div class="pp">${av(k, 32)}<div><b>${esc(nm(k))}${k === u ? ' <em>(you)</em>' : ''}</b><small>${esc(S.people[k].email)}</small></div></div></td><td>${roleCell(k)}</td><td class="muted">${esc(accessOf(k))}</td><td class="muted">${ACTIVE[k] || 'Never'}</td><td class="act">${mkMem(k) || more(k, 'mem')}</td></tr>`).join('');
+  const memRows = joined.filter(inRole).map(k => `<tr data-name="${esc((nm(k) + ' ' + S.people[k].email).toLowerCase())}"><td><div class="pp">${av(k, 32)}<div><b>${esc(nm(k))}${k === u ? ' <em>(you)</em>' : ''}</b><small>${esc(S.people[k].email)}</small></div></div></td><td>${roleCell(k)}</td><td class="muted"${role(k) === 'guest' ? ` title="Only ${esc(items().filter(i => (i.people || []).some(x => x.id === k)).map(i => i.name).join(', ') || 'nothing yet')}, view only"` : ''}>${esc(accessOf(k))}</td><td class="muted">${ACTIVE[k] || 'Never'}</td><td class="act">${mkMem(k) || more(k, 'mem')}</td></tr>`).join('');
   const invRows = invites.map(k => { const p = S.people[k]; return `<tr data-name="${esc(p.email.toLowerCase())}"><td><div class="pp">${av(k, 32)}<div><b>${esc(p.email)}</b><small>${p.pending ? 'Waiting for approval' : `Invited ${p.when || 'just now'} · expires in 14 days`}</small></div></div></td><td><span class="rl">${role(k) === 'invited' ? 'Member' : 'Viewer'}</span></td><td class="muted">${esc(accessOf(k))}</td><td>${p.pending ? '<span class="badge badge-neutral">Needs approval</span>' : '<span class="badge badge-warn">Invited</span>'}</td><td class="act">${more(k, 'inv')}</td></tr>`; }).join('');
   const invite = isMem(u) ? `<form class="inv" data-act="set-invite" autocomplete="off"><input class="input" id="si-email" placeholder="Add people by email" aria-label="Email"><select class="input" id="si-role" aria-label="Role"><option value="member">Member</option><option value="viewer">Viewer</option></select><button class="btn btn-primary" type="submit"><i class="ph ph-user-plus"></i>Invite</button></form>
     <p class="fine" style="margin-top:8px">${!adm && !S.membersInvite ? `Member invites wait for ${reqTo()}. ` : ''}<button class="lnk" data-act="roles-help" style="background:none;border:0;cursor:pointer;padding:0;font-size:inherit">What each role can do</button></p>` : '';
@@ -2094,7 +2122,7 @@ function pricingModal(feat, keep) {
 
 /* ---------- Proto bar ---------- */
 function pbar() {
-  const who = [['mani', 'Mani · Owner'], ['bala', 'Bala Kumar · Admin'], ['madhu', 'Madhu · Member'], ['sumanth', 'Sumanth · Member'], ['saravanan', 'Saravanan · Member'], ['ravi', 'Ravi · Viewer'], ['deepthi', 'Deepthi · Viewer of Q1']];
+  const who = [['mani', 'Mani · Owner'], ['bala', 'Bala Kumar · Admin'], ['madhu', 'Madhu · Member'], ['sumanth', 'Sumanth · Member'], ['saravanan', 'Saravanan · Member'], ['ravi', 'Ravi · Viewer'], ['deepthi', 'Deepthi · Viewer of one deck']];
   return `<div class="pbar" role="region" aria-label="Prototype controls">
     <label>View as <select data-act="as">${who.map(([k, l]) => `<option value="${k}" ${S.as === k ? 'selected' : ''} ${S.ws === 'studio' && k !== 'mani' ? 'disabled' : ''}>${l}</option>`).join('')}</select></label>
     <span class="sep"></span>
@@ -2186,8 +2214,8 @@ document.addEventListener('click', e => {
         if (entry) { entry.status = fresh ? 'invited' : 'active'; if (r.kind === 'upgrade') entry.role = 'member'; }
         if (!fresh) S.people[r.pid].role = 'member';
       } else if (r.kind === 'invite') { if (rit) rit.people = rit.people.filter(p => p.id !== r.pid); if (fresh) delete S.people[r.pid]; }
-      notify(r.from, { ic: act === 'approve' ? 'ph-check-circle' : 'ph-x-circle', t: `${fn(u)} ${act === 'approve' ? 'approved' : 'declined'} your ${r.kind === 'upgrade' ? 'request' : 'invite'}`, s: `${S.people[r.pid]?.email || 'The person'}${rit ? ' · ' + rit.name : ''}` });
-      toast(act === 'approve' ? (r.kind === 'upgrade' && !rit ? `Approved. ${fn(r.pid)} is a Member now. ${fn(r.from)} is told.` : `Approved. The invite is on its way. ${fn(r.from)} is told.`) : `Declined. ${fn(r.from)} is told.`);
+      notify(r.from, { ic: act === 'approve' ? 'ph-check-circle' : 'ph-x-circle', t: `${fn(u)} ${act === 'approve' ? 'approved' : 'declined'} your ${r.kind === 'invite' ? 'invite' : 'request'}`, s: r.kind === 'join' ? (act === 'approve' ? `You’re a Member of ${wsName()} now` : `You stay a Viewer in ${wsName()}`) : `${S.people[r.pid]?.email || 'The person'}${rit ? ' · ' + rit.name : ''}` });
+      toast(act === 'approve' ? (r.kind === 'join' ? `Approved. ${fn(r.pid)} is a Member now and is told.` : r.kind === 'upgrade' && !rit ? `Approved. ${fn(r.pid)} is a Member now. ${fn(r.from)} is told.` : `Approved. The invite is on its way. ${fn(r.from)} is told.`) : `Declined. ${fn(r.from)} is told.`);
       closePop(); render();
     } break;
     case 'restore': {
@@ -2353,13 +2381,18 @@ document.addEventListener('click', e => {
     case 'pv-slide': S.pvSlide = +t.dataset.i; render(); break;
     case 'pv-export': pvExport(); break;
     case 'pv-buy': closeModal(); toast(`Pays for ${esc(t.dataset.l)}, then the PowerPoint downloads. The deck owner pays nothing.`, 'brand'); break;
+    case 'tree': e.stopPropagation(); (S.tree = S.tree || {})[id] = !(S.tree[id]); render(); break;
+    case 'join-req': { if (!['viewer', 'guest'].includes(role(u)) || S.reqs.some(x => x.kind === 'join' && x.from === u && x.status === 'pending')) break;
+      const rid = 'r' + (S.seq++); S.reqs.push({ id: rid, kind: 'join', from: u, pid: u, status: 'pending' });
+      Object.keys(S.people).filter(isAdmin).forEach(a => notify(a, { ic: 'ph-user-plus', t: `${fn(u)} asked to become a Member`, s: `${role(u) === 'guest' ? 'Limited access' : 'Viewer'} today · Expires in 30 days`, req: rid }));
+      toast(`Request sent to ${reqTo()}.`, 'brand', 'ph-hourglass-medium'); render(); } break;
     case 'reset': try { sessionStorage.removeItem(KEY); } catch (er) {} S = seed(); closeModal(); go('home'); break;
   }
 });
 document.addEventListener('change', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const act = t.dataset.act, u = S.as;
-  if (act === 'as') { S.as = t.value; S.tab = 'recent'; if (mine() && S.as === 'mani') S.ws = 'studio'; const r = route(); if (r.startsWith('p/') && !sees(S.as, byId(r.slice(2)))) go('home'); else render(); toast(`Viewing as ${esc(nm(S.as))}, ${ROLE_LABEL[role(S.as)]}${role(S.as) === 'guest' ? ' of Q1 only' : ''}.`, 'brand', 'ph-user-switch'); }
+  if (act === 'as') { S.as = t.value; S.tab = 'recent'; if (mine() && S.as === 'mani') S.ws = 'studio'; const r = route(); if (r.startsWith('p/') && !sees(S.as, byId(r.slice(2)))) go('home'); else render(); toast(`Viewing as ${esc(nm(S.as))}, ${ROLE_LABEL[role(S.as)]}${role(S.as) === 'guest' ? ' of one deck' : ''}.`, 'brand', 'ph-user-switch'); }
   if (act === 'plan') { S.payFail = t.value === 'teamfail'; if (S.payFail) t.value = 'team'; if (['pro', 'solofree'].includes(t.value)) { S.ws = 'studio'; S.as = 'mani'; S.soloPlan = t.value === 'pro' ? 'pro' : 'free'; if (t.value === 'solofree' && S.plan === 'free') S.plan = 'team'; } else { S.ws = 'f1'; S.plan = t.value; } const r0 = route(); if (r0 === 'home' || r0.startsWith('settings')) render(); else go('home'); }
   if (act === 'mem-role') { S.memRole = t.value; render(); return; }
   if (act === 'pv-country') { S.pvCountry = t.value; pvExport(); return; }
