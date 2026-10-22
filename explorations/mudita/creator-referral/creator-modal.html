@@ -295,6 +295,24 @@
     .p-thumbs i { aspect-ratio: 16/10; border-radius: 3px; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); }
     .p-arrow { text-align: center; font-size: 14px; color: #0A1925; margin: 4px 0; }
 
+
+    /* intro: HardLaunch's own sample clip, face area blurred */
+    .vid-hl { position: relative; width: 240px; height: 488px; overflow: hidden; background: #2a211c; }
+    .vid-hl video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .vid-hl .v-chrome::before { content: ""; position: absolute; inset: auto 0 0 0; height: 140px; background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
+    .hl-face { position: absolute; left: 4%; top: 9%; width: 52%; height: 42%; z-index: 3; transition: opacity 120ms ease; }
+    .hl-face.off { opacity: 0; }
+    .hl-blur { position: absolute; inset: 0; border-radius: 46%; backdrop-filter: blur(16px) saturate(0.9); -webkit-backdrop-filter: blur(16px) saturate(0.9);
+      background: rgba(255,255,255,0.06);
+      -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); }
+    .hl-corner { position: absolute; width: 22px; height: 22px; border: 0 solid #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35)); }
+    .hl-corner.tl { top: 0; left: 0; border-top-width: 2.5px; border-left-width: 2.5px; border-top-left-radius: 9px; }
+    .hl-corner.tr { top: 0; right: 0; border-top-width: 2.5px; border-right-width: 2.5px; border-top-right-radius: 9px; }
+    .hl-corner.bl { bottom: 0; left: 0; border-bottom-width: 2.5px; border-left-width: 2.5px; border-bottom-left-radius: 9px; }
+    .hl-corner.br { bottom: 0; right: 0; border-bottom-width: 2.5px; border-right-width: 2.5px; border-bottom-right-radius: 9px; }
+    .hl-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px;
+      border-radius: 99px; background: rgba(10,25,37,0.55); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+
     /* ---------- review bar (outside the modal, for the design review only) ---------- */
     .review { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 80; display: flex; align-items: center; gap: 4px; padding: 5px;
       border-radius: 10px; background: #0A1925; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
@@ -373,6 +391,9 @@
 const U = id => `https://images.unsplash.com/photo-${id}?w=600&h=900&fit=crop&crop=faces&q=70`;
 const SAMPLE_ME = U('1531123897727-8f129e1688ce');
 const LINK = 'presentations.ai/r/mudita';
+// HardLaunch's homepage hero clip, hotlinked from https://hardlaunch.com/
+const HL_SAMPLE = 'https://hardlaunch.com/website/swap/source.mp4';
+const HL_POSTER = 'https://hardlaunch.com/website/swap/p/source.jpg';
 const PER_SIGNUP = 50;
 
 const TEMPLATES = [
@@ -447,8 +468,48 @@ function runCaptions() {
   show(); capTimer = setInterval(show, 900);
 }
 
+function hardlaunchSample() {
+  return `<div class="vid-hl">
+    <video src="${HL_SAMPLE}" poster="${HL_POSTER}" autoplay muted loop playsinline></video>
+    <div class="hl-face"><div class="hl-blur"></div>
+      <span class="hl-corner tl"></span><span class="hl-corner tr"></span><span class="hl-corner bl"></span><span class="hl-corner br"></span>
+      <span class="hl-label">Your face</span></div>
+    <div class="v-chrome"><div class="v-prog"><i></i></div>
+      <div class="v-rail"><div><i class="ph-fill ph-heart"></i>12.4k</div><div><i class="ph-fill ph-chat-circle"></i>318</div><div><i class="ph-fill ph-share-fat"></i>Share</div></div>
+      <div class="v-bot"><b>@you<em>Paid partnership</em></b><p>Made with presentations.ai. Link in bio #ad</p></div></div>
+  </div>`;
+}
+
+// The clip has three shots; the face box follows each one and hides on the screen shot.
+// Boxes are % of the frame, read off frames sampled every 0.1s around the cuts.
+const HL_SHOTS = [
+  { to: 8.25,  box: [4, 9, 52, 42] },   // girl with the slime, top left
+  { to: 14.95, box: null },             // laptop screen, no face
+  { to: 99,    box: [24, 15, 48, 36] }, // second creator, top centre
+];
+let faceRaf = null;
+function trackFace() {
+  cancelAnimationFrame(faceRaf);
+  const v = $('#phone video'), f = $('#phone .hl-face');
+  if (!v || !f) return;
+  const tick = () => {
+    const shot = HL_SHOTS.find(x => v.currentTime < x.to);
+    if (shot.box) { const [l, t, w, h] = shot.box; Object.assign(f.style, { left: l + '%', top: t + '%', width: w + '%', height: h + '%' }); }
+    f.classList.toggle('off', !shot.box);
+    if (document.contains(v)) faceRaf = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
 function renderPhone() {
   const v = S.view, t = tpl();
+  if (v === 'intro') {
+    clearInterval(capTimer);
+    $('#phone').innerHTML = hardlaunchSample();
+    trackFace();
+    $('#stageCap').innerHTML = 'A real HardLaunch video. <b>In yours, this creator becomes you.</b>';
+    return;
+  }
   const opts = {
     intro: {}, pick: {},
     face: { slot: true },

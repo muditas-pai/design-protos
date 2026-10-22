@@ -32,6 +32,12 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   partnership and AI-generated labels.
 - **Photo retention:** only for this user's videos, auto-deleted after 30 days. Invented.
 
+- **Intro phone plays HardLaunch's homepage hero clip**, hotlinked from
+  https://hardlaunch.com/website/swap/source.mp4 (not copied into the repo). If they
+  rename or move it, the intro shows the poster or goes blank. The blurred "Your face"
+  box is keyed to the clip's three shots (cuts at about 8.25s and 14.95s) and hides on
+  the laptop-screen shot.
+
 ## Open questions
 
 - Voice: HardLaunch matches a voice to the new face. Is it the user's voice, the template
