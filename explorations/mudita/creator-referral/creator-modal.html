@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Creator program modal · presentations.ai</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+
+  <style>
+    body { margin: 0; background: var(--bg-muted); -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    button { font-family: inherit; }
+
+    /* ---------- faux dashboard behind the modal ---------- */
+    .dash { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+    .dash-side { background: var(--bg-muted); border-right: 1px solid var(--border-tertiary); padding: 18px 14px; }
+    .dash-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; margin-bottom: 22px; }
+    .dash-logo span { width: 22px; height: 22px; border-radius: 6px; background: #FF5500; display: grid; place-items: center; color: #fff; font-size: 13px; }
+    .dash-nav { display: flex; flex-direction: column; gap: 2px; }
+    .dash-nav div { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; color: var(--text-secondary); font-size: 13px; }
+    .dash-nav div.on { background: var(--bg-elevated-hover); color: var(--text-primary); font-weight: 500; }
+    .dash-main { background: var(--bg-subtle); padding: 40px 48px; }
+    .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 28px; }
+    .dash-card { aspect-ratio: 16/10; border-radius: 8px; box-shadow: var(--shadow-elevation-02); }
+
+    /* ---------- modal shell ---------- */
+    .ov { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px;
+      background: rgba(11,15,20,0.42); opacity: 0; pointer-events: none; transition: opacity 200ms var(--ease-out-strong); }
+    .ov.on { opacity: 1; pointer-events: auto; }
+    .modal { width: 100%; max-width: 980px; height: min(660px, calc(100vh - 48px)); display: grid; grid-template-columns: minmax(0, 1fr) 380px;
+      background: var(--bg-primary); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-elevation-new-04);
+      transform: translateY(8px) scale(0.985); transition: transform 260ms var(--ease-out-strong); }
+    .ov.on .modal { transform: none; }
+
+    .modal .button-style { gap: 6px; }
+    .pane { display: flex; flex-direction: column; min-height: 0; }
+    .head { display: flex; align-items: center; gap: 16px; padding: 16px 20px 14px 28px; border-bottom: 1px solid var(--border-tertiary); }
+    .head-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+    .head-title small { font-weight: 400; color: var(--text-tertiary); }
+    .steps { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
+    .steps span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); padding: 4px 8px; border-radius: 99px; white-space: nowrap;
+      transition: color 160ms, background 160ms; }
+    .steps span b { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600;
+      box-shadow: inset 0 0 0 1px var(--border-primary); }
+    .steps span:not(.now) { font-size: 0; gap: 0; padding: 4px 2px; }
+    .steps span.now { color: var(--text-primary); background: var(--bg-tertiary); font-weight: 500; }
+    .steps span.now b { background: var(--bg-primary-inverted); color: #fff; box-shadow: none; }
+    .steps span.done { color: var(--text-secondary); }
+    .steps span.done b { background: var(--bg-success); color: #fff; box-shadow: none; }
+    .x { width: 30px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--text-tertiary); cursor: pointer; display: grid; place-items: center; font-size: 16px; }
+    .x:hover { background: var(--bg-elevated-hover); color: var(--text-primary); }
+
+    .body { flex: 1; overflow-y: auto; padding: 28px 28px 24px; }
+    .body > .view { animation: viewIn 280ms var(--ease-out-strong); }
+    @keyframes viewIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+    .foot { display: flex; align-items: center; gap: 8px; padding: 14px 20px 14px 28px; border-top: 1px solid var(--border-tertiary); }
+    .foot .note { flex: 1; font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
+
+    /* headline: setup → payoff */
+    .hl { margin: 0 0 8px; font-size: 26px; line-height: 1.18; letter-spacing: -0.02em; }
+    .hl .setup { display: block; font-weight: 400; color: var(--text-tertiary); }
+    .hl .payoff { display: block; font-weight: 600; color: var(--text-primary); }
+    .h2 { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; color: var(--text-primary); }
+    .lede { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text-secondary); max-width: 52ch; }
+    .sec { margin-top: 22px; }
+    .sec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+
+    .tag-new { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 99px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      color: #FF5500; background: rgba(255,85,0,0.10); }
+
+    /* step 1: how it works */
+    .how { display: grid; gap: 2px; margin-top: 14px; }
+    .how-row { display: grid; grid-template-columns: 36px 1fr; gap: 14px; padding: 10px 0; align-items: start; }
+    .how-row + .how-row { border-top: 1px dashed var(--border-secondary); }
+    .how-ico { width: 36px; height: 36px; border-radius: 8px; background: var(--bg-tertiary); display: grid; place-items: center; font-size: 18px; color: var(--text-primary);
+      box-shadow: inset 0 0 0 1px var(--border-tertiary); }
+    .how-row h4 { margin: 1px 0 2px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .how-row p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+
+    .earn { margin-top: 18px; border-radius: 10px; background: var(--app-50); padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+    .earn-people { display: flex; align-items: center; gap: 6px; }
+    .earn-p { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .earn-p i.ph-user-circle { font-size: 24px; color: var(--app-300); }
+    .chip-cr { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 99px; background: var(--bg-brand); color: #fff; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .earn-copy { font-size: 13px; line-height: 1.45; color: var(--app-800); }
+    .earn-copy b { font-weight: 600; color: var(--app-900); }
+
+    .faq { margin-top: 14px; font-size: 13px; }
+    .faq summary { cursor: pointer; color: var(--text-secondary); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary:hover { color: var(--text-primary); }
+    .faq[open] summary i { transform: rotate(90deg); }
+    .faq summary i { transition: transform 160ms var(--ease-out-strong); }
+    .faq-body { margin: 8px 0 0 20px; color: var(--text-secondary); line-height: 1.55; display: grid; gap: 8px; }
+    .faq-body b { color: var(--text-primary); font-weight: 600; }
+
+    /* step 2: pick */
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 14px; }
+    .chip { height: 28px; padding: 0 11px; border-radius: 99px; border: 0; background: var(--bg-primary); box-shadow: inset 0 0 0 1px var(--border-secondary);
+      font-size: 12.5px; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background 140ms, color 140ms; }
+    .chip:hover { color: var(--text-primary); background: var(--bg-secondary); }
+    .chip.on { background: var(--bg-primary-inverted); color: #fff; box-shadow: none; }
+    .tgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .tcard { border: 0; padding: 0; background: none; text-align: left; cursor: pointer; }
+    .tthumb { position: relative; aspect-ratio: 9/16; border-radius: 8px; overflow: hidden; background: #111;
+      box-shadow: 0 0 0 1px var(--border-secondary); transition: box-shadow 160ms var(--ease-out-strong), transform 160ms var(--ease-out-strong); }
+    .tcard:hover .tthumb { transform: translateY(-2px); }
+    .tcard:active .tthumb { transform: scale(0.985); }
+    .tcard.on .tthumb { box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--bg-primary-inverted); }
+    .tcheck { position: absolute; top: 8px; right: 8px; z-index: 5; width: 22px; height: 22px; border-radius: 50%; background: var(--bg-primary-inverted); color: #fff;
+      display: grid; place-items: center; font-size: 12px; opacity: 0; transform: scale(0.6); transition: opacity 160ms, transform 200ms var(--ease-out-strong); }
+    .tcard.on .tcheck { opacity: 1; transform: none; }
+    .tdur { position: absolute; bottom: 8px; left: 8px; z-index: 5; height: 18px; padding: 0 6px; border-radius: 4px; background: rgba(0,0,0,0.55); color: #fff;
+      font-size: 10.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; backdrop-filter: blur(6px); }
+    .tmeta { padding: 8px 2px 0; }
+    .tmeta div:first-child { font-size: 12px; font-weight: 500; line-height: 1.35; color: var(--text-primary); }
+    .tmeta div:last-child { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+    .tscale { position: absolute; top: 0; left: 0; transform-origin: top left; }
+
+    .script { margin-top: 18px; padding: 14px 16px; border-radius: 10px; background: var(--bg-secondary); box-shadow: inset 0 0 0 1px var(--border-tertiary); }
+    .script q { display: block; font-size: 13.5px; line-height: 1.6; color: var(--text-primary); quotes: "“" "”"; }
+    .script-foot { margin-top: 8px; font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
+
+    /* step 3: face */
+    .drop { margin-top: 18px; border-radius: 10px; border: 1.5px dashed var(--border-primary); padding: 18px 20px; display: flex; align-items: center; gap: 18px;
+      transition: border-color 160ms, background 160ms; }
+    .drop.drag { border-color: var(--border-brand); background: var(--app-50); }
+    .drop-ico { width: 64px; height: 64px; border-radius: 50%; background: var(--bg-tertiary); display: grid; place-items: center; font-size: 26px; color: var(--text-secondary); flex: none; }
+    .drop h4 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+    .drop p { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); }
+    .drop-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .linkbtn { border: 0; background: none; padding: 0; font-size: 13px; color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-primary); cursor: pointer; }
+    .linkbtn:hover { color: var(--text-primary); }
+
+    .photo { margin-top: 20px; display: flex; align-items: center; gap: 16px; padding: 14px; border-radius: 10px; box-shadow: var(--shadow-elevation-02); }
+    .photo img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; object-position: center 30%; box-shadow: 0 0 0 1px rgba(0,0,0,0.08); }
+    .photo-ok { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .ok-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-success-primary); }
+    .ok-line i { font-size: 15px; }
+    .ok-line.wait { color: var(--text-tertiary); }
+
+    .tips { display: grid; grid-template-columns: repeat(4, 84px); gap: 16px; }
+    .tip { text-align: center; font-size: 11px; line-height: 1.3; color: var(--text-secondary); }
+    .tip-img { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #ddd; margin-bottom: 6px; box-shadow: 0 0 0 1px var(--border-tertiary); }
+    .tip-img img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+    .tip-img .badge { position: absolute; bottom: 5px; right: 5px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 11px; }
+    .tip-img .badge.y { background: var(--bg-success); }
+    .tip-img .badge.n { background: var(--bg-danger); }
+    .tip-img svg.glasses { position: absolute; left: 22%; top: 30%; width: 56%; }
+
+    .consent { margin-top: 20px; display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 10px; background: var(--bg-secondary); box-shadow: inset 0 0 0 1px var(--border-tertiary); cursor: pointer; }
+    .consent input { margin-top: 2px; flex: none; }
+    .consent span { font-size: 13px; line-height: 1.5; color: var(--text-primary); }
+
+    /* step 3b: making */
+    .stages { margin-top: 22px; display: grid; gap: 4px; }
+    .stage { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 14px; color: var(--text-tertiary); transition: color 200ms; }
+    .stage .dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1.5px var(--border-secondary); font-size: 12px; color: #fff; transition: background 200ms, box-shadow 200ms; }
+    .stage.active { color: var(--text-primary); }
+    .stage.active .dot { box-shadow: inset 0 0 0 2px var(--bg-primary-inverted); }
+    .stage.active .dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--bg-primary-inverted); animation: pulse 900ms ease-in-out infinite alternate; }
+    @keyframes pulse { from { transform: scale(0.7); opacity: .5; } to { transform: scale(1); opacity: 1; } }
+    .stage.done { color: var(--text-secondary); }
+    .stage.done .dot { background: var(--bg-success); box-shadow: none; }
+    .bar { margin-top: 18px; height: 6px; border-radius: 99px; background: var(--bg-tertiary); overflow: hidden; }
+    .bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--bg-primary-inverted); transition: width 600ms var(--ease-out-strong); }
+    .bar-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-tertiary); }
+
+    /* step 4: share */
+    .row-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .linkbox { display: flex; gap: 8px; align-items: center; }
+    .linkbox .pai-input { flex: 1; font-variant-numeric: tabular-nums; }
+    .seg { display: inline-flex; padding: 3px; border-radius: 8px; background: var(--bg-tertiary); gap: 2px; flex-wrap: wrap; }
+    .seg button { height: 30px; padding: 0 11px; border: 0; border-radius: 6px; background: none; font-size: 12.5px; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .seg button i { font-size: 15px; }
+    .seg button.on { background: var(--bg-primary); color: var(--text-primary); font-weight: 500; box-shadow: var(--shadow-elevation-button); }
+    .cap { margin-top: 10px; position: relative; }
+    .cap textarea { width: 100%; min-height: 96px; resize: none; }
+    .cap .button-style { position: absolute; right: 8px; bottom: 8px; }
+    .hint { margin-top: 10px; display: grid; gap: 8px; }
+    .hint div { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+    .hint i { font-size: 15px; color: var(--text-tertiary); margin-top: 1px; flex: none; }
+    .hint b { color: var(--text-primary); font-weight: 600; }
+    .copied { color: var(--text-success-primary) !important; }
+
+    /* step 5: hub */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+    .stat { padding: 14px; border-radius: 10px; box-shadow: var(--shadow-elevation-02); }
+    .stat-l { font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 5px; }
+    .stat-v { margin-top: 6px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+    .stat-s { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .stat.brand { background: var(--app-50); box-shadow: inset 0 0 0 1px var(--app-100); }
+    .stat.brand .stat-v { color: var(--app-700); }
+    .spark { display: flex; align-items: flex-end; gap: 3px; height: 64px; margin-top: 10px; }
+    .spark i { flex: 1; border-radius: 3px 3px 1px 1px; background: var(--app-200); min-height: 3px; position: relative; }
+    .spark i.p { background: repeating-linear-gradient(-45deg, var(--app-200) 0 3px, var(--app-50) 3px 6px); }
+    .spark i.z { background: var(--bg-quaternary); }
+    .spark-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 11.5px; color: var(--text-tertiary); }
+    .spark-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .spark-legend span::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--app-200); }
+    .spark-legend span.p::before { background: repeating-linear-gradient(-45deg, var(--app-200) 0 2px, var(--app-50) 2px 4px); box-shadow: inset 0 0 0 1px var(--app-200); }
+    .feed { display: grid; }
+    .feed div { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; font-size: 13px; color: var(--text-secondary); }
+    .feed div + div { border-top: 1px solid var(--border-tertiary); }
+    .feed i { font-size: 16px; color: var(--text-tertiary); }
+    .feed .pend { font-size: 11px; color: var(--text-tertiary); background: var(--bg-tertiary); padding: 2px 7px; border-radius: 99px; }
+
+    /* ---------- the stage (right pane) ---------- */
+    .stagepane { background: var(--bg-tertiary); border-left: 1px solid var(--border-tertiary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; position: relative; overflow: hidden; }
+    .stagepane::before { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 50% at 50% 40%, rgba(255,255,255,0.9), transparent 70%); pointer-events: none; }
+    .phone { position: relative; width: 252px; height: 500px; border-radius: 34px; padding: 6px; background: #0b0b0c;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 1px 0 1px rgba(255,255,255,0.06) inset, 0 30px 60px -20px rgba(11,15,20,0.45), 0 12px 24px -12px rgba(11,15,20,0.3); }
+    .phone-screen { position: relative; width: 240px; height: 488px; border-radius: 28px; overflow: hidden; background: #000; }
+    .stage-cap { position: relative; max-width: 290px; text-align: center; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); min-height: 38px; }
+    .stage-cap b { color: var(--text-primary); font-weight: 600; }
+
+    /* ---------- the video (240 × 488, scaled for thumbnails) ---------- */
+    .vid { position: relative; width: 240px; height: 488px; overflow: hidden; background: #f3f1ec; font-family: Inter, sans-serif; }
+    .v-prod { position: absolute; }
+    .vid.f-screen .v-prod { inset: 0 0 auto 0; height: 250px; padding: 46px 14px 0; background: linear-gradient(180deg, #e9edf3, #f6f4ef); }
+    .vid.f-head .v-prod { top: 60px; right: 12px; width: 150px; z-index: 3; transform: rotate(3deg); filter: drop-shadow(0 10px 18px rgba(0,0,0,0.35)); }
+    .v-face { position: absolute; overflow: hidden; background: #c9c4bb; }
+    .vid.f-screen .v-face { left: 0; right: 0; bottom: 0; height: 262px; }
+    .vid.f-screen .v-face::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 28px; background: linear-gradient(#f6f4ef, transparent); z-index: 2; }
+    .vid.f-head .v-face { inset: 0; }
+    .v-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; transition: opacity 900ms ease, filter 900ms ease; }
+    .v-face img.u { opacity: 0; }
+    .vid.is-you .v-face img.t { opacity: 0; }
+    .vid.is-you .v-face img.u { opacity: 1; }
+    .vid.f-head .v-face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.25), transparent 30%, transparent 55%, rgba(0,0,0,0.6)); }
+    .v-slot { position: absolute; inset: 14px; border-radius: 14px; border: 2px dashed rgba(255,255,255,0.85); display: none; place-items: center; z-index: 3;
+      background: rgba(10,25,37,0.55); backdrop-filter: blur(8px); color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
+    .v-slot i { display: block; font-size: 26px; margin-bottom: 6px; }
+    .vid.slot .v-slot { display: grid; animation: slotPulse 1.6s ease-in-out infinite alternate; }
+    .vid.f-head .v-slot { inset: 110px 30px 150px; }
+    @keyframes slotPulse { from { border-color: rgba(255,255,255,0.45); } to { border-color: rgba(255,255,255,0.95); } }
+    .v-scan { position: absolute; inset: 0; z-index: 3; display: none; pointer-events: none; }
+    .vid.scanning .v-scan { display: block; }
+    .vid.scanning .v-face img { filter: saturate(0.3) brightness(1.05); }
+    .v-scan::before { content: ""; position: absolute; left: 0; right: 0; height: 60px; top: -60px;
+      background: linear-gradient(180deg, transparent, rgba(86,160,255,0.55) 85%, #fff 100%); animation: scan 1.4s cubic-bezier(.45,0,.55,1) infinite; }
+    .v-scan::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1.5px); background-size: 14px 14px; opacity: 0.35; }
+    @keyframes scan { to { top: 100%; } }
+
+    .v-cap { position: absolute; left: 14px; right: 14px; z-index: 4; text-align: center; font-weight: 800; font-size: 19px; line-height: 1.12; letter-spacing: -0.01em; color: #fff;
+      text-shadow: 0 0 1px #000, 0 1px 0 #000, 0 2px 8px rgba(0,0,0,0.6); -webkit-text-stroke: 0.5px rgba(0,0,0,0.6); }
+    .vid.f-screen .v-cap { top: 236px; }
+    .vid.f-head .v-cap { top: 300px; }
+    .v-cap span { display: inline-block; animation: pop 260ms var(--ease-out-strong); }
+    .v-cap span.hi { color: #FFD43B; }
+    @keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    .v-chrome { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+    .v-prog { position: absolute; top: 10px; left: 12px; right: 12px; height: 2.5px; border-radius: 2px; background: rgba(255,255,255,0.35); overflow: hidden; }
+    .v-prog i { display: block; height: 100%; width: 0; background: #fff; animation: prog 12s linear infinite; }
+    @keyframes prog { to { width: 100%; } }
+    .v-rail { position: absolute; right: 8px; bottom: 96px; display: flex; flex-direction: column; gap: 14px; align-items: center; color: #fff; font-size: 9px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+    .v-rail div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .v-rail i { font-size: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+    .v-bot { position: absolute; left: 12px; right: 52px; bottom: 16px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+    .v-bot b { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+    .v-bot b em { font-style: normal; font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.25); text-shadow: none; }
+    .v-bot p { margin: 3px 0 0; font-size: 10.5px; line-height: 1.35; opacity: 0.95; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .vid.thumb .v-chrome { display: none; }
+    .v-who { position: absolute; top: 22px; left: 12px; z-index: 6; height: 20px; padding: 0 8px; border-radius: 99px; background: rgba(0,0,0,0.5); color: #fff; font-size: 10px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 5px; backdrop-filter: blur(6px); }
+    .v-who.you { background: var(--bg-brand); }
+    .vid.thumb .v-who { display: none; }
+
+    /* product scenes inside the video */
+    .p-slide { background: #fff; border-radius: 6px; box-shadow: 0 6px 16px rgba(10,25,37,0.16), 0 0 0 1px rgba(10,25,37,0.06); overflow: hidden; }
+    .p-bar { height: 16px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 3px; padding: 0 6px; }
+    .p-bar i { width: 4px; height: 4px; border-radius: 50%; background: #d4d4d4; }
+    .p-body { padding: 10px; }
+    .p-h { font-size: 11px; font-weight: 700; color: #0A1925; line-height: 1.2; }
+    .p-sub { font-size: 7px; color: #737373; margin-top: 3px; }
+    .p-chart { display: flex; align-items: flex-end; gap: 5px; height: 58px; margin-top: 10px; }
+    .p-chart i { flex: 1; border-radius: 2px 2px 0 0; background: #284B71; }
+    .p-chart i:last-child { background: #FF5500; }
+    .p-lines { display: grid; gap: 4px; margin-top: 8px; }
+    .p-lines i { height: 4px; border-radius: 2px; background: #e5e5e5; }
+    .p-prompt { font-size: 8px; line-height: 1.35; color: #0A1925; background: #fff; border-radius: 8px; padding: 7px 8px; box-shadow: 0 0 0 1px rgba(10,25,37,0.1), 0 4px 10px rgba(10,25,37,0.08); }
+    .p-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 8px; }
+    .p-thumbs i { aspect-ratio: 16/10; border-radius: 3px; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); }
+    .p-arrow { text-align: center; font-size: 14px; color: #0A1925; margin: 4px 0; }
+
+    /* ---------- review bar (outside the modal, for the design review only) ---------- */
+    .review { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 80; display: flex; align-items: center; gap: 4px; padding: 5px;
+      border-radius: 10px; background: #0A1925; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .review span { font-size: 11px; color: rgba(255,255,255,0.5); padding: 0 8px 0 6px; }
+    .review button { height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: rgba(255,255,255,0.75); font-size: 12px; cursor: pointer; }
+    .review button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .review button.on { background: #fff; color: #0A1925; font-weight: 500; }
+
+    @media (max-width: 900px) {
+      .modal { grid-template-columns: 1fr; height: calc(100vh - 48px); }
+      .stagepane { display: none; }
+      .steps span:not(.now) { display: none; }
+      .tgrid { grid-template-columns: repeat(2, 1fr); }
+      .stats { grid-template-columns: 1fr; }
+      .review span { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+    }
+  </style>
+</head>
+<body class="pai">
+
+  <!-- faux dashboard, context only -->
+  <div class="dash" aria-hidden="true">
+    <aside class="dash-side">
+      <div class="dash-logo"><span><i class="ph-fill ph-presentation"></i></span>presentations.ai</div>
+      <nav class="dash-nav">
+        <div class="on"><i class="ph ph-house"></i>Home</div>
+        <div><i class="ph ph-folder"></i>My presentations</div>
+        <div><i class="ph ph-layout"></i>Templates</div>
+        <div><i class="ph ph-palette"></i>Brand kit</div>
+        <div><i class="ph ph-trash"></i>Trash</div>
+      </nav>
+    </aside>
+    <main class="dash-main">
+      <div style="font-size:24px; font-weight:600; letter-spacing:-0.02em;"><span style="color:var(--text-tertiary); font-weight:400;">Ready to build,</span> Mudita?</div>
+      <div class="dash-grid">
+        <div class="dash-card" style="background:linear-gradient(135deg,#0A1925,#284B71)"></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#f4efe6,#e6dccb)"></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#e6efff,#bfd5fc)"></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#1b1b1b,#525252)"></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#fff3ec,#ffd7c2)"></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#eff9f2,#bde7cb)"></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#f5f5f5,#e0e0e0)"></div>
+        <div class="dash-card" style="background:linear-gradient(135deg,#043485,#005EFF)"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- the modal -->
+  <div class="ov" id="ov">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+      <section class="pane">
+        <header class="head">
+          <div class="head-title" id="dlgTitle"><i class="ph-fill ph-video-camera" style="color:var(--text-secondary)"></i>Creator program <small>with HardLaunch</small></div>
+          <div class="steps" id="steps"></div>
+          <button class="x" id="close" aria-label="Close"><i class="ph ph-x"></i></button>
+        </header>
+        <div class="body" id="body"></div>
+        <footer class="foot" id="foot"></footer>
+      </section>
+      <aside class="stagepane">
+        <div class="phone"><div class="phone-screen" id="phone"></div></div>
+        <div class="stage-cap" id="stageCap"></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- review bar: jump between states while reviewing the proto -->
+  <div class="review" id="review"><span>Review</span></div>
+
+  <input type="file" id="file" accept="image/*" hidden />
+
+<script>
+const U = id => `https://images.unsplash.com/photo-${id}?w=600&h=900&fit=crop&crop=faces&q=70`;
+const SAMPLE_ME = U('1531123897727-8f129e1688ce');
+const LINK = 'presentations.ai/r/mudita';
+const PER_SIGNUP = 50;
+
+const TEMPLATES = [
+  { id: 'investor', tags: ['for-you', 'founders'], hook: 'I built my investor deck before my coffee got cold', dur: '0:24', format: 'screen', face: U('1507003211169-0a1dd7228f2d'), scene: 'chart',
+    script: 'Board meeting at nine. Zero slides at eight forty. I told presentations.ai what we do, and it gave me this: the story, the charts, the lot. I changed two words. Link in my bio.' },
+  { id: 'doc', tags: ['for-you', 'work'], hook: 'Turn a messy doc into a deck in 30 seconds', dur: '0:15', format: 'head', face: U('1534528741775-53994a69daeb'), scene: 'doc',
+    script: 'This is my meeting notes doc. It is a mess. Watch. I drop it in, and that is a deck. Not a rough one, an actual deck. Try it, link in my bio.' },
+  { id: '5pm', tags: ['for-you', 'work'], hook: 'POV: your manager wants slides by 5pm', dur: '0:18', format: 'head', face: U('1494790108377-be9c29b29330'), scene: 'prompt',
+    script: 'Four fifty-two. Manager says, can you pull a few slides together. Sure. One prompt. Done by five. I even had time to pick a theme.' },
+  { id: 'sunday', tags: ['students'], hook: 'Stop losing your Sunday to group-project slides', dur: '0:21', format: 'screen', face: U('1539571696357-5a69c17a67c6'), scene: 'thumbs',
+    script: 'Group project, due Monday, nobody has started. I pasted our outline in here and got twelve slides that match. Sunday saved.' },
+  { id: 'sales', tags: ['sales'], hook: 'I let AI build my sales deck. My VP noticed.', dur: '0:27', format: 'head', face: U('1500648767791-00dcc994a43e'), scene: 'chart',
+    script: 'I used to spend a day on every pitch deck. Now I type the client name and what they need, and it builds the deck around them. My VP asked who designed it.' },
+  { id: 'lesson', tags: ['teachers'], hook: 'Tomorrow’s lesson slides, done in one prompt', dur: '0:22', format: 'screen', face: U('1438761681033-6461ffad8d80'), scene: 'thumbs',
+    script: 'Teachers, this one is for you. I typed the topic and the grade, and it made the whole lesson: intro, examples, a quiz slide at the end.' },
+];
+const FILTERS = [['for-you', 'For you', 'ph-sparkle'], ['all', 'All'], ['work', 'Work'], ['founders', 'Founders'], ['sales', 'Sales'], ['students', 'Students'], ['teachers', 'Teachers']];
+const PLATFORMS = {
+  tiktok:    { label: 'TikTok',    icon: 'ph-tiktok-logo',    bio: true },
+  instagram: { label: 'Instagram', icon: 'ph-instagram-logo', bio: true },
+  linkedin:  { label: 'LinkedIn',  icon: 'ph-linkedin-logo',  bio: false },
+  youtube:   { label: 'Shorts',    icon: 'ph-youtube-logo',   bio: false },
+};
+const STEPS = [['intro', 'How it works'], ['pick', 'Pick a video'], ['face', 'Add your face'], ['share', 'Share']];
+const STAGES = ['Reading your photo', 'Matching light and skin tone', 'Syncing your lips to the script', 'Final touches'];
+
+const S = { view: 'intro', tpl: 'investor', filter: 'for-you', photo: null, consent: false, platform: 'instagram', prog: 0 };
+const $ = s => document.querySelector(s);
+const tpl = () => TEMPLATES.find(t => t.id === S.tpl);
+
+/* ---------------- the video ---------------- */
+function scene(t) {
+  const slide = inner => `<div class="p-slide"><div class="p-bar"><i></i><i></i><i></i></div><div class="p-body">${inner}</div></div>`;
+  if (t.scene === 'chart') return slide(`<div class="p-h">Northwind raised $4M.<br>Here’s what’s next.</div><div class="p-sub">Series A · Board update</div>
+    <div class="p-chart"><i style="height:30%"></i><i style="height:42%"></i><i style="height:55%"></i><i style="height:71%"></i><i style="height:100%"></i></div>`);
+  if (t.scene === 'doc') return `<div class="p-slide"><div class="p-body"><div class="p-sub" style="margin:0 0 5px">meeting-notes.docx</div><div class="p-lines"><i style="width:90%"></i><i></i><i style="width:70%"></i><i style="width:84%"></i></div></div></div>
+    <div class="p-arrow"><i class="ph-bold ph-arrow-down"></i></div>${slide(`<div class="p-h">Q3 Plan</div><div class="p-chart" style="height:30px"><i style="height:50%"></i><i style="height:80%"></i><i style="height:100%"></i></div>`)}`;
+  if (t.scene === 'prompt') return `<div class="p-prompt">Make 6 slides on our Q3 results for the leadership sync</div>
+    <div class="p-thumbs"><i style="background:#0A1925"></i><i style="background:#e6efff"></i><i style="background:#f4efe6"></i><i style="background:#fff3ec"></i><i style="background:#284B71"></i><i style="background:#eff9f2"></i></div>`;
+  return slide(`<div class="p-h">${t.id === 'lesson' ? 'The Water Cycle' : 'Climate &amp; Cities'}</div><div class="p-sub">${t.id === 'lesson' ? 'Grade 6 · Science' : 'Group 4 · Urban Studies'}</div>
+    <div class="p-thumbs"><i style="background:#e6efff"></i><i style="background:#bfd5fc"></i><i style="background:#0A1925"></i><i style="background:#f4efe6"></i><i style="background:#eff9f2"></i><i style="background:#94BBFF"></i></div>`);
+}
+function video(t, { thumb = false, you = false, slot = false, scanning = false } = {}) {
+  const cls = ['vid', 'f-' + t.format, thumb && 'thumb', you && 'is-you', slot && 'slot', scanning && 'scanning'].filter(Boolean).join(' ');
+  const firstWords = t.hook.split(' ').slice(0, 4).join(' ');
+  const caption = PLATFORMS[S.platform].bio ? `${t.hook}. Link in bio #ad` : `${t.hook}. ${LINK} #ad`;
+  return `<div class="${cls}">
+    <div class="v-face"><img class="t" src="${t.face}" alt=""><img class="u" src="${S.photo || SAMPLE_ME}" alt=""><div class="v-scan"></div>
+      <div class="v-slot"><div><i class="ph ph-user-focus"></i>Your face<br>goes here</div></div></div>
+    <div class="v-prod">${scene(t)}</div>
+    <div class="v-cap" data-cap>${thumb ? firstWords : ''}</div>
+    <div class="v-who ${you ? 'you' : ''}">${you ? '<i class="ph-fill ph-user"></i>You' : '<i class="ph ph-video-camera"></i>Template'}</div>
+    <div class="v-chrome"><div class="v-prog"><i></i></div>
+      <div class="v-rail"><div><i class="ph-fill ph-heart"></i>${you ? '0' : '12.4k'}</div><div><i class="ph-fill ph-chat-circle"></i>${you ? '0' : '318'}</div><div><i class="ph-fill ph-share-fat"></i>Share</div></div>
+      <div class="v-bot"><b>${you ? '@mudita' : '@hardlaunch.creator'}${you ? '<em>Paid partnership</em>' : ''}</b><p>${caption}</p></div></div>
+  </div>`;
+}
+
+/* karaoke captions on the big phone */
+let capTimer = null;
+function runCaptions() {
+  clearInterval(capTimer);
+  const el = $('#phone [data-cap]'); if (!el) return;
+  const words = tpl().hook.split(' ');
+  const chunks = []; for (let i = 0; i < words.length; i += 3) chunks.push(words.slice(i, i + 3));
+  let i = 0;
+  const show = () => {
+    const c = chunks[i % chunks.length];
+    el.innerHTML = c.map((w, j) => `<span class="${j === c.length - 1 && i % 2 === 0 ? 'hi' : ''}">${w}</span>`).join(' ');
+    i++;
+  };
+  show(); capTimer = setInterval(show, 900);
+}
+
+function renderPhone() {
+  const v = S.view, t = tpl();
+  const opts = {
+    intro: {}, pick: {},
+    face: { slot: true },
+    making: { you: S.prog >= 2, scanning: S.prog < 4 },
+    share: { you: true }, hub: { you: true },
+  }[v];
+  $('#phone').innerHTML = video(t, opts);
+  runCaptions();
+  const caps = {
+    intro: 'A real HardLaunch template. <b>In yours, this creator becomes you.</b>',
+    pick: `Previewing <b>${t.hook}</b>`,
+    face: 'Your photo replaces the creator’s face. <b>Same words, same edit, you on screen.</b>',
+    making: S.prog >= 4 ? '<b>Done.</b> That’s you.' : 'Putting you in the video…',
+    share: '<b>Your video.</b> Download it and post it from your own account.',
+    hub: 'Your video is live. <b>Make another any time.</b>',
+  };
+  $('#stageCap').innerHTML = caps[v];
+}
+
+/* ---------------- views ---------------- */
+const btn = (label, cls, attrs = '') => `<button class="button-style button-medium ${cls}" ${attrs}>${label}</button>`;
+
+const VIEWS = {
+  intro: () => ({
+    body: `
+      <span class="tag-new">NEW</span>
+      <h1 class="hl" style="margin-top:12px"><span class="setup">Post one video about us.</span><span class="payoff">Earn credits for every signup.</span></h1>
+      <p class="lede">We give you a ready-made video. Add one selfie and it’s you on screen. Post it, and every signup through your link earns you credits.</p>
+      <div class="how">
+        <div class="how-row"><div class="how-ico"><i class="ph ph-film-strip"></i></div><div><h4>Pick a video</h4><p>Scripted and edited by HardLaunch creators. Nothing to film, nothing to write.</p></div></div>
+        <div class="how-row"><div class="how-ico"><i class="ph ph-user-focus"></i></div><div><h4>Add your face</h4><p>Upload one photo. AI swaps you in for the creator, with your lips matched to the words.</p></div></div>
+        <div class="how-row"><div class="how-ico"><i class="ph ph-link"></i></div><div><h4>Share your link</h4><p>Post the video from your own account with your personal link. We count the signups.</p></div></div>
+      </div>
+      <div class="earn">
+        <div class="earn-people">${[1,2,3].map(() => `<div class="earn-p"><i class="ph-fill ph-user-circle"></i><span class="chip-cr">+${PER_SIGNUP}</span></div>`).join('')}</div>
+        <div class="earn-copy"><b>${PER_SIGNUP} credits for every signup</b>, added when they make their first deck. No cap on how much you earn.</div>
+      </div>
+      <details class="faq"><summary><i class="ph ph-caret-right"></i>Is it really me in the video? What happens to my photo?</summary>
+        <div class="faq-body">
+          <div><b>Yes, it’s you.</b> Your face and expressions, the template’s script and edit. The video is labelled as AI-assisted so your followers know.</div>
+          <div><b>Your photo is only used for your videos.</b> Never for anyone else’s, never sold. Delete it any time, and it’s removed automatically after 30 days.</div>
+          <div><b>You stay in control.</b> Nothing is posted for you. You download the video and decide where it goes.</div>
+        </div></details>`,
+    foot: `<div class="note"><i class="ph ph-clock"></i>About 2 minutes</div>${btn('Not now', 'button-ghost', 'data-close')}${btn('Pick my video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="pick"')}`,
+  }),
+
+  pick: () => {
+    const list = TEMPLATES.filter(t => S.filter === 'all' || t.tags.includes(S.filter));
+    const t = tpl();
+    return {
+      body: `
+        <h2 class="h2">Pick your video</h2>
+        <p class="lede">Each one is scripted, shot and edited. Your face replaces the creator’s, the rest stays as it is.</p>
+        <div class="chips">${FILTERS.map(([k, l, ic]) => `<button class="chip ${S.filter === k ? 'on' : ''}" data-filter="${k}">${ic ? `<i class="ph ${ic}"></i>` : ''}${l}</button>`).join('')}</div>
+        <div class="tgrid">${list.map(x => `
+          <button class="tcard ${x.id === S.tpl ? 'on' : ''}" data-tpl="${x.id}" aria-pressed="${x.id === S.tpl}">
+            <div class="tthumb" data-thumb><div class="tscale">${video(x, { thumb: true })}</div>
+              <span class="tcheck"><i class="ph-bold ph-check"></i></span><span class="tdur"><i class="ph-fill ph-play"></i>${x.dur}</span></div>
+            <div class="tmeta"><div>${x.hook}</div><div>${x.format === 'screen' ? 'Screen + face' : 'Talking head'}</div></div>
+          </button>`).join('')}</div>
+        <div class="script"><div class="sec-label" style="margin-bottom:6px">What you’ll say</div><q>${t.script}</q>
+          <div class="script-foot"><i class="ph ph-info"></i>Scripts are fixed so every video stays accurate about the product.</div></div>`,
+      foot: `${btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost', 'data-go="intro"')}<div class="note"></div>${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="face"')}`,
+    };
+  },
+
+  face: () => {
+    const ready = S.photo && S.consent;
+    const sample = SAMPLE_ME;
+    return {
+      body: `
+        <h2 class="h2">Add your face</h2>
+        <p class="lede">One clear photo is all it takes. A selfie works.</p>
+        ${S.photo ? `
+          <div class="photo"><img src="${S.photo}" alt="Your photo">
+            <div class="photo-ok"><div class="ok-line"><i class="ph-fill ph-check-circle"></i>One face found</div><div class="ok-line"><i class="ph-fill ph-check-circle"></i>Good light, facing the camera</div></div>
+            ${btn('Replace', 'button-secondary button-small', 'data-upload')}</div>` : `
+          <div class="drop" id="drop"><div class="drop-ico"><i class="ph ph-user-focus"></i></div>
+            <div><h4>Drop a photo of yourself</h4><p>JPG or PNG. Just you, facing the camera.</p>
+              <div class="drop-actions">${btn('<i class="ph ph-upload-simple"></i>Upload photo', 'button-secondary', 'data-upload')}${btn('<i class="ph ph-camera"></i>Take a selfie', 'button-tertiary', 'data-upload')}</div>
+              <div style="margin-top:10px"><button class="linkbtn" data-sample>Use a sample photo (prototype only)</button></div></div></div>`}
+        <div class="sec"><div class="sec-label">What works best</div>
+          <div class="tips">
+            <div class="tip"><div class="tip-img"><img src="${sample}" alt=""><span class="badge y"><i class="ph-bold ph-check"></i></span></div>Face forward</div>
+            <div class="tip"><div class="tip-img"><img src="${sample}" alt=""><svg class="glasses" viewBox="0 0 60 16"><rect x="1" y="2" width="24" height="12" rx="5" fill="#111"/><rect x="35" y="2" width="24" height="12" rx="5" fill="#111"/><rect x="24" y="5" width="12" height="2" fill="#111"/></svg><span class="badge n"><i class="ph-bold ph-x"></i></span></div>No sunglasses</div>
+            <div class="tip"><div class="tip-img" style="display:grid;grid-template-columns:1fr 1fr"><img src="${sample}" alt=""><img src="${TEMPLATES[0].face}" alt=""><span class="badge n"><i class="ph-bold ph-x"></i></span></div>Only you</div>
+            <div class="tip"><div class="tip-img"><img src="${sample}" alt="" style="filter:brightness(.3) contrast(.8)"><span class="badge n"><i class="ph-bold ph-x"></i></span></div>Not too dark</div>
+          </div></div>
+        <label class="consent"><input type="checkbox" class="pai-checkbox" id="consent" ${S.consent ? 'checked' : ''}>
+          <span>This is me, I’m 18 or older, and I agree to my photo being used to make this video. I can delete it any time.</span></label>`,
+      foot: `${btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost', 'data-go="pick"')}<div class="note"><i class="ph ph-lock-simple"></i>Only used for your videos</div>
+        ${btn('<i class="ph ph-sparkle"></i>Make my video', 'button-primary-brand' + (ready ? '' : ' button-disabled button-disabled-40'), ready ? 'data-make' : 'disabled')}`,
+    };
+  },
+
+  making: () => ({
+    body: `
+      <h2 class="h2">${S.prog >= 4 ? 'Your video is ready' : 'Making your video'}</h2>
+      <p class="lede">This takes about 2 minutes. Keep working if you like; we’ll let you know when it’s ready.</p>
+      <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i < S.prog ? 'done' : i === S.prog ? 'active' : ''}"><span class="dot">${i < S.prog ? '<i class="ph-bold ph-check"></i>' : ''}</span>${s}</div>`).join('')}</div>
+      <div class="bar"><i style="width:${S.prog * 25}%"></i></div>
+      <div class="bar-meta"><span>${S.prog >= 4 ? 'Done' : `Step ${S.prog + 1} of 4`}</span><span>${S.prog >= 4 ? '' : `About ${Math.max(1, 4 - S.prog) * 30} seconds left`}</span></div>`,
+    foot: `<div class="note"></div>${btn('<i class="ph ph-bell"></i>Keep working, notify me', 'button-secondary', 'data-close')}`,
+  }),
+
+  share: () => {
+    const p = PLATFORMS[S.platform], t = tpl();
+    const caption = p.bio
+      ? `${t.hook}. Made with presentations.ai, link in bio.\n\n#ad #presentationsai #ai`
+      : `${t.hook}. Made with presentations.ai. Try it: ${LINK}\n\n#ad #presentationsai${S.platform === 'youtube' ? ' #shorts' : ''}`;
+    return {
+      body: `
+        <h1 class="hl"><span class="setup">That’s you on screen.</span><span class="payoff">Post it and share your link.</span></h1>
+        <div class="row-actions">${btn('<i class="ph ph-download-simple"></i>Download video', 'button-primary-brand', 'data-download')}${btn('<i class="ph ph-arrows-clockwise"></i>Try another video', 'button-secondary', 'data-go="pick"')}</div>
+        <div class="sec"><div class="sec-label">Your link</div>
+          <div class="linkbox"><input class="pai-input" readonly value="${LINK}">${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy="' + LINK + '"')}</div>
+          <div class="hint"><div><i class="ph ph-coins"></i><span><b>+${PER_SIGNUP} credits</b> each time someone signs up with it and makes their first deck.</span></div></div></div>
+        <div class="sec"><div class="sec-label">Where are you posting?</div>
+          <div class="seg">${Object.entries(PLATFORMS).map(([k, v]) => `<button class="${S.platform === k ? 'on' : ''}" data-platform="${k}"><i class="ph ${v.icon}"></i>${v.label}</button>`).join('')}</div>
+          <div class="cap"><textarea class="pai-textarea" id="caption">${caption}</textarea>${btn('<i class="ph ph-copy"></i>Copy caption', 'button-secondary button-small', 'data-copy-caption')}</div>
+          <div class="hint">
+            ${p.bio
+              ? `<div><i class="ph ph-link"></i><span>Links in ${p.label} captions can’t be tapped. <b>Put your link in your bio</b>, the caption already points there.</span></div>`
+              : `<div><i class="ph ph-link"></i><span>Your link is <b>already in the caption</b>, and it’s tappable on ${p.label}.</span></div>`}
+            <div><i class="ph ph-tag"></i><span><b>Keep #ad in the caption</b> and turn on ${p.label}’s ${S.platform === 'linkedin' ? 'branded content' : 'paid partnership'} and AI-generated labels. You’re earning from this post, so it has to say so.</span></div>
+          </div></div>`,
+      foot: `<div class="note"><i class="ph ph-floppy-disk"></i>Saved to your creator page</div>${btn('Done', 'button-secondary', 'data-go="hub"')}`,
+    };
+  },
+
+  hub: () => {
+    // signups per day, last 14 days; the last 3 are still pending (no first deck yet)
+    const days = [0, 0, 1, 0, 2, 1, 0, 0, 1, 0, 1, 1, 0, 2];
+    const pendingFrom = 11;
+    const max = Math.max(...days);
+    const total = days.reduce((a, b) => a + b, 0);
+    const pending = days.slice(pendingFrom).reduce((a, b) => a + b, 0);
+    const earned = (total - pending) * PER_SIGNUP;
+    return {
+      body: `
+        <h2 class="h2">Your creator page</h2>
+        <p class="lede">Every signup from your link shows up here. Credits land when they make their first deck.</p>
+        <div class="stats">
+          <div class="stat brand"><div class="stat-l"><i class="ph ph-coins"></i>Credits earned</div><div class="stat-v">${earned}</div><div class="stat-s">${pending * PER_SIGNUP} more on the way</div></div>
+          <div class="stat"><div class="stat-l"><i class="ph ph-user-plus"></i>Signups</div><div class="stat-v">${total}</div><div class="stat-s">${pending} waiting on a first deck</div></div>
+          <div class="stat"><div class="stat-l"><i class="ph ph-cursor-click"></i>Link clicks</div><div class="stat-v">214</div><div class="stat-s">About 1 in 24 signs up</div></div>
+        </div>
+        <div class="sec"><div class="sec-label">Signups, last 14 days</div>
+          <div class="spark">${days.map((d, i) => `<i class="${d === 0 ? 'z' : i >= pendingFrom ? 'p' : ''}" style="height:${d === 0 ? 3 : Math.round(d / max * 100)}%" title="${d} signup${d === 1 ? '' : 's'}"></i>`).join('')}</div>
+          <div class="spark-legend"><span>Credited</span><span class="p">Pending first deck</span></div></div>
+        <div class="sec"><div class="sec-label">Latest</div>
+          <div class="feed">
+            <div><i class="ph ph-instagram-logo"></i>Someone signed up from Instagram<span class="pend">Pending</span></div>
+            <div><i class="ph ph-instagram-logo"></i>Someone signed up from Instagram<span class="pend">Pending</span></div>
+            <div><i class="ph ph-linkedin-logo"></i>Someone made their first deck<span class="chip-cr">+${PER_SIGNUP}</span></div>
+          </div></div>`,
+      foot: `${btn('<i class="ph ph-copy"></i>Copy my link', 'button-secondary', 'data-copy="' + LINK + '"')}<div class="note"></div>${btn('<i class="ph ph-plus"></i>Make another video', 'button-primary-brand', 'data-go="pick"')}`,
+    };
+  },
+};
+
+/* ---------------- render + wiring ---------------- */
+function renderSteps() {
+  const order = ['intro', 'pick', 'face', 'share'];
+  const cur = { making: 'face', hub: 'share' }[S.view] || S.view;
+  const idx = order.indexOf(cur);
+  $('#steps').innerHTML = S.view === 'hub' ? '' : STEPS.map(([k, l], i) =>
+    `<span class="${i < idx || (S.view === 'making' && S.prog >= 4 && i === idx) ? 'done' : i === idx ? 'now' : ''}"><b>${i < idx ? '<i class="ph-bold ph-check"></i>' : i + 1}</b>${l}</span>`).join('');
+}
+function render(animate = true) {
+  const v = VIEWS[S.view]();
+  $('#body').innerHTML = `<div class="view" ${animate ? '' : 'style="animation:none"'}>${v.body}</div>`;
+  $('#foot').innerHTML = v.foot;
+  renderSteps(); renderPhone(); fitThumbs(); renderReview();
+}
+function fitThumbs() {
+  document.querySelectorAll('[data-thumb]').forEach(el => { el.querySelector('.tscale').style.transform = `scale(${el.clientWidth / 240})`; });
+}
+function go(view) { S.view = view; if (view !== 'making') clearInterval(makeTimer); $('#body').scrollTop = 0; render(); }
+
+let makeTimer = null;
+function make() {
+  S.prog = 0; go('making');
+  makeTimer = setInterval(() => {
+    S.prog++;
+    if (S.prog >= 4) { clearInterval(makeTimer); render(false); setTimeout(() => S.view === 'making' && go('share'), 1300); }
+    else render(false);
+  }, 1500);
+}
+
+function open() { $('#ov').classList.add('on'); }
+function close() { $('#ov').classList.remove('on'); }
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button, [data-close]'); if (!t) return;
+  if (t.dataset.go) go(t.dataset.go);
+  else if ('close' in t.dataset) close();
+  else if (t.dataset.filter) { S.filter = t.dataset.filter; render(false); }
+  else if (t.dataset.tpl) { S.tpl = t.dataset.tpl; render(false); }
+  else if ('upload' in t.dataset) $('#file').click();
+  else if ('sample' in t.dataset) { S.photo = SAMPLE_ME; render(false); }
+  else if ('make' in t.dataset) make();
+  else if (t.dataset.platform) { S.platform = t.dataset.platform; render(false); }
+  else if (t.dataset.copy || 'copyCaption' in t.dataset) {
+    const text = t.dataset.copy || $('#caption').value;
+    navigator.clipboard?.writeText(text).catch(() => {});
+    const was = t.innerHTML; t.innerHTML = '<i class="ph ph-check"></i>Copied'; t.classList.add('copied');
+    setTimeout(() => { t.innerHTML = was; t.classList.remove('copied'); }, 1400);
+  }
+  else if ('download' in t.dataset) { const was = t.innerHTML; t.innerHTML = '<i class="ph ph-check"></i>Downloading'; setTimeout(() => t.innerHTML = was, 1400); }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'consent') { S.consent = e.target.checked; render(false); }
+  if (e.target.id === 'file' && e.target.files[0]) readPhoto(e.target.files[0]);
+});
+function readPhoto(f) { const r = new FileReader(); r.onload = () => { S.photo = r.result; render(false); }; r.readAsDataURL(f); $('#file').value = ''; }
+['dragover', 'dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => {
+  const d = $('#drop'); if (!d) return;
+  if (ev === 'dragover') { e.preventDefault(); d.classList.add('drag'); }
+  else { d.classList.remove('drag'); if (ev === 'drop') { e.preventDefault(); e.dataTransfer.files[0] && readPhoto(e.dataTransfer.files[0]); } }
+}));
+$('#close').onclick = close;
+$('#ov').addEventListener('mousedown', e => { if (e.target.id === 'ov') close(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+window.addEventListener('resize', fitThumbs);
+
+/* review bar */
+const REVIEW = [['intro', 'Intro'], ['pick', 'Pick'], ['face', 'Face'], ['making', 'Making'], ['share', 'Share'], ['hub', 'Creator page']];
+function renderReview() {
+  $('#review').innerHTML = '<span>Review</span>' + REVIEW.map(([k, l]) => `<button data-review="${k}" class="${S.view === k ? 'on' : ''}">${l}</button>`).join('');
+}
+$('#review').addEventListener('click', e => {
+  const k = e.target.closest('[data-review]')?.dataset.review; if (!k) return;
+  e.stopPropagation(); open();
+  if (k === 'making') { S.photo ||= SAMPLE_ME; S.consent = true; make(); return; }
+  if (['share', 'hub'].includes(k)) { S.photo ||= SAMPLE_ME; S.consent = true; }
+  go(k);
+}, true);
+
+render(); setTimeout(open, 250);
+</script>
+</body>
+</html>
