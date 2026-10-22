@@ -43,10 +43,12 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   22 Oct 2026.
 - **Scripts are fixed.** Users endorse the product in words they did not write, so the
   script is shown before they commit.
-- **Caption changes per platform.** TikTok/Instagram captions cannot hold a tappable link,
-  so those say "link in bio"; LinkedIn/Shorts carry the link inline.
-- **#ad is pre-filled** and the share step asks users to switch on the platform's paid
-  partnership and AI-generated labels.
+- **Share step is a 3-item checklist:** download, copy caption, put link in bio. One
+  caption for every platform ("link in bio", since TikTok/Instagram captions can't hold a
+  tappable link). The per-platform picker and long hints were cut 22 Oct 2026 as too
+  complex. `#ad` stays in the caption with a one-line reminder; the platform's own
+  paid-partnership / AI labels are no longer prompted in the modal (open: where to tell
+  users about them).
 - **Photo retention:** only for this user's videos, auto-deleted after 30 days. Invented.
 
 - **Intro phone plays HardLaunch's "As filmed" clip**, hotlinked from
