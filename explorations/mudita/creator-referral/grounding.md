@@ -24,11 +24,11 @@ creator pieces added:
 
 ```
 Refer & earn
-├── Hero (cream)          existing link + share buttons │ NEW creator card in the empty right half
-│                                                       │   no videos: HardLaunch clip + "Make my video"
-│                                                       │   has videos: signups from videos + "Make another"
+├── Hero (cream)          existing link + share buttons │ NEW creator card in the right half,
+│                                                       │   only while the user has no videos yet
 ├── Stat cards            credits meter splits link vs videos (NEW legend)
-├── Your videos           NEW, only once a video exists: thumb, made date, signups, download
+├── Your videos           NEW, once a video exists: first tile is "Create new video", then
+│                         each video (thumb, made date, signups, download)
 ├── Your invites          "Came from" gets a "Your video" badge + platform + which video
 └── How rewards work      NEW bullet: video signups count as referrals
 ```
