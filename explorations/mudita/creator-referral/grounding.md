@@ -54,6 +54,13 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   they rename or move it, the intro shows the poster or goes blank. It is one steady shot,
   so the blurred "Your face" box is a fixed position.
 
+- **Both protos use the live app's tokens, not `design-system/`.** The repo snapshot is
+  stale: it still has Brand Blue `#005EFF` and Inter. The live app (`pitchdeckdoclist`
+  `new_dev_migration`, 22 Oct 2026) uses indigo `#3427FF`, cool neutrals (ink `#14141F`,
+  line `#E4E4EC`, sunken `#F3F3F7`), the system font stack, radii 6 / 12 / 16, and a
+  brand-filled primary button. Each proto carries an override block at the end of its
+  `<style>`; drop it once `design-system/` is re-synced.
+
 ## Open questions
 
 - **The 2,000-credit yearly cap is 10 friends.** A creator video that works hits it fast,
