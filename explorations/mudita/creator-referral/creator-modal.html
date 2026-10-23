@@ -513,6 +513,9 @@
     .rail-cap b { font-size: 16px; line-height: 22px; letter-spacing: -0.01em; }
     .rail-script { margin-top: 12px; max-width: 360px; text-align: left; padding-left: 12px; border-left: 2px solid var(--border-secondary); }
     .rail-script q { margin-top: 0; font-size: 13px; line-height: 19px; color: var(--text-secondary); }
+
+    /* phone pinned at the same spot on every step; text flows beneath it */
+    .rail { justify-content: flex-start; padding-top: 24px; }
   </style>
 </head>
 <body class="pai">
@@ -719,7 +722,6 @@ const VIEWS = {
           <div><b>Your photo is only used for your videos.</b> Never for anyone else’s, never sold. Delete it any time, and it’s removed automatically after 30 days.</div>
           <div><b>You stay in control.</b> Nothing is posted for you. You download the video and decide where it goes.</div>
         </div></details>`,
-    left: btn('Not now', 'button-ghost', 'data-close'),
     cta: btn('Pick my video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="pick"'),
   }),
 
@@ -824,13 +826,15 @@ function render(animate = true) {
   if (S.view === 'pick' && prevTpl && prevTpl !== S.tpl) $('#phone').animate([{ opacity: 0.4, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 160, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   $('#phone').dataset.tpl = S.tpl;
 }
-// the rail phone is as large as its pane allows: fill the height left after the caption/script, cap by width
+// the rail phone is one fixed size on every step: sized from the modal, never from the caption/script under it
+const PHONE_TEXT_ROOM = 135; // title (2 lines) + script (4 lines), reserved whether or not they're shown
+const FOOTER_H = 65;          // reserved even on the footer-less share step, so the phone doesn't grow there
 function fitPhone() {
   const rail = $('.rail'), wrap = $('.rail-phone'), ph = wrap.querySelector('.phone');
   if (!rail.offsetParent) return;
-  const cs = getComputedStyle(rail), padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-  const below = $('#railCap').offsetHeight + $('#railScript').offsetHeight + 36;
-  const k = Math.max(0.5, Math.min((rail.clientHeight - padY - below) / 500, (rail.clientWidth - padX) / 252, 1.15));
+  const cs = getComputedStyle(rail), padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const availH = $('.modal').clientHeight - FOOTER_H - 48 - PHONE_TEXT_ROOM;
+  const k = Math.max(0.5, Math.min(availH / 500, (rail.clientWidth - padX) / 252, 1.15));
   wrap.style.width = Math.round(252 * k) + 'px'; wrap.style.height = Math.round(500 * k) + 'px';
   ph.style.transform = `scale(${k})`;
 }
