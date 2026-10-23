@@ -478,7 +478,10 @@
     /* rail: just the video, its title and (on Pick) the script, centred in the pane */
     .rail { justify-content: center; padding: 24px 32px; }
     .rail-phone { width: 252px; height: 500px; }
-    .rail-phone .phone { transition: none; }
+    /* the step change scales the phone between its two sizes; wrapper and phone move on one curve */
+    .rail-phone { transition: width 320ms cubic-bezier(0.77, 0, 0.175, 1), height 320ms cubic-bezier(0.77, 0, 0.175, 1); }
+    .rail-phone .phone { transition: transform 320ms cubic-bezier(0.77, 0, 0.175, 1); }
+    @media (prefers-reduced-motion: reduce) { .rail-phone, .rail-phone .phone { transition: none; } }
     .rail-cap { margin-top: 16px; font-size: 13px; line-height: 18px; }
     .rail-cap b { font-size: 14px; line-height: 20px; }
     .rail-script { margin: 10px auto 0; padding: 0; border: 0; background: none; border-radius: 0; max-width: 380px; text-align: center; }
@@ -830,13 +833,15 @@ function render(animate = true) {
   $('#phone').dataset.tpl = S.tpl;
 }
 // the rail phone is one fixed size on every step: sized from the modal, never from the caption/script under it
-const PHONE_TEXT_ROOM = 135; // title (2 lines) + script (4 lines), reserved whether or not they're shown
+// two fixed sizes: large on every step, smaller on Pick where the script sits under it.
+// Room is reserved per step (not measured), so captions of different lengths never resize the phone.
+const PHONE_TEXT_ROOM = { pick: 135, other: 64 };
 const FOOTER_H = 65;          // reserved even on the footer-less share step, so the phone doesn't grow there
 function fitPhone() {
   const rail = $('.rail'), wrap = $('.rail-phone'), ph = wrap.querySelector('.phone');
   if (!rail.offsetParent) return;
   const cs = getComputedStyle(rail), padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-  const availH = $('.modal').clientHeight - FOOTER_H - 48 - PHONE_TEXT_ROOM;
+  const availH = $('.modal').clientHeight - FOOTER_H - 48 - (S.view === 'pick' ? PHONE_TEXT_ROOM.pick : PHONE_TEXT_ROOM.other);
   const k = Math.max(0.5, Math.min(availH / 500, (rail.clientWidth - padX) / 252, 1.15));
   wrap.style.width = Math.round(252 * k) + 'px'; wrap.style.height = Math.round(500 * k) + 'px';
   ph.style.transform = `scale(${k})`;
