@@ -496,6 +496,23 @@
     .done-links { margin-top: 20px; display: flex; gap: 20px; }
     .done-links a, .done-links button { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
     .done-links a:hover, .done-links button:hover { color: var(--text-primary); }
+
+    /* upload progress: a ring that fills around the photo */
+    .up-ring.uploading img { filter: saturate(0.6) brightness(0.92); }
+    .up-ring svg { position: absolute; inset: -5px; width: calc(100% + 10px); height: calc(100% + 10px); transform: rotate(-90deg); }
+    .up-ring circle { fill: none; stroke-width: 3; }
+    .up-ring .trk { stroke: var(--bg-quaternary); }
+    .up-ring .arc { stroke: var(--bg-brand); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
+    #upPct { font-variant-numeric: tabular-nums; }
+    /* scannability: video options back to bordered cards; rail title and script with clear tiers */
+    .tgrid { gap: 8px; margin: 0; }
+    .tcard { border: 1px solid var(--border-secondary); background: #fff; padding: 8px 16px 8px 8px; border-radius: 12px; }
+    @media (hover: hover) and (pointer: fine) { .tcard:hover { background: #fff; border-color: var(--border-primary); } }
+    .tcard.on, .tcard.on:hover { border-color: var(--border-brand); background: var(--app-50); box-shadow: inset 0 0 0 1px var(--border-brand); }
+    .tcard.on .tmeta div:first-child { color: var(--text-primary); }
+    .rail-cap b { font-size: 16px; line-height: 22px; letter-spacing: -0.01em; }
+    .rail-script { margin-top: 12px; max-width: 360px; text-align: left; padding-left: 12px; border-left: 2px solid var(--border-secondary); }
+    .rail-script q { margin-top: 0; font-size: 13px; line-height: 19px; color: var(--text-secondary); }
   </style>
 </head>
 <body class="pai">
@@ -735,10 +752,10 @@ const VIEWS = {
         <p class="lede">One clear photo is all it takes. A selfie works.</p>
         <div class="up ${S.photo ? 'has' : ''}" id="drop">
           ${S.photo ? `
-            <div class="up-ring"><img src="${S.photo}" alt="Your photo"><span class="up-ok"><i class="ph-bold ph-check"></i></span></div>
-            <div class="up-t">Looks good</div>
-            <div class="up-s">One face, facing the camera, good light</div>
-            <button class="linkbtn" data-upload>Choose a different photo</button>` : `
+            <div class="up-ring uploading"><img src="${S.photo}" alt="Your photo">
+              <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" class="trk"/><circle cx="50" cy="50" r="48" class="arc" pathLength="100"/></svg></div>
+            <div class="up-t">Uploading your photo</div>
+            <div class="up-s"><span id="upPct">0</span>%</div>` : `
             <div class="up-ring"><i class="ph ph-user-focus"></i></div>
             <div class="up-t">Drop a photo of yourself here</div>
             <div class="up-acts">${btn('<i class="ph ph-upload-simple"></i>Upload photo', 'button-secondary', 'data-upload')}${btn('<i class="ph ph-camera"></i>Take a selfie', 'button-ghost', 'data-upload')}</div>
@@ -746,7 +763,7 @@ const VIEWS = {
             <button class="linkbtn" data-sample>Use a sample photo (prototype only)</button>`}
         </div>`,
       back: 'pick',
-      cta: btn('<i class="ph ph-sparkle"></i>Make my video', 'button-primary-brand' + (ready ? '' : ' button-disabled button-disabled-40'), ready ? 'data-make' : 'disabled'),
+      cta: '',
     };
   },
 
@@ -848,7 +865,7 @@ document.addEventListener('click', e => {
   }
   else if (t.dataset.tpl) { S.tpl = t.dataset.tpl; render(false); }
   else if ('upload' in t.dataset) $('#file').click();
-  else if ('sample' in t.dataset) { S.photo = SAMPLE_ME; render(false); }
+  else if ('sample' in t.dataset) startUpload(SAMPLE_ME);
   else if ('make' in t.dataset) make();
   else if (t.dataset.copy || 'copyCaption' in t.dataset) {
     const text = t.dataset.copy || $('#caption').textContent;
@@ -862,7 +879,19 @@ document.addEventListener('change', e => {
   if (e.target.id === 'consent') { S.consent = e.target.checked; render(false); }
   if (e.target.id === 'file' && e.target.files[0]) readPhoto(e.target.files[0]);
 });
-function readPhoto(f) { const r = new FileReader(); r.onload = () => { S.photo = r.result; render(false); }; r.readAsDataURL(f); $('#file').value = ''; }
+function readPhoto(f) { const r = new FileReader(); r.onload = () => startUpload(r.result); r.readAsDataURL(f); $('#file').value = ''; }
+// picking a photo is the commitment: show the upload filling the ring, then go straight to making the video
+function startUpload(src) {
+  S.photo = src; render(false);
+  const arc = $('.up-ring .arc'), pct = $('#upPct'), t0 = performance.now(), dur = 1800;
+  const tick = now => {
+    if (!pct || !document.contains(pct)) return;
+    const k = Math.min(1, (now - t0) / dur), e = k * k * (3 - 2 * k); // smoothstep: the ring visibly travels
+    arc.style.strokeDashoffset = 100 - e * 100; pct.textContent = Math.round(e * 100);
+    if (k < 1) requestAnimationFrame(tick); else setTimeout(() => S.view === 'face' && make(), 250);
+  };
+  requestAnimationFrame(tick);
+}
 ['dragover', 'dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => {
   const d = $('#drop'); if (!d) return;
   if (ev === 'dragover') { e.preventDefault(); d.classList.add('drag'); }
