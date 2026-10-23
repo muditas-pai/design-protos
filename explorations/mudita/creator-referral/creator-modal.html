@@ -485,6 +485,17 @@
     .rail-script span { display: block; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
     .rail-script q { display: block; margin-top: 4px; font-size: 13px; line-height: 19px; color: var(--text-secondary); quotes: "“" "”"; }
     @media (prefers-reduced-motion: reduce) { .tcard:active { transform: none; } }
+
+    /* share = success state: no footer, the three things to do as one boxed list */
+    .mfoot[hidden] { display: none; }
+    .post { margin-top: 20px; border: 1px solid var(--border-secondary); border-radius: 12px; }
+    .post li { padding: 14px 16px; }
+    .post li.top { align-items: start; }
+    .post li.top .n, .post li.top .button-style { margin-top: 2px; }
+    .post-sub.full { white-space: normal; overflow: visible; text-overflow: clip; word-break: break-word; line-height: 18px; margin-top: 4px; }
+    .done-links { margin-top: 20px; display: flex; gap: 20px; }
+    .done-links a, .done-links button { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+    .done-links a:hover, .done-links button:hover { color: var(--text-primary); }
   </style>
 </head>
 <body class="pai">
@@ -750,21 +761,25 @@ const VIEWS = {
   }),
 
   share: () => {
-    const caption = `${tpl().hook}. Made with presentations.ai, link in bio. #ad`;
+    // the caption carries the link, so it works on platforms where captions are tappable too
+    const caption = `${tpl().hook}. Made with presentations.ai, try it: ${LINK} #ad`;
     return {
       body: `
         <h1 class="hl"><span class="setup">Your video is ready.</span><span class="payoff">Post it and start earning.</span></h1>
-        <p class="lede" style="margin-top:4px">Download it, then:</p>
         <ol class="post">
-          <li><span class="n">1</span><div><div class="post-t">Copy the caption</div><div class="post-sub" id="caption" title="${caption}">${caption}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy-caption')}</li>
-          <li><span class="n">2</span><div><div class="post-t">Add your link to your bio</div><div class="post-sub mono">${LINK}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy="' + LINK + '"')}</li>
+          <li><span class="n">1</span><div class="post-t">Download your video</div>${btn('<i class="ph ph-download-simple"></i>Download', 'button-primary-brand', 'data-download')}</li>
+          <li class="top"><span class="n">2</span><div><div class="post-t">Copy the caption</div><div class="post-sub full" id="caption">${caption}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy-caption')}</li>
+          <li><span class="n">3</span><div><div class="post-t">Add your link to your bio</div><div class="post-sub mono">${LINK}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy="' + LINK + '"')}</li>
         </ol>
-        <p class="muted-note">Keep #ad in the caption; it’s a paid post. +${PER_SIGNUP} credits for every friend who signs up.</p>`,
-      left: btn('<i class="ph ph-arrows-clockwise"></i>Try another video', 'button-ghost', 'data-go="pick"'),
-      cta: `<a class="button-style button-medium button-secondary" href="${REFER_PAGE}" target="_blank" rel="noopener">Track my signups <i class="ph ph-arrow-up-right"></i></a>
-        ${btn('<i class="ph ph-download-simple"></i>Download video', 'button-primary-brand', 'data-download')}`,
+        <p class="muted-note">Keep #ad in the caption; it’s a paid post. +${PER_SIGNUP} credits for every friend who signs up.</p>
+        <div class="done-links">
+          <a href="${REFER_PAGE}" target="_blank" rel="noopener">Track my signups <i class="ph ph-arrow-up-right"></i></a>
+          <button data-go="pick"><i class="ph ph-arrows-clockwise"></i>Make another video</button>
+        </div>`,
+      noFoot: true,
     };
   },
+
 
 
 };
@@ -784,7 +799,8 @@ function render(animate = true) {
   const v = VIEWS[S.view]();
   $('#body').innerHTML = `<div class="view" ${animate ? '' : 'style="animation:none"'}>${v.body}</div>`;
   const left = v.back ? btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost', `data-go="${v.back}"`) : (v.left || '');
-  $('#foot').innerHTML = `${left}<div class="note">${v.note || ''}</div>${v.cta}`;
+  $('#foot').innerHTML = v.noFoot ? '' : `${left}<div class="note">${v.note || ''}</div>${v.cta}`;
+  $('#foot').hidden = !!v.noFoot;
   $('#railScript').innerHTML = S.view === 'pick' ? `<span>What you’ll say</span><q>${tpl().script}</q>` : '';
   const prevTpl = $('#phone').dataset.tpl;
   renderSteps(); renderPhone(); fitThumbs(); renderReview(); fitPhone();
