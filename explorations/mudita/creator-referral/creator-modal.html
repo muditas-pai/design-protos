@@ -400,6 +400,38 @@
     .stage.active .dot::after { background: var(--bg-brand); }
     .stagepane { background: var(--bg-secondary); border-left-color: var(--border-secondary); }
     .stage-cap { font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+
+    /* ---------- build rail on the right (22 Oct 2026: picked from crazy 8s round 2, mirrored) ---------- */
+    .modal { grid-template-columns: minmax(0, 1fr) 296px; }
+    .rail { min-height: 0; display: flex; flex-direction: column; padding: 14px 20px 20px; background: var(--bg-secondary); border-left: 1px solid var(--border-secondary); overflow-y: auto; }
+    .rail-top { display: flex; align-items: center; justify-content: space-between; margin: 0 -6px 12px 0; }
+    .rail-top span { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .rail-top span i { color: var(--text-secondary); }
+    .rail-phone { position: relative; flex: none; width: 112px; height: 222px; margin: 0 auto; }
+    .rail-phone .phone { position: absolute; top: 0; left: 0; transform: scale(0.444); transform-origin: top left; box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 36px -16px rgba(16,12,60,0.45); }
+    .rsteps { list-style: none; margin: 14px 0 0; padding: 0; }
+    .rsteps li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 7px 0; }
+    .rsteps li + li { border-top: 1px solid var(--border-secondary); }
+    .rdot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--border-primary); color: var(--text-tertiary); }
+    .rsteps li.now .rdot { background: var(--bg-brand); color: #fff; box-shadow: none; }
+    .rsteps li.done .rdot { background: var(--bg-success); color: #fff; box-shadow: none; }
+    .rk { font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
+    .rv { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-primary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .rv.dim { color: var(--text-quaternary); font-weight: 400; }
+    .rail-cta { margin-top: auto; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .rail-cta .button-style { width: 100%; }
+    .rail-cta .consent { margin: 0; }
+    .rail-cta .consent span { font-size: 12px; line-height: 16px; }
+    .rail-note { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
+    .crumb { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 13px; color: var(--text-secondary); }
+    .crumb:hover { color: var(--text-primary); }
+    .after { margin-top: 16px; }
+    @media (max-width: 900px) {
+      .modal { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+      .rail { border-left: 0; border-top: 1px solid var(--border-secondary); padding: 12px 16px; }
+      .rail-top, .rail-phone, .rsteps { display: none; }
+      .rail-cta { padding-top: 0; }
+    }
   </style>
 </head>
 <body class="pai">
@@ -437,15 +469,15 @@
       <section class="pane">
         <header class="head">
           <div class="head-title" id="dlgTitle"><i class="ph-fill ph-video-camera" style="color:var(--text-secondary)"></i>Creator program <small>with HardLaunch</small></div>
-          <div class="steps" id="steps"></div>
-          <button class="x" id="close" aria-label="Close"><i class="ph ph-x"></i></button>
         </header>
         <div class="body" id="body"></div>
-        <footer class="foot" id="foot"></footer>
       </section>
-      <aside class="stagepane">
-        <div class="phone"><div class="phone-screen" id="phone"></div></div>
-        <div class="stage-cap" id="stageCap"></div>
+      <!-- build rail: the video so far, what you've chosen at each step, and the step's one button -->
+      <aside class="rail" aria-label="Your video">
+        <div class="rail-top"><span><i class="ph-fill ph-film-slate"></i>Your video</span><button class="x" id="close" aria-label="Close"><i class="ph ph-x"></i></button></div>
+        <div class="rail-phone"><div class="phone"><div class="phone-screen" id="phone"></div></div></div>
+        <ol class="rsteps" id="rsteps"></ol>
+        <div class="rail-cta" id="cta"></div>
       </aside>
     </div>
   </div>
@@ -549,25 +581,16 @@ function renderPhone() {
   if (v === 'intro') {
     clearInterval(capTimer);
     $('#phone').innerHTML = hardlaunchSample();
-    $('#stageCap').innerHTML = 'A real HardLaunch video. <b>In yours, this creator becomes you.</b>';
     return;
   }
   const opts = {
     intro: {}, pick: {},
-    face: { slot: true },
+    face: S.photo ? { you: true } : { slot: true },
     making: { you: S.prog >= 2, scanning: S.prog < 4 },
     share: { you: true },
   }[v];
   $('#phone').innerHTML = video(t, opts);
   runCaptions();
-  const caps = {
-    intro: 'One of our ready-made videos. <b>In yours, this creator becomes you.</b>',
-    pick: 'Your pick, playing. <b>Your face replaces the creator’s.</b>',
-    face: 'Your photo replaces the creator’s face. <b>Same words, same edit, you on screen.</b>',
-    making: S.prog >= 4 ? '<b>Done.</b> That’s you.' : 'Putting you in the video…',
-    share: '<b>Your video, made for you.</b> Yours to keep and post anywhere.',
-  };
-  $('#stageCap').innerHTML = caps[v];
 }
 
 /* ---------------- views ---------------- */
@@ -590,7 +613,7 @@ const VIEWS = {
           <div><b>Your photo is only used for your videos.</b> Never for anyone else’s, never sold. Delete it any time, and it’s removed automatically after 30 days.</div>
           <div><b>You stay in control.</b> Nothing is posted for you. You download the video and decide where it goes.</div>
         </div></details>`,
-    foot: `<div class="note"><i class="ph ph-clock"></i>Ready in about 2 minutes</div>${btn('Not now', 'button-ghost', 'data-close')}${btn('Pick my video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="pick"')}`,
+    cta: `${btn('Pick my video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="pick"')}<div class="rail-note"><i class="ph ph-clock"></i>Ready in about 2 minutes</div>`,
   }),
 
   pick: () => {
@@ -609,9 +632,8 @@ const VIEWS = {
           </button>`).join('')}</div>
         <div class="script"><div class="sec-label" style="margin-bottom:6px">What you’ll say</div><q>${t.script}</q>
           <div class="script-foot"><i class="ph ph-info"></i>Scripts are fixed so every video stays accurate about the product.</div></div>`,
-      foot: `${btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost', 'data-go="intro"')}
-        <div class="picked" aria-live="polite"><img src="${t.face}" alt=""><div><div class="picked-k">Selected</div><div class="picked-t">${t.hook}</div></div></div>
-        ${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="face"')}`,
+      back: 'intro',
+      cta: btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="face"'),
     };
   },
 
@@ -632,10 +654,10 @@ const VIEWS = {
             <div class="up-acts">${btn('<i class="ph ph-upload-simple"></i>Upload photo', 'button-secondary', 'data-upload')}${btn('<i class="ph ph-camera"></i>Take a selfie', 'button-ghost', 'data-upload')}</div>
             <ul class="dos"><li><i class="ph-bold ph-check"></i>Facing the camera</li><li><i class="ph-bold ph-check"></i>Good light</li><li><i class="ph-bold ph-check"></i>Just you</li><li><i class="ph-bold ph-check"></i>No sunglasses</li></ul>
             <button class="linkbtn" data-sample>Use a sample photo (prototype only)</button>`}
-        </div>
-        <label class="consent"><input type="checkbox" class="pai-checkbox" id="consent" ${S.consent ? 'checked' : ''}>
-          <span>This is me, I’m 18 or older, and I agree to my photo being used to make this video. I can delete it any time.</span></label>`,
-      foot: `${btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost', 'data-go="pick"')}<div class="note"><i class="ph ph-lock-simple"></i>Only used for your videos</div>
+        </div>`,
+      back: 'pick',
+      cta: `<label class="consent"><input type="checkbox" class="pai-checkbox" id="consent" ${S.consent ? 'checked' : ''}>
+          <span>This is me and I’m 18 or older. Use my photo for this video only; I can delete it any time.</span></label>
         ${btn('<i class="ph ph-sparkle"></i>Make my video', 'button-primary-brand' + (ready ? '' : ' button-disabled button-disabled-40'), ready ? 'data-make' : 'disabled')}`,
     };
   },
@@ -648,7 +670,7 @@ const VIEWS = {
       <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i < S.prog ? 'done' : i === S.prog ? 'active' : ''}"><span class="dot">${i < S.prog ? '<i class="ph-bold ph-check"></i>' : ''}</span>${s}</div>`).join('')}</div>
       <div class="bar"><i style="width:${S.prog * 25}%"></i></div>
       <div class="bar-meta"><span>${S.prog >= 4 ? 'Done' : `Step ${S.prog + 1} of 4`}</span><span>${S.prog >= 4 ? '' : `About ${Math.max(1, 4 - S.prog) * 30} seconds left`}</span></div>`,
-    foot: `<div class="note"></div>${btn('<i class="ph ph-bell"></i>Keep working, notify me', 'button-secondary', 'data-close')}`,
+    cta: btn('<i class="ph ph-bell"></i>Keep working, notify me', 'button-secondary', 'data-close'),
   }),
 
   share: () => {
@@ -656,17 +678,18 @@ const VIEWS = {
     return {
       body: `
         <h1 class="hl"><span class="setup">Your video is ready.</span><span class="payoff">Post it and start earning.</span></h1>
+        <p class="lede" style="margin-top:4px">Download it from the panel on the right, then:</p>
         <ol class="post">
-          <li><span class="n">1</span><div class="post-t">Download your video</div>${btn('<i class="ph ph-download-simple"></i>Download', 'button-primary-brand', 'data-download')}</li>
-          <li><span class="n">2</span><div><div class="post-t">Copy the caption</div><div class="post-sub" id="caption" title="${caption}">${caption}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy-caption')}</li>
-          <li><span class="n">3</span><div><div class="post-t">Add your link to your bio</div><div class="post-sub mono">${LINK}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy="' + LINK + '"')}</li>
+          <li><span class="n">1</span><div><div class="post-t">Copy the caption</div><div class="post-sub" id="caption" title="${caption}">${caption}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy-caption')}</li>
+          <li><span class="n">2</span><div><div class="post-t">Add your link to your bio</div><div class="post-sub mono">${LINK}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy="' + LINK + '"')}</li>
         </ol>
         <div class="post-note">
           <div><i class="ph ph-coins"></i><span><b>+${PER_SIGNUP} credits</b> for every friend who signs up and makes a deck</span></div>
           <div><i class="ph ph-tag"></i><span>Keep <b>#ad</b> in the caption. It’s a paid post.</span></div>
-        </div>`,
-      foot: `${btn('<i class="ph ph-arrows-clockwise"></i>Try another video', 'button-ghost', 'data-go="pick"')}<div class="note"></div>
-        <a class="button-style button-medium button-secondary" href="${REFER_PAGE}" target="_blank" rel="noopener">Track my signups <i class="ph ph-arrow-up-right"></i></a>`,
+        </div>
+        <div class="after">${btn('<i class="ph ph-arrows-clockwise"></i>Try another video', 'button-ghost', 'data-go="pick"')}</div>`,
+      cta: `${btn('<i class="ph ph-download-simple"></i>Download video', 'button-primary-brand', 'data-download')}
+        <a class="button-style button-medium button-ghost" href="${REFER_PAGE}" target="_blank" rel="noopener">Track my signups <i class="ph ph-arrow-up-right"></i></a>`,
     };
   },
 
@@ -676,15 +699,24 @@ const VIEWS = {
 /* ---------------- render + wiring ---------------- */
 function renderSteps() {
   const order = ['intro', 'pick', 'face', 'share'];
-  const cur = { making: 'face' }[S.view] || S.view;
-  const idx = order.indexOf(cur);
-  $('#steps').innerHTML = STEPS.map(([k, l], i) =>
-    `<span class="${i < idx || (S.view === 'making' && S.prog >= 4 && i === idx) ? 'done' : i === idx ? 'now' : ''}"><b>${i < idx ? '<i class="ph-bold ph-check"></i>' : i + 1}</b>${l}</span>`).join('');
+  const at = S.view === 'making' ? 2.5 : order.indexOf(S.view);
+  const done = S.view === 'making' && S.prog >= 4;
+  const rows = [
+    ['How it works', at > 0 ? 'Read' : 'You’re here', false],
+    ['Video', at >= 1 ? tpl().hook : 'Not picked yet', at < 1],
+    ['Your photo', S.view === 'making' ? (done ? 'Added' : 'Putting you in…') : (S.photo && at >= 2 ? 'Added' : 'Not added yet'), !(S.photo && at >= 2)],
+    ['Share', S.view === 'share' ? 'Ready to post' : 'Last step', S.view !== 'share'],
+  ];
+  $('#rsteps').innerHTML = rows.map(([k, v, dim], i) => {
+    const state = S.view === 'making' && i === 2 ? (done ? 'done' : 'now') : i < at ? 'done' : Math.floor(at) === i ? 'now' : '';
+    return `<li class="${state}"><span class="rdot">${state === 'done' ? '<i class="ph-bold ph-check"></i>' : i + 1}</span><div><div class="rk">${k}</div><div class="rv ${dim ? 'dim' : ''}">${v}</div></div></li>`;
+  }).join('');
 }
 function render(animate = true) {
   const v = VIEWS[S.view]();
-  $('#body').innerHTML = `<div class="view" ${animate ? '' : 'style="animation:none"'}>${v.body}</div>`;
-  $('#foot').innerHTML = v.foot;
+  const back = v.back ? `<button class="crumb" data-go="${v.back}"><i class="ph ph-arrow-left"></i>Back</button>` : '';
+  $('#body').innerHTML = `<div class="view" ${animate ? '' : 'style="animation:none"'}>${back}${v.body}</div>`;
+  $('#cta').innerHTML = v.cta;
   renderSteps(); renderPhone(); fitThumbs(); renderReview();
 }
 function fitThumbs() {
