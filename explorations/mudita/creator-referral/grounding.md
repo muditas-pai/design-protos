@@ -66,7 +66,7 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   and a caption; on Pick it also names the selection and shows its script ("What you'll
   say"). One footer spans the whole modal: Back (or Not now / Try another video) on the
   left, notes or the consent checkbox in the middle, the step's primary button bottom
-  right. Numbered stepper in the header.
+  right. No stepper (dropped 23 Oct 2026).
 - **Tab switch keeps the pick if it's in the new tab, otherwise selects that tab's
   first video**, so the selected card is always visible and matches the rail.
 
