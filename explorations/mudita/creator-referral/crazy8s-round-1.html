@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Crazy 8s · Pick a video · creator modal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <style>
+    /* Self-contained: every value below is hardcoded from the live app (pitchdeckdoclist
+       new_dev_migration, 22 Oct 2026). No design-system/ dependency. */
+    *, *::before, *::after { box-sizing: border-box; }
+    h1, h2, h3, h4, p, ul, figure { margin: 0; }
+    ul { padding: 0; }
+    img, video { display: block; max-width: none; }
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea { font: inherit; color: inherit; }
+    button { background: transparent; border: 0; padding: 0; cursor: pointer; }
+    /* button base (sizes + colours further down) */
+    .button-style { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; user-select: none; border: 0; text-decoration: none; cursor: pointer; }
+    .button-medium.icon-only { width: 36px; min-width: 36px; padding: 0; }
+    .button-disabled { pointer-events: none; cursor: not-allowed; }
+    /* input / textarea / checkbox base */
+    .pai-input, .pai-textarea { width: 100%; background: #fff; padding: 0 12px; outline: none; transition: border-color 150ms cubic-bezier(0.2, 0, 0, 1), box-shadow 150ms cubic-bezier(0.2, 0, 0, 1); }
+    .pai-textarea { padding: 10px 12px; line-height: 20px; }
+    .pai-checkbox { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; flex-shrink: 0; border: 1px solid rgba(20,20,31,0.20); border-radius: 4px; background: #fff center / 11px no-repeat; cursor: pointer; }
+    .pai-checkbox:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M13 4.5 6.5 11.5 3 8' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+    .pai-checkbox:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(52,39,255,0.20); }
+
+    body { margin: 0; background: var(--bg-muted); -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    button { font-family: inherit; }
+
+    /* ---------- faux dashboard behind the modal ---------- */
+    .dash { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+    .dash-side { background: var(--bg-muted); border-right: 1px solid var(--border-tertiary); padding: 18px 14px; }
+    .dash-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; margin-bottom: 22px; }
+    .dash-logo span { width: 22px; height: 22px; border-radius: 6px; background: #FF5500; display: grid; place-items: center; color: #fff; font-size: 13px; }
+    .dash-nav { display: flex; flex-direction: column; gap: 2px; }
+    .dash-nav div { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; color: var(--text-secondary); font-size: 13px; }
+    .dash-nav div.on { background: var(--bg-elevated-hover); color: var(--text-primary); font-weight: 500; }
+    .dash-main { background: var(--bg-subtle); padding: 40px 48px; }
+    .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 28px; }
+    .dash-card { aspect-ratio: 16/10; border-radius: 8px; box-shadow: var(--shadow-elevation-02); }
+
+    /* ---------- modal shell ---------- */
+    .ov { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px;
+      background: rgba(11,15,20,0.42); opacity: 0; pointer-events: none; transition: opacity 200ms var(--ease-out-strong); }
+    .ov.on { opacity: 1; pointer-events: auto; }
+    .modal { width: 100%; max-width: 980px; height: min(660px, calc(100vh - 48px)); display: grid; grid-template-columns: minmax(0, 1fr) 380px;
+      background: var(--bg-primary); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-elevation-new-04);
+      transform: translateY(8px) scale(0.985); transition: transform 260ms var(--ease-out-strong); }
+    .ov.on .modal { transform: none; }
+
+    .modal .button-style { gap: 6px; }
+    .pane { display: flex; flex-direction: column; min-height: 0; }
+    .head { display: flex; align-items: center; gap: 16px; padding: 16px 20px 14px 28px; border-bottom: 1px solid var(--border-tertiary); }
+    .head-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+    .head-title small { font-weight: 400; color: var(--text-tertiary); }
+    .steps { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
+    .steps span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); padding: 4px 8px; border-radius: 99px; white-space: nowrap;
+      transition: color 160ms, background 160ms; }
+    .steps span b { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600;
+      box-shadow: inset 0 0 0 1px var(--border-primary); }
+    .steps span:not(.now) { font-size: 0; gap: 0; padding: 4px 2px; }
+    .steps span.now { color: var(--app-700); background: var(--app-50); font-weight: 500; }
+    .steps span.now b { background: var(--bg-brand); color: #fff; box-shadow: none; }
+    .steps span.done { color: var(--text-secondary); }
+    .steps span.done b { background: var(--bg-success); color: #fff; box-shadow: none; }
+    .x { width: 30px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--text-tertiary); cursor: pointer; display: grid; place-items: center; font-size: 16px; }
+    .x:hover { background: var(--bg-elevated-hover); color: var(--text-primary); }
+
+    .body { flex: 1; overflow-y: auto; padding: 28px 28px 24px; }
+    .body > .view { animation: viewIn 280ms var(--ease-out-strong); }
+    @keyframes viewIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+    .foot { display: flex; align-items: center; gap: 8px; padding: 14px 20px 14px 28px; border-top: 1px solid var(--border-tertiary); }
+    .foot .note { flex: 1; font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
+
+    /* headline: setup → payoff */
+    .hl { margin: 0 0 8px; font-size: 26px; line-height: 1.18; letter-spacing: -0.02em; }
+    .hl .setup { display: block; font-weight: 600; color: var(--text-tertiary); }
+    .hl .payoff { display: block; font-weight: 600; color: var(--text-primary); }
+    .h2 { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; color: var(--text-primary); }
+    .lede { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text-secondary); max-width: 52ch; }
+    .sec { margin-top: 22px; }
+    .sec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+
+    .tag-new { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 99px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      color: #FF5500; background: rgba(255,85,0,0.10); }
+
+    /* step 1: how it works */
+    .how { display: grid; gap: 2px; margin-top: 20px; }
+    .how-row { display: grid; grid-template-columns: 36px 1fr; gap: 14px; padding: 10px 0; align-items: start; }
+    .how-row + .how-row { border-top: 1px dashed var(--border-secondary); }
+    .how-ico { width: 36px; height: 36px; border-radius: 8px; background: var(--bg-tertiary); display: grid; place-items: center; font-size: 18px; color: var(--text-primary);
+      box-shadow: inset 0 0 0 1px var(--border-tertiary); }
+    .how-row h4 { margin: 1px 0 2px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .how-row p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+
+    .earn { margin-top: 16px; border-radius: 8px; background: var(--app-50); padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .earn > i { font-size: 18px; color: var(--text-brand); flex: none; }
+    .earn-copy { font-size: 13px; line-height: 1.4; color: var(--app-800); }
+    .earn-copy b { font-weight: 600; color: var(--app-900); font-variant-numeric: tabular-nums; }
+
+    .faq { margin-top: 14px; font-size: 13px; }
+    .faq summary { cursor: pointer; color: var(--text-secondary); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary:hover { color: var(--text-primary); }
+    .faq[open] summary i { transform: rotate(90deg); }
+    .faq summary i { transition: transform 160ms var(--ease-out-strong); }
+    .faq-body { margin: 8px 0 0 20px; color: var(--text-secondary); line-height: 1.55; display: grid; gap: 8px; }
+    .faq-body b { color: var(--text-primary); font-weight: 600; }
+
+    /* step 2: pick */
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 14px; }
+    .chip { height: 28px; padding: 0 11px; border-radius: 99px; border: 0; background: var(--bg-primary); box-shadow: inset 0 0 0 1px var(--border-secondary);
+      font-size: 12.5px; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background 140ms, color 140ms; }
+    .chip:hover { color: var(--text-primary); background: var(--bg-secondary); }
+    .chip.on { background: var(--bg-brand); color: #fff; box-shadow: none; }
+    .chip.on:hover { background: var(--bg-brand-hover); }
+    .tgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .tcard { border: 0; padding: 0; background: none; text-align: left; cursor: pointer; }
+    .tthumb { position: relative; aspect-ratio: 9/16; border-radius: 8px; overflow: hidden; background: #111;
+      box-shadow: 0 0 0 1px var(--border-secondary); transition: box-shadow 160ms var(--ease-out-strong), transform 160ms var(--ease-out-strong); }
+    .tcard:hover .tthumb { transform: translateY(-2px); }
+    .tcard:active .tthumb { transform: scale(0.985); }
+    .tcard.on .tthumb { box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--bg-brand); }
+    .tcheck { position: absolute; top: 8px; right: 8px; z-index: 5; width: 22px; height: 22px; border-radius: 50%; background: var(--bg-brand); color: #fff;
+      display: grid; place-items: center; font-size: 12px; opacity: 0; transform: scale(0.6); transition: opacity 160ms, transform 200ms var(--ease-out-strong); }
+    .tcard.on .tcheck { opacity: 1; transform: none; }
+    .tdur { position: absolute; bottom: 8px; left: 8px; z-index: 5; height: 18px; padding: 0 6px; border-radius: 4px; background: rgba(0,0,0,0.55); color: #fff;
+      font-size: 10.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; backdrop-filter: blur(6px); }
+    .tmeta { padding: 8px 2px 0; }
+    .tmeta div:first-child { font-size: 12px; font-weight: 500; line-height: 1.35; color: var(--text-primary); }
+    .tmeta div:last-child { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+    .tscale { position: absolute; top: 0; left: 0; transform-origin: top left; }
+
+    .script { margin-top: 18px; padding: 14px 16px; border-radius: 10px; background: var(--bg-secondary); box-shadow: inset 0 0 0 1px var(--border-tertiary); }
+    .script q { display: block; font-size: 13.5px; line-height: 1.6; color: var(--text-primary); quotes: "“" "”"; }
+    .script-foot { margin-top: 8px; font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
+
+    /* step 3: face — one centred drop zone, tips inside it, consent as a plain row */
+    .up { margin-top: 20px; padding: 28px 24px 20px; border-radius: 12px; border: 1.5px dashed var(--border-primary); background: var(--bg-secondary);
+      display: flex; flex-direction: column; align-items: center; text-align: center; transition: border-color 150ms var(--ease-std), background 150ms var(--ease-std); }
+    .up.drag { border-color: var(--border-brand); background: var(--app-50); }
+    .up.has { border-style: solid; border-color: var(--border-secondary); background: #fff; }
+    .up-ring { position: relative; width: 88px; height: 88px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px var(--border-secondary);
+      display: grid; place-items: center; font-size: 32px; color: var(--text-tertiary); margin-bottom: 14px; }
+    .up-ring img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center 30%; }
+    .up-ok { position: absolute; right: 0; bottom: 2px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg-success); color: #fff; display: grid; place-items: center; font-size: 13px; box-shadow: 0 0 0 2px #fff; }
+    .up-t { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--text-primary); }
+    .up-s { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--text-tertiary); }
+    .up-acts { display: flex; gap: 8px; margin-top: 14px; }
+    .dos { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; }
+    .dos li { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
+    .dos i { font-size: 13px; color: var(--bg-success); }
+    .up .linkbtn { margin-top: 12px; font-size: 12px; color: var(--text-tertiary); }
+    .linkbtn { border: 0; background: none; padding: 0; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-primary); cursor: pointer; }
+    .linkbtn:hover { color: var(--text-primary); }
+    .consent { margin-top: 18px; display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+    .consent input { margin-top: 1px; flex: none; }
+    .consent span { font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+    .consent .pai-checkbox:checked { background-color: var(--bg-brand); border-color: var(--bg-brand); }
+
+    /* step 3b: making */
+    .stages { margin-top: 22px; display: grid; gap: 4px; }
+    .stage { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 14px; color: var(--text-tertiary); transition: color 200ms; }
+    .stage .dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1.5px var(--border-secondary); font-size: 12px; color: #fff; transition: background 200ms, box-shadow 200ms; }
+    .stage.active { color: var(--text-primary); }
+    .stage.active .dot { box-shadow: inset 0 0 0 2px var(--bg-primary-inverted); }
+    .stage.active .dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--bg-primary-inverted); animation: pulse 900ms ease-in-out infinite alternate; }
+    @keyframes pulse { from { transform: scale(0.7); opacity: .5; } to { transform: scale(1); opacity: 1; } }
+    .stage.done { color: var(--text-secondary); }
+    .stage.done .dot { background: var(--bg-success); box-shadow: none; }
+    .bar { margin-top: 18px; height: 6px; border-radius: 99px; background: var(--bg-tertiary); overflow: hidden; }
+    .bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--bg-primary-inverted); transition: width 600ms var(--ease-out-strong); }
+    .bar-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-tertiary); }
+
+    /* step 4: share */
+    .post { list-style: none; margin: 20px 0 0; padding: 0; border: 1px solid var(--border-secondary); border-radius: 12px; }
+    .post li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; }
+    .post li + li { border-top: 1px solid var(--border-secondary); }
+    .post .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--app-50); color: var(--text-brand); font-size: 12px; font-weight: 600; }
+    .post-t { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--text-primary); }
+    .post-sub { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .post-sub.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .post-note { margin-top: 14px; display: grid; gap: 6px; }
+    .post-note div { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: var(--text-tertiary); }
+    .post-note i { font-size: 15px; flex: none; }
+    .post-note b { font-weight: 600; color: var(--text-secondary); }
+    /* pick step: the selection lives next to its CTA, so it survives filtering */
+    .picked { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; margin: 0 4px 0 12px; padding: 4px 12px 4px 4px; border-radius: 8px; background: var(--app-50); }
+    .picked img { width: 26px; height: 40px; border-radius: 4px; object-fit: cover; object-position: center 25%; flex: none; }
+    .picked > div { min-width: 0; }
+    .picked-k { font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-brand); }
+    .picked-t { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .copied { color: var(--text-success-primary) !important; }
+
+    /* ---------- the stage (right pane) ---------- */
+    .stagepane { background: var(--bg-tertiary); border-left: 1px solid var(--border-tertiary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; position: relative; overflow: hidden; }
+    .stagepane::before { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 50% at 50% 40%, rgba(255,255,255,0.9), transparent 70%); pointer-events: none; }
+    .phone { position: relative; width: 252px; height: 500px; border-radius: 34px; padding: 6px; background: #0b0b0c;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 1px 0 1px rgba(255,255,255,0.06) inset, 0 30px 60px -20px rgba(11,15,20,0.45), 0 12px 24px -12px rgba(11,15,20,0.3); }
+    .phone-screen { position: relative; width: 240px; height: 488px; border-radius: 28px; overflow: hidden; background: #000; }
+    .stage-cap { position: relative; max-width: 290px; text-align: center; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); min-height: 38px; }
+    .stage-cap b { color: var(--text-primary); font-weight: 600; }
+
+    /* ---------- the video (240 × 488, scaled for thumbnails) ---------- */
+    .vid { position: relative; width: 240px; height: 488px; overflow: hidden; background: #f3f1ec; font-family: Inter, sans-serif; }
+    .v-prod { position: absolute; }
+    .vid.f-screen .v-prod { inset: 0 0 auto 0; height: 250px; padding: 46px 14px 0; background: linear-gradient(180deg, #e9edf3, #f6f4ef); }
+    .vid.f-head .v-prod { top: 60px; right: 12px; width: 150px; z-index: 3; transform: rotate(3deg); filter: drop-shadow(0 10px 18px rgba(0,0,0,0.35)); }
+    .v-face { position: absolute; overflow: hidden; background: #c9c4bb; }
+    .vid.f-screen .v-face { left: 0; right: 0; bottom: 0; height: 262px; }
+    .vid.f-screen .v-face::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 28px; background: linear-gradient(#f6f4ef, transparent); z-index: 2; }
+    .vid.f-head .v-face { inset: 0; }
+    .v-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; transition: opacity 900ms ease, filter 900ms ease; }
+    .v-face img.u { opacity: 0; }
+    .vid.is-you .v-face img.t { opacity: 0; }
+    .vid.is-you .v-face img.u { opacity: 1; }
+    .vid.f-head .v-face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.25), transparent 30%, transparent 55%, rgba(0,0,0,0.6)); }
+    .v-slot { position: absolute; inset: 14px; border-radius: 14px; border: 2px dashed rgba(255,255,255,0.85); display: none; place-items: center; z-index: 3;
+      background: rgba(10,25,37,0.55); backdrop-filter: blur(8px); color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
+    .v-slot i { display: block; font-size: 26px; margin-bottom: 6px; }
+    .vid.slot .v-slot { display: grid; animation: slotPulse 1.6s ease-in-out infinite alternate; }
+    .vid.f-head .v-slot { inset: 110px 30px 150px; }
+    @keyframes slotPulse { from { border-color: rgba(255,255,255,0.45); } to { border-color: rgba(255,255,255,0.95); } }
+    .v-scan { position: absolute; inset: 0; z-index: 3; display: none; pointer-events: none; }
+    .vid.scanning .v-scan { display: block; }
+    .vid.scanning .v-face img { filter: saturate(0.3) brightness(1.05); }
+    .v-scan::before { content: ""; position: absolute; left: 0; right: 0; height: 60px; top: -60px;
+      background: linear-gradient(180deg, transparent, rgba(86,160,255,0.55) 85%, #fff 100%); animation: scan 1.4s cubic-bezier(.45,0,.55,1) infinite; }
+    .v-scan::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1.5px); background-size: 14px 14px; opacity: 0.35; }
+    @keyframes scan { to { top: 100%; } }
+
+    .v-cap { position: absolute; left: 14px; right: 14px; z-index: 4; text-align: center; font-weight: 800; font-size: 19px; line-height: 1.12; letter-spacing: -0.01em; color: #fff;
+      text-shadow: 0 0 1px #000, 0 1px 0 #000, 0 2px 8px rgba(0,0,0,0.6); -webkit-text-stroke: 0.5px rgba(0,0,0,0.6); }
+    .vid.f-screen .v-cap { top: 236px; }
+    .vid.f-head .v-cap { top: 300px; }
+    .v-cap span { display: inline-block; animation: pop 260ms var(--ease-out-strong); }
+    .v-cap span.hi { color: #FFD43B; }
+    @keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    .v-chrome { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+    .v-prog { position: absolute; top: 10px; left: 12px; right: 12px; height: 2.5px; border-radius: 2px; background: rgba(255,255,255,0.35); overflow: hidden; }
+    .v-prog i { display: block; height: 100%; width: 0; background: #fff; animation: prog 12s linear infinite; }
+    @keyframes prog { to { width: 100%; } }
+    .v-rail { position: absolute; right: 8px; bottom: 96px; display: flex; flex-direction: column; gap: 14px; align-items: center; color: #fff; font-size: 9px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+    .v-rail div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .v-rail i { font-size: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+    .v-bot { position: absolute; left: 12px; right: 52px; bottom: 16px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+    .v-bot b { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+    .v-bot b em { font-style: normal; font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.25); text-shadow: none; }
+    .v-bot p { margin: 3px 0 0; font-size: 10.5px; line-height: 1.35; opacity: 0.95; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .vid.thumb .v-chrome { display: none; }
+    .v-who { position: absolute; top: 22px; left: 12px; z-index: 6; height: 20px; padding: 0 8px; border-radius: 99px; background: rgba(0,0,0,0.5); color: #fff; font-size: 10px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 5px; backdrop-filter: blur(6px); }
+    .v-who.you { background: var(--bg-brand); }
+    .vid.thumb .v-who { display: none; }
+
+    /* product scenes inside the video */
+    .p-slide { background: #fff; border-radius: 6px; box-shadow: 0 6px 16px rgba(10,25,37,0.16), 0 0 0 1px rgba(10,25,37,0.06); overflow: hidden; }
+    .p-bar { height: 16px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 3px; padding: 0 6px; }
+    .p-bar i { width: 4px; height: 4px; border-radius: 50%; background: #d4d4d4; }
+    .p-body { padding: 10px; }
+    .p-h { font-size: 11px; font-weight: 700; color: #0A1925; line-height: 1.2; }
+    .p-sub { font-size: 7px; color: #737373; margin-top: 3px; }
+    .p-chart { display: flex; align-items: flex-end; gap: 5px; height: 58px; margin-top: 10px; }
+    .p-chart i { flex: 1; border-radius: 2px 2px 0 0; background: #284B71; }
+    .p-chart i:last-child { background: #FF5500; }
+    .p-lines { display: grid; gap: 4px; margin-top: 8px; }
+    .p-lines i { height: 4px; border-radius: 2px; background: #e5e5e5; }
+    .p-prompt { font-size: 8px; line-height: 1.35; color: #0A1925; background: #fff; border-radius: 8px; padding: 7px 8px; box-shadow: 0 0 0 1px rgba(10,25,37,0.1), 0 4px 10px rgba(10,25,37,0.08); }
+    .p-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 8px; }
+    .p-thumbs i { aspect-ratio: 16/10; border-radius: 3px; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); }
+    .p-arrow { text-align: center; font-size: 14px; color: #0A1925; margin: 4px 0; }
+
+
+    /* intro: HardLaunch's own sample clip, face area blurred */
+    .vid-hl { position: relative; width: 240px; height: 488px; overflow: hidden; background: #2a211c; }
+    .vid-hl video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .vid-hl .v-chrome::before { content: ""; position: absolute; inset: auto 0 0 0; height: 140px; background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
+    .hl-face { position: absolute; left: 20%; top: 11%; width: 50%; height: 39%; z-index: 3; }
+    .hl-blur { position: absolute; inset: 0; border-radius: 46%; backdrop-filter: blur(16px) saturate(0.9); -webkit-backdrop-filter: blur(16px) saturate(0.9);
+      background: rgba(255,255,255,0.06);
+      -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); }
+    .hl-corner { position: absolute; width: 22px; height: 22px; border: 0 solid #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35)); }
+    .hl-corner.tl { top: 0; left: 0; border-top-width: 2.5px; border-left-width: 2.5px; border-top-left-radius: 9px; }
+    .hl-corner.tr { top: 0; right: 0; border-top-width: 2.5px; border-right-width: 2.5px; border-top-right-radius: 9px; }
+    .hl-corner.bl { bottom: 0; left: 0; border-bottom-width: 2.5px; border-left-width: 2.5px; border-bottom-left-radius: 9px; }
+    .hl-corner.br { bottom: 0; right: 0; border-bottom-width: 2.5px; border-right-width: 2.5px; border-bottom-right-radius: 9px; }
+    .hl-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px;
+      border-radius: 99px; background: rgba(10,25,37,0.55); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+
+    /* ---------- review bar (outside the modal, for the design review only) ---------- */
+    .review { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 80; display: flex; align-items: center; gap: 4px; padding: 5px;
+      border-radius: 10px; background: #0A1925; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .review span { font-size: 11px; color: rgba(255,255,255,0.5); padding: 0 8px 0 6px; }
+    .review button { height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: rgba(255,255,255,0.75); font-size: 12px; cursor: pointer; }
+    .review button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .review button.on { background: #fff; color: #0A1925; font-weight: 500; }
+
+    @media (max-width: 900px) {
+      .modal { grid-template-columns: 1fr; height: calc(100vh - 48px); }
+      .stagepane { display: none; }
+      .steps span:not(.now) { display: none; }
+      .tgrid { grid-template-columns: repeat(2, 1fr); }
+      .review span { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+    }
+
+    /* Live-app tokens + ds component treatments, from pitchdeckdoclist new_dev_migration
+       (config/tailwind/pai.tailwind.config.js + src/common/uicomponents/ds/*), 22 Oct 2026. */
+    :root {
+      --app-50:#ECEBFF; --app-75:#E3E1FF; --app-100:#DCD9FF; --app-200:#B8B3FF; --app-300:#96A5FF; --app-400:#6E8CFF;
+      --app-500:#3566FE; --app-600:#3427FF; --app-650:#2F23EA; --app-700:#2A1FD6; --app-800:#2118A6; --app-900:#171070;
+      --bg-brand:#3427FF; --bg-brand-hover:#2A1FD6; --bg-brand-pressed:#231AB3; --bg-brand-selected:rgba(52,39,255,0.12); --bg-brand-inverted:#ECEBFF;
+      --text-brand:#3427FF; --text-brand-hover:#2A1FD6; --text-brand-secondary:#3566FE; --border-brand:#3427FF; --border-brand-secondary:#DCD9FF;
+      --text-primary:#14141F; --text-secondary:#4E4E5E; --text-tertiary:#6C6C7C; --text-quaternary:#A3A3B0; --gray-500:#6C6C7C;
+      --bg-secondary:#F8F8FB; --bg-tertiary:#F3F3F7; --bg-quaternary:#E4E4EC; --bg-elevated-hover:rgba(20,20,31,0.08);
+      --border-primary:rgba(20,20,31,0.20); --border-secondary:#E4E4EC; --border-tertiary:rgba(228,228,236,0.6);
+      --bg-success:#16A34A; --bg-success-inverted:#DCFCE7; --text-success-primary:#15803D; --green-50:#DCFCE7; --green-700:#15803D;
+      --bg-warning-inverted:#FEF3C7; --text-warning-primary:#B45309;
+      --drop-1:rgba(16,12,60,0.06); --drop-2:rgba(16,12,60,0.09); --drop-3:rgba(16,12,60,0.20);
+      --shadow-dialog:0 2px 6px 0 rgba(16,12,60,0.09), 0 24px 64px -12px rgba(9,15,21,0.28);
+      --shadow-menu:0 1px 2px 0 rgba(16,12,60,0.06), 0 8px 24px -6px rgba(9,15,21,0.16);
+      --shadow-button-primary:0 1px 0 0 rgba(255,255,255,0.15) inset, 0 1px 2px 0 rgba(16,12,60,0.20);
+      --shadow-segment:0 1px 2px 0 rgba(9,15,21,0.12);
+      --ease-std:cubic-bezier(0.2, 0, 0, 1);
+      --bg-primary:#FFFFFF; --bg-primary-inverted:#0A1925; --bg-danger:#DC2626; --bg-subtle:#FCFCFC; --bg-muted:#F9F9F9;
+      --ease-out-strong:cubic-bezier(0.2, 0, 0, 1);
+      --shadow-elevation-02:0 0 0 1px rgba(20,20,31,0.09), 0 1px 2px 0 rgba(16,12,60,0.09);
+      --shadow-elevation-button:0 0 0 1px rgba(20,20,31,0.09), 0 1px 2px 0 rgba(16,12,60,0.06);
+      --shadow-elevation-new-04:0 2px 6px 0 rgba(16,12,60,0.09), 0 24px 64px -12px rgba(9,15,21,0.28);
+      --font-ui:-apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    }
+    body.pai, .pai { font-family: var(--font-ui); color: var(--text-primary); }
+    /* ds/Button: control radius 6, medium weight, brand primary with inner highlight, tap to 98% */
+    .button-style { border-radius: 6px; font-weight: 500; transition: background-color 150ms var(--ease-std), border-color 150ms var(--ease-std), color 150ms var(--ease-std), transform 120ms var(--ease-std); }
+    .button-style:active { transform: scale(0.98); }
+    .button-large { height: 44px; padding: 0 20px; font-size: 14px; line-height: 20px; border-radius: 6px; }
+    .button-medium { height: 36px; padding: 0 14px; font-size: 14px; line-height: 20px; border-radius: 6px; }
+    .button-small { height: 32px; padding: 0 12px; font-size: 13px; line-height: 18px; border-radius: 6px; }
+    .button-small.icon-only { width: 32px; min-width: 32px; padding: 0; }
+    .button-primary, .button-primary-brand { color: #fff; background: var(--bg-brand); box-shadow: var(--shadow-button-primary); }
+    .button-primary:hover, .button-primary-brand:hover { background: var(--bg-brand-hover); }
+    .button-secondary, .button-tertiary { color: var(--text-primary); background: #fff; border: 1px solid var(--border-secondary); box-shadow: none; }
+    .button-secondary:hover, .button-tertiary:hover { background: var(--bg-tertiary); border-color: var(--border-primary); }
+    .button-ghost { color: var(--text-secondary); }
+    .button-ghost:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+    .button-style.button-disabled { opacity: 1; background: var(--bg-tertiary); color: var(--text-tertiary); box-shadow: none; border-color: transparent; }
+    /* ds/Input */
+    .pai-input, .pai-textarea { border-radius: 6px; border: 1px solid var(--border-secondary); box-shadow: none; color: var(--text-primary); font-size: 14px; }
+    .pai-input { height: 36px; }
+    .pai-input:hover, .pai-textarea:hover { border-color: var(--border-primary); }
+    .pai-input:focus, .pai-textarea:focus { border-color: var(--border-brand); box-shadow: 0 0 0 2px rgba(52,39,255,0.20); outline: none; }
+    .pai-checkbox:checked { background-color: var(--bg-brand); border-color: var(--bg-brand); }
+    /* ds/Badge: 20px pill, 12px semibold */
+    .tag-new { height: 20px; padding: 0 8px; border-radius: 99px; font-size: 12px; line-height: 16px; letter-spacing: 0.01em; font-weight: 600; color: var(--text-brand); background: var(--app-50); }
+
+    /* ds/Dialog: scrim at 45% + 2px blur, 16px radius, line border, dialog shadow */
+    .ov { background: rgba(16,12,60,0.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); transition: opacity 180ms var(--ease-std); }
+    .modal { border-radius: 16px; border: 1px solid var(--border-secondary); box-shadow: var(--shadow-dialog); transform: translateY(12px); transition: transform 200ms var(--ease-std); }
+    .head { padding: 16px 16px 14px 24px; border-bottom-color: var(--border-secondary); }
+    .head-title { font-size: 14px; }
+    .x { width: 32px; height: 32px; border-radius: 6px; color: var(--text-secondary); }
+    .x:hover { background: var(--bg-tertiary); }
+    .body { padding: 24px; }
+    .foot { padding: 14px 16px 14px 24px; border-top-color: var(--border-secondary); }
+    .foot .note { font-size: 12px; color: var(--text-tertiary); }
+    .steps span { font-size: 12px; font-weight: 500; }
+    .hl { font-size: 24px; line-height: 32px; letter-spacing: -0.015em; }
+    .h2 { font-size: 24px; line-height: 32px; letter-spacing: -0.015em; font-weight: 600; }
+    .lede { font-size: 14px; line-height: 20px; }
+    .sec-label { font-size: 12px; line-height: 16px; letter-spacing: 0.08em; color: var(--text-tertiary); }
+    .how-ico { border-radius: 6px; background: var(--bg-tertiary); box-shadow: none; color: var(--text-secondary); }
+    .how-row h4 { font-size: 14px; line-height: 20px; }
+    .how-row p { font-size: 13px; line-height: 18px; }
+    .how-row + .how-row { border-top: 1px solid var(--border-tertiary); }
+    .earn { border-radius: 6px; }
+    .chip { height: 32px; padding: 0 12px; font-size: 13px; font-weight: 500; box-shadow: inset 0 0 0 1px var(--border-secondary); color: var(--text-secondary); }
+    .chip:hover { background: var(--bg-tertiary); }
+    .tthumb { border-radius: 8px; box-shadow: 0 0 0 1px var(--border-secondary); }
+    .tmeta div:first-child { font-size: 13px; line-height: 18px; }
+    .tmeta div:last-child { font-size: 12px; color: var(--text-tertiary); }
+    .script { border-radius: 12px; background: var(--bg-tertiary); box-shadow: none; }
+    .script q { font-size: 14px; line-height: 20px; }
+    .stage { font-size: 14px; }
+    .bar i { background: var(--bg-brand); transition-timing-function: var(--ease-std); }
+    .stage.active .dot { box-shadow: inset 0 0 0 2px var(--bg-brand); }
+    .stage.active .dot::after { background: var(--bg-brand); }
+    .stagepane { background: var(--bg-secondary); border-left-color: var(--border-secondary); }
+    .stage-cap { font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+
+    /* ================= crazy 8s gallery ================= */
+    body { margin: 0; background: #E9E9F0; }
+    .g-top { max-width: 1040px; margin: 0 auto; padding: 48px 24px 8px; }
+    .g-top h1 { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.015em; }
+    .g-top p { margin-top: 6px; font-size: 14px; line-height: 20px; color: var(--text-secondary); max-width: 70ch; }
+    .g-sec { max-width: 1040px; margin: 0 auto; padding: 40px 24px 24px; }
+    .g-lab { display: flex; align-items: baseline; gap: 10px; }
+    .g-lab b { font-size: 18px; line-height: 26px; font-weight: 600; }
+    .g-lab span { font-size: 13px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+    .g-idea { margin-top: 4px; font-size: 14px; line-height: 20px; color: var(--text-secondary); max-width: 80ch; }
+    .g-steps { margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--text-tertiary); max-width: 80ch; }
+    .g-steps b { color: var(--text-secondary); font-weight: 600; }
+    .g-stage { margin-top: 16px; padding: 28px; border-radius: 16px; background: rgba(16,12,60,0.38); display: flex; justify-content: center; }
+
+    /* mock modal shell */
+    .mk { width: 100%; max-width: 980px; height: 640px; background: #fff; border-radius: 16px; border: 1px solid var(--border-secondary); box-shadow: var(--shadow-dialog);
+      overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+    .mk .body { overflow-y: auto; padding: 24px; }
+    .mk .body > * { animation: none; }
+    .mk-cols { display: grid; min-height: 0; }
+    .mk-cols > * { min-height: 0; overflow-y: auto; }
+    .pane-r { background: var(--bg-secondary); border-left: 1px solid var(--border-secondary); }
+    .pane-l { background: var(--bg-secondary); border-right: 1px solid var(--border-secondary); }
+    .phw { position: relative; flex: none; }
+    .phw .phone { position: absolute; top: 0; left: 0; transform-origin: top left; }
+    .tgrid.c4 { grid-template-columns: repeat(4, 1fr); }
+    .tgrid.c5 { grid-template-columns: repeat(5, 1fr); }
+    .tgrid.c6 { grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    .t-title { font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-primary); }
+    .t-meta { font-size: 12px; line-height: 16px; color: var(--text-tertiary); display: flex; gap: 8px; align-items: center; }
+    .t-script { font-size: 13px; line-height: 19px; color: var(--text-secondary); }
+    .t-script.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .full { width: 100%; }
+    .hidden-note { font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
+
+    /* 02 carousel */
+    .reel { position: relative; height: 380px; display: flex; align-items: center; justify-content: center; }
+    .reel .side { position: absolute; top: 50%; opacity: 0.45; transition: opacity 150ms; cursor: pointer; }
+    .reel .side:hover { opacity: 0.8; }
+    .reel .arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-menu);
+      display: grid; place-items: center; font-size: 16px; z-index: 3; }
+    .dots { display: flex; gap: 6px; justify-content: center; }
+    .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--bg-quaternary); }
+    .dots i.on { background: var(--bg-brand); width: 18px; border-radius: 99px; }
+
+    /* 03 expand in place */
+    .xrow { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; padding: 16px; border-radius: 12px; background: var(--bg-tertiary); position: relative; }
+    .xrow::before { content: ""; position: absolute; top: -7px; width: 14px; height: 14px; background: var(--bg-tertiary); transform: rotate(45deg); left: var(--tip, 40px); }
+
+    /* 04 list */
+    .lrow { width: 100%; display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 8px; border-radius: 8px; text-align: left; }
+    .lrow:hover { background: var(--bg-tertiary); }
+    .lrow.on { background: var(--app-50); box-shadow: inset 0 0 0 1px var(--app-100); }
+    .lrow img { width: 34px; height: 54px; border-radius: 5px; object-fit: cover; object-position: center 25%; }
+    .lrow .lt { font-size: 13px; line-height: 17px; font-weight: 500; color: var(--text-primary); }
+    .lrow .ld { font-size: 12px; color: var(--text-tertiary); }
+    .lsel { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin: 12px 8px 4px; }
+    select.pai-input { padding: 0 10px; background: #fff; }
+
+    /* 05 act on the card */
+    .acard .tthumb { cursor: pointer; }
+    .acard .tthumb::after { content: "\25B6  Preview"; position: absolute; inset: auto 8px 8px auto; z-index: 6; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,0.55);
+      padding: 3px 7px; border-radius: 4px; opacity: 0; transition: opacity 150ms; }
+    .acard:hover .tthumb::after { opacity: 1; }
+    .acard .button-style { margin-top: 8px; }
+    .lightbox { position: absolute; inset: 0; z-index: 10; background: rgba(16,12,60,0.55); display: flex; align-items: center; justify-content: center; gap: 28px; padding: 24px; }
+    .lightbox .lb-card { background: #fff; border-radius: 12px; padding: 20px; width: 300px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* 06 feed */
+    .feed6 { scroll-snap-type: y mandatory; scroll-padding-top: 136px; }
+    .f-item { scroll-snap-align: start; display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--border-secondary); }
+
+    /* 07 categories */
+    .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .cat { text-align: left; border-radius: 12px; border: 1px solid var(--border-secondary); padding: 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; min-height: 120px;
+      transition: border-color 150ms, background 150ms; }
+    .cat:hover { border-color: var(--border-brand); background: var(--app-50); }
+    .cat b { font-size: 15px; font-weight: 600; color: var(--text-primary); display: block; }
+    .cat small { font-size: 12px; color: var(--text-tertiary); }
+    .stack { display: flex; }
+    .stack img { width: 30px; height: 48px; border-radius: 5px; object-fit: cover; object-position: center 25%; box-shadow: 0 0 0 2px #fff; }
+    .stack img + img { margin-left: -12px; }
+    .crumb { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+
+    /* 08 build rail */
+    .rail { display: flex; flex-direction: column; gap: 0; padding: 20px; }
+    .rstep { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 10px 0; }
+    .rstep + .rstep { border-top: 1px solid var(--border-secondary); }
+    .rdot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--border-primary); color: var(--text-tertiary); }
+    .rstep.now .rdot { background: var(--bg-brand); color: #fff; box-shadow: none; }
+    .rstep.done .rdot { background: var(--bg-success); color: #fff; box-shadow: none; }
+    .rk { font-size: 12px; color: var(--text-tertiary); }
+    .rv { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-primary); }
+    .rv.dim { color: var(--text-quaternary); font-weight: 400; }
+  </style>
+</head>
+<body class="pai">
+  <header class="g-top">
+    <h1>Round 1 · Pick a video</h1>
+    <p>The problem: the selected video can disappear behind a filter, and the preview sits far from “Use this video”. Eight different ways to put the choice and its action in one place. Every mock is clickable: try a filter that hides your pick.</p>
+  </header>
+  <main id="gallery"></main>
+
+<script>
+const U = id => `https://images.unsplash.com/photo-${id}?w=600&h=900&fit=crop&crop=faces&q=70`;
+const SAMPLE_ME = U('1531123897727-8f129e1688ce');
+// Same referral link as Refer & earn, so video signups land in the same invites table.
+const LINK = 'app.presentations.ai/?ref=k3n8q2xd';
+const REFER_PAGE = 'https://app.presentations.ai/#/referandearn';
+// HardLaunch's homepage hero clip, hotlinked from https://hardlaunch.com/
+const HL_SAMPLE = 'https://hardlaunch.com/website/swap/languages/source.mp4';
+const HL_POSTER = 'https://hardlaunch.com/website/swap/p/languages/source.jpg';
+const PER_SIGNUP = 200; // matches Refer & earn: 200 credits when a friend makes their first deck
+
+const TEMPLATES = [
+  { id: 'investor', tags: ['for-you', 'founders'], hook: 'I built my investor deck before my coffee got cold', dur: '0:24', format: 'screen', face: U('1507003211169-0a1dd7228f2d'), scene: 'chart',
+    script: 'Board meeting at nine. Zero slides at eight forty. I told presentations.ai what we do, and it gave me this: the story, the charts, the lot. I changed two words. Link in my bio.' },
+  { id: 'doc', tags: ['for-you', 'work'], hook: 'Turn a messy doc into a deck in 30 seconds', dur: '0:15', format: 'head', face: U('1534528741775-53994a69daeb'), scene: 'doc',
+    script: 'This is my meeting notes doc. It is a mess. Watch. I drop it in, and that is a deck. Not a rough one, an actual deck. Try it, link in my bio.' },
+  { id: '5pm', tags: ['for-you', 'work'], hook: 'POV: your manager wants slides by 5pm', dur: '0:18', format: 'head', face: U('1494790108377-be9c29b29330'), scene: 'prompt',
+    script: 'Four fifty-two. Manager says, can you pull a few slides together. Sure. One prompt. Done by five. I even had time to pick a theme.' },
+  { id: 'sunday', tags: ['students'], hook: 'Stop losing your Sunday to group-project slides', dur: '0:21', format: 'screen', face: U('1539571696357-5a69c17a67c6'), scene: 'thumbs',
+    script: 'Group project, due Monday, nobody has started. I pasted our outline in here and got twelve slides that match. Sunday saved.' },
+  { id: 'sales', tags: ['sales'], hook: 'I let AI build my sales deck. My VP noticed.', dur: '0:27', format: 'head', face: U('1500648767791-00dcc994a43e'), scene: 'chart',
+    script: 'I used to spend a day on every pitch deck. Now I type the client name and what they need, and it builds the deck around them. My VP asked who designed it.' },
+  { id: 'lesson', tags: ['teachers'], hook: 'Tomorrow’s lesson slides, done in one prompt', dur: '0:22', format: 'screen', face: U('1438761681033-6461ffad8d80'), scene: 'thumbs',
+    script: 'Teachers, this one is for you. I typed the topic and the grade, and it made the whole lesson: intro, examples, a quiz slide at the end.' },
+];
+const FILTERS = [['for-you', 'For you', 'ph-sparkle'], ['all', 'All'], ['work', 'Work'], ['founders', 'Founders'], ['sales', 'Sales'], ['students', 'Students'], ['teachers', 'Teachers']];
+const STEPS = [['intro', 'How it works'], ['pick', 'Pick a video'], ['face', 'Add your face'], ['share', 'Share']];
+const STAGES = ['Reading your photo', 'Matching light and skin tone', 'Syncing your lips to the script', 'Final touches'];
+
+const S = { photo: null };
+const $ = s => document.querySelector(s);
+const tpl = () => TEMPLATES.find(t => t.id === S.tpl);
+
+/* ---------------- the video ---------------- */
+function scene(t) {
+  const slide = inner => `<div class="p-slide"><div class="p-bar"><i></i><i></i><i></i></div><div class="p-body">${inner}</div></div>`;
+  if (t.scene === 'chart') return slide(`<div class="p-h">Northwind raised $4M.<br>Here’s what’s next.</div><div class="p-sub">Series A · Board update</div>
+    <div class="p-chart"><i style="height:30%"></i><i style="height:42%"></i><i style="height:55%"></i><i style="height:71%"></i><i style="height:100%"></i></div>`);
+  if (t.scene === 'doc') return `<div class="p-slide"><div class="p-body"><div class="p-sub" style="margin:0 0 5px">meeting-notes.docx</div><div class="p-lines"><i style="width:90%"></i><i></i><i style="width:70%"></i><i style="width:84%"></i></div></div></div>
+    <div class="p-arrow"><i class="ph-bold ph-arrow-down"></i></div>${slide(`<div class="p-h">Q3 Plan</div><div class="p-chart" style="height:30px"><i style="height:50%"></i><i style="height:80%"></i><i style="height:100%"></i></div>`)}`;
+  if (t.scene === 'prompt') return `<div class="p-prompt">Make 6 slides on our Q3 results for the leadership sync</div>
+    <div class="p-thumbs"><i style="background:#0A1925"></i><i style="background:#e6efff"></i><i style="background:#f4efe6"></i><i style="background:#fff3ec"></i><i style="background:#284B71"></i><i style="background:#eff9f2"></i></div>`;
+  return slide(`<div class="p-h">${t.id === 'lesson' ? 'The Water Cycle' : 'Climate &amp; Cities'}</div><div class="p-sub">${t.id === 'lesson' ? 'Grade 6 · Science' : 'Group 4 · Urban Studies'}</div>
+    <div class="p-thumbs"><i style="background:#e6efff"></i><i style="background:#bfd5fc"></i><i style="background:#0A1925"></i><i style="background:#f4efe6"></i><i style="background:#eff9f2"></i><i style="background:#94BBFF"></i></div>`);
+}
+function video(t, { thumb = false, you = false, slot = false, scanning = false } = {}) {
+  const cls = ['vid', 'f-' + t.format, thumb && 'thumb', you && 'is-you', slot && 'slot', scanning && 'scanning'].filter(Boolean).join(' ');
+  const firstWords = t.hook.split(' ').slice(0, 4).join(' ');
+  const caption = `${t.hook}. Link in bio #ad`;
+  return `<div class="${cls}">
+    <div class="v-face"><img class="t" src="${t.face}" alt=""><img class="u" src="${S.photo || SAMPLE_ME}" alt=""><div class="v-scan"></div>
+      <div class="v-slot"><div><i class="ph ph-user-focus"></i>Your photo<br>goes here</div></div></div>
+    <div class="v-prod">${scene(t)}</div>
+    <div class="v-cap" data-cap>${thumb ? firstWords : ''}</div>
+    <div class="v-who ${you ? 'you' : ''}">${you ? '<i class="ph-fill ph-user"></i>You' : '<i class="ph ph-video-camera"></i>Template'}</div>
+    <div class="v-chrome"><div class="v-prog"><i></i></div>
+      <div class="v-rail"><div><i class="ph-fill ph-heart"></i>${you ? '0' : '12.4k'}</div><div><i class="ph-fill ph-chat-circle"></i>${you ? '0' : '318'}</div><div><i class="ph-fill ph-share-fat"></i>Share</div></div>
+      <div class="v-bot"><b>${you ? '@mudita' : '@hardlaunch.creator'}${you ? '<em>Paid partnership</em>' : ''}</b><p>${caption}</p></div></div>
+  </div>`;
+}
+
+/* ================= gallery helpers ================= */
+const btn = (label, cls, attrs = '') => `<button class="button-style button-medium ${cls}" ${attrs}>${label}</button>`;
+const byId = id => TEMPLATES.find(t => t.id === id);
+const list = st => TEMPLATES.filter(t => st.filter === 'all' || t.tags.includes(st.filter));
+const first = (t, n = 4) => t.hook.split(' ').slice(0, n).join(' ');
+const chips = st => `<div class="chips" style="margin:0">${FILTERS.map(([k, l, ic]) => `<button class="chip ${st.filter === k ? 'on' : ''}" data-act="filter" data-id="${k}">${ic ? `<i class="ph ${ic}"></i>` : ''}${l}</button>`).join('')}</div>`;
+function bigVid(t, o = {}) {
+  const w = t.hook.split(' ');
+  return video(t, o).replace('data-cap></div>', `data-cap><span>${w.slice(0, 2).join(' ')}</span> <span class="hi">${w[2] || ''}</span></div>`);
+}
+const phoneAt = (t, w, o = {}) => `<div class="phw" style="width:${w}px;height:${Math.round(500 * w / 252)}px"><div class="phone" style="transform:scale(${w / 252})"><div class="phone-screen">${bigVid(t, o)}</div></div></div>`;
+const card = (t, st, act = 'tpl') => `
+  <button class="tcard ${t.id === st.tpl ? 'on' : ''}" data-act="${act}" data-id="${t.id}">
+    <div class="tthumb" data-thumb><div class="tscale">${video(t, { thumb: true })}</div><span class="tcheck"><i class="ph-bold ph-check"></i></span><span class="tdur"><i class="ph-fill ph-play"></i>${t.dur}</span></div>
+    <div class="tmeta"><div>${t.hook}</div><div>${t.format === 'screen' ? 'Screen + face' : 'Talking head'}</div></div>
+  </button>`;
+const head = (extra = '') => `<header class="head"><div class="head-title"><i class="ph-fill ph-video-camera" style="color:var(--text-secondary)"></i>Creator program <small>with HardLaunch</small></div>
+  <div class="steps"><span class="done"><b><i class="ph-bold ph-check"></i></b>How it works</span><span class="now"><b>2</b>Pick a video${extra}</span><span><b>3</b>Add your face</span><span><b>4</b>Share</span></div>
+  <button class="x" aria-label="Close"><i class="ph ph-x"></i></button></header>`;
+const intro = (sub = 'Each one is scripted, shot and edited. Your face replaces the creator’s.') => `<h2 class="h2">Pick your video</h2><p class="lede" style="margin-bottom:16px">${sub}</p>`;
+const meta = t => `<div class="t-meta"><span><i class="ph-fill ph-play"></i> ${t.dur}</span><span>${t.format === 'screen' ? 'Screen + face' : 'Talking head'}</span></div>`;
+const backFoot = (right = '') => `<footer class="foot">${btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost')}<div class="note"></div>${right}</footer>`;
+
+/* ================= the eight ================= */
+const VARIANTS = [
+  {
+    label: 'CTA lives under the preview',
+    idea: 'The right pane stops being decoration and becomes the decision: the playing video, its script and “Use this video” stacked together. The grid on the left is only for browsing, so a filter can hide a card without hiding the choice.',
+    steps: 'Every step puts its main action in the right pane under the phone (Pick my video, Make my video, Download). The footer keeps only Back.',
+    st: { tpl: 'investor', filter: 'for-you' },
+    render: st => { const t = byId(st.tpl); return `<div class="mk">${head()}
+      <div class="mk-cols" style="grid-template-columns:minmax(0,1fr) 340px">
+        <div class="body">${intro()}${chips(st)}<div class="tgrid" style="margin-top:14px">${list(st).map(x => card(x, st)).join('')}</div></div>
+        <div class="pane-r" style="padding:20px 24px;display:flex;flex-direction:column;align-items:center;gap:12px">
+          ${phoneAt(t, 132)}
+          <div style="width:100%"><div class="t-title">${t.hook}</div><div style="margin-top:4px">${meta(t)}</div>
+          <p class="t-script clamp" style="margin-top:8px;-webkit-line-clamp:2">“${t.script}”</p></div>
+          ${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand full')}
+        </div></div>
+      ${backFoot()}</div>`; },
+  },
+  {
+    label: 'One reel, centre is the pick',
+    idea: 'No grid and no separate selection. One big phone in the middle with its neighbours peeking either side; whatever is centred is the choice, and the button sits right under it. Filters just change the reel, so nothing can be hidden.',
+    steps: 'The phone becomes the centred hero of every step, with that step’s copy and button under it. The two-pane modal goes away.',
+    st: { tpl: 'investor', filter: 'all' },
+    render: st => { const l = list(st); let i = Math.max(0, l.findIndex(x => x.id === st.tpl)); if (!l.find(x => x.id === st.tpl)) st.tpl = l[0].id, i = 0;
+      const t = l[i], prev = l[(i - 1 + l.length) % l.length], next = l[(i + 1) % l.length];
+      return `<div class="mk" style="max-width:760px">${head()}
+      <div class="body" style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+        <div><h2 class="h2">Pick your video</h2></div>${chips(st)}
+        <div class="reel" style="width:100%;height:300px">
+          ${l.length > 1 ? `<div class="side" style="left:calc(50% - 190px);transform:translateY(-50%)" data-act="tpl" data-id="${prev.id}">${phoneAt(prev, 96)}</div>
+          <div class="side" style="left:calc(50% + 94px);transform:translateY(-50%)" data-act="tpl" data-id="${next.id}">${phoneAt(next, 96)}</div>
+          <button class="arrow" style="left:calc(50% - 236px)" data-act="tpl" data-id="${prev.id}" aria-label="Previous"><i class="ph ph-caret-left"></i></button>
+          <button class="arrow" style="left:calc(50% + 200px)" data-act="tpl" data-id="${next.id}" aria-label="Next"><i class="ph ph-caret-right"></i></button>` : ''}
+          <div style="position:relative;z-index:2">${phoneAt(t, 148)}</div>
+        </div>
+        <div class="dots">${l.map(x => `<i class="${x.id === t.id ? 'on' : ''}"></i>`).join('')}</div>
+        <div style="max-width:460px"><div class="t-title">${t.hook}</div><p class="t-script clamp" style="margin-top:6px;-webkit-line-clamp:2">“${t.script}”</p></div>
+      </div>
+      ${backFoot(btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand'))}</div>`; },
+  },
+  {
+    label: 'Opens in place',
+    idea: 'A full-width grid; tapping a card opens a detail strip right under its row, Google Images style, with the preview, script and “Use this video” together. The open card is the selection. Change a filter and the strip closes with the card, so there is never a hidden choice.',
+    steps: 'No right pane on any step. Intro, Face and Share use the full modal width; the phone appears only where it carries information (Face: your slot, Share: your result).',
+    st: { tpl: 'investor', filter: 'all' },
+    render: st => { const l = list(st); const idx = l.findIndex(x => x.id === st.tpl); const cols = 6;
+      const rowEnd = idx < 0 ? -1 : Math.min(l.length - 1, Math.floor(idx / cols) * cols + cols - 1);
+      const t = byId(st.tpl);
+      const strip = !t ? '' : `<div class="xrow" style="--tip:${(idx % cols) * (100 / 6) + 7}%">${phoneAt(t, 130)}
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:420px"><div class="t-title">${t.hook}</div>${meta(t)}<p class="t-script">“${t.script}”</p>
+        <div style="display:flex;gap:8px;margin-top:4px">${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand')}${btn('Close', 'button-ghost', 'data-act="tpl" data-id=""')}</div></div></div>`;
+      return `<div class="mk">${head()}
+      <div class="body">${intro('Tap a video to see it play. Your face replaces the creator’s.')}${chips(st)}
+        <div class="tgrid c6" style="margin-top:14px">${l.map((x, k) => card(x, st) + (k === rowEnd ? strip : '')).join('')}</div></div>
+      ${backFoot()}</div>`; },
+  },
+  {
+    label: 'List and detail',
+    idea: 'A compact list on the left (filters as a dropdown), a large detail on the right with the button directly under the script. If a filter hides your pick, it stays pinned at the top of the list under “Your pick”.',
+    steps: 'The left rail persists through the flow as a summary (video, then photo); the right side is each step’s work area with its button inside it.',
+    st: { tpl: 'doc', filter: 'sales' },
+    render: st => { const l = list(st); const t = byId(st.tpl); const hidden = !l.find(x => x.id === st.tpl);
+      const row = x => `<button class="lrow ${x.id === st.tpl ? 'on' : ''}" data-act="tpl" data-id="${x.id}"><img src="${x.face}" alt=""><div><div class="lt">${x.hook}</div><div class="ld">${x.dur} · ${x.format === 'screen' ? 'Screen + face' : 'Talking head'}</div></div>${x.id === st.tpl ? '<i class="ph-fill ph-check-circle" style="color:var(--text-brand)"></i>' : ''}</button>`;
+      return `<div class="mk">${head()}
+      <div class="mk-cols" style="grid-template-columns:300px minmax(0,1fr)">
+        <div class="pane-l" style="padding:16px 12px">
+          <select class="pai-input" style="width:100%" data-act="select">${FILTERS.map(([k, lb]) => `<option value="${k}" ${st.filter === k ? 'selected' : ''}>${lb}</option>`).join('')}</select>
+          ${hidden ? `<div class="lsel">Your pick</div>${row(t)}<div class="lsel">${FILTERS.find(f => f[0] === st.filter)[1]}</div>` : '<div style="height:8px"></div>'}
+          ${l.map(row).join('')}
+        </div>
+        <div class="body" style="display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;padding:28px 32px">
+          ${phoneAt(t, 200)}
+          <div style="display:flex;flex-direction:column;gap:10px"><div class="sec-label" style="margin:0">Your pick</div><div class="t-title" style="font-size:20px;line-height:26px">${t.hook}</div>${meta(t)}
+            <p class="t-script">“${t.script}”</p><div style="margin-top:6px">${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand')}</div></div>
+        </div></div>
+      ${backFoot()}</div>`; },
+  },
+  {
+    label: 'Choose on the card',
+    idea: 'Drop the idea of a selection. Every card has its own “Use this” button, so the action is always beside the thing it acts on. Tapping the thumbnail opens a preview over the modal, with the same button under the playing video.',
+    steps: 'Pick becomes one tap, so there is no Next in its footer. Other steps keep a normal footer button; the phone on the right is only kept for Face and Share.',
+    st: { tpl: '', filter: 'for-you', open: '' },
+    render: st => { const l = list(st); const o = st.open && byId(st.open);
+      return `<div class="mk" style="position:relative">${head()}
+      <div class="body">${intro()}${chips(st)}
+        <div class="tgrid c6" style="margin-top:14px">${l.map(x => `<div class="acard tcard">
+          <div class="tthumb" data-thumb data-act="open" data-id="${x.id}"><div class="tscale">${video(x, { thumb: true })}</div><span class="tdur"><i class="ph-fill ph-play"></i>${x.dur}</span></div>
+          <div class="tmeta"><div>${x.hook}</div></div>${btn('Use this', 'button-secondary button-small full')}</div>`).join('')}</div></div>
+      ${backFoot()}
+      ${o ? `<div class="lightbox" data-act="open" data-id="">${phoneAt(o, 230)}<div class="lb-card"><div class="t-title">${o.hook}</div>${meta(o)}<p class="t-script">“${o.script}”</p>
+        ${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand full')}${btn('Keep browsing', 'button-ghost full', 'data-act="open" data-id=""')}</div></div>` : ''}</div>`; },
+  },
+  {
+    label: 'Scroll like a feed',
+    idea: 'Browse the way creators already do: a snapping vertical feed of playing videos, each with its script and its own button beside it. Filters stick to the top. Nothing is selected, so nothing can be lost; the button is always next to the video it uses.',
+    steps: 'The flow reads as one tall column: feed for Pick, then a single centred phone for Face and Share. No side pane anywhere.',
+    st: { tpl: '', filter: 'for-you' },
+    render: st => `<div class="mk" style="max-width:720px">${head()}
+      <div class="body feed6" style="padding-top:0">
+        <div style="position:sticky;top:0;background:#fff;z-index:5;margin:0 -24px;padding:20px 24px 12px;border-bottom:1px solid var(--border-secondary)">${intro('Scroll, watch, and use the one that sounds like you.').replace('margin-bottom:16px', 'margin-bottom:12px')}${chips(st)}</div>
+        ${list(st).map(x => `<div class="f-item">${phoneAt(x, 150)}<div style="display:flex;flex-direction:column;gap:8px"><div class="t-title">${x.hook}</div>${meta(x)}<p class="t-script">“${x.script}”</p>
+          <div style="margin-top:4px">${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand')}</div></div></div>`).join('')}
+      </div>${backFoot()}</div>`,
+  },
+  {
+    label: 'Choose a lane first',
+    idea: 'Turn the filters into the first decision: six lane cards (For you, Work, Founders…) with a peek of what’s inside. Picking a lane opens just those videos with a big preview and the button beneath it. Filters can’t hide a choice because the choice happens after the filter.',
+    steps: 'Pick gets a sub-step (shown in the stepper as “Pick a video · Founders”). The phone appears on the second half of Pick and on Face and Share.',
+    st: { tpl: 'investor', filter: 'for-you', cat: '' },
+    render: st => { if (!st.cat) return `<div class="mk">${head()}
+      <div class="body">${intro('What do you make slides for? We’ll show the videos that fit.')}
+        <div class="cats">${FILTERS.filter(f => f[0] !== 'all').map(([k, lb, ic]) => { const l = TEMPLATES.filter(t => t.tags.includes(k));
+          return `<button class="cat" data-act="cat" data-id="${k}"><div><b>${ic ? `<i class="ph ${ic}"></i> ` : ''}${lb}</b><small>${l.length} video${l.length === 1 ? '' : 's'}</small></div><div class="stack">${l.slice(0, 3).map(t => `<img src="${t.face}" alt="">`).join('')}</div></button>`; }).join('')}</div>
+        <button class="linkbtn" style="margin-top:14px;font-size:13px;color:var(--text-tertiary)" data-act="cat" data-id="all">Or see all six</button></div>
+      ${backFoot()}</div>`;
+      const l = TEMPLATES.filter(t => st.cat === 'all' || t.tags.includes(st.cat)); if (!l.find(x => x.id === st.tpl)) st.tpl = l[0].id; const t = byId(st.tpl);
+      const lab = FILTERS.find(f => f[0] === st.cat)[1];
+      return `<div class="mk">${head(` · ${lab}`)}
+      <div class="mk-cols" style="grid-template-columns:minmax(0,1fr) 380px">
+        <div class="body"><button class="crumb" data-act="cat" data-id=""><i class="ph ph-arrow-left"></i>All lanes</button>
+          <h2 class="h2" style="margin-top:8px">${lab}</h2><p class="lede" style="margin-bottom:14px">${l.length} video${l.length === 1 ? '' : 's'}</p>
+          <div class="tgrid">${l.map(x => card(x, st)).join('')}</div></div>
+        <div class="pane-r" style="padding:20px 28px;display:flex;flex-direction:column;align-items:center;gap:12px">${phoneAt(t, 140)}
+          <div style="width:100%"><div class="t-title">${t.hook}</div><p class="t-script clamp" style="margin-top:6px;-webkit-line-clamp:2">“${t.script}”</p></div>
+          ${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand full')}</div></div>
+      ${backFoot()}</div>`; },
+  },
+  {
+    label: 'Build rail with the button',
+    idea: 'Merge the stepper and the preview into one left rail: your video so far at the top, then the steps with what you’ve chosen at each (video, photo, link), and the button at the bottom of the rail. The rail is the selection, so filters on the right can’t hide it.',
+    steps: 'The rail stays put for the whole flow and fills in as you go (video ✓, photo ✓, ready). The header stepper is removed; the right side is just each step’s content.',
+    st: { tpl: 'sunday', filter: 'for-you' },
+    render: st => { const t = byId(st.tpl);
+      return `<div class="mk" style="grid-template-rows:minmax(0,1fr)">
+      <div class="mk-cols" style="grid-template-columns:280px minmax(0,1fr)">
+        <div class="pane-l rail">
+          <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:16px"><i class="ph-fill ph-video-camera" style="color:var(--text-secondary)"></i>Your video</div>
+          <div style="display:flex;justify-content:center">${phoneAt(t, 128)}</div>
+          <div style="margin-top:16px">
+            <div class="rstep done"><span class="rdot"><i class="ph-bold ph-check"></i></span><div><div class="rk">How it works</div><div class="rv">Read</div></div></div>
+            <div class="rstep now"><span class="rdot">2</span><div><div class="rk">Video</div><div class="rv">${t.hook}</div></div></div>
+            <div class="rstep"><span class="rdot">3</span><div><div class="rk">Your photo</div><div class="rv dim">Next</div></div></div>
+            <div class="rstep"><span class="rdot">4</span><div><div class="rk">Share</div><div class="rv dim">Last</div></div></div>
+          </div>
+          <div style="margin-top:auto;padding-top:12px">${btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand full')}</div>
+        </div>
+        <div class="body" style="position:relative"><button class="x" style="position:absolute;top:16px;right:16px" aria-label="Close"><i class="ph ph-x"></i></button>
+          ${intro()}${chips(st)}<div class="tgrid" style="margin-top:14px">${list(st).map(x => card(x, st)).join('')}</div></div>
+      </div></div>`; },
+  },
+];
+
+/* ================= mount ================= */
+const G = document.getElementById('gallery');
+VARIANTS.forEach((v, i) => {
+  const n = String(i + 1).padStart(2, '0');
+  const sec = document.createElement('section'); sec.className = 'g-sec';
+  sec.innerHTML = `<div class="g-lab"><span>${n}</span><b>${v.label}</b></div><p class="g-idea">${v.idea}</p><p class="g-steps"><b>Across the steps:</b> ${v.steps}</p><div class="g-stage" id="v${i}"></div>`;
+  G.appendChild(sec);
+  const box = sec.querySelector('.g-stage');
+  const draw = () => {
+    box.innerHTML = v.render(v.st);
+    box.querySelectorAll('[data-thumb]').forEach(el => { const sc = el.querySelector('.tscale'); if (sc) sc.style.transform = `scale(${el.clientWidth / 240})`; });
+    const x = box.querySelector('.xrow'); if (x) { const b = x.closest('.body'); b.scrollTop = x.offsetTop - b.offsetTop - 260; }
+  };
+  box.addEventListener('click', e => {
+    const a = e.target.closest('[data-act]'); if (!a || a.tagName === 'SELECT') return;
+    if (a.classList.contains('lightbox') && e.target !== a) return;
+    const id = a.dataset.id;
+    if (a.dataset.act === 'filter') v.st.filter = id;
+    else if (a.dataset.act === 'tpl') v.st.tpl = (v.st.tpl === id && v.label === 'Opens in place') ? '' : id;
+    else if (a.dataset.act === 'open') v.st.open = id;
+    else if (a.dataset.act === 'cat') v.st.cat = id;
+    draw();
+  });
+  box.addEventListener('change', e => { if (e.target.dataset.act === 'select') { v.st.filter = e.target.value; draw(); } });
+  draw();
+});
+window.addEventListener('resize', () => document.querySelectorAll('[data-thumb]').forEach(el => { const sc = el.querySelector('.tscale'); if (sc) sc.style.transform = `scale(${el.clientWidth / 240})`; }));
+</script>
+</body>
+</html>
