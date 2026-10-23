@@ -24,11 +24,10 @@ creator pieces added:
 
 ```
 Refer & earn
-├── Hero (cream)          existing link + share buttons │ NEW creator card in the right half,
-│                                                       │   only while the user has no videos yet
+├── Hero (cream)          the live page's hero, unchanged (creator card removed 23 Oct 2026: too busy)
+├── Your videos           NEW, right under the hero in both states. Empty: "Create new video" tile
+│                         + one line on what it is. With videos: Create tile first, then each video
 ├── Stat cards            credits meter splits link vs videos (NEW legend)
-├── Your videos           NEW, once a video exists: first tile is "Create new video", then
-│                         each video (thumb, made date, signups, download)
 ├── Your invites          "Came from" gets a "Your video" badge + platform + which video
 └── How rewards work      NEW bullet: video signups count as referrals
 ```

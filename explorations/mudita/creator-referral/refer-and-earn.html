@@ -241,6 +241,11 @@
     .rules { background: var(--bg-tertiary); }
     th { color: var(--text-tertiary); }
     td .sub, .k, .sec-h span { color: var(--text-tertiary); }
+
+    /* empty Your videos: the Create tile and one line of explanation */
+    .vempty { display: grid; grid-template-columns: 258px minmax(0, 1fr); gap: 20px; align-items: center; padding: 16px; }
+    .vempty-t b { display: block; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--text-primary); }
+    .vempty-t p { margin: 4px 0 0; max-width: 52ch; font-size: 14px; line-height: 20px; color: var(--text-secondary); }
   </style>
 </head>
 <body class="pai">
@@ -292,22 +297,36 @@ let state = 'new'; // 'new' = never made a video · 'creator' = has videos
 const btn = (label, cls, attrs = '') => `<button class="button-style ${cls}" ${attrs}>${label}</button>`;
 const corners = '<span class="hl-corner tl"></span><span class="hl-corner tr"></span><span class="hl-corner bl"></span><span class="hl-corner br"></span>';
 
-function creatorCard() {
-  if (state === 'new') return `
-    <div class="cr">
-      <div class="cr-phone"><div class="cr-screen">
-        <video src="${HL_SAMPLE}" poster="${HL_POSTER}" autoplay muted loop playsinline></video>
-        <div class="hl-face"><div class="hl-blur"></div>${corners}<span class="hl-label">Your photo here</span></div>
-        <div class="cr-link"><i class="ph-bold ph-link"></i>Your link in bio</div>
-      </div></div>
-      <div>
-        <span class="tag-new">NEW</span>
-        <h3><span>Share your link in a video.</span>We make it, you post it.</h3>
-        <p class="s">Pick one of our ready-made videos and add your face. Every signup from it counts as your referral.</p>
-        ${btn('<i class="ph ph-video-camera"></i>Make my video', 'button-medium button-subtle', 'data-open-modal')}
+// Your videos sits right under the hero in both states. Empty: the Create tile plus one line on what it is.
+function videosSection(creator) {
+  const create = '<button class="vnew" data-open-modal><span class="vnew-ico"><i class="ph ph-plus"></i></span><b>Create new video</b><span>Pick one of ours, add your face</span></button>';
+  if (!creator) return `
+    <section class="card" style="padding:0">
+      <div class="sec-h"><h3>Your videos <span class="tag-new" style="margin-left:6px;vertical-align:3px">NEW</span></h3></div>
+      <div class="vempty">
+        ${create}
+        <div class="vempty-t">
+          <b>Share your link in a video</b>
+          <p>Pick one of our ready-made videos and add your face. Post it from your own account, and every signup from it counts as your referral.</p>
+        </div>
       </div>
-    </div>`;
-  return ''; // has videos: the hero goes back to the live page's own layout; videos live in Your videos
+    </section>`;
+  return `
+    <section class="card" style="padding:0">
+      <div class="sec-h"><h3>Your videos</h3><span>${VIDEOS.reduce((a, v) => a + v.signups, 0)} signups so far · each one carries your link</span></div>
+      <div class="vids">
+        ${create}
+        ${VIDEOS.map(v => `
+          <div class="vcard">
+            <div class="vthumb"><img src="${ME}" alt=""><span class="play"><i class="ph-fill ph-play"></i></span><span class="cap">${v.hook.split(' ').slice(0, 4).join(' ')}</span></div>
+            <div class="vmeta">
+              <div class="t">${v.hook}</div><div class="d">Made ${v.made}</div>
+              <div class="n"><i class="ph ph-user-plus"></i><b>${v.signups}</b> signup${v.signups === 1 ? '' : 's'}</div>
+              <div class="acts">${btn('<i class="ph ph-download-simple"></i>Download', 'button-small button-secondary')}${btn('<i class="ph ph-copy"></i>', 'button-small button-ghost icon-only', 'aria-label="Copy caption" title="Copy caption"')}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </section>`;
 }
 
 function render() {
@@ -318,7 +337,7 @@ function render() {
   const earned = Math.min(CAP_YEAR, fromLink + fromVideo);
 
   $('#page').innerHTML = `
-    <section class="hero ${creator ? 'solo' : ''}">
+    <section class="hero solo">
       <div>
         <div class="over"><i class="ph ph-gift"></i>Refer &amp; earn</div>
         <h2>Give 200 credits, get 200 credits</h2>
@@ -329,8 +348,9 @@ function render() {
           ${btn('LinkedIn', 'button-small button-secondary')}${btn('Twitter', 'button-small button-secondary')}${btn('Facebook', 'button-small button-secondary')}${btn('WhatsApp', 'button-small button-secondary')}
         </div>
       </div>
-      ${creatorCard()}
     </section>
+
+    ${videosSection(creator)}
 
     <div class="stats">
       <section class="card">
@@ -352,22 +372,6 @@ function render() {
       </section>
     </div>
 
-    ${creator ? `
-    <section class="card" style="padding:0">
-      <div class="sec-h"><h3>Your videos</h3><span>${VIDEOS.reduce((a, v) => a + v.signups, 0)} signups so far · each one carries your link</span></div>
-      <div class="vids">
-        <button class="vnew" data-open-modal><span class="vnew-ico"><i class="ph ph-plus"></i></span><b>Create new video</b><span>Pick one of ours, add your face</span></button>
-        ${VIDEOS.map(v => `
-          <div class="vcard">
-            <div class="vthumb"><img src="${ME}" alt=""><span class="play"><i class="ph-fill ph-play"></i></span><span class="cap">${v.hook.split(' ').slice(0, 4).join(' ')}</span></div>
-            <div class="vmeta">
-              <div class="t">${v.hook}</div><div class="d">Made ${v.made}</div>
-              <div class="n"><i class="ph ph-user-plus"></i><b>${v.signups}</b> signup${v.signups === 1 ? '' : 's'}</div>
-              <div class="acts">${btn('<i class="ph ph-download-simple"></i>Download', 'button-small button-secondary')}${btn('<i class="ph ph-copy"></i>', 'button-small button-ghost icon-only', 'aria-label="Copy caption" title="Copy caption"')}</div>
-            </div>
-          </div>`).join('')}
-      </div>
-    </section>` : ''}
 
     <section class="card" style="padding:0">
       <div class="sec-h"><h3>Your invites</h3><span>Templates you publish${creator ? ' and videos you post' : ''} carry your link too</span></div>
