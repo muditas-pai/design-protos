@@ -70,6 +70,10 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
 - **Tab switch keeps the pick if it's in the new tab, otherwise selects that tab's
   first video**, so the selected card is always visible and matches the rail.
 
+- **No consent checkbox in the modal** (removed 23 Oct 2026). "Make my video" unlocks
+  on a photo alone. Open: where the likeness / 18+ consent lives instead (signup to the
+  creator program, HardLaunch's terms, or a one-time agreement).
+
 ## Open questions
 
 - **The 2,000-credit yearly cap is 10 friends.** A creator video that works hits it fast,
