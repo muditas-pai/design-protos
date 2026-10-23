@@ -62,12 +62,13 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   line `#E4E4EC`, sunken `#F3F3F7`, system font stack, radii 6 / 12 / 16, brand-filled
   primary button. Decided 22 Oct 2026 for these few protos only; no design-system PR.
 
-- **Layout: right rail** (picked 23 Oct 2026 from crazy 8s round 2, direction 08,
-  mirrored, then trimmed). The rail holds the video, a one-line caption under it (on
-  Pick it names the selected video, so a filter can't hide the choice), and the step's
-  one button at its bottom, with consent beside "Make my video". The numbered stepper
-  stays in the header; the rail's step timeline was dropped. No footer; Back is a crumb
-  at the top of the content.
+- **Layout: right rail + modal footer** (23 Oct 2026). The right rail shows the video
+  and a caption; on Pick it also names the selection and shows its script ("What you'll
+  say"). One footer spans the whole modal: Back (or Not now / Try another video) on the
+  left, notes or the consent checkbox in the middle, the step's primary button bottom
+  right. Numbered stepper in the header.
+- **Tab switch keeps the pick if it's in the new tab, otherwise selects that tab's
+  first video**, so the selected card is always visible and matches the rail.
 
 ## Open questions
 

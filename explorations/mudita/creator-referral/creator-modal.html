@@ -407,15 +407,20 @@
     .rail-top { display: flex; align-items: center; justify-content: space-between; margin: 0 -6px 12px 0; }
     .rail-top span { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
     .rail-top span i { color: var(--text-secondary); }
-    .rail-phone { position: relative; flex: none; width: 168px; height: 333px; margin: 4px auto 0; }
-    .rail-phone .phone { position: absolute; top: 0; left: 0; transform: scale(0.667); transform-origin: top left; box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 36px -16px rgba(16,12,60,0.45); }
-    .rail-cap { margin-top: 14px; text-align: center; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+    .rail-phone { position: relative; flex: none; width: 136px; height: 270px; margin: 0 auto; }
+    .rail-phone .phone { position: absolute; top: 0; left: 0; transform: scale(0.54); transform-origin: top left; box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 36px -16px rgba(16,12,60,0.45); }
+    .rail-cap { margin-top: 10px; text-align: center; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
     .rail-cap b { display: block; margin-top: 2px; font-weight: 600; color: var(--text-primary); }
     .rail-cap .k { display: block; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-brand); }
-    .rail-cta { margin-top: auto; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
-    .rail-cta .button-style { width: 100%; }
-    .rail-cta .consent { margin: 0; }
-    .rail-cta .consent span { font-size: 12px; line-height: 16px; }
+    .modal { grid-template-rows: minmax(0, 1fr) auto; }
+    .mfoot { grid-column: 1 / -1; }
+    .mfoot .consent { margin: 0; max-width: 420px; }
+    .mfoot .consent span { font-size: 12px; line-height: 16px; }
+    .rail-script { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--border-secondary); }
+    .rail-script:empty { display: none; }
+    .rail-script .sec-label { margin: 0 0 4px; font-size: 11px; }
+    .rail-script q { display: block; font-size: 13px; line-height: 19px; color: var(--text-primary); quotes: "“" "”"; }
+    .rail-script .script-foot { margin-top: 6px; font-size: 11px; line-height: 15px; }
     .rail-note { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
     .crumb { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 13px; color: var(--text-secondary); }
     .crumb:hover { color: var(--text-primary); }
@@ -423,8 +428,7 @@
     @media (max-width: 900px) {
       .modal { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
       .rail { border-left: 0; border-top: 1px solid var(--border-secondary); padding: 12px 16px; }
-      .rail-top, .rail-phone, .rail-cap { display: none; }
-      .rail-cta { padding-top: 0; }
+      .rail-top, .rail-phone, .rail-cap, .rail-script { display: none; }
     }
   </style>
 </head>
@@ -467,13 +471,15 @@
         </header>
         <div class="body" id="body"></div>
       </section>
-      <!-- right rail: the video so far, what it is, and the step's one button -->
+      <!-- right rail: the video and what it is (on Pick: the selection and its script) -->
       <aside class="rail" aria-label="Your video">
         <div class="rail-top"><span><i class="ph-fill ph-film-slate"></i>Your video</span><button class="x" id="close" aria-label="Close"><i class="ph ph-x"></i></button></div>
         <div class="rail-phone"><div class="phone"><div class="phone-screen" id="phone"></div></div></div>
         <div class="rail-cap" id="railCap" aria-live="polite"></div>
-        <div class="rail-cta" id="cta"></div>
+        <div class="rail-script" id="railScript"></div>
       </aside>
+      <!-- one footer across the whole modal: Back on the left, the step's primary button bottom right -->
+      <footer class="foot mfoot" id="foot"></footer>
     </div>
   </div>
 
@@ -608,7 +614,9 @@ const VIEWS = {
           <div><b>Your photo is only used for your videos.</b> Never for anyone else’s, never sold. Delete it any time, and it’s removed automatically after 30 days.</div>
           <div><b>You stay in control.</b> Nothing is posted for you. You download the video and decide where it goes.</div>
         </div></details>`,
-    cta: `${btn('Pick my video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="pick"')}<div class="rail-note"><i class="ph ph-clock"></i>Ready in about 2 minutes</div>`,
+    left: btn('Not now', 'button-ghost', 'data-close'),
+    note: '<i class="ph ph-clock"></i>Ready in about 2 minutes',
+    cta: btn('Pick my video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="pick"'),
   }),
 
   pick: () => {
@@ -625,8 +633,7 @@ const VIEWS = {
               <span class="tcheck"><i class="ph-bold ph-check"></i></span><span class="tdur"><i class="ph-fill ph-play"></i>${x.dur}</span></div>
             <div class="tmeta"><div>${x.hook}</div><div>${x.format === 'screen' ? 'Screen + face' : 'Talking head'}</div></div>
           </button>`).join('')}</div>
-        <div class="script"><div class="sec-label" style="margin-bottom:6px">What you’ll say</div><q>${t.script}</q>
-          <div class="script-foot"><i class="ph ph-info"></i>Scripts are fixed so every video stays accurate about the product.</div></div>`,
+`,
       back: 'intro',
       cta: btn('Use this video <i class="ph ph-arrow-right"></i>', 'button-primary-brand', 'data-go="face"'),
     };
@@ -651,9 +658,9 @@ const VIEWS = {
             <button class="linkbtn" data-sample>Use a sample photo (prototype only)</button>`}
         </div>`,
       back: 'pick',
-      cta: `<label class="consent"><input type="checkbox" class="pai-checkbox" id="consent" ${S.consent ? 'checked' : ''}>
-          <span>This is me and I’m 18 or older. Use my photo for this video only; I can delete it any time.</span></label>
-        ${btn('<i class="ph ph-sparkle"></i>Make my video', 'button-primary-brand' + (ready ? '' : ' button-disabled button-disabled-40'), ready ? 'data-make' : 'disabled')}`,
+      note: `<label class="consent"><input type="checkbox" class="pai-checkbox" id="consent" ${S.consent ? 'checked' : ''}>
+          <span>This is me and I’m 18 or older. Use my photo for this video only; I can delete it any time.</span></label>`,
+      cta: btn('<i class="ph ph-sparkle"></i>Make my video', 'button-primary-brand' + (ready ? '' : ' button-disabled button-disabled-40'), ready ? 'data-make' : 'disabled'),
     };
   },
 
@@ -673,7 +680,7 @@ const VIEWS = {
     return {
       body: `
         <h1 class="hl"><span class="setup">Your video is ready.</span><span class="payoff">Post it and start earning.</span></h1>
-        <p class="lede" style="margin-top:4px">Download it from the panel on the right, then:</p>
+        <p class="lede" style="margin-top:4px">Download it, then:</p>
         <ol class="post">
           <li><span class="n">1</span><div><div class="post-t">Copy the caption</div><div class="post-sub" id="caption" title="${caption}">${caption}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy-caption')}</li>
           <li><span class="n">2</span><div><div class="post-t">Add your link to your bio</div><div class="post-sub mono">${LINK}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy="' + LINK + '"')}</li>
@@ -681,10 +688,10 @@ const VIEWS = {
         <div class="post-note">
           <div><i class="ph ph-coins"></i><span><b>+${PER_SIGNUP} credits</b> for every friend who signs up and makes a deck</span></div>
           <div><i class="ph ph-tag"></i><span>Keep <b>#ad</b> in the caption. It’s a paid post.</span></div>
-        </div>
-        <div class="after">${btn('<i class="ph ph-arrows-clockwise"></i>Try another video', 'button-ghost', 'data-go="pick"')}</div>`,
-      cta: `${btn('<i class="ph ph-download-simple"></i>Download video', 'button-primary-brand', 'data-download')}
-        <a class="button-style button-medium button-ghost" href="${REFER_PAGE}" target="_blank" rel="noopener">Track my signups <i class="ph ph-arrow-up-right"></i></a>`,
+        </div>`,
+      left: btn('<i class="ph ph-arrows-clockwise"></i>Try another video', 'button-ghost', 'data-go="pick"'),
+      cta: `<a class="button-style button-medium button-secondary" href="${REFER_PAGE}" target="_blank" rel="noopener">Track my signups <i class="ph ph-arrow-up-right"></i></a>
+        ${btn('<i class="ph ph-download-simple"></i>Download video', 'button-primary-brand', 'data-download')}`,
     };
   },
 
@@ -709,9 +716,11 @@ function renderSteps() {
 }
 function render(animate = true) {
   const v = VIEWS[S.view]();
-  const back = v.back ? `<button class="crumb" data-go="${v.back}"><i class="ph ph-arrow-left"></i>Back</button>` : '';
-  $('#body').innerHTML = `<div class="view" ${animate ? '' : 'style="animation:none"'}>${back}${v.body}</div>`;
-  $('#cta').innerHTML = v.cta;
+  $('#body').innerHTML = `<div class="view" ${animate ? '' : 'style="animation:none"'}>${v.body}</div>`;
+  const left = v.back ? btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost', `data-go="${v.back}"`) : (v.left || '');
+  $('#foot').innerHTML = `${left}<div class="note">${v.note || ''}</div>${v.cta}`;
+  $('#railScript').innerHTML = S.view === 'pick' ? `<div class="sec-label">What you’ll say</div><q>${tpl().script}</q>
+    <div class="script-foot"><i class="ph ph-info"></i>Scripts are fixed so every video stays accurate.</div>` : '';
   renderSteps(); renderPhone(); fitThumbs(); renderReview();
 }
 function fitThumbs() {
@@ -736,7 +745,12 @@ document.addEventListener('click', e => {
   const t = e.target.closest('button, [data-close]'); if (!t) return;
   if (t.dataset.go) go(t.dataset.go);
   else if ('close' in t.dataset) close();
-  else if (t.dataset.filter) { S.filter = t.dataset.filter; render(false); }
+  else if (t.dataset.filter) {
+    S.filter = t.dataset.filter;
+    const inTab = TEMPLATES.filter(x => S.filter === 'all' || x.tags.includes(S.filter));
+    if (!inTab.some(x => x.id === S.tpl)) S.tpl = inTab[0].id; // the pick is always a visible card
+    render(false);
+  }
   else if (t.dataset.tpl) { S.tpl = t.dataset.tpl; render(false); }
   else if ('upload' in t.dataset) $('#file').click();
   else if ('sample' in t.dataset) { S.photo = SAMPLE_ME; render(false); }
