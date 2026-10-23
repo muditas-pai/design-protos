@@ -444,6 +444,47 @@
       .rail { border-left: 0; border-top: 1px solid var(--border-secondary); padding: 12px 16px; }
       .rail-top, .rail-phone, .rail-cap, .rail-script { display: none; }
     }
+
+    /* ---------- clean-up pass (23 Oct 2026): fewer boxes, one progress signal, the video as large as its pane ---------- */
+    .modal { position: relative; }
+    .mclose { position: absolute; top: 12px; right: 12px; z-index: 5; }
+    .view { animation-duration: 220ms; }
+    .lede .cr { font-weight: 600; color: var(--text-brand); }
+    .steps3 { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 16px; }
+    .steps3 li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; align-items: start; }
+    .steps3 i { font-size: 20px; color: var(--text-tertiary); margin-top: 1px; }
+    .steps3 h4 { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--text-primary); }
+    .steps3 p { margin: 0; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+    .faq { margin-top: 24px; }
+    /* filter tabs: one row that scrolls, never wraps */
+    .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -24px; padding-right: 24px; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; }
+    /* video list: rows, not boxed cards; only the selected one gets a surface */
+    .tgrid { gap: 2px; margin: 0 -8px; }
+    .tcard { border: 0; background: transparent; padding: 8px; border-radius: 10px; transition: background 150ms var(--ease-std), transform 120ms var(--ease-std); }
+    .tcard:active { transform: scale(0.99); }
+    @media (hover: hover) and (pointer: fine) { .tcard:hover { background: var(--bg-tertiary); } }
+    .tcard.on, .tcard.on:hover { background: var(--app-50); box-shadow: none; }
+    .tcard.on .tmeta div:first-child { color: var(--text-brand); }
+    /* face: the drop zone is a real target so it keeps its dashes; once filled it is just content */
+    .up.has { border: 0; background: transparent; padding-top: 12px; }
+    /* making: the stage list is the progress */
+    .stages { margin-top: 24px; }
+    /* share: rows on the page, not a box */
+    .post { border: 0; border-radius: 0; margin-top: 16px; border-top: 1px solid var(--border-secondary); border-bottom: 1px solid var(--border-secondary); }
+    .post li { padding: 14px 0; }
+    .muted-note { margin: 12px 0 0; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
+    /* rail: just the video, its title and (on Pick) the script, centred in the pane */
+    .rail { justify-content: center; padding: 24px 32px; }
+    .rail-phone { width: 252px; height: 500px; }
+    .rail-phone .phone { transition: transform 200ms var(--ease-std); }
+    .rail-cap { margin-top: 16px; font-size: 13px; line-height: 18px; }
+    .rail-cap b { font-size: 14px; line-height: 20px; }
+    .rail-script { margin: 10px auto 0; padding: 0; border: 0; background: none; border-radius: 0; max-width: 380px; text-align: center; }
+    .rail-script span { display: block; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+    .rail-script q { display: block; margin-top: 4px; font-size: 13px; line-height: 19px; color: var(--text-secondary); quotes: "“" "”"; }
+    @media (prefers-reduced-motion: reduce) { .tcard:active { transform: none; } }
   </style>
 </head>
 <body class="pai">
@@ -486,11 +527,11 @@
       </section>
       <!-- right rail: the video and what it is (on Pick: the selection and its script) -->
       <aside class="rail" aria-label="Your video">
-        <div class="rail-top"><span><i class="ph-fill ph-film-slate"></i>Your video</span><button class="x" id="close" aria-label="Close"><i class="ph ph-x"></i></button></div>
         <div class="rail-phone"><div class="phone"><div class="phone-screen" id="phone"></div></div></div>
         <div class="rail-cap" id="railCap" aria-live="polite"></div>
         <div class="rail-script" id="railScript"></div>
       </aside>
+      <button class="x mclose" id="close" aria-label="Close"><i class="ph ph-x"></i></button>
       <!-- one footer across the whole modal: Back on the left, the step's primary button bottom right -->
       <footer class="foot mfoot" id="foot"></footer>
     </div>
@@ -638,12 +679,12 @@ const VIEWS = {
     body: `
       <span class="tag-new">NEW</span>
       <h1 class="hl" style="margin-top:12px"><span class="setup">We make the video, you post it.</span><span class="payoff">Earn credits for every signup.</span></h1>
-      <div class="how">
-        <div class="how-row"><div class="how-ico"><i class="ph ph-film-strip"></i></div><div><h4>Pick one of our videos</h4><p>Already scripted, shot and edited. Nothing to film, nothing to write.</p></div></div>
-        <div class="how-row"><div class="how-ico"><i class="ph ph-user-focus"></i></div><div><h4>Add your face</h4><p>Upload one photo. We put you in the video, with your lips matched to the words.</p></div></div>
-        <div class="how-row"><div class="how-ico"><i class="ph ph-download-simple"></i></div><div><h4>Download it. It’s yours.</h4><p>Post it from your own account, wherever you like. Make as many as you want.</p></div></div>
-      </div>
-      <div class="earn"><i class="ph-fill ph-coins"></i><div class="earn-copy"><b>+${PER_SIGNUP} credits</b> for every friend who signs up and makes a deck</div></div>
+      <p class="lede"><b class="cr">+${PER_SIGNUP} credits</b> for every friend who signs up with your link and makes a deck.</p>
+      <ol class="steps3">
+        <li><i class="ph ph-film-strip"></i><div><h4>Pick one of our videos</h4><p>Already scripted, shot and edited.</p></div></li>
+        <li><i class="ph ph-user-focus"></i><div><h4>Add your face</h4><p>One photo. We match your lips to the words.</p></div></li>
+        <li><i class="ph ph-download-simple"></i><div><h4>Download it. It’s yours.</h4><p>Post it from your own account.</p></div></li>
+      </ol>
       <details class="faq"><summary><i class="ph ph-caret-right"></i>Is it really me in the video? What happens to my photo?</summary>
         <div class="faq-body">
           <div><b>Yes, it’s you.</b> Your face and expressions, the template’s script and edit. The video is labelled as AI-assisted so your followers know.</div>
@@ -661,14 +702,14 @@ const VIEWS = {
     return {
       body: `
         <h2 class="h2">Pick your video</h2>
-        <p class="lede">Each one is already scripted, shot and edited, so you’re not starting from a blank page. Your face replaces the creator’s; the rest is done.</p>
+        <p class="lede">Scripted, shot and edited. Your face replaces the creator’s.</p>
         <div class="chips">${FILTERS.map(([k, l, ic]) => `<button class="chip ${S.filter === k ? 'on' : ''}" data-filter="${k}">${ic ? `<i class="ph ${ic}"></i>` : ''}${l}</button>`).join('')}</div>
         <div class="tgrid">${list.map(x => `
           <button class="tcard ${x.id === S.tpl ? 'on' : ''}" data-tpl="${x.id}" aria-pressed="${x.id === S.tpl}">
             <div class="tthumb" data-thumb><div class="tscale">${video(x, { thumb: true })}</div>
               <span class="tcheck"><i class="ph-bold ph-check"></i></span><span class="tdur"><i class="ph-fill ph-play"></i>${x.dur}</span></div>
             <div class="tmeta"><div>${x.hook}</div><div><i class="ph-fill ph-play"></i>${x.dur} · ${x.format === 'screen' ? 'Screen + face' : 'Talking head'}</div></div>
-            <span class="tpick" aria-hidden="true">${x.id === S.tpl ? '<i class="ph-bold ph-check"></i>' : ''}</span>
+            ${x.id === S.tpl ? '<span class="tpick" aria-hidden="true"><i class="ph-bold ph-check"></i></span>' : '<span></span>'}
           </button>`).join('')}</div>
 `,
       back: 'intro',
@@ -703,10 +744,8 @@ const VIEWS = {
   making: () => ({
     body: `
       <h2 class="h2">${S.prog >= 4 ? 'Your video is ready' : 'Making your video'}</h2>
-      <p class="lede">This takes about 2 minutes. Keep working if you like; we’ll let you know when it’s ready.</p>
-      <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i < S.prog ? 'done' : i === S.prog ? 'active' : ''}"><span class="dot">${i < S.prog ? '<i class="ph-bold ph-check"></i>' : ''}</span>${s}</div>`).join('')}</div>
-      <div class="bar"><i style="width:${S.prog * 25}%"></i></div>
-      <div class="bar-meta"><span>${S.prog >= 4 ? 'Done' : `Step ${S.prog + 1} of 4`}</span><span>${S.prog >= 4 ? '' : `About ${Math.max(1, 4 - S.prog) * 30} seconds left`}</span></div>`,
+      <p class="lede">About 2 minutes. You can close this; we’ll let you know when it’s ready.</p>
+      <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i < S.prog ? 'done' : i === S.prog ? 'active' : ''}"><span class="dot">${i < S.prog ? '<i class="ph-bold ph-check"></i>' : ''}</span>${s}</div>`).join('')}</div>`,
     cta: btn('<i class="ph ph-bell"></i>Keep working, notify me', 'button-secondary', 'data-close'),
   }),
 
@@ -720,10 +759,7 @@ const VIEWS = {
           <li><span class="n">1</span><div><div class="post-t">Copy the caption</div><div class="post-sub" id="caption" title="${caption}">${caption}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy-caption')}</li>
           <li><span class="n">2</span><div><div class="post-t">Add your link to your bio</div><div class="post-sub mono">${LINK}</div></div>${btn('<i class="ph ph-copy"></i>Copy', 'button-secondary', 'data-copy="' + LINK + '"')}</li>
         </ol>
-        <div class="post-note">
-          <div><i class="ph ph-coins"></i><span><b>+${PER_SIGNUP} credits</b> for every friend who signs up and makes a deck</span></div>
-          <div><i class="ph ph-tag"></i><span>Keep <b>#ad</b> in the caption. It’s a paid post.</span></div>
-        </div>`,
+        <p class="muted-note">Keep #ad in the caption; it’s a paid post. +${PER_SIGNUP} credits for every friend who signs up.</p>`,
       left: btn('<i class="ph ph-arrows-clockwise"></i>Try another video', 'button-ghost', 'data-go="pick"'),
       cta: `<a class="button-style button-medium button-secondary" href="${REFER_PAGE}" target="_blank" rel="noopener">Track my signups <i class="ph ph-arrow-up-right"></i></a>
         ${btn('<i class="ph ph-download-simple"></i>Download video', 'button-primary-brand', 'data-download')}`,
@@ -738,7 +774,7 @@ function renderSteps() {
   // under the rail phone: what you're looking at; on Pick it names the selection, so a filter can't hide it
   $('#railCap').innerHTML = {
     intro: 'A real HardLaunch video. <b>In yours, this creator becomes you.</b>',
-    pick: `<span class="k">Selected</span><b>${tpl().hook}</b>`,
+    pick: `<b>${tpl().hook}</b>`,
     face: S.photo ? 'That’s you in it. <b>Same words, same edit.</b>' : 'Your photo goes in here.',
     making: S.prog >= 4 ? '<b>Done. That’s you.</b>' : 'Putting you in…',
     share: '<b>Your video.</b> Yours to post anywhere.',
@@ -749,10 +785,24 @@ function render(animate = true) {
   $('#body').innerHTML = `<div class="view" ${animate ? '' : 'style="animation:none"'}>${v.body}</div>`;
   const left = v.back ? btn('<i class="ph ph-arrow-left"></i>Back', 'button-ghost', `data-go="${v.back}"`) : (v.left || '');
   $('#foot').innerHTML = `${left}<div class="note">${v.note || ''}</div>${v.cta}`;
-  $('#railScript').innerHTML = S.view === 'pick' ? `<div class="sec-label">What you’ll say</div><q>${tpl().script}</q>
-    <div class="script-foot"><i class="ph ph-info"></i>Scripts are fixed so every video stays accurate.</div>` : '';
-  renderSteps(); renderPhone(); fitThumbs(); renderReview();
+  $('#railScript').innerHTML = S.view === 'pick' ? `<span>What you’ll say</span><q>${tpl().script}</q>` : '';
+  const prevTpl = $('#phone').dataset.tpl;
+  renderSteps(); renderPhone(); fitThumbs(); renderReview(); fitPhone();
+  // a new pick crossfades in instead of snapping (150ms, ease-out)
+  if (S.view === 'pick' && prevTpl && prevTpl !== S.tpl) $('#phone').animate([{ opacity: 0.4, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 160, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  $('#phone').dataset.tpl = S.tpl;
 }
+// the rail phone is as large as its pane allows: fill the height left after the caption/script, cap by width
+function fitPhone() {
+  const rail = $('.rail'), wrap = $('.rail-phone'), ph = wrap.querySelector('.phone');
+  if (!rail.offsetParent) return;
+  const cs = getComputedStyle(rail), padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const below = $('#railCap').offsetHeight + $('#railScript').offsetHeight + 36;
+  const k = Math.max(0.5, Math.min((rail.clientHeight - padY - below) / 500, (rail.clientWidth - padX) / 252, 1.15));
+  wrap.style.width = Math.round(252 * k) + 'px'; wrap.style.height = Math.round(500 * k) + 'px';
+  ph.style.transform = `scale(${k})`;
+}
+window.addEventListener('resize', () => fitPhone());
 function fitThumbs() {
   document.querySelectorAll('[data-thumb]').forEach(el => { el.querySelector('.tscale').style.transform = `scale(${el.clientWidth / 240})`; });
 }
