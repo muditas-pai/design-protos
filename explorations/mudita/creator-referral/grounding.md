@@ -62,11 +62,12 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   line `#E4E4EC`, sunken `#F3F3F7`, system font stack, radii 6 / 12 / 16, brand-filled
   primary button. Decided 22 Oct 2026 for these few protos only; no design-system PR.
 
-- **Layout: build rail on the right** (picked 23 Oct 2026 from crazy 8s round 2,
-  direction 08, mirrored). The rail holds the video so far, what's been chosen at each
-  step (video, photo, share), and the step's one button at its bottom, with consent
-  beside "Make my video". The header stepper and the footer are gone; Back is a crumb
-  at the top of the content. The rail *is* the selection, so a filter can't hide it.
+- **Layout: right rail** (picked 23 Oct 2026 from crazy 8s round 2, direction 08,
+  mirrored, then trimmed). The rail holds the video, a one-line caption under it (on
+  Pick it names the selected video, so a filter can't hide the choice), and the step's
+  one button at its bottom, with consent beside "Make my video". The numbered stepper
+  stays in the header; the rail's step timeline was dropped. No footer; Back is a crumb
+  at the top of the content.
 
 ## Open questions
 

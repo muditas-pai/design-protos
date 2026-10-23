@@ -407,17 +407,11 @@
     .rail-top { display: flex; align-items: center; justify-content: space-between; margin: 0 -6px 12px 0; }
     .rail-top span { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
     .rail-top span i { color: var(--text-secondary); }
-    .rail-phone { position: relative; flex: none; width: 112px; height: 222px; margin: 0 auto; }
-    .rail-phone .phone { position: absolute; top: 0; left: 0; transform: scale(0.444); transform-origin: top left; box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 36px -16px rgba(16,12,60,0.45); }
-    .rsteps { list-style: none; margin: 14px 0 0; padding: 0; }
-    .rsteps li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 7px 0; }
-    .rsteps li + li { border-top: 1px solid var(--border-secondary); }
-    .rdot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--border-primary); color: var(--text-tertiary); }
-    .rsteps li.now .rdot { background: var(--bg-brand); color: #fff; box-shadow: none; }
-    .rsteps li.done .rdot { background: var(--bg-success); color: #fff; box-shadow: none; }
-    .rk { font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
-    .rv { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-primary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .rv.dim { color: var(--text-quaternary); font-weight: 400; }
+    .rail-phone { position: relative; flex: none; width: 168px; height: 333px; margin: 4px auto 0; }
+    .rail-phone .phone { position: absolute; top: 0; left: 0; transform: scale(0.667); transform-origin: top left; box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 36px -16px rgba(16,12,60,0.45); }
+    .rail-cap { margin-top: 14px; text-align: center; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+    .rail-cap b { display: block; margin-top: 2px; font-weight: 600; color: var(--text-primary); }
+    .rail-cap .k { display: block; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-brand); }
     .rail-cta { margin-top: auto; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
     .rail-cta .button-style { width: 100%; }
     .rail-cta .consent { margin: 0; }
@@ -429,7 +423,7 @@
     @media (max-width: 900px) {
       .modal { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
       .rail { border-left: 0; border-top: 1px solid var(--border-secondary); padding: 12px 16px; }
-      .rail-top, .rail-phone, .rsteps { display: none; }
+      .rail-top, .rail-phone, .rail-cap { display: none; }
       .rail-cta { padding-top: 0; }
     }
   </style>
@@ -469,14 +463,15 @@
       <section class="pane">
         <header class="head">
           <div class="head-title" id="dlgTitle"><i class="ph-fill ph-video-camera" style="color:var(--text-secondary)"></i>Creator program <small>with HardLaunch</small></div>
+          <div class="steps" id="steps"></div>
         </header>
         <div class="body" id="body"></div>
       </section>
-      <!-- build rail: the video so far, what you've chosen at each step, and the step's one button -->
+      <!-- right rail: the video so far, what it is, and the step's one button -->
       <aside class="rail" aria-label="Your video">
         <div class="rail-top"><span><i class="ph-fill ph-film-slate"></i>Your video</span><button class="x" id="close" aria-label="Close"><i class="ph ph-x"></i></button></div>
         <div class="rail-phone"><div class="phone"><div class="phone-screen" id="phone"></div></div></div>
-        <ol class="rsteps" id="rsteps"></ol>
+        <div class="rail-cap" id="railCap" aria-live="polite"></div>
         <div class="rail-cta" id="cta"></div>
       </aside>
     </div>
@@ -699,18 +694,18 @@ const VIEWS = {
 /* ---------------- render + wiring ---------------- */
 function renderSteps() {
   const order = ['intro', 'pick', 'face', 'share'];
-  const at = S.view === 'making' ? 2.5 : order.indexOf(S.view);
-  const done = S.view === 'making' && S.prog >= 4;
-  const rows = [
-    ['How it works', at > 0 ? 'Read' : 'You’re here', false],
-    ['Video', at >= 1 ? tpl().hook : 'Not picked yet', at < 1],
-    ['Your photo', S.view === 'making' ? (done ? 'Added' : 'Putting you in…') : (S.photo && at >= 2 ? 'Added' : 'Not added yet'), !(S.photo && at >= 2)],
-    ['Share', S.view === 'share' ? 'Ready to post' : 'Last step', S.view !== 'share'],
-  ];
-  $('#rsteps').innerHTML = rows.map(([k, v, dim], i) => {
-    const state = S.view === 'making' && i === 2 ? (done ? 'done' : 'now') : i < at ? 'done' : Math.floor(at) === i ? 'now' : '';
-    return `<li class="${state}"><span class="rdot">${state === 'done' ? '<i class="ph-bold ph-check"></i>' : i + 1}</span><div><div class="rk">${k}</div><div class="rv ${dim ? 'dim' : ''}">${v}</div></div></li>`;
-  }).join('');
+  const cur = { making: 'face' }[S.view] || S.view;
+  const idx = order.indexOf(cur);
+  $('#steps').innerHTML = STEPS.map(([k, l], i) =>
+    `<span class="${i < idx || (S.view === 'making' && S.prog >= 4 && i === idx) ? 'done' : i === idx ? 'now' : ''}"><b>${i < idx ? '<i class="ph-bold ph-check"></i>' : i + 1}</b>${l}</span>`).join('');
+  // under the rail phone: what you're looking at; on Pick it names the selection, so a filter can't hide it
+  $('#railCap').innerHTML = {
+    intro: 'A real HardLaunch video. <b>In yours, this creator becomes you.</b>',
+    pick: `<span class="k">Selected</span><b>${tpl().hook}</b>`,
+    face: S.photo ? 'That’s you in it. <b>Same words, same edit.</b>' : 'Your photo goes in here.',
+    making: S.prog >= 4 ? '<b>Done. That’s you.</b>' : 'Putting you in…',
+    share: '<b>Your video.</b> Yours to post anywhere.',
+  }[S.view];
 }
 function render(animate = true) {
   const v = VIEWS[S.view]();
