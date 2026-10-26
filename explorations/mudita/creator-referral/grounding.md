@@ -98,6 +98,14 @@ Analytics promo (bg-secondary card, art faded in from the right, one small butto
 the subtle button, since the footer's Copy link is already the primary. The older
 `components/core/share` dialog with a "Social media" tab is the legacy host (pdapp, mobile).
 
+**Share → creator modal transition.** "Make my video" opens
+`creator-modal.html?step=intro&from=share`; both pages name their dialog `creator-dlg` and
+opt into cross-document view transitions, so the Share dialog morphs into the creator modal
+(420ms, drawer curve; contents crossfade) and "Back to Share" reverses it. The editor stays
+behind the modal when coming from Share. Chrome/Edge/Safari 18.2+; elsewhere it's a plain
+page change. In the product this is one dialog swapping its content, so engineering can
+do it with the ds Dialog's height tween instead.
+
 ### Nudge (bottom-right card, weighted engine): proto `creator-nudge.html`
 
 Fits the existing engine in `pitchdeckdoclist/src/nudge/` (new_dev_migration, 26 Oct 2026)
