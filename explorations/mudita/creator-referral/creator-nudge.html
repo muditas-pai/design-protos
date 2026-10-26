@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Creator video nudge · presentations.ai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <!--
+    The creator-video nudge as it would appear in the app's nudge slot (bottom right), matching
+    pitchdeckdoclist src/nudge/view/NudgeCard.jsx (redesign branch, new_dev_migration, 26 Oct 2026):
+    380px card, close disc above the right edge, 214px hero band, title + body + one full-width primary CTA.
+    Values are hardcoded from the live app, like the other protos in this folder.
+  -->
+  <style>
+    :root {
+      --brand: #3427FF; --brand-hover: #2A1FD6; --tint: #ECEBFF; --tint-strong: #DCD9FF;
+      --ink: #14141F; --ink-2: #4E4E5E; --ink-3: #6C6C7C; --line: #E4E4EC; --sunken: #F3F3F7; --canvas: #F8F8FB;
+      --shadow-dialog: 0 2px 6px 0 rgba(16,12,60,0.09), 0 24px 64px -12px rgba(9,15,21,0.28);
+      --shadow-button-primary: 0 1px 0 0 rgba(255,255,255,0.15) inset, 0 1px 2px 0 rgba(16,12,60,0.20);
+      --ease: cubic-bezier(0.2, 0, 0, 1);
+      --font: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: var(--font); color: var(--ink); background: var(--canvas); -webkit-font-smoothing: antialiased; overflow: hidden; }
+    button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+    /* faux editor, context only */
+    .ed { position: fixed; inset: 0; display: grid; grid-template-rows: 52px 1fr; }
+    .ed-top { display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #fff; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 500; }
+    .ed-top .logo { width: 22px; height: 22px; border-radius: 6px; background: #FF5500; display: grid; place-items: center; color: #fff; font-size: 13px; }
+    .ed-top .sp { flex: 1; }
+    .ed-top .pill { height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); background: #fff; }
+    .ed-top .pill.pri { background: var(--brand); color: #fff; border: 0; }
+    .ed-main { display: grid; grid-template-columns: 180px 1fr; min-height: 0; }
+    .ed-rail { background: #fff; border-right: 1px solid var(--line); padding: 14px; display: grid; gap: 10px; align-content: start; }
+    .ed-rail i { display: block; aspect-ratio: 16/9; border-radius: 6px; background: var(--sunken); box-shadow: 0 0 0 1px var(--line); }
+    .ed-rail i:first-child { box-shadow: 0 0 0 2px var(--brand); }
+    .ed-canvas { display: grid; place-items: center; padding: 40px; }
+    .slide { width: min(820px, 100%); aspect-ratio: 16/9; background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgba(16,12,60,0.06), 0 12px 32px -12px rgba(16,12,60,0.18); padding: 6% 7%; display: flex; flex-direction: column; justify-content: center; }
+    .slide h1 { margin: 0; font-size: clamp(22px, 3vw, 40px); line-height: 1.1; letter-spacing: -0.02em; }
+    .slide p { margin: 12px 0 0; font-size: clamp(12px, 1.3vw, 17px); color: var(--ink-3); }
+    .slide .bars { display: flex; align-items: flex-end; gap: 10px; height: 34%; margin-top: 6%; }
+    .slide .bars i { flex: 1; border-radius: 4px 4px 0 0; background: #284B71; }
+    .slide .bars i:last-child { background: #FF5500; }
+
+    /* ---------- the nudge (NudgeCard.jsx, redesign branch) ---------- */
+    .nudge { position: fixed; right: 12px; bottom: 12px; z-index: 60; width: min(380px, calc(100vw - 48px));
+      opacity: 0; transform: translateY(16px); transition: opacity 260ms var(--ease), transform 420ms cubic-bezier(0.34, 1.2, 0.64, 1); }
+    .nudge.on { opacity: 1; transform: none; }
+    .nudge-x { position: absolute; top: -40px; right: 0; z-index: 2; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 1px solid rgba(20,20,31,0.2);
+      display: grid; place-items: center; font-size: 16px; transition: background 150ms var(--ease); }
+    .nudge-x:hover { background: var(--line); }
+    .nudge-card { overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #fff; box-shadow: var(--shadow-dialog); }
+    .nudge-body { padding: 16px; }
+    .nudge-body h2 { margin: 0; font-size: 20px; line-height: 26px; letter-spacing: -0.015em; font-weight: 600; }
+    .nudge-body p { margin: 4px 0 0; font-size: 14px; line-height: 20px; color: var(--ink-2); }
+    .cta { margin-top: 12px; width: 100%; height: 36px; border-radius: 6px; background: var(--brand); color: #fff; font-size: 14px; font-weight: 500; box-shadow: var(--shadow-button-primary);
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background 150ms var(--ease), transform 120ms var(--ease); }
+    .cta:hover { background: var(--brand-hover); }
+    .cta:active { transform: scale(0.98); }
+
+    /* hero band: three reels on the brand tint, the middle one is the real HardLaunch clip with your photo slot */
+    .hero { position: relative; height: 214px; background: radial-gradient(120% 90% at 50% 100%, var(--tint-strong), var(--tint) 60%); overflow: hidden; }
+    .reel { position: absolute; bottom: -18px; width: 92px; height: 176px; border-radius: 14px; overflow: hidden; background: #222;
+      box-shadow: 0 0 0 3px #fff, 0 14px 28px -12px rgba(16,12,60,0.45); }
+    .reel img, .reel video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+    .reel.l { left: 50%; margin-left: -150px; transform: rotate(-8deg); bottom: -30px; }
+    .reel.r { left: 50%; margin-left: 58px; transform: rotate(8deg); bottom: -30px; }
+    .reel.c { left: 50%; width: 112px; height: 200px; margin-left: -56px; z-index: 2; }
+    .reel .cap { position: absolute; left: 6px; right: 6px; bottom: 26px; color: #fff; font: 800 9px/11px Inter, sans-serif; text-align: center; text-shadow: 0 1px 2px #000; z-index: 3; }
+    .reel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(0,0,0,0.5)); }
+    .face { position: absolute; left: 20%; top: 11%; width: 56%; height: 36%; z-index: 3; }
+    .face .blur { position: absolute; inset: 0; border-radius: 46%; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); }
+    .face b { position: absolute; width: 10px; height: 10px; border: 0 solid #fff; }
+    .face b.tl { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 5px; }
+    .face b.tr { top: 0; right: 0; border-top-width: 2px; border-right-width: 2px; border-top-right-radius: 5px; }
+    .face b.bl { bottom: 0; left: 0; border-bottom-width: 2px; border-left-width: 2px; border-bottom-left-radius: 5px; }
+    .face b.br { bottom: 0; right: 0; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 5px; }
+    .face span { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; height: 16px; padding: 0 6px; border-radius: 99px;
+      background: rgba(10,25,37,0.55); color: #fff; font-size: 8px; font-weight: 600; display: inline-flex; align-items: center; }
+    .chip { position: absolute; top: 14px; left: 14px; z-index: 4; height: 24px; padding: 0 9px; border-radius: 99px; background: #fff; color: var(--brand);
+      font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(16,12,60,0.12); }
+
+    /* review bar: replay, and a note on how it scores */
+    .review { position: fixed; left: 16px; bottom: 16px; z-index: 80; display: flex; gap: 4px; padding: 5px; border-radius: 10px; background: #0A1925; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .review span { font-size: 11px; color: rgba(255,255,255,0.5); padding: 0 8px 0 6px; align-self: center; }
+    .review button { height: 28px; padding: 0 10px; border-radius: 6px; color: rgba(255,255,255,0.8); font-size: 12px; }
+    .review button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .how { position: fixed; left: 16px; bottom: 60px; z-index: 80; width: 360px; max-height: calc(100vh - 140px); overflow: auto; padding: 16px; border-radius: 12px; background: #fff;
+      border: 1px solid var(--line); box-shadow: var(--shadow-dialog); font-size: 13px; line-height: 18px; color: var(--ink-2); display: none; }
+    .how.on { display: block; }
+    .how h3 { margin: 0 0 6px; font-size: 14px; color: var(--ink); }
+    .how table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+    .how td { padding: 4px 0; border-top: 1px solid var(--line); }
+    .how td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+    .how .neg td:last-child { color: #B91C1C; }
+    .how .bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--brand); vertical-align: middle; margin-right: 6px; }
+    @media (prefers-reduced-motion: reduce) { .nudge { transition: opacity 200ms linear; transform: none; } }
+  </style>
+</head>
+<body>
+  <div class="ed" aria-hidden="true">
+    <div class="ed-top"><span class="logo"><i class="ph-fill ph-presentation"></i></span>Northwind · Board update<span class="sp"></span>
+      <span class="pill"><i class="ph ph-play"></i>Present</span><span class="pill"><i class="ph ph-share-network"></i>Share</span><span class="pill pri"><i class="ph ph-download-simple"></i>Export</span></div>
+    <div class="ed-main">
+      <div class="ed-rail"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="ed-canvas"><div class="slide"><h1>Northwind raised $4M.<br>Here’s what’s next.</h1><p>Series A · Board update · Q3</p><div class="bars"><i style="height:30%"></i><i style="height:45%"></i><i style="height:58%"></i><i style="height:74%"></i><i style="height:100%"></i></div></div></div>
+    </div>
+  </div>
+
+  <!-- the nudge -->
+  <div class="nudge" id="nudge" data-nudge-id="creator-video">
+    <button class="nudge-x" id="x" aria-label="Close"><i class="ph ph-x"></i></button>
+    <aside class="nudge-card" role="status" aria-label="Post one video, earn credits for every signup">
+      <div class="hero">
+        <span class="chip"><i class="ph-fill ph-coins"></i>+200 credits per signup</span>
+        <div class="reel l"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=540&fit=crop&crop=faces&q=70" alt=""><span class="cap">I built my investor deck</span></div>
+        <div class="reel c"><video src="https://hardlaunch.com/website/swap/languages/source.mp4" poster="https://hardlaunch.com/website/swap/p/languages/source.jpg" autoplay muted loop playsinline></video>
+          <div class="face"><div class="blur"></div><b class="tl"></b><b class="tr"></b><b class="bl"></b><b class="br"></b><span>Your photo here</span></div></div>
+        <div class="reel r"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=540&fit=crop&crop=faces&q=70" alt=""><span class="cap">POV: slides by 5pm</span></div>
+      </div>
+      <div class="nudge-body">
+        <h2>Post one video, earn credits for every signup</h2>
+        <p>We make the video. You add one photo and post it from your account.</p>
+        <button class="cta" id="cta">Make my video <i class="ph ph-arrow-right"></i></button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="how" id="how">
+    <h3>How it scores</h3>
+    Same engine as the other seven nudges: the signals below add up (repeatable ones log-scaled), plus role and intent. It fires above <b>10</b>, and only after the usual guardrails (free users only, 5 min into a session, idle, 3 per session).
+    <table id="tbl"></table>
+    <b style="color:var(--ink)">Example: a Marketing user on their second deck who copied a share link twice</b><br>
+    role 4 + intent 2 + second deck 4 + share link ×2 6.3 = <b style="color:var(--ink)">16.3</b>, so it fires.
+  </div>
+
+  <div class="review"><span>Review</span><button id="replay">Replay</button><button id="toggle">How it scores</button></div>
+
+<script>
+  const SIGNALS = [
+    ['Started a second deck', 'second-deck', 4], ['Regular deck sharer', 'deck-sharer', 5], ['Copied a share link', 'share-link-copy', 4], ['Published a deck', 'pres-publish', 4],
+    ['Exported for LinkedIn', 'export-png-linkedin', 6], ['Shared a referral link', 'acq-referral', 8], ['Credits low', 'credits-low', 4],
+    ['Credits zero', 'credits-zero', 6], ['Reached end of a show', 'endshow-reached', 2], ['Already made a creator video', 'creator-video-made', -100],
+  ];
+  document.getElementById('tbl').innerHTML = SIGNALS.map(([l, id, v]) =>
+    `<tr class="${v < 0 ? 'neg' : ''}"><td>${v > 0 ? `<span class="bar" style="width:${v * 5}px"></span>` : ''}${l}</td><td>${v > 0 ? '+' : ''}${v}</td></tr>`).join('');
+  const n = document.getElementById('nudge');
+  const show = () => { n.classList.remove('on'); void n.offsetWidth; setTimeout(() => n.classList.add('on'), 400); };
+  document.getElementById('x').onclick = () => n.classList.remove('on');
+  document.getElementById('replay').onclick = show;
+  document.getElementById('toggle').onclick = () => document.getElementById('how').classList.toggle('on');
+  document.getElementById('cta').onclick = e => { const b = e.currentTarget, was = b.innerHTML; b.innerHTML = '<i class="ph ph-arrow-square-out"></i>Opens the creator modal'; setTimeout(() => b.innerHTML = was, 1400); };
+  show();
+</script>
+</body>
+</html>

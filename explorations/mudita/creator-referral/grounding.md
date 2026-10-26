@@ -88,6 +88,50 @@ Share modal · Social media tab      about to post something          Intro
 Dashboard empty state · feature     new, hasn't made anything yet    Intro
 ```
 
+### Nudge (bottom-right card, weighted engine) — proto: `creator-nudge.html`
+
+Fits the existing engine in `pitchdeckdoclist/src/nudge/` (new_dev_migration, 26 Oct 2026)
+with no engine changes: one new entry in `config/nudges.json` and one new signal.
+
+```jsonc
+{
+  "id": "creator-video", "name": "Creator video", "type": "growth", "threshold": 10,
+  "title": "Post one video, earn credits for every signup",
+  "body": "We make the video. You add one photo and post it from your account.",
+  "cta": "Make my video",                        // opens the creator modal at Intro
+  "image": "nudges/nudge-creator-video.png",     // 440×214 hero band, see the proto
+  "actions": {
+    "second-deck":        { "score": 4,    "repeatable": false },
+    "deck-sharer":        { "score": 5,    "repeatable": false },
+    "share-link-copy":    { "score": 4,    "repeatable": true  },
+    "pres-publish":       { "score": 4,    "repeatable": true  },
+    "export-png-linkedin":{ "score": 6,    "repeatable": true  },
+    "acq-referral":       { "score": 8,    "repeatable": false },
+    "credits-low":        { "score": 4,    "repeatable": false },
+    "credits-zero":       { "score": 6,    "repeatable": false },
+    "endshow-reached":    { "score": 2,    "repeatable": true  },
+    "creator-video-made": { "score": -100, "repeatable": false }   // NEW signal; suppresses forever
+  },
+  "roleScores":   { "Creator": 5, "Marketing": 4, "Sales": 3, "Leadership": 3, "Consulting": 2, "_default": 1 },
+  "intentScores": { "high": 4, "medium": 2, "low": 0, "_default": 1 }
+}
+```
+
+- **Place it last in `nudges[]`.** Ties go to the lower index, so the paid-plan nudges win a
+  tie and this one never takes revenue from them.
+- **Negative score as an off switch.** Scores are summed, so a one-off `-100` from
+  `creator-video-made` (signal it when a creator video is downloaded) keeps the nudge from
+  ever reaching threshold again. No engine change needed.
+- **Free users only, by design of the engine.** `Guardrails.js` disables every nudge for Pro
+  users. Paid users still earn referral credits, so they need a different entry point (Refer
+  & earn, Share modal).
+- **No signal for "first deck made".** `second-deck` and `deck-sharer` stand in. A real
+  `first-deck` signal would be a better gate if engineering can add one.
+- **Test recipe** (TESTING.md style):
+  `await __nudge.resetAll(); await __nudge.setRole("Marketing"); await __nudge.signal("second-deck");`
+  `for (let i = 0; i < 2; i++) await __nudge.signal("share-link-copy"); await __nudge.forceFire()`
+  → 4 + 2 + 4 + 6.3 = **16.3**.
+
 ## Open questions
 
 - **The 2,000-credit yearly cap is 10 friends.** A creator video that works hits it fast,
