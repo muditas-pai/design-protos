@@ -92,6 +92,7 @@
     .review span { font-size: 11px; color: rgba(255,255,255,0.5); padding: 0 8px 0 6px; align-self: center; }
     .review button { height: 28px; padding: 0 10px; border-radius: 6px; color: rgba(255,255,255,0.8); font-size: 12px; }
     .review button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .review button.on { background: #fff; color: #0A1925; font-weight: 500; }
     .how { position: fixed; left: 16px; bottom: 60px; z-index: 80; width: 360px; max-height: calc(100vh - 140px); overflow: auto; padding: 16px; border-radius: 12px; background: #fff;
       border: 1px solid var(--line); box-shadow: var(--shadow-dialog); font-size: 13px; line-height: 18px; color: var(--ink-2); display: none; }
     .how.on { display: block; }
@@ -126,8 +127,8 @@
         <div class="reel r"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=540&fit=crop&crop=faces&q=70" alt=""><span class="cap">POV: slides by 5pm</span></div>
       </div>
       <div class="nudge-body">
-        <h2>Post one video, earn credits for every signup</h2>
-        <p>We make the video. You add one photo and post it from your account.</p>
+        <h2 id="nt">Post one video, earn credits for every signup</h2>
+        <p id="nb">We make the video. You add one photo and post it from your account.</p>
         <button class="cta" id="cta">Make my video <i class="ph ph-arrow-right"></i></button>
       </div>
     </aside>
@@ -137,11 +138,10 @@
     <h3>How it scores</h3>
     Same engine as the other seven nudges: the signals below add up (repeatable ones log-scaled), plus role and intent. It fires above <b>10</b>, and only after the usual guardrails (free users only, 5 min into a session, idle, 3 per session).
     <table id="tbl"></table>
-    <b style="color:var(--ink)">Example: a Marketing user on their second deck who copied a share link twice</b><br>
-    role 4 + intent 2 + second deck 4 + share link ×2 6.3 = <b style="color:var(--ink)">16.3</b>, so it fires.
+    <div id="ex"></div>
   </div>
 
-  <div class="review"><span>Review</span><button id="replay">Replay</button><button id="toggle">How it scores</button></div>
+  <div class="review"><span>Review</span><button id="v-gen" class="on">General</button><button id="v-cr">Out of credits</button><button id="replay">Replay</button><button id="toggle">How it scores</button></div>
 
 <script>
   const SIGNALS = [
@@ -157,7 +157,22 @@
   document.getElementById('replay').onclick = show;
   document.getElementById('toggle').onclick = () => document.getElementById('how').classList.toggle('on');
   document.getElementById('cta').onclick = e => { const b = e.currentTarget, was = b.innerHTML; b.innerHTML = '<i class="ph ph-arrow-square-out"></i>Opens the creator modal'; setTimeout(() => b.innerHTML = was, 1400); };
-  show();
+  // two copy variants of the same nudge: general, and the one shown once credits hit zero
+  const VARIANTS = {
+    gen: { t: 'Post one video, earn credits for every signup', b: 'We make the video. You add one photo and post it from your account.',
+      ex: '<b style="color:var(--ink)">Example: a Marketing user on their second deck who copied a share link twice</b><br>role 4 + intent 2 + second deck 4 + share link ×2 6.3 = <b style="color:var(--ink)">16.3</b>, so it fires.' },
+    cr: { t: 'Out of credits? Earn them with one video', b: 'We make the video. You add one photo and post it. +200 credits for every friend who signs up.',
+      ex: '<b style="color:var(--ink)">Example: any free user who hits zero credits</b><br>role 1 + intent 1 + credits low 4 + credits zero 6 = <b style="color:var(--ink)">12</b>, so it fires. Shown after they close the out-of-credits screen without paying; the checkout itself is unchanged.' },
+  };
+  const setVariant = k => {
+    const v = VARIANTS[k];
+    document.getElementById('nt').textContent = v.t; document.getElementById('nb').textContent = v.b; document.getElementById('ex').innerHTML = v.ex;
+    document.getElementById('v-gen').classList.toggle('on', k === 'gen'); document.getElementById('v-cr').classList.toggle('on', k === 'cr');
+    show();
+  };
+  document.getElementById('v-gen').onclick = () => setVariant('gen');
+  document.getElementById('v-cr').onclick = () => setVariant('cr');
+  setVariant(new URLSearchParams(location.search).get('variant') === 'credits' ? 'cr' : 'gen');
 </script>
 </body>
 </html>

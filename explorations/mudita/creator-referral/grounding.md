@@ -106,21 +106,14 @@ behind the modal when coming from Share. Chrome/Edge/Safari 18.2+; elsewhere it'
 page change. In the product this is one dialog swapping its content, so engineering can
 do it with the ds Dialog's height tween instead.
 
-### Out of credits: proto `out-of-credits.html`
+### Out of credits: nudge only (26 Oct 2026)
 
-Live path for free users: `DocumentStore.showOutOfCreditsTrigger` → `EVENT_UPGRADE_PLAN`
-`{ directpayment, showCredits }` → `PricingScreenNew` → `CheckoutScreen` with
-`creditsContext` ("Get more credits to proceed", plan rows with credit counts). Added: one
-tinted row under the plan cards, "Or earn them: +200 credits for every friend who signs up
-from a video you post · Make a video". It's a text link, never a button, so Pay stays the
-only primary and the sale isn't undercut. "Make a video" closes checkout and opens the
-creator modal at Intro.
-
-Closing the checkout without paying is when the nudge shows: `credits-zero` (+6) usually
-carries `creator-video` over 10. The proto uses a credits-specific title ("Out of credits?
-Earn them with one video"). **The engine has one title per nudge**, so this needs either a
-second nudge entry (`creator-video-credits`, gated on `credits-zero`) or copy variants keyed
-by the top contributing signal. Open question for engineering.
+The payment checkout is **not** touched (decided 26 Oct 2026). Out of credits is covered by
+the bottom-right nudge alone: `credits-zero` (+6) and `credits-low` (+4) carry
+`creator-video` over its threshold once a free user hits zero. `creator-nudge.html?variant=credits`
+shows the credits copy ("Out of credits? Earn them with one video"). The engine has one title
+per nudge, so this needs a second entry (`creator-video-credits`, gated on `credits-zero`) or
+copy variants keyed by the top contributing signal. Open question for engineering.
 
 ### Nudge (bottom-right card, weighted engine): proto `creator-nudge.html`
 
