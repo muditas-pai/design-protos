@@ -88,7 +88,7 @@ Share modal · Social media tab      about to post something          Intro
 Dashboard empty state · feature     new, hasn't made anything yet    Intro
 ```
 
-### Nudge (bottom-right card, weighted engine) — proto: `creator-nudge.html`
+### Nudge (bottom-right card, weighted engine): proto `creator-nudge.html`
 
 Fits the existing engine in `pitchdeckdoclist/src/nudge/` (new_dev_migration, 26 Oct 2026)
 with no engine changes: one new entry in `config/nudges.json` and one new signal.
