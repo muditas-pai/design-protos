@@ -88,12 +88,15 @@ Share modal · Social media tab      about to post something          Intro
 Dashboard empty state · feature     new, hasn't made anything yet    Intro
 ```
 
-### Share modal, Social media tab: proto `share-social-tab.html`
+### Share dialog, Share externally: proto `share-dialog.html`
 
-The live tab (`PublishScreen.jsx` → `SocialMediaSection`: four share rows + copy link) is
-kept as is; a creator-video card goes underneath. The user opened Share for *their deck*, so
-the card comes after every share option and uses the same subtle button as the rows, never
-a primary. CTA opens the creator modal at Intro.
+The live dialog is the redesign (`views/share/ShareScreen.jsx` with `redesign`: ds Dialog,
+Segmented tabs Export to PowerPoint · Invite to collaborate · Share externally). Social
+sharing lives inside **Share externally** (`views/share/PublishScreen.jsx`), so the creator
+card goes there, right under "Share on social media". It copies the dialog's existing
+Analytics promo (bg-secondary card, art faded in from the right, one small button) and uses
+the subtle button, since the footer's Copy link is already the primary. The older
+`components/core/share` dialog with a "Social media" tab is the legacy host (pdapp, mobile).
 
 ### Nudge (bottom-right card, weighted engine): proto `creator-nudge.html`
 

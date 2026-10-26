@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Share dialog · creator video</title>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <!--
+    The live Share dialog (redesign host), rebuilt from pitchdeckdoclist new_dev_migration, 26 Oct 2026:
+    src/listing/core/screens/views/share/ShareScreen.jsx  (ds Dialog, max-w-xl, Segmented tabs)
+    src/listing/core/screens/views/share/PublishScreen.jsx (props.redesign branch: "Share externally")
+    src/listing/core/screens/views/share/AdvancedSetting.jsx (redesign row)
+    Everything is the live dialog except the creator-video card, marked NEW. It reuses the dialog's own
+    promo pattern (the Analytics promo: bg-secondary card, art faded in from the right, one small button).
+  -->
+  <style>
+    :root {
+      --brand: #3427FF; --brand-hover: #2A1FD6; --tint: #ECEBFF; --tint-strong: #DCD9FF;
+      --ink: #14141F; --ink-2: #4E4E5E; --ink-3: #6C6C7C; --line: #E4E4EC; --line-strong: rgba(20,20,31,0.2);
+      --sunken: #F3F3F7; --surface-2: #F8F8FB; --quaternary: #E4E4EC; --good: #15803D;
+      --shadow-dialog: 0 2px 6px 0 rgba(16,12,60,0.09), 0 24px 64px -12px rgba(9,15,21,0.28);
+      --shadow-button-primary: 0 1px 0 0 rgba(255,255,255,0.15) inset, 0 1px 2px 0 rgba(16,12,60,0.20);
+      --shadow-segment: 0 1px 2px 0 rgba(9,15,21,0.12);
+      --ease: cubic-bezier(0.2, 0, 0, 1);
+      --font: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: var(--font); color: var(--ink); background: #F8F8FB; -webkit-font-smoothing: antialiased; }
+    button, input { font: inherit; color: inherit; }
+    button { background: none; border: 0; padding: 0; cursor: pointer; }
+
+    /* faux editor behind */
+    .ed { position: fixed; inset: 0; display: grid; grid-template-rows: 52px 1fr; }
+    .ed-top { display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #fff; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 500; }
+    .ed-top .logo { width: 22px; height: 22px; border-radius: 6px; background: #FF5500; display: grid; place-items: center; color: #fff; font-size: 13px; }
+    .ed-top .sp { flex: 1; }
+    .ed-top .pill { height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); background: #fff; }
+    .ed-body { display: grid; place-items: center; }
+    .slide { width: min(760px, 80vw); aspect-ratio: 16/9; background: #fff; border-radius: 8px; box-shadow: 0 12px 32px -12px rgba(16,12,60,0.18); }
+
+    /* ds/Dialog */
+    .scrim { position: fixed; inset: 0; z-index: 48; background: rgba(16,12,60,0.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+    .wrap { position: fixed; inset: 0; z-index: 49; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .dlg { position: relative; width: 100%; max-width: 576px; max-height: calc(100vh - 24px); overflow-y: auto; scrollbar-width: none;
+      background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-dialog); }
+    .dlg::-webkit-scrollbar { display: none; }
+    .dlg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px 8px; }
+    .dlg-head h2 { margin: 0; font-size: 24px; line-height: 32px; letter-spacing: -0.015em; font-weight: 600; word-break: break-word; }
+    .icon-btn { width: 32px; height: 32px; margin: -4px -8px 0 0; flex: none; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); font-size: 20px;
+      transition: background 150ms var(--ease), color 150ms var(--ease); }
+    .icon-btn:hover { background: var(--sunken); color: var(--ink); }
+    .dlg-body { padding: 12px 24px 24px; }
+
+    /* ds/Segmented */
+    .seg { display: inline-flex; padding: 2px; border-radius: 6px; background: var(--sunken); }
+    .seg button { position: relative; height: 32px; padding: 0 12px; border-radius: 5px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--ink-3); transition: color 150ms; }
+    .seg button:hover { color: var(--ink-2); }
+    .seg button.on { color: var(--ink); background: #fff; box-shadow: var(--shadow-segment); }
+
+    /* ds/Button */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 6px; font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap;
+      transition: background 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease), transform 120ms var(--ease); }
+    .btn:active { transform: scale(0.98); }
+    .btn.sm { height: 32px; padding: 0 12px; gap: 6px; font-size: 13px; line-height: 18px; }
+    .btn i { font-size: 16px; }
+    .btn.primary { background: var(--brand); color: #fff; box-shadow: var(--shadow-button-primary); }
+    .btn.primary:hover { background: var(--brand-hover); }
+    .btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .btn.secondary:hover { border-color: var(--line-strong); background: var(--sunken); }
+    .btn.ghost { color: var(--ink-2); }
+    .btn.ghost:hover { color: var(--ink); background: var(--sunken); }
+    .btn.subtle { background: var(--tint); color: var(--brand); }
+    .btn.subtle:hover { background: var(--tint-strong); }
+
+    /* Share externally (PublishScreen redesign) */
+    .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .live { display: flex; align-items: center; gap: 12px; }
+    .live > div { flex: 1; min-width: 0; }
+    .live-t { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 500; }
+    .live-t::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+    .live p { margin: 2px 0 0; font-size: 13px; line-height: 18px; color: var(--ink-3); }
+    .link-in { margin-top: 12px; height: 36px; width: 100%; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); padding: 0 12px; font-size: 13px; color: var(--ink-2); outline: none; }
+    .link-in:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(52,39,255,0.2); }
+    .caption { margin: 20px 0 0; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; font-weight: 600; text-transform: uppercase; color: var(--ink-3); }
+    .socials { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .split { display: inline-flex; }
+    .split .btn { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .split .chev { margin-left: -1px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 0 6px 6px 0; background: #fff; color: var(--ink-2); font-size: 12px; }
+    .split .chev:hover { background: var(--sunken); color: var(--ink); }
+    .adv { margin-top: 16px; width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 6px; background: var(--sunken); text-align: left; font-size: 14px; line-height: 20px; font-weight: 500;
+      transition: background 150ms var(--ease); }
+    .adv:hover { background: var(--quaternary); }
+    .adv i { font-size: 20px; color: var(--ink-2); }
+    .adv span { flex: 1; }
+    .foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .track { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--brand); }
+    .track:hover { text-decoration: underline; }
+    .track i { font-size: 16px; }
+
+    /* NEW: creator-video promo, same shape as the dialog's Analytics promo */
+    .promo { position: relative; margin-top: 12px; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+    .promo-art { position: absolute; right: 0; top: 0; height: 100%; width: 46%; pointer-events: none;
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 40%); mask-image: linear-gradient(to right, transparent, #000 40%); }
+    .promo-art video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 15%; }
+    .promo-art .face { position: absolute; left: 22%; top: 4%; width: 48%; height: 92%; }
+    .promo-art .blur { position: absolute; inset: 0; border-radius: 46%; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); }
+    .promo-art b { position: absolute; width: 10px; height: 10px; border: 0 solid #fff; }
+    .promo-art b.tl { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 4px; }
+    .promo-art b.tr { top: 0; right: 0; border-top-width: 2px; border-right-width: 2px; border-top-right-radius: 4px; }
+    .promo-art b.bl { bottom: 0; left: 0; border-bottom-width: 2px; border-left-width: 2px; border-bottom-left-radius: 4px; }
+    .promo-art b.br { bottom: 0; right: 0; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 4px; }
+    .promo-art .ylabel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 99px; background: rgba(10,25,37,0.55); color: #fff; font-size: 11px; font-weight: 600; }
+    .promo-txt { position: relative; max-width: 62%; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+    .promo-txt p { margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; }
+    .promo-txt p span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; font-weight: 400; color: var(--ink-3); }
+    .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 99px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--brand); background: var(--tint); }
+
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 90; transform: translate(-50%, 12px); opacity: 0; padding: 10px 14px; border-radius: 8px; background: #14141F; color: #fff; font-size: 13px;
+      transition: opacity 160ms var(--ease), transform 200ms var(--ease); pointer-events: none; }
+    .toast.on { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 520px) { .promo-txt { max-width: 70%; } .promo-art { width: 40%; } }
+  </style>
+</head>
+<body>
+  <div class="ed" aria-hidden="true">
+    <div class="ed-top"><span class="logo"><i class="ph-fill ph-presentation"></i></span>Northwind · Board update<span class="sp"></span>
+      <span class="pill"><i class="ph ph-play"></i>Present</span><span class="pill"><i class="ph ph-share-fat"></i>Share</span></div>
+    <div class="ed-body"><div class="slide"></div></div>
+  </div>
+
+  <div class="scrim"></div>
+  <div class="wrap">
+    <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dt">
+      <div class="dlg-head"><h2 id="dt">Share "Northwind · Board update"</h2><button class="icon-btn" aria-label="Close" data-t="Closes the dialog"><i class="ph ph-x"></i></button></div>
+      <div class="dlg-body">
+        <div class="seg" role="radiogroup" aria-label="Share">
+          <button role="radio" aria-checked="false" data-t="Not part of this proto">Export to PowerPoint</button>
+          <button role="radio" aria-checked="false" data-t="Not part of this proto">Invite to collaborate</button>
+          <button role="radio" aria-checked="true" class="on">Share externally</button>
+        </div>
+
+        <div style="margin-top:16px">
+          <div class="card">
+            <div class="live">
+              <div><div class="live-t">Live link</div><p>Anyone with the link can view this presentation.</p></div>
+              <button class="btn sm ghost" data-t="Unpublishes the link"><i class="ph ph-prohibit"></i>Unpublish</button>
+            </div>
+            <input class="link-in" readonly value="https://app.presentations.ai/view/Nw8xQ2pLd" aria-label="Live link" onfocus="this.select()" />
+          </div>
+
+          <p class="caption">Share on social media</p>
+          <div class="socials">
+            <span class="split"><button class="btn sm secondary" data-t="Opens LinkedIn"><i class="ph-fill ph-linkedin-logo"></i>LinkedIn</button><button class="chev" aria-label="More options" data-t="LinkedIn options"><i class="ph ph-caret-down"></i></button></span>
+            <button class="btn sm secondary" data-t="Opens X"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>X</button>
+            <button class="btn sm secondary" data-t="Opens Facebook"><i class="ph-fill ph-facebook-logo"></i>Facebook</button>
+            <button class="btn sm secondary" data-t="Opens your email"><i class="ph ph-envelope-simple"></i>Email</button>
+            <button class="btn sm secondary" data-t="Shows the embed code"><i class="ph ph-code"></i>Embed</button>
+          </div>
+
+          <!-- NEW: creator video, right under the social row it relates to -->
+          <div class="promo">
+            <div class="promo-art" aria-hidden="true">
+              <video src="https://hardlaunch.com/website/swap/languages/source.mp4" poster="https://hardlaunch.com/website/swap/p/languages/source.jpg" autoplay muted loop playsinline></video>
+              <div class="face"><div class="blur"></div><b class="tl"></b><b class="tr"></b><b class="bl"></b><b class="br"></b><span class="ylabel"><i class="ph-fill ph-user"></i>Your photo here</span></div>
+            </div>
+            <div class="promo-txt">
+              <span class="badge">NEW</span>
+              <p>Post a video about presentations.ai too<span>We make it, you add your face. +200 credits for every friend who signs up.</span></p>
+              <button class="btn sm subtle" data-t="Opens the creator modal"><i class="ph ph-video-camera"></i>Make my video</button>
+            </div>
+          </div>
+
+          <button class="adv" aria-expanded="false" data-t="Advanced settings (unchanged)"><i class="ph ph-gear-six"></i><span>Advanced settings</span><i class="ph ph-caret-down"></i></button>
+
+          <div class="foot">
+            <button class="track" data-t="Opens analytics"><i class="ph ph-chart-bar"></i>Track analytics</button>
+            <button class="btn primary" data-t="Link copied"><i class="ph ph-link"></i>Copy link</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  const toast = document.getElementById('toast'); let tm;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-t]'); if (!b) return;
+    toast.textContent = b.dataset.t; toast.classList.add('on'); clearTimeout(tm); tm = setTimeout(() => toast.classList.remove('on'), 1400);
+  });
+</script>
+</body>
+</html>
