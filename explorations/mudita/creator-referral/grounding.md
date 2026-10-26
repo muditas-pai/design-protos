@@ -88,6 +88,13 @@ Share modal · Social media tab      about to post something          Intro
 Dashboard empty state · feature     new, hasn't made anything yet    Intro
 ```
 
+### Share modal, Social media tab: proto `share-social-tab.html`
+
+The live tab (`PublishScreen.jsx` → `SocialMediaSection`: four share rows + copy link) is
+kept as is; a creator-video card goes underneath. The user opened Share for *their deck*, so
+the card comes after every share option and uses the same subtle button as the rows, never
+a primary. CTA opens the creator modal at Intro.
+
 ### Nudge (bottom-right card, weighted engine): proto `creator-nudge.html`
 
 Fits the existing engine in `pitchdeckdoclist/src/nudge/` (new_dev_migration, 26 Oct 2026)
