@@ -73,6 +73,21 @@ scan → you, with the caption, handle and "Paid partnership" chip updating per 
   on a photo alone. Open: where the likeness / 18+ consent lives instead (signup to the
   creator program, HardLaunch's terms, or a one-time agreement).
 
+- **Deep link:** `creator-modal.html?step=pick` opens the modal on Pick a video. Refer &
+  earn's "Make my first video" links there: a deliberate exception to the repo's
+  "protos don't link to each other" rule, asked for 26 Oct 2026. Any step except
+  `making` works (`intro`, `pick`, `face`, `share`).
+
+## Touchpoints (26 Oct 2026, thinking)
+
+```
+Entry point                         Mindset when they see it          Opens modal at
+──────────────────────────────────  ────────────────────────────────  ──────────────
+Refer & earn · Your videos          already wants to earn            Pick
+Share modal · Social media tab      about to post something          Intro
+Dashboard empty state · feature     new, hasn't made anything yet    Intro
+```
+
 ## Open questions
 
 - **The 2,000-credit yearly cap is 10 friends.** A creator video that works hits it fast,
