@@ -34,7 +34,8 @@ These decide the shape of the feature. Legal to sign off before build.
 
 - **Signed-in users who have made at least one deck.** A review should come from real use, and it slows down abuse.
 - Free and paid plans alike.
-- One reward per platform per person. A second post on the same platform earns nothing.
+- **One reward per platform, ever.** People can post as often as they like, but only their first approved post on each platform earns credits. A post that isn't approved doesn't use up the reward; they can try again with no time limit.
+  Why not more: repeat rewards turn it into paid posting, invite spam on their feeds, and are easy to farm. If we want repeat engagement later, a yearly reset per platform is the safest next step.
 
 ## Where it lives
 
@@ -62,6 +63,8 @@ Nothing to paste. We pass G2 the user's email, and G2 tells us when the review i
 1. User clicks **Write a review**.
 2. A dialog explains: written on G2, about 5 minutes; any honest rating counts; +400 credits once G2 **publishes** it (usually within 3 business days); G2 marks it as rewarded.
 3. **Write my review** opens **G2's in-app review form** with the signed-in user's email. G2 ties the review to that email, whether they have a G2 account or review anonymously. The card shows **Waiting for G2**.
+   - **They don't need a G2 account with the same email.** If one exists for that email, G2 signs them in; if not, the review is linked to our email, and they may be asked to create a G2 profile after submitting.
+   - **They must start from our button.** A review written by going to G2 directly can't be matched to their account. The dialog says so.
 4. G2 moderates the review (up to 3 business days).
 5. **A daily server job** checks G2 for every user in Waiting for G2:
    - **Published** → add +400 credits, email + toast → **Credited**.
@@ -107,6 +110,18 @@ Each platform button carries its own state; the row's grey line explains the lat
 | Not published by G2 | Red outline, “Edit on G2” | “G2 didn’t publish your review. They’ve emailed you why; you can edit it on G2.” |
 | Credited | Grey fill, green check | (G2) “+400 credits added.” |
 | Not approved | Red outline, “Try X again” | The reason, in red |
+
+### Status details
+
+Every button that isn't “available” opens a small dialog with: a coloured status box, the post link with **View post** (socials), and a three-step timeline (sent → checked → credits) with dates.
+
+| State | Status box | Actions |
+|---|---|---|
+| Pending | “We’re checking your post. Expect an answer by **[date]**. We’ll email you either way.” | Change the link · Done |
+| Waiting for G2 | “G2 checks every review, usually within 3 business days. Expect it by **[date]**.” | Open G2 · Done |
+| Credited | “+200 credits added on **[date]**.” | Done |
+| Not approved | The reason, then “Fix it and send the link again. No time limit.” | Write a new post · **Send the link again** |
+| Not published by G2 | “G2 emailed you the reason. Edit it on G2 and resubmit.” | **Edit on G2** |
 
 **Reasons a post isn't approved:** the post isn't public · the link doesn't open a post · the post isn't about presentations.ai · it has no #ad or paid-partnership label · this account was already rewarded.
 
