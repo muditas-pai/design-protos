@@ -105,8 +105,8 @@ Each platform button carries its own state; the row's grey line explains the lat
 | State | Button | Row line |
 |---|---|---|
 | Available | Outlined, platform icon + name | What to do |
-| Pending | Dashed, hourglass | “Checking your X post, usually within 2 working days.” |
-| Waiting for G2 | Dashed, “Waiting for G2” | “Credits arrive once G2 publishes it, usually within 3 business days.” |
+| Pending | Dashed, platform name + “In Review” in orange | “Checking your X post, usually within 2 working days.” |
+| Waiting for G2 | Dashed, “G2” + “In Review” in orange | “Credits arrive once G2 publishes it, usually within 3 business days.” |
 | Not published by G2 | Red outline, “Edit on G2” | “G2 didn’t publish your review. They’ve emailed you why; you can edit it on G2.” |
 | Credited | Grey fill, green check | (G2) “+400 credits added.” |
 | Not approved | Red outline, “Try X again” | The reason, in red |
