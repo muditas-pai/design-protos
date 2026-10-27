@@ -113,7 +113,7 @@ Each platform button carries its own state; the row's grey line explains the lat
 
 ### Status details
 
-Failed buttons retry directly (the reason is already on the card), so no dialog. Every other button that isn't “available” opens a small dialog with: the post link with **View post** right under the title (socials), a coloured status box, and a three-step timeline (sent → checked → credits) with dates.
+Failed buttons retry directly (the reason is already on the card), so no dialog. Every other button that isn't “available” opens a small dialog with: the post link with **View post** right under the title (socials), and a coloured status box. In-review states also show a three-step timeline (sent → checked → credits) with dates; credited and failed states don't, since the status box already says what happened.
 
 | State | Status box | Actions |
 |---|---|---|
