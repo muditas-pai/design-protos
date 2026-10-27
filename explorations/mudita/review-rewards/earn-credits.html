@@ -296,7 +296,15 @@
     .tp { padding: 12px 20px 16px; font-size: 13px; line-height: 18px; color: var(--text-tertiary); border-top: 1px solid var(--border-secondary); }
     .tp a { color: var(--text-secondary); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-primary); }
     .tp a:hover { color: var(--text-primary); }
-    @media (max-width: 760px) { .erow { grid-template-columns: 1fr; gap: 12px; } .acts { justify-content: flex-start; } }
+    .ecards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 20px 20px; }
+    .ecard { display: flex; flex-direction: column; padding: 16px; border: 1px solid var(--border-secondary); border-radius: 12px; }
+    .ecard h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--text-primary); }
+    .ecard h4 b { font-weight: 600; color: var(--text-brand); font-variant-numeric: tabular-nums; }
+    .ecard h4 .each { font-weight: 400; color: var(--text-tertiary); font-size: 13px; }
+    .ecard p { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--text-tertiary); }
+    .ecard p.bad { color: #B91C1C; }
+    .ecard .acts { margin-top: auto; padding-top: 16px; justify-content: flex-start; }
+    @media (max-width: 860px) { .ecards { grid-template-columns: 1fr; } }
 
     /* dialogs (ds Dialog) */
     .x { width: 32px; height: 32px; flex: none; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text-secondary); }
@@ -354,6 +362,10 @@
     .sent-ic { width: 48px; height: 48px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--bg-warning-inverted); color: var(--text-warning-primary); font-size: 24px; }
     .sent h3 { margin: 14px 0 0; font-size: 18px; line-height: 26px; font-weight: 600; }
     .sent p { margin: 6px auto 0; max-width: 40ch; font-size: 14px; line-height: 20px; color: var(--text-secondary); }
+    .urlrow { display: flex; gap: 8px; margin-top: 14px; }
+    .urlrow .url { margin-top: 0; flex: 1; }
+    .sample { margin-top: 10px; padding: 0; border: 0; background: none; font: 12px var(--font-ui); color: var(--text-tertiary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .sample:hover { color: var(--text-primary); }
   </style>
 </head>
 <body class="pai">
@@ -439,9 +451,10 @@ function render() {
     <!-- NEW -->
     <section class="card earn">
       <div class="earn-h"><h3>Earn more credits <span class="tag-new" style="margin-left:6px;vertical-align:3px">NEW</span></h3><span>${earnedHere ? `${earnedHere} of 1,000 earned` : 'Up to 1,000 credits'}</span></div>
-      <div class="erow"><div><h4>Post about us <b>+200</b> <span style="font-weight:400;color:var(--text-tertiary)">each</span></h4>${postLine()}</div><div class="acts">${['li', 'x', 'fb'].map(pbtn).join('')}</div></div>
-      <div class="erow"><div><h4>Review us on G2 <b>+400</b></h4>${g2Line()}</div><div class="acts">${pbtn('g2')}</div></div>
-      <div class="tp">Liking presentations.ai? <a href="#" data-toast="Opens Trustpilot">Leave a review on Trustpilot</a>. There’s no reward for this one.</div>
+      <div class="ecards">
+        <div class="ecard"><h4>Post about us <b>+200</b> <span class="each">each</span></h4>${postLine()}<div class="acts">${['li', 'x', 'fb'].map(pbtn).join('')}</div></div>
+        <div class="ecard"><h4>Review us on G2 <b>+400</b></h4>${g2Line()}<div class="acts">${pbtn('g2')}</div></div>
+      </div>
     </section>
 
     <div class="stats">
@@ -504,8 +517,9 @@ function socialDialog() {
       ${btn(k === 'fb' ? `Copy text and open Facebook <i class="ph ph-arrow-up-right"></i>` : `Open ${t.name} <i class="ph ph-arrow-up-right"></i>`, 'button-medium button-primary', `data-launch${over ? ' disabled' : ''}`)}`;
   } else if (D.step === 'link') {
     body = `<p class="lead">${D.opened ? `Posted on ${t.name}? ` : ''}Paste the link to your post and we’ll check it.</p>
-      <input class="url" id="url" placeholder="${t.example}" aria-label="Link to your post" autocomplete="off" />
+      <div class="urlrow"><input class="url" id="url" placeholder="${t.example}" aria-label="Link to your post" autocomplete="off" />${btn('<i class="ph ph-clipboard-text"></i>Paste', 'button-medium button-secondary', 'data-paste')}</div>
       <div class="hint" id="urlhint">The post has to be public.</div>
+      <button class="sample" data-sample>Use a sample link (prototype only)</button>
       <div class="howto"><div class="howto-h">Where to find the link</div><ol>${HOWTO[k].map(h => `<li>${h}</li>`).join('')}</ol></div>`;
     foot = `${btn('<i class="ph ph-arrow-left"></i>Back', 'button-medium button-ghost', 'data-step="write"')}<span style="flex:1"></span>${btn('Submit for review', 'button-medium button-primary', 'data-submit')}`;
   } else {
@@ -548,6 +562,13 @@ function launch() {
   // here we simulate the round trip.
   setTimeout(() => D.k === k && goStep('link'), 1600);
 }
+const SAMPLES = { li: 'https://www.linkedin.com/posts/mudita_presentationsai-activity-7254', x: 'https://x.com/mudita/status/1831140226', fb: 'https://www.facebook.com/mudita/posts/pfbid0Xk2' };
+// Paste reads the clipboard (the browser asks the first time); falls back to focusing the field for ⌘V
+async function pasteLink() {
+  const i = $('#url');
+  try { const t = await navigator.clipboard.readText(); if (t) { i.value = t.trim(); i.dispatchEvent(new Event('input', { bubbles: true })); } } catch (e) {}
+  i.focus();
+}
 function submit() {
   const k = D.k, input = $('#url'), hint = $('#urlhint');
   let ok = false;
@@ -565,6 +586,8 @@ document.addEventListener('click', e => {
   else if (d.step) goStep(d.step);
   else if ('launch' in d) launch();
   else if ('submit' in d) submit();
+  else if ('paste' in d) pasteLink();
+  else if ('sample' in d) { const i = $('#url'); i.value = SAMPLES[D.k]; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); }
   else if ('g2go' in d) { S.g2 = 'waiting'; closeDialog(); render(); toast('Opens our G2 review page in a new tab'); }
   else if (d.toast) { e.preventDefault(); toast(d.toast); }
 });

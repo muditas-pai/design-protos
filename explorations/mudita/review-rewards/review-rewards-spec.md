@@ -5,7 +5,7 @@
 
 ## In one line
 
-Users earn credits for sharing their honest experience of presentations.ai: **+200 per social post** and **+400 for a G2 review**. Trustpilot gets a plain, unrewarded ask.
+Users earn credits for sharing their honest experience of presentations.ai: **+200 per social post** and **+400 for a G2 review**. Trustpilot isn't part of it (it doesn't allow rewards).
 
 ## What earns what
 
@@ -15,7 +15,7 @@ Users earn credits for sharing their honest experience of presentations.ai: **+2
 | Public post on **X** | +200 credits | Once | Same |
 | Public post on **Facebook** | +200 credits | Once | Same |
 | Review on **G2** | +400 credits | Once | G2 confirms the review was published |
-| Review on **Trustpilot** | No reward | – | Not tracked |
+| Review on **Trustpilot** | No reward | – | Not part of this feature |
 
 Most a user can earn here: **1,000 credits** (3 posts + G2). This is separate from the 2,000-a-year referral cap.
 
@@ -51,7 +51,7 @@ Storyboard for each platform: `posting-flows.html`. A three-step dialog: **Write
    - LinkedIn and X open their composer **with the text filled in**.
    - Facebook doesn't allow apps to pre-fill posts, so the button is **Copy text and open Facebook** and says why.
 3. **Coming back to our tab** moves the dialog to **Paste the link** on its own. “I've already posted” skips straight there.
-4. **Paste the link.** Each platform shows where to find it (LinkedIn: ··· → Copy link to post; X: share icon → Copy link; Facebook: ··· → Copy link, audience must be Public). We check it's a post link from that platform.
+4. **Paste the link.** A **Paste** button reads the clipboard (the field also takes ⌘V). Each platform shows where to find it (LinkedIn: ··· → Copy link to post; X: share icon → Copy link; Facebook: ··· → Copy link, audience must be Public). We check it's a post link from that platform.
 5. **Done.** “Thanks, we're checking your post”; the card shows Pending.
 6. A person approves it → email + toast, credits added. Or Not approved, with the reason and Try again.
 
@@ -64,21 +64,19 @@ Storyboard for each platform: `posting-flows.html`. A three-step dialog: **Write
 
 ### Trustpilot
 
-One quiet row: “Liking presentations.ai? Leave a review on Trustpilot.” Opens Trustpilot. No reward, no tracking, shown to everyone who qualifies.
+Not in this section (dropped 27 Oct 2026). If we ask for Trustpilot reviews at all, it's unrewarded and lives elsewhere.
 
 ## Layout and states
 
-One card, two rows, and a line for Trustpilot. No per-platform cards.
+One section, two cards side by side.
 
 ```
-Earn more credits  NEW                                     Up to 1,000 credits
-Post about us  +200 each                       [in LinkedIn] [X] [f Facebook]
-A public post about your honest experience. One per platform.
-──────────────────────────────────────────────────────────────────────────────
-Review us on G2  +400                                    [G2 Write a review]
-An honest review on G2. Any rating counts.
-──────────────────────────────────────────────────────────────────────────────
-Liking presentations.ai? Leave a review on Trustpilot. There's no reward for this one.
+Earn more credits  NEW                                          Up to 1,000 credits
+┌ Post about us  +200 each ───────────────┐ ┌ Review us on G2  +400 ──────────────┐
+│ A public post about your honest         │ │ An honest review on G2. Any rating  │
+│ experience. One per platform.           │ │ counts.                             │
+│ [in LinkedIn] [X] [f Facebook]          │ │ [G2 Write a review]                 │
+└─────────────────────────────────────────┘ └─────────────────────────────────────┘
 ```
 
 Each platform button carries its own state; the row's grey line explains the latest one.
