@@ -328,6 +328,32 @@
     .facts i { font-size: 18px; color: var(--text-brand); }
     .toast { position: fixed; left: 50%; bottom: 72px; z-index: 90; transform: translate(-50%, 12px); opacity: 0; padding: 10px 14px; border-radius: 8px; background: #14141F; color: #fff; font-size: 13px; transition: opacity 160ms var(--ease-std), transform 200ms var(--ease-std); pointer-events: none; }
     .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+    /* posting dialog steps */
+    .steps3 { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
+    .steps3 span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .steps3 b { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--border-primary); }
+    .steps3 span.now { color: var(--text-primary); font-weight: 500; }
+    .steps3 span.now b { background: var(--bg-brand); color: #fff; box-shadow: none; }
+    .steps3 span.done b { background: var(--bg-success); color: #fff; box-shadow: none; }
+    .steps3 .sep { flex: 1; height: 1px; background: var(--border-secondary); max-width: 32px; }
+    .dlg-b .draft { margin-top: 14px; min-height: 120px; }
+    .meta-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; }
+    .count { font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .count.over { color: #B91C1C; font-weight: 600; }
+    .note { margin-top: 12px; display: flex; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--bg-tertiary); font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+    .note i { font-size: 16px; margin-top: 1px; flex: none; }
+    .dlg-b .url { margin-top: 14px; }
+    .howto { margin-top: 16px; padding: 12px 14px; border-radius: 8px; background: var(--bg-tertiary); }
+    .howto-h { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--text-secondary); }
+    .howto ol { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 20px; color: var(--text-secondary); }
+    .howto b { color: var(--text-primary); font-weight: 600; }
+    .dlg-f { align-items: center; }
+    .button-style[disabled] { opacity: 1; background: var(--bg-tertiary); color: var(--text-tertiary); box-shadow: none; pointer-events: none; }
+    .sent { text-align: center; padding: 8px 8px 4px; }
+    .sent-ic { width: 48px; height: 48px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--bg-warning-inverted); color: var(--text-warning-primary); font-size: 24px; }
+    .sent h3 { margin: 14px 0 0; font-size: 18px; line-height: 26px; font-weight: 600; }
+    .sent p { margin: 6px auto 0; max-width: 40ch; font-size: 14px; line-height: 20px; color: var(--text-secondary); }
   </style>
 </head>
 <body class="pai">
@@ -450,65 +476,107 @@ function render() {
     .map(([k, l]) => `<button data-preset="${k}" class="${preset === k ? 'on' : ''}">${l}</button>`).join('');
 }
 
-/* ---------- dialogs ---------- */
-function openDialog(k) {
-  const t = TASKS[k];
-  if (k === 'g2') {
-    $('#dlg').innerHTML = `
-      <div class="dlg-h"><h2 id="dt">Review us on G2</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>
-      <div class="dlg-b">
-        <p class="lead">Tell other people what it’s really like to use presentations.ai.</p>
-        <ul class="facts">
-          <li><i class="ph ph-pencil-simple-line"></i><span>You write the review on G2. It takes about 5 minutes.</span></li>
-          <li><i class="ph ph-scales"></i><span>Any honest rating counts. Your reward doesn’t depend on what you say.</span></li>
-          <li><i class="ph ph-coins"></i><span><b>+400 credits</b> once G2 publishes it. G2 marks it as a review with a small reward.</span></li>
-        </ul>
-        <div class="dlg-f">${btn('Not now', 'button-medium button-ghost', 'data-close')}${btn('Write my review <i class="ph ph-arrow-up-right"></i>', 'button-medium button-primary', 'data-g2go')}</div>
-      </div>`;
-  } else {
-    const draft = `I’ve been using presentations.ai to build my decks. My honest take: [your experience]. Try it: ${SHORT} #ad`;
-    $('#dlg').innerHTML = `
-      <div class="dlg-h"><h2 id="dt">Post on ${t.name}</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>
-      <div class="dlg-b">
-        <p class="lead">Share your honest experience in a public post. <b>+${t.reward} credits</b> once we’ve checked it.</p>
-        <div class="stepn"><span class="n">1</span><div><h5>Write your post</h5>
-          <textarea class="draft" id="draft" aria-label="Suggested post">${draft}</textarea>
-          <div class="hint">A starting point. Keep #ad so people know it’s a paid post.</div>
-          <div class="row-btns">${btn('<i class="ph ph-copy"></i>Copy text', 'button-small button-secondary', 'data-copydraft')}${btn(`Open ${t.name} <i class="ph ph-arrow-up-right"></i>`, 'button-small button-secondary', `data-toast="Opens ${t.name} with your text"`)}</div></div></div>
-        <div class="stepn"><span class="n">2</span><div><h5>Paste the link to your post</h5>
-          <input class="url" id="url" placeholder="${t.example}" aria-label="Link to your post" autocomplete="off" />
-          <div class="hint" id="urlhint">Make sure the post is set to Public.</div></div></div>
-        <div class="dlg-f">${btn('Cancel', 'button-medium button-ghost', 'data-close')}${btn('Submit for review', 'button-medium button-primary', `data-submit="${k}"`)}</div>
-      </div>`;
-  }
-  $('#scrim').classList.add('on');
-  setTimeout(() => $('#dlg').querySelector('#url, [data-g2go]')?.focus(), 200);
-}
-const closeDialog = () => $('#scrim').classList.remove('on');
-function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 1600); }
+/* ---------- dialogs ----------
+   Social: a three-step dialog. Write → (they post in the other tab) → paste link → sent.
+   Coming back to this tab after opening the platform moves straight to the link step. */
+const HOWTO = {
+  li: ['Open your post on LinkedIn', 'Click ··· at the top right of the post', 'Choose <b>Copy link to post</b>'],
+  x:  ['Open your post on X', 'Click the share icon under the post', 'Choose <b>Copy link</b>'],
+  fb: ['Make sure the post’s audience is <b>Public</b> (the globe icon)', 'Click ··· at the top right of the post', 'Choose <b>Copy link</b>'],
+};
+const D = { k: null, step: 'write', text: '', opened: false };
+const draftFor = k => `I’ve been using presentations.ai to build my decks. My honest take: [your experience]. Try it: ${SHORT} #ad`;
+// X counts any link as 23 characters
+const xLength = t => t.replace(/\S*presentations\.ai\S*/g, 'x'.repeat(23)).length;
 
-function submit(k) {
-  const input = $('#url'), hint = $('#urlhint');
+function socialDialog() {
+  const k = D.k, t = TASKS[k];
+  const steps = ['write', 'link', 'sent'], at = steps.indexOf(D.step);
+  const dots = `<div class="steps3">${['Write', 'Paste the link', 'Done'].map((l, i) => `<span class="${i < at ? 'done' : i === at ? 'now' : ''}"><b>${i < at ? '<i class="ph-bold ph-check"></i>' : i + 1}</b>${l}</span>`).join('<i class="sep"></i>')}</div>`;
+  let body = '', foot = '';
+  if (D.step === 'write') {
+    const over = k === 'x' && xLength(D.text) > 280;
+    body = `<p class="lead">Share your honest experience in a public post. <b>+${t.reward} credits</b> once we’ve checked it.</p>
+      <textarea class="draft" id="draft" aria-label="Your post">${D.text}</textarea>
+      <div class="meta-row"><span class="hint">Change it to your own words. Keep #ad so people know it’s a paid post.</span>${k === 'x' ? `<span class="count ${over ? 'over' : ''}" id="count">${xLength(D.text)} / 280</span>` : ''}</div>
+      ${k === 'fb' ? '<div class="note"><i class="ph ph-info"></i><span>Facebook doesn’t let apps fill in your post. We’ll copy the text, so you can paste it there.</span></div>' : ''}`;
+    foot = `${btn('I’ve already posted', 'button-medium button-ghost', 'data-step="link"')}<span style="flex:1"></span>
+      ${btn(k === 'fb' ? `Copy text and open Facebook <i class="ph ph-arrow-up-right"></i>` : `Open ${t.name} <i class="ph ph-arrow-up-right"></i>`, 'button-medium button-primary', `data-launch${over ? ' disabled' : ''}`)}`;
+  } else if (D.step === 'link') {
+    body = `<p class="lead">${D.opened ? `Posted on ${t.name}? ` : ''}Paste the link to your post and we’ll check it.</p>
+      <input class="url" id="url" placeholder="${t.example}" aria-label="Link to your post" autocomplete="off" />
+      <div class="hint" id="urlhint">The post has to be public.</div>
+      <div class="howto"><div class="howto-h">Where to find the link</div><ol>${HOWTO[k].map(h => `<li>${h}</li>`).join('')}</ol></div>`;
+    foot = `${btn('<i class="ph ph-arrow-left"></i>Back', 'button-medium button-ghost', 'data-step="write"')}<span style="flex:1"></span>${btn('Submit for review', 'button-medium button-primary', 'data-submit')}`;
+  } else {
+    body = `<div class="sent"><span class="sent-ic"><i class="ph-fill ph-hourglass-medium"></i></span>
+      <h3>Thanks, we’re checking your post</h3>
+      <p>Usually within 2 working days. We’ll email you, and <b>+${t.reward} credits</b> land in your account once it’s approved.</p></div>`;
+    foot = `<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
+  }
+  return `<div class="dlg-h"><h2 id="dt">Post on ${t.name}</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>
+    <div class="dlg-b">${D.step !== 'sent' ? dots : ''}${body}<div class="dlg-f">${foot}</div></div>`;
+}
+function g2Dialog() {
+  return `<div class="dlg-h"><h2 id="dt">Review us on G2</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>
+    <div class="dlg-b">
+      <p class="lead">Tell other people what it’s really like to use presentations.ai.</p>
+      <ul class="facts">
+        <li><i class="ph ph-pencil-simple-line"></i><span>You write the review on G2. It takes about 5 minutes.</span></li>
+        <li><i class="ph ph-scales"></i><span>Any honest rating counts. Your reward doesn’t depend on what you say.</span></li>
+        <li><i class="ph ph-coins"></i><span><b>+400 credits</b> once G2 publishes it. G2 marks it as a review with a small reward.</span></li>
+      </ul>
+      <div class="dlg-f"><span style="flex:1"></span>${btn('Not now', 'button-medium button-ghost', 'data-close')}${btn('Write my review <i class="ph ph-arrow-up-right"></i>', 'button-medium button-primary', 'data-g2go')}</div>
+    </div>`;
+}
+function paint() { $('#dlg').innerHTML = D.k === 'g2' ? g2Dialog() : socialDialog(); }
+function openDialog(k) {
+  Object.assign(D, { k, step: 'write', text: draftFor(k), opened: false });
+  paint(); $('#scrim').classList.add('on');
+  setTimeout(() => $('#dlg').querySelector('#draft, [data-g2go]')?.focus(), 200);
+}
+const closeDialog = () => { $('#scrim').classList.remove('on'); D.k = null; };
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 1800); }
+function goStep(step) { D.step = step; paint(); if (step === 'link') setTimeout(() => $('#url')?.focus(), 50); }
+
+function launch() {
+  const k = D.k;
+  if (k === 'fb') navigator.clipboard?.writeText(D.text).catch(() => {});
+  D.opened = true;
+  toast(k === 'fb' ? 'Text copied. Facebook opens in a new tab.' : `${TASKS[k].name} opens in a new tab with your post filled in.`);
+  // in the product: window.open(composer URL); coming back to this tab moves to the link step.
+  // here we simulate the round trip.
+  setTimeout(() => D.k === k && goStep('link'), 1600);
+}
+function submit() {
+  const k = D.k, input = $('#url'), hint = $('#urlhint');
   let ok = false;
-  try { const u = new URL(/^https?:\/\//.test(input.value.trim()) ? input.value.trim() : 'https://' + input.value.trim()); ok = TASKS[k].host.test(u.hostname) && u.pathname.length > 1; } catch (e) {}
+  try { const v = input.value.trim(), u = new URL(/^https?:\/\//.test(v) ? v : 'https://' + v); ok = TASKS[k].host.test(u.hostname) && u.pathname.length > 1; } catch (e) {}
   if (!ok) { input.classList.add('err'); hint.classList.add('err'); hint.textContent = `That doesn’t look like ${k === 'x' ? 'an' : 'a'} ${TASKS[k].name} post. Paste the link to the post itself.`; input.focus(); return; }
-  S[k] = 'pending'; closeDialog(); render(); toast('Sent for review. We’ll let you know within 2 working days.');
+  S[k] = 'pending'; render(); goStep('sent');
 }
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('button, a'); if (!b) return;
+  const b = e.target.closest('button, a'); if (!b || b.disabled) return;
   const d = b.dataset;
   if (d.preset) { preset = d.preset; S = { ...PRESETS[preset] }; render(); }
   else if (d.open) openDialog(d.open);
   else if ('close' in d) closeDialog();
-  else if (d.submit) submit(d.submit);
+  else if (d.step) goStep(d.step);
+  else if ('launch' in d) launch();
+  else if ('submit' in d) submit();
   else if ('g2go' in d) { S.g2 = 'waiting'; closeDialog(); render(); toast('Opens our G2 review page in a new tab'); }
-  else if ('copydraft' in d) { navigator.clipboard?.writeText($('#draft').value).catch(() => {}); b.innerHTML = '<i class="ph ph-check"></i>Copied'; setTimeout(() => b.innerHTML = '<i class="ph ph-copy"></i>Copy text', 1400); }
   else if (d.toast) { e.preventDefault(); toast(d.toast); }
 });
 $('#scrim').addEventListener('mousedown', e => { if (e.target.id === 'scrim') closeDialog(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDialog(); });
-document.addEventListener('input', e => { if (e.target.id === 'url') { e.target.classList.remove('err'); const h = $('#urlhint'); h.classList.remove('err'); h.textContent = 'Make sure the post is set to Public.'; } });
+document.addEventListener('input', e => {
+  if (e.target.id === 'draft') {
+    D.text = e.target.value;
+    const c = $('#count'); if (c) { const n = xLength(D.text); c.textContent = `${n} / 280`; c.classList.toggle('over', n > 280); $('[data-launch]').disabled = n > 280; }
+  }
+  if (e.target.id === 'url') { e.target.classList.remove('err'); const h = $('#urlhint'); h.classList.remove('err'); h.textContent = 'The post has to be public.'; }
+});
 render();
 </script>
 </body>

@@ -1,7 +1,7 @@
 # Earn credits for posts and reviews
 
 **Status:** draft for review · **Owner:** Mudita · **Updated:** 27 Oct 2026
-**Prototype:** `earn-credits.html` in this folder · **Notes and code mapping:** `grounding.md`
+**Prototype:** `earn-credits.html` · **Flows:** `posting-flows.html` in this folder · **Notes and code mapping:** `grounding.md`
 
 ## In one line
 
@@ -44,11 +44,16 @@ A new **“Earn more credits”** section on the Refer & earn page, between the 
 
 ### Posting on socials
 
-1. User picks a platform card and clicks **Post on LinkedIn** (or X, Facebook).
-2. A small dialog shows **suggested post text** they can edit, with #ad and their link already in it, plus **Copy text** and **Open LinkedIn**.
-3. They post publicly, come back, and **paste the link to their post**.
-4. We check the link looks like a post on that platform, then save it as **Pending**.
-5. A person checks it within 2 working days → **Credited** or **Not approved** (with the reason and a way to try again).
+Storyboard for each platform: `posting-flows.html`. A three-step dialog: **Write → Paste the link → Done**.
+
+1. **Write.** Suggested text with #ad and their link, which they rewrite in their own words. X shows a 280-character counter (links count as 23) and blocks Open X when it's too long.
+2. **Open the platform** in a new tab:
+   - LinkedIn and X open their composer **with the text filled in**.
+   - Facebook doesn't allow apps to pre-fill posts, so the button is **Copy text and open Facebook** and says why.
+3. **Coming back to our tab** moves the dialog to **Paste the link** on its own. “I've already posted” skips straight there.
+4. **Paste the link.** Each platform shows where to find it (LinkedIn: ··· → Copy link to post; X: share icon → Copy link; Facebook: ··· → Copy link, audience must be Public). We check it's a post link from that platform.
+5. **Done.** “Thanks, we're checking your post”; the card shows Pending.
+6. A person approves it → email + toast, credits added. Or Not approved, with the reason and Try again.
 
 ### Reviewing on G2
 
