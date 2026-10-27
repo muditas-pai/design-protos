@@ -46,8 +46,10 @@ A new **“Earn more credits”** section on the Refer & earn page, between the 
 | Export done | Green “Your PPT has been downloaded” banner | A link at its end, with the four platform stickers: “Happy with it? Tell people, earn up to 1,000 credits” | Every download, until every reward is claimed |
 | Share dialog | Share externally tab | A row under the social buttons: “Say what you think of presentations.ai” · **Earn credits** | Every open, until every reward is claimed |
 | Nudge | Bottom-right nudge slot | A new nudge type, `earn`, that the Pro guardrail doesn't block | Scored on downloads, end of show, share links, third deck; never after a failed generation |
-| After upgrade | “Welcome to Pro Plan” dialog (not checkout) | One quiet line under the blue card: “You chose Pro. Tell others why and earn up to 1,000 credits” | Paid plans, once |
-| Pro checklist | “Get most out of Pro” in the editor top bar (in code, not on prod yet) | Row 4: Tell people about us · Earn up to +1,000 | Paid plans, until done |
+| After upgrade | “Welcome to Pro Plan” dialog (not checkout) | One quiet line under the blue card: “You chose Pro. Tell others why, so they can decide too.” · Share your take | Paid plans, once |
+| Pro checklist | “Get most out of Pro” in the editor top bar (in code, not on prod yet) | Row 4: Tell people why you chose Pro (no Earn badge) | Paid plans, until done |
+
+**Paid users get a different pitch.** They've just bought credits, so credits aren't the reason to post. Their entry points talk about helping others decide, and the dialog becomes **Tell people what you think**: the same two options, with “+200 credits as a thank-you” in small type instead of the big +200. The reward still exists and is still disclosed (#ad, and to G2).
 
 Rules for all of them: only after the first deck; never while generating or after an error; earn asks share the nudge engine's session cap with the upsells; two dismissals and the nudge stops for good.
 
