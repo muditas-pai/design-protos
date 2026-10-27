@@ -161,7 +161,7 @@ Never deck titles, slide text, company or client names. Decks are often confiden
 **In the dialog**
 
 - **Writing state, about 3 seconds:** three skeleton lines where the text box goes, and a status line that changes each second: “Looking at your 12 decks” → “Picking out what you make most” → “Writing it the way you'd say it”. Open [platform] is disabled; “I've already posted” still works.
-- **Draft ready:** it fades into an editable box that grows to fit. Under it, on the hint line: **Write another** for a new version.
+- **Draft ready:** it fades into an editable box that grows to fit.
 - Start writing when the **Earn more credits** dialog opens, not when they pick a platform, so by the time they choose, the draft is usually ready.
 - If it takes over 6 seconds or fails, show the plain template so they're never stuck.
 - Model: a fast one, Claude Haiku 5.5 (`claude-haiku-5-5`). One draft per platform per day is cached.
