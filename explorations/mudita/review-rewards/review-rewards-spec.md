@@ -26,7 +26,7 @@ These decide the shape of the feature. Legal to sign off before build.
 | Rule | Source | What it means for the design |
 |---|---|---|
 | Rewards can't depend on the review being positive | FTC rule on reviews and testimonials (in force 21 Oct 2024) | Copy says “honest experience”, never “positive”, “5 stars” or “testimonial”. We never reject a post for being critical |
-| Paid posts must say they're paid | FTC endorsement guides | Suggested post text includes **#ad**; a post without a disclosure isn't approved |
+| Paid posts must say they're paid | FTC endorsement guides | The drafted post text always includes **#ad**; a post without a disclosure isn't approved |
 | Trustpilot doesn't allow any incentive for a review | Trustpilot guidelines | No credits for Trustpilot. Ask everyone, not only happy users (selective asking is also against the rules) |
 | G2 allows incentives, including credits, if they're disclosed to G2, capped at $100 in value, and never tied to sentiment | G2 Community Guidelines | Run it as a G2 review campaign, or disclose it to G2. G2 labels the review as incentivized. 400 credits must be worth under $100 |
 
@@ -57,7 +57,7 @@ Rules for all of them: only after the first deck; never while generating or afte
 
 Storyboard for each platform: `posting-flows.html`. A three-step dialog: **Write → Paste the link → Done**.
 
-1. **Write.** Suggested text with #ad and their link, which they rewrite in their own words. X shows a 280-character counter (links count as 23) and blocks Open X when it's too long.
+1. **Write.** A draft written for them by AI from how they use presentations.ai (see **Drafted post text**), with #ad and their link. About 3 seconds of a writing state first. X shows a 280-character counter (links count as 23) and blocks Open X when it's too long.
 2. **Open the platform** in a new tab:
    - LinkedIn and X open their composer **with the text filled in**.
    - Facebook doesn't allow apps to pre-fill posts, so the button is **Copy text and open Facebook** and says why.
@@ -133,13 +133,40 @@ Failed buttons retry directly (the reason is already on the card), so no dialog.
 
 **Reasons a post isn't approved:** the post isn't public · the link doesn't open a post · the post isn't about presentations.ai · it has no #ad or paid-partnership label · this account was already rewarded.
 
-## Suggested post text
+## Drafted post text
 
-Editable, never required. One per platform, for example:
+The post is drafted for them by AI, from how they actually use presentations.ai. It's a starting point they edit, never required.
 
-> I’ve been using presentations.ai to build my decks. Here’s my honest take: [your experience]. Try it: app.presentations.ai/?ref=… #ad
+**What it's written from**
 
-The placeholder makes it clear they should write their own experience. We don't pre-write praise.
+| Input | Example | Source |
+|---|---|---|
+| Role | Founder | Onboarding answer |
+| What they make | mostly investor updates and board decks | Deck types, classified from their decks |
+| How they start | usually from a Google Doc | Input type per deck: prompt, document, PDF, URL, PowerPoint import |
+| How much | 12 decks | Deck count |
+
+Never deck titles, slide text, company or client names. Decks are often confidential; the draft only ever sees categories and counts.
+
+**How it should read**
+
+- First person, plain words, specific to them: what they make, how they start, how many.
+- No claims we can't know: no time saved, no "got funded", no results. Outcomes are theirs to add.
+- No praise words or superlatives ("amazing", "best", "game-changer").
+- None of the usual AI tells: no em dashes, no rhetorical questions, no "not just X, it's Y", no lists of three, no "Here's the thing", no "I'm thrilled", no openers like "As a founder,", no emoji, no hashtags besides #ad, no "seamless / unlock / journey / elevate".
+- Length per platform: LinkedIn 2 to 4 sentences, X under 240 characters before the link, Facebook 2 to 3 casual sentences.
+- **We add the link and #ad**, not the model, so they're always there and always correct.
+- A check runs on every draft for the banned words and patterns. If one slips through, it rewrites once; if it still fails, it falls back to a plain template.
+
+**In the dialog**
+
+- **Writing state, about 3 seconds:** three skeleton lines where the text box goes, and a status line that changes each second: “Looking at your 12 decks” → “Picking out what you make most” → “Writing it the way you'd say it”. Open [platform] is disabled; “I've already posted” still works.
+- **Draft ready:** it fades into an editable box that grows to fit. Under it: “Drafted from your work: Founder · 12 decks, mostly investor updates · usually started from a Google Doc”, and **Write another** for a new version.
+- Start writing when the **Earn more credits** dialog opens, not when they pick a platform, so by the time they choose, the draft is usually ready.
+- If it takes over 6 seconds or fails, show the plain template so they're never stuck.
+- Model: a fast one, Claude Haiku 5.5 (`claude-haiku-5-5`). One draft per platform per day is cached.
+
+**Why we draft at all, and the risk.** Earlier we chose not to pre-write anything. Drafting should get more people to post, but the FTC rule bans testimonials that misrepresent the person's experience. Keeping the draft to facts from their own usage, leaving opinions and outcomes to them, and having them edit and post it from their own account keeps it theirs. Legal must sign off on this specifically. G2 reviews are never drafted: G2 wants reviews in the reviewer's own words.
 
 ## Credits and notifications
 
@@ -152,7 +179,7 @@ The placeholder makes it clear they should write their own experience. We don't 
 - How many people who see the section start a task, and how many finish one.
 - Approval rate per platform, and the top reasons for not approving.
 - New G2 reviews per month and our G2 rating.
-- Signups from links in posts (their referral link is in the suggested text).
+- Signups from links in posts (their referral link is in the drafted text).
 
 ## Not in v1
 
@@ -170,4 +197,4 @@ The placeholder makes it clear they should write their own experience. We don't 
 2. **Value:** what 400 credits are worth in dollars, to confirm it's under G2's $100 cap.
 3. **Review owner:** who checks submitted posts, and where (an admin queue).
 4. **Deleted posts:** do we take credits back if a post is deleted soon after?
-5. **Legal:** sign-off on the copy, disclosure and eligibility.
+5. **Legal:** sign-off on the copy, disclosure and eligibility, and on **AI-drafted posts** in particular (see Drafted post text).

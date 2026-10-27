@@ -757,7 +757,27 @@ go(TP[new URLSearchParams(location.search).get('tp')] ? new URLSearchParams(loca
 #earn .stepn h5 { margin: 2px 0 8px; font-size: 14px; line-height: 20px; font-weight: 600; }
 #earn .draft { width: 100%; min-height: 104px; padding: 10px 12px; border: 1px solid var(--border-secondary); border-radius: 6px; font: 14px/20px var(--font-ui); color: var(--text-primary); resize: vertical; outline: none; }
 #earn .draft:focus, #earn .url:focus { border-color: var(--border-brand); box-shadow: 0 0 0 2px rgba(52,39,255,0.2); }
-#earn .row-btns { display: flex; gap: 8px; margin-top: 8px; }
+#earn .row-btns { display: flex; gap: 8px; margin-top: 8px; }/* AI draft: a 3s writing state in the textarea's place, then the draft fades in with what it was written from */
+#earn .gen { margin-top: 14px; min-height: 144px; padding: 12px; border: 1px solid var(--border-secondary); border-radius: 6px; display: flex; flex-direction: column; }
+#earn .gen .ln { height: 10px; margin-bottom: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--bg-tertiary) 0%, #E8E8F0 45%, var(--bg-tertiary) 90%) 0 0 / 200% 100%; animation: genShimmer 1.4s linear infinite; }
+#earn .gen-st { margin-top: auto; display: flex; align-items: center; gap: 6px; height: 16px; font-size: 12px; line-height: 16px; color: var(--text-secondary); }
+#earn .gen-st > i { color: var(--text-brand); font-size: 14px; animation: genPulse 1.2s ease-in-out infinite; }
+#earn .gen-st .rot { position: relative; flex: 1; height: 16px; }
+#earn .gen-st .rot span { position: absolute; inset: 0; opacity: 0; animation: genLine 1s cubic-bezier(0.23, 1, 0.32, 1) both; }
+#earn .gen-st .rot span:nth-child(2) { animation-delay: 1s; }
+#earn .gen-st .rot span:nth-child(3) { animation: genLast 1s 2s cubic-bezier(0.23, 1, 0.32, 1) both; }
+@keyframes genShimmer { to { background-position: -200% 0; } }
+@keyframes genPulse { 50% { opacity: 0.4; } }
+@keyframes genLine { 0% { opacity: 0; transform: translateY(6px); } 20%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
+@keyframes genLast { 0% { opacity: 0; transform: translateY(6px); } 20%, 100% { opacity: 1; transform: none; } }
+#earn .draft.fresh { animation: genIn 320ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+@keyframes genIn { from { opacity: 0; filter: blur(3px); } }
+#earn .basis { margin-top: 8px; display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
+#earn .basis > i { margin-top: 1px; font-size: 13px; color: var(--text-brand); }
+#earn .basis span { flex: 1; }
+#earn .basis b { font-weight: 500; color: var(--text-secondary); }
+#earn .basis button { flex: none; display: inline-flex; align-items: center; gap: 4px; margin: -4px -6px 0 0; height: 24px; padding: 0 6px; border-radius: 4px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+#earn .basis button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 #earn .url { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--border-secondary); border-radius: 6px; font: 14px var(--font-ui); outline: none; }
 #earn .url.err { border-color: #DC2626; }
 #earn .hint { margin-top: 6px; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
@@ -965,8 +985,30 @@ const HOWTO = {
   x:  ['Open your post on X', 'Click the share icon under the post', 'Choose <b>Copy link</b>'],
   fb: ['Make sure the post’s audience is <b>Public</b> (the globe icon)', 'Click ··· at the top right of the post', 'Choose <b>Copy link</b>'],
 };
-const D = { k: null, step: 'write', text: '', opened: false };
-const draftFor = k => `I’ve been using presentations.ai to build my decks. My honest take: [your experience]. Try it: ${SHORT} #ad`;
+const D = { k: null, step: 'write', text: '', opened: false, gen: 'ready', v: 0 };
+
+/* The draft is AI-written from how this person uses the product (prototype: canned output).
+   In: role (onboarding), deck kinds, how decks were started, deck count. Never deck titles or content.
+   Out: plain first-person text with no outcome claims we can't know. The link and #ad are added by us, not the model. */
+const PROFILE = { role: 'Founder', decks: 12, kinds: 'investor updates and board decks', input: 'a Google Doc' };
+const DRAFTS = {
+  li: ['Most of my investor updates and board decks start as a messy Google Doc. I paste the doc into presentations.ai and get slides I can edit straight away. I’ve made 12 decks with it so far, and it’s where I start now.',
+       'I’m a founder, so I make a lot of board decks and investor updates. For the last 12 I’ve pasted my notes into presentations.ai and edited what came back. It’s how I make decks now.'],
+  x:  ['My board decks start as a messy Google Doc. I paste it into presentations.ai and get slides I can edit. 12 decks so far.',
+       '12 decks in. I paste my notes into presentations.ai and edit the slides it gives me. Mostly investor updates.'],
+  fb: ['If you make slides for work: I’ve been using presentations.ai for my investor updates and board decks. I paste in my notes from a Google Doc and it gives me a first version to edit. I’ve made 12 so far.',
+       'I’ve made 12 decks with presentations.ai now, mostly board decks and investor updates. I start from my notes and fix up what it makes.'],
+};
+const draftFor = (k, v = 0) => DRAFTS[k][v % DRAFTS[k].length] + (k === 'x' ? ` ${SHORT} #ad` : `\n\nTry it: ${SHORT} #ad`);
+const GEN_MS = 3000;
+function generate(k) {
+  D.gen = 'loading'; paint();
+  clearTimeout(generate.t);
+  generate.t = setTimeout(() => {
+    if (D.k !== k || D.step !== 'write') { D.gen = 'ready'; return; }
+    D.text = draftFor(k, D.v); D.gen = 'fresh'; paint(); D.gen = 'ready';
+  }, GEN_MS);
+}
 // X counts any link as 23 characters
 const xLength = t => t.replace(/\S*presentations\.ai\S*/g, 'x'.repeat(23)).length;
 
@@ -976,13 +1018,19 @@ function socialDialog() {
   const dots = `<div class="steps3">${['Write', 'Paste the link', 'Done'].map((l, i) => `<span class="${i < at ? 'done' : i === at ? 'now' : ''}"><b>${i < at ? '<i class="ph-bold ph-check"></i>' : i + 1}</b>${l}</span>`).join('<i class="sep"></i>')}</div>`;
   let body = '', foot = '';
   if (D.step === 'write') {
-    const over = k === 'x' && xLength(D.text) > 280;
+    const loading = D.gen === 'loading';
+    const over = !loading && k === 'x' && xLength(D.text) > 280;
+    const draft = loading
+      ? `<div class="gen" role="status" aria-label="Writing a draft"><i class="ln" style="width:92%"></i><i class="ln" style="width:100%"></i><i class="ln" style="width:74%"></i>
+          <div class="gen-st"><i class="ph-fill ph-sparkle"></i><span class="rot"><span>Looking at your ${PROFILE.decks} decks</span><span>Picking out what you make most</span><span>Writing it the way you’d say it</span></span></div></div>`
+      : `<textarea class="draft ${D.gen === 'fresh' ? 'fresh' : ''}" id="draft" aria-label="Your post">${D.text}</textarea>
+        <div class="basis"><i class="ph-fill ph-sparkle"></i><span>Drafted from your work: <b>${PROFILE.role}</b> · <b>${PROFILE.decks} decks</b>, mostly ${PROFILE.kinds} · usually started from ${PROFILE.input}</span><button data-regen><i class="ph ph-arrows-clockwise"></i>Write another</button></div>`;
     body = `<p class="lead">Share your honest experience in a public post. <b>+${t.reward} credits</b> once we’ve checked it.</p>
-      <textarea class="draft" id="draft" aria-label="Your post">${D.text}</textarea>
-      <div class="meta-row"><span class="hint">Change it to your own words. Keep #ad so people know it’s a paid post.</span>${k === 'x' ? `<span class="count ${over ? 'over' : ''}" id="count">${xLength(D.text)} / 280</span>` : ''}</div>
+      ${draft}
+      ${loading ? '' : `<div class="meta-row"><span class="hint">Make it yours. Keep #ad so people know it’s paid.</span>${k === 'x' ? `<span class="count ${over ? 'over' : ''}" id="count">${xLength(D.text)} / 280</span>` : ''}</div>`}
       ${k === 'fb' ? '<div class="note"><i class="ph ph-info"></i><span>Facebook doesn’t let apps fill in your post. We’ll copy the text, so you can paste it there.</span></div>' : ''}`;
     foot = `${btn('I’ve already posted', 'button-medium button-ghost', 'data-step="link"')}<span style="flex:1"></span>
-      ${btn(k === 'fb' ? `Copy text and open Facebook <i class="ph ph-arrow-up-right"></i>` : `Open ${t.name} <i class="ph ph-arrow-up-right"></i>`, 'button-medium button-primary', `data-launch${over ? ' disabled' : ''}`)}`;
+      ${btn(k === 'fb' ? `Copy text and open Facebook <i class="ph ph-arrow-up-right"></i>` : `Open ${t.name} <i class="ph ph-arrow-up-right"></i>`, 'button-medium button-primary', `data-launch${over || loading ? ' disabled' : ''}`)}`;
   } else if (D.step === 'link') {
     body = `<p class="lead">${D.opened ? `Posted on ${t.name}? ` : ''}Paste the link to your post and we’ll check it.</p>
       <div class="urlrow"><input class="url" id="url" placeholder="${t.example}" aria-label="Link to your post" autocomplete="off" />${btn('<i class="ph ph-clipboard-text"></i>Paste', 'button-medium button-secondary', 'data-paste')}</div>
@@ -1012,10 +1060,15 @@ function g2Dialog() {
       <div class="dlg-f"><span style="flex:1"></span>${btn('Not now', 'button-medium button-ghost', 'data-close')}${btn('Write my review <i class="ph ph-arrow-up-right"></i>', 'button-medium button-primary', 'data-g2go')}</div>
     </div>`;
 }
-function paint() { $('#dlg').innerHTML = D.k === 'g2' ? g2Dialog() : socialDialog(); }
+function paint() {
+  $('#dlg').innerHTML = D.k === 'g2' ? g2Dialog() : socialDialog();
+  // the draft box grows to fit the draft, so the link and #ad are never hidden below the fold
+  const ta = $('#draft'); if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 2 + 'px'; }
+}
 function openDialog(k) {
-  Object.assign(D, { k, step: 'write', text: draftFor(k), opened: false });
-  paint(); $('#scrim').classList.add('on');
+  Object.assign(D, { k, step: 'write', text: '', opened: false, v: 0 });
+  $('#scrim').classList.add('on');
+  if (k === 'g2') paint(); else generate(k);
   setTimeout(() => $('#dlg').querySelector('#draft, [data-g2go]')?.focus(), 200);
 }
 const closeDialog = () => { $('#scrim').classList.remove('on'); D.k = null; };
@@ -1057,6 +1110,7 @@ document.addEventListener('click', e => {
   else if (d.relink) { Object.assign(D, { k: d.relink, step: 'link', text: draftFor(d.relink), opened: false }); paint(); $('#scrim').classList.add('on'); setTimeout(() => $('#url')?.focus(), 50); }
   else if ('close' in d) closeDialog();
   else if (d.step) goStep(d.step);
+  else if ('regen' in d) { D.v++; generate(D.k); }
   else if ('launch' in d) launch();
   else if ('submit' in d) submit();
   else if ('paste' in d) pasteLink();
