@@ -61,15 +61,30 @@ A new **“Earn more credits”** section on the Refer & earn page, between the 
 
 One quiet row: “Liking presentations.ai? Leave a review on Trustpilot.” Opens Trustpilot. No reward, no tracking, shown to everyone who qualifies.
 
-## States for each card
+## Layout and states
 
-| State | What the card shows | Main action |
+One card, two rows, and a line for Trustpilot. No per-platform cards.
+
+```
+Earn more credits  NEW                                     Up to 1,000 credits
+Post about us  +200 each                       [in LinkedIn] [X] [f Facebook]
+A public post about your honest experience. One per platform.
+──────────────────────────────────────────────────────────────────────────────
+Review us on G2  +400                                    [G2 Write a review]
+An honest review on G2. Any rating counts.
+──────────────────────────────────────────────────────────────────────────────
+Liking presentations.ai? Leave a review on Trustpilot. There's no reward for this one.
+```
+
+Each platform button carries its own state; the row's grey line explains the latest one.
+
+| State | Button | Row line |
 |---|---|---|
-| Available | Platform, reward, one line | Post on LinkedIn / Review us on G2 |
-| Pending | “Checking your post · usually within 2 working days” | View post |
-| Waiting for G2 | “Credits arrive when G2 publishes your review” | Open G2 |
-| Credited | “+200 credits added” with the date | View post |
-| Not approved | The reason, in plain words | Try again |
+| Available | Outlined, platform icon + name | What to do |
+| Pending | Dashed, hourglass | “Checking your X post, usually within 2 working days.” |
+| Waiting for G2 | Dashed, “Waiting for G2” | “Credits arrive when G2 publishes your review.” |
+| Credited | Grey fill, green check | (G2) “+400 credits added.” |
+| Not approved | Red outline, “Try X again” | The reason, in red |
 
 **Reasons a post isn't approved:** the post isn't public · the link doesn't open a post · the post isn't about presentations.ai · it has no #ad or paid-partnership label · this account was already rewarded.
 
