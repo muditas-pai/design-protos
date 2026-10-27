@@ -39,7 +39,17 @@ These decide the shape of the feature. Legal to sign off before build.
 
 ## Where it lives
 
-A new **“Earn more credits”** section on the Refer & earn page, between the hero and the stat cards. v1 has no other entry point; a bottom-right nudge can follow once it's live.
+A new **“Earn more credits”** section on the Refer & earn page, between the hero and the stat cards. Everything else points there (prototype: `touchpoints.html`):
+
+| Touchpoint | Live screen | What's added | Shows |
+|---|---|---|---|
+| Export done | Green “Your PPT has been downloaded” banner | One link at its end: “Happy with it? Post about us, get 200 credits” | Every download, until the social rewards are claimed |
+| Share dialog | Share externally tab | A row under the social buttons: “Say what you think of presentations.ai” · **Earn credits** | Every open, until the social rewards are claimed |
+| Nudge | Bottom-right nudge slot | A new nudge type, `earn`, that the Pro guardrail doesn't block | Scored on downloads, end of show, share links, third deck; never after a failed generation |
+| After upgrade | “Welcome to Pro Plan” dialog (not checkout) | One quiet G2 line under the blue card | Paid plans, once |
+| Pro checklist | “Get most out of Pro” in the editor top bar (in code, not on prod yet) | Rows 4 and 5: Review us on G2 · Earn +400, Post about us · Earn +200 each | Paid plans, until done |
+
+Rules for all of them: only after the first deck; never while generating or after an error; earn asks share the nudge engine's session cap with the upsells; two dismissals and the nudge stops for good.
 
 ## The flow
 

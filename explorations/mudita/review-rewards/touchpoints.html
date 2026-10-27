@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Earn credits · touchpoints</title>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <!--
+    Four places that point people at "Earn more credits" (earn-credits.html), each drawn on the live screen
+    it sits on. Live references, 27 Oct 2026 (app.presentations.ai + pitchdeckdoclist new_dev_migration):
+      Export done   : the green banner after a PPT download (bg-success-100, h-10) + the Hire-an-expert nudge
+      Share dialog  : src/listing/core/screens/views/share/ShareScreen.jsx + PublishScreen.jsx (unpublished state)
+      Nudge         : src/nudge/view/NudgeCard.jsx (redesign branch), slot bottom right
+      After upgrade : src/common/components/payment/pricingNew/PaymentSuccessScreenNew.jsx (welcomeBody, ds Dialog)
+      Pro checklist : src/editor/core/view/editor/workspace/topmenu/TopmenuGetMostOut.jsx (in code, not yet on prod)
+    Everything is the live screen except the parts tagged NEW in the notes panel.
+  -->
+  <style>
+    :root {
+      --brand: #3427FF; --brand-hover: #2A1FD6; --tint: #ECEBFF; --tint-strong: #DCD9FF;
+      --ink: #14141F; --ink-2: #4E4E5E; --ink-3: #6C6C7C; --line: #E4E4EC; --line-strong: rgba(20,20,31,0.2);
+      --sunken: #F3F3F7; --surface-2: #F8F8FB; --quaternary: #E4E4EC; --canvas: #F6F6F9;
+      --good: #018C3C; --good-bg: #DAF1E2; --good-ink: #15803D;
+      --shadow-dialog: 0 2px 6px 0 rgba(16,12,60,0.09), 0 24px 64px -12px rgba(9,15,21,0.28);
+      --shadow-button-primary: 0 1px 0 0 rgba(255,255,255,0.15) inset, 0 1px 2px 0 rgba(16,12,60,0.20);
+      --shadow-segment: 0 1px 2px 0 rgba(9,15,21,0.12);
+      --ease: cubic-bezier(0.2, 0, 0, 1); --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --font: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      --banner: 0px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: var(--font); color: var(--ink); background: var(--canvas); -webkit-font-smoothing: antialiased; overflow: hidden; }
+    button, input, a { font: inherit; color: inherit; }
+    a { text-decoration: none; }
+    button { background: none; border: 0; padding: 0; cursor: pointer; }
+    body[data-tp="export"] { --banner: 40px; }
+
+    /* ---------- the live editor, behind everything ---------- */
+    .ed { position: fixed; inset: var(--banner) 0 0 0; display: grid; grid-template-rows: 56px 1fr; }
+    .ed-top { display: flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; background: #fff; border-bottom: 1px solid var(--line); }
+    .ed-top .home { width: 32px; height: 32px; display: grid; place-items: center; font-size: 20px; color: var(--ink); }
+    .ed-top .div { width: 1px; height: 24px; background: var(--line); margin: 0 8px 0 4px; }
+    .ed-top .ttl { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+    .ed-top .sp { flex: 1; }
+    .ed-top .ico { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 6px; color: var(--ink-2); font-size: 18px; }
+    .ed-top .ico.dim { color: #B4B4C0; }
+    .tbtn { height: 36px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; white-space: nowrap; }
+    .tbtn i { font-size: 16px; }
+    .tbtn.pri { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: var(--shadow-button-primary); }
+    .ed-main { display: grid; grid-template-columns: 180px 1fr; min-height: 0; }
+    .ed-rail { background: #fff; border-right: 1px solid var(--line); padding: 10px 10px 0 8px; overflow: hidden; }
+    .ed-rail .new { height: 34px; border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; margin-bottom: 12px; }
+    .ed-rail .th { display: grid; grid-template-columns: 14px 1fr; gap: 6px; margin-bottom: 10px; font-size: 11px; color: var(--ink-3); }
+    .ed-rail .th i { display: block; aspect-ratio: 16/9; border-radius: 6px; background: #fff; box-shadow: 0 0 0 1px var(--line); }
+    .ed-rail .th:nth-child(2) i { background: #0B0B14; box-shadow: 0 0 0 2px var(--brand); }
+    .ed-rail .th:nth-child(2) { color: var(--brand); }
+    .ed-canvas { position: relative; display: flex; flex-direction: column; align-items: center; padding: 18px 48px 0; min-width: 0; }
+    .ed-canvas .meta { align-self: stretch; max-width: 980px; margin: 0 auto 10px; width: 100%; font-size: 13px; color: var(--ink-3); }
+    .slide { width: min(980px, 100%); aspect-ratio: 16/9; border-radius: 8px; background: #0B0B14; color: #fff; padding: 5% 6%; display: grid; grid-template-columns: 1.15fr 1fr; gap: 6%; align-items: center;
+      box-shadow: 0 1px 2px rgba(16,12,60,0.06), 0 12px 32px -12px rgba(16,12,60,0.18); overflow: hidden; }
+    .slide small { display: block; font-size: clamp(9px, 1vw, 13px); font-weight: 600; opacity: 0.8; margin-bottom: 18%; }
+    .slide h1 { margin: 0; font-size: clamp(20px, 3.4vw, 48px); line-height: 1.05; letter-spacing: -0.02em; font-weight: 600; }
+    .slide p { margin: 6% 0 0; font-size: clamp(9px, 1.05vw, 14px); line-height: 1.4; opacity: 0.7; }
+    .slide .art { height: 100%; border-radius: 10px; background: linear-gradient(160deg, #2A2F5E, #3427FF 45%, #96A5FF); position: relative; overflow: hidden; }
+    .slide .art i { position: absolute; bottom: 0; width: 14%; border-radius: 4px 4px 0 0; background: rgba(255,255,255,0.85); }
+    .dock { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); height: 44px; padding: 0 6px; border-radius: 10px; background: #fff; border: 1px solid var(--line);
+      box-shadow: 0 4px 16px -6px rgba(16,12,60,0.18); display: flex; align-items: center; gap: 4px; font-size: 14px; white-space: nowrap; }
+    .dock span { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; height: 32px; }
+    .dock span i { font-size: 16px; } .dock .ai i { color: var(--brand); }
+
+    /* ---------- shared: buttons, stickers, scrim, toast ---------- */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 6px; font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap;
+      transition: background 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease), transform 120ms var(--ease); }
+    .btn:active { transform: scale(0.97); }
+    .btn.sm { height: 32px; padding: 0 12px; gap: 6px; font-size: 13px; line-height: 18px; }
+    .btn i { font-size: 16px; }
+    .btn.primary { background: var(--brand); color: #fff; box-shadow: var(--shadow-button-primary); }
+    .btn.primary:hover { background: var(--brand-hover); }
+    .btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .btn.secondary:hover { border-color: var(--line-strong); background: var(--sunken); }
+    .btn.subtle { background: var(--tint); color: var(--brand); }
+    .btn.subtle:hover { background: var(--tint-strong); }
+    .btn.lg { height: 44px; font-size: 15px; }
+    .w-full { width: 100%; }
+
+    /* platform stickers, same as the Earn more credits cards; --s sets the size */
+    .stickers { display: inline-flex; flex: none; }
+    .stk { --s: 40px; --r: 0deg; width: var(--s); height: var(--s); display: grid; place-items: center; border-radius: calc(var(--s) * 0.25); border: calc(var(--s) * 0.0625) solid #fff; color: #fff;
+      box-shadow: 0 0 0 1px rgba(20,20,31,.06), 0 1px 2px rgba(20,20,31,.12), 0 4px 10px rgba(20,20,31,.08);
+      transform: rotate(var(--r)); transition: transform 220ms var(--ease-out); }
+    .stk + .stk { margin-left: calc(var(--s) * -0.2); }
+    .stk:nth-child(1) { --r: -8deg; z-index: 4; } .stk:nth-child(2) { --r: 4deg; z-index: 3; } .stk:nth-child(3) { --r: -3deg; z-index: 2; } .stk:nth-child(4) { --r: 6deg; z-index: 1; }
+    .stk svg { width: 45%; height: 45%; }
+    .stk.s-li { background: #0A66C2; } .stk.s-x { background: #0F0F0F; } .stk.s-fb { background: #1877F2; } .stk.s-fb svg { width: 50%; height: 50%; }
+    .stk.s-g2 { background: #fff; border-radius: 50%; } .stk.s-g2 svg { width: 100%; height: 100%; }
+    .stickers.sm .stk { --s: 20px; border-width: 1.5px; box-shadow: 0 0 0 1px rgba(20,20,31,.06), 0 1px 2px rgba(20,20,31,.14); }
+    .stickers.md .stk { --s: 32px; border-width: 2px; }
+    .stickers.xl .stk { --s: 68px; border-width: 3.5px; box-shadow: 0 0 0 1px rgba(20,20,31,.05), 0 2px 4px rgba(20,20,31,.10), 0 12px 24px -6px rgba(16,12,60,.25); }
+    .stickers.xl .stk + .stk { margin-left: -10px; }
+    .g2-logo { width: 16px; height: 16px; flex: none; display: block; color: #FF492C; }
+
+    .layer { display: none; }
+    body[data-tp="export"] .l-export, body[data-tp="share"] .l-share, body[data-tp="nudge"] .l-nudge,
+    body[data-tp="upgrade"] .l-upgrade, body[data-tp="gmo"] .l-gmo { display: block; }
+    .scrim { position: fixed; inset: 0; z-index: 48; background: rgba(16,12,60,0.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+    .wrap { position: fixed; inset: 0; z-index: 49; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .dlg { position: relative; width: 100%; max-width: 576px; max-height: calc(100vh - 24px); overflow-y: auto; scrollbar-width: none; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-dialog);
+      animation: dlg-in 240ms var(--ease-out) both; }
+    @keyframes dlg-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+    .icon-btn { width: 32px; height: 32px; flex: none; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); font-size: 20px; transition: background 150ms var(--ease); }
+    .icon-btn:hover { background: var(--sunken); color: var(--ink); }
+    .toast { position: fixed; left: 50%; bottom: 76px; z-index: 90; transform: translate(-50%, 12px); opacity: 0; padding: 10px 14px; border-radius: 8px; background: #14141F; color: #fff; font-size: 13px;
+      transition: opacity 160ms var(--ease), transform 200ms var(--ease-out); pointer-events: none; }
+    .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ---------- 1. export done: the live green banner, with one link added ---------- */
+    .banner { position: fixed; top: 0; left: 0; right: 0; height: 40px; z-index: 9; background: var(--good-bg); display: flex; align-items: center; justify-content: center; padding: 0 48px; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 500; }
+    .banner .tick { width: 20px; height: 20px; border-radius: 50%; background: var(--good); color: #fff; display: grid; place-items: center; font-size: 11px; flex: none; }
+    .banner .msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .banner .sep { width: 1px; height: 16px; background: rgba(1,140,60,0.3); margin: 0 6px; flex: none; }
+    .banner .earn { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; flex: none; text-decoration: underline; text-decoration-color: rgba(20,20,31,0.35); text-underline-offset: 3px; }
+    .banner .earn:hover { text-decoration-color: currentColor; }
+    .banner .earn i { font-size: 14px; transition: transform 160ms var(--ease-out); }
+    .banner .earn:hover i { transform: translateX(2px); }
+    .banner .close { position: absolute; right: 16px; font-size: 16px; }
+    /* the live Hire-an-expert nudge that fires at the same moment, unchanged */
+    .nudge { position: fixed; right: 16px; bottom: 16px; z-index: 60; width: min(420px, calc(100vw - 32px)); animation: nudge-in 420ms cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+    @keyframes nudge-in { from { opacity: 0; transform: translateY(16px); } }
+    .nudge-x { position: absolute; top: -40px; right: 0; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 1px solid var(--line-strong); display: grid; place-items: center; font-size: 16px; }
+    .nudge-card { overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #fff; box-shadow: var(--shadow-dialog); }
+    .nudge-body { padding: 20px 24px 24px; }
+    .nudge-body h2 { margin: 0; font-size: 24px; line-height: 30px; letter-spacing: -0.02em; font-weight: 600; }
+    .nudge-body p { margin: 8px 0 0; font-size: 14px; line-height: 20px; color: var(--ink-2); }
+    .nudge-body .btn { margin-top: 18px; }
+    .nudge-body .fine { margin-top: 12px; text-align: center; font-size: 13px; color: var(--ink-3); display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .proof { background: #EEEDFB; padding: 18px 24px 20px; font-size: 14px; line-height: 20px; }
+    .proof .row { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 13px; }
+    .proof .faces { display: flex; } .proof .faces b { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #EEEDFB; margin-left: -8px; background: center/cover; }
+    .proof .faces b:first-child { margin-left: 0; }
+    .proof .stars { color: #F5A524; letter-spacing: 1px; }
+    .proof q { display: block; margin-top: 12px; font-style: italic; color: var(--ink); quotes: none; }
+
+    /* ---------- 2. share dialog (live, unpublished state) ---------- */
+    .dlg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px 8px; }
+    .dlg-head h2 { margin: 0; font-size: 24px; line-height: 32px; letter-spacing: -0.015em; font-weight: 600; }
+    .dlg-head .icon-btn { margin: -2px -8px 0 0; }
+    .dlg-body { padding: 12px 24px 24px; }
+    .seg { display: inline-flex; padding: 2px; border-radius: 6px; background: var(--sunken); }
+    .seg button { height: 32px; padding: 0 12px; border-radius: 5px; font-size: 13px; font-weight: 500; color: var(--ink-3); }
+    .seg button.on { color: var(--ink); background: #fff; box-shadow: var(--shadow-segment); }
+    .card { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+    .card b { display: block; font-size: 14px; line-height: 20px; font-weight: 500; }
+    .card span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--ink-3); }
+    .caption { margin: 20px 0 0; font-size: 12px; line-height: 16px; letter-spacing: 0.08em; font-weight: 600; text-transform: uppercase; color: var(--ink-3); }
+    .socials { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .socials .btn { background: var(--sunken); color: var(--ink-2); }
+    .socials .btn:hover { background: var(--quaternary); color: var(--ink); }
+    .socials svg { width: 14px; height: 14px; }
+    .adv { margin-top: 16px; width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 6px; background: var(--sunken); text-align: left; font-size: 14px; font-weight: 500; }
+    .adv i { font-size: 20px; color: var(--ink-2); } .adv span { flex: 1; }
+    .foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
+    /* NEW: the earn row, right under the social buttons it sits next to in meaning */
+    .earnrow { margin-top: 12px; display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+    .earnrow > div { flex: 1; min-width: 0; }
+    .earnrow > div b { display: block; font-size: 14px; line-height: 20px; font-weight: 500; }
+    .earnrow > div span { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--ink-3); }
+    .earnrow:hover .stk:nth-child(1) { transform: rotate(-12deg) translate(-2px, -1px); }
+    .earnrow:hover .stk:nth-child(2) { transform: rotate(6deg) translateY(-2px); }
+    .earnrow:hover .stk:nth-child(3) { transform: rotate(-1deg) translate(2px, -1px); }
+
+    /* ---------- 3. the earn nudge (NudgeCard redesign branch, 380px) ---------- */
+    .l-nudge .nudge { width: min(380px, calc(100vw - 32px)); }
+    .ehero { position: relative; height: 196px; display: grid; place-items: center; overflow: hidden;
+      background: radial-gradient(120% 90% at 50% 100%, var(--tint-strong), var(--tint) 60%); }
+    .ehero .chip { position: absolute; top: 14px; left: 14px; height: 24px; padding: 0 9px; border-radius: 99px; background: #fff; color: var(--brand); font-size: 12px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(16,12,60,0.12); }
+    .ehero .stickers { margin-top: 18px; }
+    .l-nudge .nudge-body { padding: 16px; }
+    .l-nudge .nudge-body h2 { font-size: 20px; line-height: 26px; letter-spacing: -0.015em; }
+    .l-nudge .nudge-body p { margin-top: 4px; }
+    .l-nudge .nudge-body .btn { margin-top: 12px; }
+    .nudge-card:hover .ehero .stk:nth-child(1) { transform: rotate(-12deg) translate(-4px, -2px); }
+    .nudge-card:hover .ehero .stk:nth-child(2) { transform: rotate(7deg) translateY(-4px); }
+    .nudge-card:hover .ehero .stk:nth-child(3) { transform: rotate(-1deg) translate(3px, -3px); }
+    .nudge-card:hover .ehero .stk:nth-child(4) { transform: rotate(10deg) translate(5px, -1px); }
+
+    /* ---------- 4. after upgrade: PaymentSuccessScreenNew welcomeBody ---------- */
+    .welcome { padding: 56px 32px 32px; }
+    .welcome .icon-btn { position: absolute; top: 12px; right: 12px; border-radius: 50%; }
+    .welcome h2 { margin: 0; text-align: center; font-size: 28px; line-height: 36px; letter-spacing: -0.02em; font-weight: 600; }
+    .welcome h2 em { font-style: normal; background: linear-gradient(90deg, #171070 0%, #2118A6 24%, #3427FF 50%, #3F33FF 66%, #4D45FF 78%, #5C56FF 91.83%, #96A5FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .welcome .sub { margin: 4px 0 0; text-align: center; font-size: 14px; line-height: 20px; color: var(--ink-2); }
+    .wcard { position: relative; margin: 32px auto 0; max-width: 420px; border-radius: 12px; padding: 10px;
+      background: linear-gradient(180deg, rgba(0, 85, 237, 0.42) -20.43%, rgba(197, 212, 240, 0.70) 57.85%, rgba(255, 255, 255, 0.70) 100%), #FFF; }
+    .wcard::before { content: ""; position: absolute; inset: 8px; border-radius: 12px; border: 2px dashed #fff; mix-blend-mode: soft-light; pointer-events: none; }
+    .wcard .in { position: relative; padding: 20px 24px; }
+    .wcard h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; color: #111827; }
+    .wcard p { margin: 8px 0 0; max-width: 274px; font-size: 14px; line-height: 20px; color: #111827; }
+    .wcard img { position: absolute; right: -14px; top: 28px; width: 135px; pointer-events: none; }
+    .wcard .btn { margin-top: 56px; }
+    /* NEW: one quiet line under the card; the card's button stays the only emphatic action */
+    .g2line { margin: 20px auto 0; max-width: 420px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; line-height: 18px; color: var(--ink-2); }
+    .g2line .g2-logo { width: 24px; height: 24px; }
+    .g2line .tx { flex: 1; }
+    .g2line b { color: var(--ink); font-weight: 600; }
+    .g2line a { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--brand); white-space: nowrap; }
+    .g2line a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+    /* ---------- 5. Pro checklist (TopmenuGetMostOut), two rows added ---------- */
+    .gmo { position: relative; }
+    .gmo-pill { position: relative; height: 36px; display: inline-flex; align-items: center; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 2px rgba(16,12,60,0.12), 0 0 0 1px rgba(16,12,60,0.06);
+      background: linear-gradient(90deg, #ccdcfd 0%, #dfe9fe 45%, #f3f6fe 75%, #fdfdfe 100%); font-size: 14px; white-space: nowrap; }
+    .gmo-pill .t { padding: 0 12px; }
+    .gmo-pill .d { width: 1px; height: 24px; background: var(--line); }
+    .gmo-pill .c { width: 36px; display: grid; place-items: center; color: var(--ink-2); font-size: 16px; }
+    .gmo-panel { position: absolute; left: 0; top: calc(100% + 6px); z-index: 60; display: flex; flex-direction: column; gap: 12px; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff;
+      box-shadow: 0 12px 32px -8px rgba(16,12,60,0.22), 0 2px 6px rgba(16,12,60,0.08); width: max-content; animation: dlg-in 200ms var(--ease-out) both; }
+    .gmo-row { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 4px; text-align: left; font-size: 14px; line-height: 20px; }
+    .gmo-row:hover { background: var(--sunken); }
+    .gmo-row .n { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-strong); display: grid; place-items: center; flex: none; }
+    .gmo-row .n.done { background: #16A34A; border-color: #16A34A; color: #fff; }
+    .pillb { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 34px; font-size: 10px; line-height: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap; }
+    .pillb.earn { background: var(--tint); color: var(--brand); }
+    .pillb.earned { background: #DCFCE7; color: var(--good-ink); }
+    .gmo-row .arrow { font-size: 16px; opacity: 0; transition: opacity 150ms; }
+    .gmo-row:hover .arrow { opacity: 1; }
+
+    /* ---------- review bar + notes ---------- */
+    .review { position: fixed; left: 16px; bottom: 16px; z-index: 80; display: flex; gap: 4px; padding: 5px; border-radius: 10px; background: #0A1925; box-shadow: 0 10px 30px rgba(0,0,0,0.3); flex-wrap: wrap; max-width: calc(100vw - 32px); }
+    .review span { font-size: 11px; color: rgba(255,255,255,0.5); padding: 0 8px 0 6px; align-self: center; }
+    .review button { height: 28px; padding: 0 10px; border-radius: 6px; color: rgba(255,255,255,0.8); font-size: 12px; }
+    .review button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .review button.on { background: #fff; color: #0A1925; font-weight: 500; }
+    .review .gap { width: 1px; background: rgba(255,255,255,0.15); margin: 4px 2px; }
+    .notes { position: fixed; left: 16px; bottom: 62px; z-index: 80; width: 360px; max-height: calc(100vh - 140px); overflow: auto; padding: 16px; border-radius: 12px; background: #fff;
+      border: 1px solid var(--line); box-shadow: var(--shadow-dialog); font-size: 13px; line-height: 18px; color: var(--ink-2); display: none; }
+    .notes.on { display: block; }
+    .notes h3 { margin: 0 0 8px; font-size: 14px; color: var(--ink); }
+    .notes dl { margin: 0; display: grid; grid-template-columns: 76px 1fr; gap: 6px 10px; }
+    .notes dt { font-weight: 600; color: var(--ink); }
+    .notes dd { margin: 0; }
+    .notes .new { display: inline-block; padding: 0 6px; border-radius: 99px; background: var(--tint); color: var(--brand); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; margin-right: 4px; vertical-align: 1px; }
+    .notes table { width: 100%; border-collapse: collapse; margin: 6px 0 0; font-size: 12px; }
+    .notes td { padding: 4px 0; border-top: 1px solid var(--line); }
+    .notes td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; white-space: nowrap; }
+    .notes .bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--brand); vertical-align: middle; margin-right: 6px; }
+    .notes .neg td:last-child { color: #B91C1C; }
+
+    @media (max-width: 900px) { .ed-main { grid-template-columns: 1fr; } .ed-rail { display: none; } .ed-top .ttl, .ed-top .ico { display: none; } .banner .msg { display: none; } .banner .sep { display: none; } .gmo-pill .t { font-size: 13px; } }
+    @media (prefers-reduced-motion: reduce) { .stk, .dlg, .nudge, .gmo-panel { transition: none; animation: none; } }
+  </style>
+</head>
+<body data-tp="export">
+  <!-- 1. export done: live banner + one link -->
+  <div class="layer l-export">
+    <div class="banner" role="status">
+      <span class="tick"><i class="ph-bold ph-check"></i></span>
+      <span class="msg">Your PPT has been downloaded. We’ve also emailed a copy to <span>mudita@northwind.co</span></span>
+      <span class="sep"></span>
+      <button class="earn" data-t="Opens Earn more credits on Refer &amp; earn"><span class="stickers sm" data-st="li,x,fb"></span>Happy with it? Post about us, get 200 credits<i class="ph ph-arrow-right"></i></button>
+      <button class="close" aria-label="Close" data-t="Closes the banner"><i class="ph ph-x"></i></button>
+    </div>
+  </div>
+
+  <div class="ed" aria-hidden="false">
+    <div class="ed-top">
+      <span class="home"><i class="ph ph-house"></i></span><span class="div"></span>
+      <span class="ttl">Northwind Series A: Board Update</span>
+      <span class="gmo l-gmo layer" id="gmo">
+        <button class="gmo-pill" id="gmoPill" aria-expanded="true"><span class="t">🚀 Get most out of Pro</span><span class="d"></span><span class="c"><i class="ph ph-caret-up"></i></span></button>
+        <div class="gmo-panel" id="gmoPanel">
+          <button class="gmo-row" data-t="Opens Brand Kit"><span class="n done"><i class="ph-bold ph-check"></i></span>Set up your Brand Kit<span class="pillb earned">Earned 50 credits</span><i class="ph ph-arrow-right arrow"></i></button>
+          <button class="gmo-row" data-t="Opens Create a project"><span class="n">2</span>Create a project<span class="pillb earn"><i class="ph-fill ph-sparkle"></i>Earn +50</span><i class="ph ph-arrow-right arrow"></i></button>
+          <button class="gmo-row" data-t="Opens Invite"><span class="n">3</span>Invite team member<span class="pillb earn"><i class="ph-fill ph-sparkle"></i>Earn +50</span><i class="ph ph-arrow-right arrow"></i></button>
+          <button class="gmo-row new" data-t="Opens the G2 dialog from Earn more credits"><span class="n">4</span>Review us on G2<span class="pillb earn"><i class="ph-fill ph-sparkle"></i>Earn +400</span><i class="ph ph-arrow-right arrow"></i></button>
+          <button class="gmo-row new" data-t="Opens Earn more credits on Refer &amp; earn"><span class="n">5</span>Post about us<span class="pillb earn"><i class="ph-fill ph-sparkle"></i>Earn +200 each</span><i class="ph ph-arrow-right arrow"></i></button>
+        </div>
+      </span>
+      <span class="sp"></span>
+      <span class="ico dim"><i class="ph ph-arrow-counter-clockwise"></i></span><span class="ico"><i class="ph ph-sun"></i></span><span class="ico"><i class="ph ph-dots-three"></i></span>
+      <span class="tbtn"><i class="ph ph-share-network"></i>Share</span><span class="tbtn"><i class="ph ph-play"></i>Present</span><span class="tbtn pri"><i class="ph ph-download-simple"></i>Download</span>
+    </div>
+    <div class="ed-main">
+      <div class="ed-rail"><div class="new"><i class="ph ph-plus"></i>New slide</div>
+        <div class="th">1<i></i></div><div class="th">2<i></i></div><div class="th">3<i></i></div><div class="th">4<i></i></div><div class="th">5<i></i></div><div class="th">6<i></i></div></div>
+      <div class="ed-canvas">
+        <div class="meta">Slide 1 of 11</div>
+        <div class="slide"><div><small>Northwind</small><h1>Series A: what we raised and what comes next</h1><p>Board update · Q3 2026 · Growth, runway and the three bets for next year</p></div>
+          <div class="art"><i style="left:8%;height:28%"></i><i style="left:26%;height:40%"></i><i style="left:44%;height:52%"></i><i style="left:62%;height:66%"></i><i style="left:80%;height:84%;background:#FF5500"></i></div></div>
+        <div class="dock"><span><i class="ph ph-plus"></i>Insert</span><span><i class="ph ph-paint-brush"></i>Style</span><span class="ai"><i class="ph ph-sparkle"></i>Edit with AI</span><span><i class="ph ph-dots-three-vertical"></i></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1b. the live Hire-an-expert nudge that already fires after an export -->
+  <div class="layer l-export">
+    <div class="nudge">
+      <button class="nudge-x" aria-label="Close" data-t="Closes the nudge"><i class="ph ph-x"></i></button>
+      <aside class="nudge-card">
+        <div class="proof"><div class="row"><span class="faces"><b style="background-image:url(https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=faces)"></b><b style="background-image:url(https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=60&h=60&fit=crop&crop=faces)"></b><b style="background-image:url(https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=60&h=60&fit=crop&crop=faces)"></b></span><span class="stars">★★★★★</span>4.9 · 5,000+ decks</div>
+          <q>Transformed my pitch deck completely. Got funded the next week." Erin T., Startup Founder</q></div>
+        <div class="nudge-body"><h2>Let our experts design your deck</h2><p>Our designers rebuild every slide from scratch: custom layouts, brand-aligned visuals, polished typography. Delivered in 24 hrs.</p>
+          <button class="btn primary lg w-full" data-t="Opens Hire an expert">Get your redesigned deck in 24 hrs</button>
+          <div class="fine"><i class="ph ph-lock-simple"></i>NDA protected · 100% satisfaction guarantee</div></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 2. share dialog -->
+  <div class="layer l-share">
+    <div class="scrim"></div>
+    <div class="wrap">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="sdt">
+        <div class="dlg-head"><h2 id="sdt">Share "Northwind Series A: Board Update"</h2><button class="icon-btn" aria-label="Close" data-t="Closes the dialog"><i class="ph ph-x"></i></button></div>
+        <div class="dlg-body">
+          <div class="seg"><button data-t="Not part of this proto">Export to PowerPoint</button><button data-t="Not part of this proto">Invite to collaborate</button><button class="on">Share externally</button></div>
+          <div class="card"><b>Share public link</b><span>Generate a public link to share on social media</span></div>
+          <p class="caption">Share on social media</p>
+          <div class="socials">
+            <button class="btn sm" data-t="Shares this deck on LinkedIn"><i class="ph ph-linkedin-logo"></i>LinkedIn<i class="ph ph-caret-down" style="font-size:12px;margin-left:4px"></i></button>
+            <button class="btn sm" data-t="Shares this deck on X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>X</button>
+            <button class="btn sm" data-t="Shares this deck on Facebook"><i class="ph ph-facebook-logo"></i>Facebook</button>
+            <button class="btn sm" data-t="Opens your email"><i class="ph ph-envelope-simple"></i>Email</button>
+            <button class="btn sm" data-t="Shows the embed code"><i class="ph ph-code"></i>Embed</button>
+          </div>
+          <div class="earnrow">
+            <span class="stickers md" data-st="li,x,fb"></span>
+            <div><b>Say what you think of presentations.ai</b><span>A public post on LinkedIn, X or Facebook earns you 200 credits each.</span></div>
+            <button class="btn sm subtle" data-t="Opens Earn more credits on Refer &amp; earn">Earn credits</button>
+          </div>
+          <button class="adv" data-t="Advanced settings (unchanged)"><i class="ph ph-gear-six"></i><span>Advanced settings</span><i class="ph ph-caret-down"></i></button>
+          <div class="foot"><button class="btn primary" data-t="Generates the public link"><i class="ph ph-link"></i>Generate public link</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. the earn nudge -->
+  <div class="layer l-nudge">
+    <div class="nudge" id="enudge">
+      <button class="nudge-x" aria-label="Close" data-t="Closes the nudge. Two closes and it stops asking"><i class="ph ph-x"></i></button>
+      <aside class="nudge-card" role="status">
+        <div class="ehero"><span class="chip"><i class="ph-fill ph-coins"></i>Up to 1,000 credits</span><span class="stickers xl" data-st="li,x,fb,g2"></span></div>
+        <div class="nudge-body"><h2>Like your deck? Tell people about us</h2>
+          <p>Post on LinkedIn, X or Facebook for 200 credits each, or review us on G2 for 400. Any honest opinion counts.</p>
+          <button class="btn primary w-full" data-t="Opens Earn more credits on Refer &amp; earn">Earn credits <i class="ph ph-arrow-right"></i></button></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 4. after upgrade -->
+  <div class="layer l-upgrade">
+    <div class="scrim"></div>
+    <div class="wrap">
+      <div class="dlg welcome" role="dialog" aria-modal="true" aria-labelledby="wdt">
+        <button class="icon-btn" aria-label="Close" data-t="Same as Continue"><i class="ph ph-x"></i></button>
+        <h2 id="wdt">Welcome to <em>Pro Plan</em></h2>
+        <p class="sub">We’ve sent you a confirmation email and invoice at mudita@northwind.co</p>
+        <div class="wcard"><div class="in">
+          <h3>Make the most of Pro</h3>
+          <p>You now have <b>1 license</b> and <b>2,000 credits</b>, everything you need to create faster and explore premium features.</p>
+          <img src="assets/probadge.svg" alt="" />
+          <button class="btn primary lg w-full" data-t="Opens the Pro offer, as today">Unlock special offer for Pro users</button>
+        </div></div>
+        <div class="g2line"><span data-g2></span><span class="tx">You chose Pro. <b>Tell others why on G2</b> and get 400 credits.</span><a href="#" data-t="Opens the G2 dialog from Earn more credits">Review <i class="ph ph-arrow-up-right"></i></a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="notes" id="notes"></div>
+  <div class="review" id="review"><span>Touchpoint</span></div>
+
+<script>
+const $ = s => document.querySelector(s);
+// G2's logo (Simple Icons, from G2's brand resources), brand red #FF492C
+const G2_PATH = 'M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm.122 5.143c.45 0 .9.044 1.342.132l-1.342 2.806C9.962 8.08 8.203 9.84 8.203 12s1.76 3.92 3.92 3.92c.937 0 1.844-.338 2.553-.951l1.483 2.572A6.856 6.856 0 0 1 5.266 12a6.856 6.856 0 0 1 6.856-6.856Zm3.498.49a1.262 1.262 0 0 1 .026 0c.427 0 .792.113 1.101.34.31.229.466.546.466.946 0 .639-.36 1.03-1.035 1.376l-.377.191c-.403.204-.602.385-.657.706h2.05v.85h-3.101v-.144c0-.526.103-.96.314-1.306.211-.345.576-.65 1.102-.917l.242-.117c.427-.216.538-.401.538-.625 0-.266-.228-.458-.6-.458-.44 0-.773.228-1.004.694l-.592-.595c.13-.279.338-.502.619-.675a1.7 1.7 0 0 1 .908-.266Zm-2.094 5.388h3.394l1.697 2.937-1.697 2.94-1.697-2.94H11.83l1.696-2.937Z';
+const G2_LOGO = `<svg class="g2-logo" viewBox="0 0 24 24" fill="currentColor"><path d="${G2_PATH}"/></svg>`;
+// bare glyphs for the stickers (the sticker itself is the brand-coloured tile)
+const GLYPH = {
+  li: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.75h4V21H3zM9.5 9.75h3.83v1.54h.05c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.13V21h-4v-5.02c0-1.2-.02-2.74-1.67-2.74-1.67 0-1.93 1.3-1.93 2.65V21h-4z"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+  fb: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 8.5V6.9c0-.75.5-.93.86-.93h2.2V2.52L14.03 2.5C10.66 2.5 9.9 5.02 9.9 6.63V8.5H8v3.6h1.9V22H14v-9.9h2.77l.37-3.6z"/></svg>',
+  g2: G2_LOGO,
+};
+document.querySelectorAll('[data-st]').forEach(el => el.innerHTML = el.dataset.st.split(',').map(k => `<span class="stk s-${k}">${GLYPH[k]}</span>`).join(''));
+document.querySelectorAll('[data-g2]').forEach(el => el.innerHTML = G2_LOGO);
+
+// what each touchpoint is, when it shows, and what is new on the live screen
+const TP = {
+  export: { label: 'Export done', title: 'After a download',
+    rows: [['Live', 'Green banner after a PPT or PDF download, plus the Hire-an-expert nudge.'], ['New', 'One link at the end of the banner, with the three platform stickers.'],
+      ['When', 'Every successful download, from the first deck on. Hidden once all three social rewards are claimed.'], ['Why here', 'They just got the thing they came for. The link is part of the success message, so it doesn’t compete with the Hire-an-expert card.'],
+      ['Opens', 'Earn more credits on Refer & earn.']] },
+  share: { label: 'Share dialog', title: 'Share externally',
+    rows: [['Live', 'Share dialog, Share externally tab, before a link exists.'], ['New', 'One row under the social buttons.'],
+      ['When', 'Every open, until the social rewards are claimed. Same row on the published-link state.'], ['Why here', 'They’re already about to post on these platforms. The row makes clear it’s a post about us, not a share of their deck.'],
+      ['Opens', 'Earn more credits on Refer & earn.']] },
+  nudge: { label: 'Nudge', title: 'Earn nudge, bottom right', score: true,
+    rows: [['Live', 'The nudge slot and card (NudgeCard). Today every nudge is a Pro upsell.'], ['New', 'A nudge of a new type, earn, that the Pro guardrail doesn’t block, so paying users see it too.'],
+      ['Rules', 'After the first deck. Shares the session cap (3) and cooldown with the upsells. Two closes and it never shows again.'], ['Opens', 'Earn more credits on Refer & earn.']] },
+  upgrade: { label: 'After upgrade', title: 'Welcome to Pro',
+    rows: [['Live', 'PaymentSuccessScreenNew: the welcome dialog after a successful payment. Checkout itself is untouched.'], ['New', 'One quiet line under the blue card. The card’s button stays the only emphatic action.'],
+      ['When', 'Paid plans only, once. G2 counts reviews from paying users as the most credible.'], ['Opens', 'The G2 dialog from Earn more credits.']] },
+  gmo: { label: 'Pro checklist', title: 'Get most out of Pro',
+    rows: [['Live', 'TopmenuGetMostOut: the checklist pill in the editor top bar. It’s on new_dev_migration but not on app.presentations.ai yet.'], ['New', 'Rows 4 and 5, in the checklist’s own numbered style with its Earn badge.'],
+      ['Why here', 'It already pays credits for tasks, so the reward needs no explaining. It stays put, so it catches people a few weeks into Pro, when they have an opinion.'], ['Opens', 'The G2 dialog, or Earn more credits.']] },
+};
+const SIGNALS = [['Downloaded a PPT or PDF', 'export-download', 6], ['Reached the end of a show', 'endshow-reached', 6], ['Copied a share link', 'share-link-copy', 4],
+  ['Published a deck', 'pres-publish', 4], ['Third deck or later', 'third-deck', 4], ['Credits low', 'credits-low', 4], ['Generation failed this session', 'gen-failed', -100], ['Claimed every reward', 'earn-all-claimed', -100]];
+
+function notes(k) {
+  const t = TP[k];
+  return `<h3>${t.title}</h3><dl>${t.rows.map(([a, b]) => `<dt>${a === 'New' ? '<span class="new">NEW</span>' : a}</dt><dd>${b}</dd>`).join('')}</dl>` +
+    (t.score ? `<h3 style="margin-top:14px">How it scores</h3>Fires above <b>10</b>, using signals the engine already tracks.<table>${SIGNALS.map(([l, id, v]) =>
+      `<tr class="${v < 0 ? 'neg' : ''}"><td>${v > 0 ? `<span class="bar" style="width:${v * 6}px"></span>` : ''}${l}</td><td>${v > 0 ? '+' : ''}${v}</td></tr>`).join('')}</table>
+      <p style="margin:8px 0 0">Example: someone who downloads a deck and presents it scores 6 + 6 = <b>12</b>, so it fires.</p>` : '');
+}
+function go(k) {
+  document.body.dataset.tp = k;
+  document.querySelectorAll('#review [data-k]').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  $('#notes').innerHTML = notes(k);
+  // replay entrance animations on switch
+  document.querySelectorAll(`.l-${k} .dlg, .l-${k} .nudge, .l-${k} .gmo-panel`).forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+  history.replaceState(null, '', '?tp=' + k);
+}
+$('#review').insertAdjacentHTML('beforeend', Object.entries(TP).map(([k, t]) => `<button data-k="${k}">${t.label}</button>`).join('') + '<i class="gap"></i><button id="nt">Notes</button>');
+$('#review').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) go(b.dataset.k); });
+$('#nt').onclick = () => { $('#notes').classList.toggle('on'); $('#nt').classList.toggle('on'); };
+$('#gmoPill').onclick = () => { const p = $('#gmoPanel'); const open = p.hidden; p.hidden = !open; $('#gmoPill').setAttribute('aria-expanded', open); };
+
+const toast = $('#toast'); let tm;
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-t]'); if (!b) return; e.preventDefault();
+  toast.textContent = b.dataset.t; toast.classList.add('on'); clearTimeout(tm); tm = setTimeout(() => toast.classList.remove('on'), 1600);
+});
+go(TP[new URLSearchParams(location.search).get('tp')] ? new URLSearchParams(location.search).get('tp') : 'export');
+</script>
+</body>
+</html>
