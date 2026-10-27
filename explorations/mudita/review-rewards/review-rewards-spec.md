@@ -68,7 +68,7 @@ Not in this section (dropped 27 Oct 2026). If we ask for Trustpilot reviews at a
 
 ## Layout and states
 
-One section, two cards side by side.
+A plain heading on the page and two cards side by side (no outer box).
 
 ```
 Earn more credits  NEW                                          Up to 1,000 credits
