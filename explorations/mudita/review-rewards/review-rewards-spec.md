@@ -39,15 +39,15 @@ These decide the shape of the feature. Legal to sign off before build.
 
 ## Where it lives
 
-A new **“Earn more credits”** section on the Refer & earn page, between the hero and the stat cards. Everything else points there (prototype: `touchpoints.html`):
+A new **“Earn more credits”** section on the Refer & earn page, between the hero and the stat cards. Every other entry point opens one **Earn more credits** dialog with the same two cards (socials and G2), so people always see every option and pick for themselves (prototype: `touchpoints.html`):
 
 | Touchpoint | Live screen | What's added | Shows |
 |---|---|---|---|
-| Export done | Green “Your PPT has been downloaded” banner | One link at its end: “Happy with it? Post about us, get 200 credits” | Every download, until the social rewards are claimed |
-| Share dialog | Share externally tab | A row under the social buttons: “Say what you think of presentations.ai” · **Earn credits** | Every open, until the social rewards are claimed |
+| Export done | Green “Your PPT has been downloaded” banner | A link at its end, with the four platform stickers: “Happy with it? Tell people, earn up to 1,000 credits” | Every download, until every reward is claimed |
+| Share dialog | Share externally tab | A row under the social buttons: “Say what you think of presentations.ai” · **Earn credits** | Every open, until every reward is claimed |
 | Nudge | Bottom-right nudge slot | A new nudge type, `earn`, that the Pro guardrail doesn't block | Scored on downloads, end of show, share links, third deck; never after a failed generation |
-| After upgrade | “Welcome to Pro Plan” dialog (not checkout) | One quiet G2 line under the blue card | Paid plans, once |
-| Pro checklist | “Get most out of Pro” in the editor top bar (in code, not on prod yet) | Rows 4 and 5: Review us on G2 · Earn +400, Post about us · Earn +200 each | Paid plans, until done |
+| After upgrade | “Welcome to Pro Plan” dialog (not checkout) | One quiet line under the blue card: “You chose Pro. Tell others why and earn up to 1,000 credits” | Paid plans, once |
+| Pro checklist | “Get most out of Pro” in the editor top bar (in code, not on prod yet) | Row 4: Tell people about us · Earn up to +1,000 | Paid plans, until done |
 
 Rules for all of them: only after the first deck; never while generating or after an error; earn asks share the nudge engine's session cap with the upsells; two dismissals and the nudge stops for good.
 
