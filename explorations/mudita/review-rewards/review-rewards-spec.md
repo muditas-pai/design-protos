@@ -53,7 +53,7 @@ Storyboard for each platform: `posting-flows.html`. A three-step dialog: **Write
    - Facebook doesn't allow apps to pre-fill posts, so the button is **Copy text and open Facebook** and says why.
 3. **Coming back to our tab** moves the dialog to **Paste the link** on its own. “I've already posted” skips straight there.
 4. **Paste the link.** A **Paste** button reads the clipboard (the field also takes ⌘V). Each platform shows where to find it (LinkedIn: ··· → Copy link to post; X: share icon → Copy link; Facebook: ··· → Copy link, audience must be Public). We check it's a post link from that platform.
-5. **Done.** “Thanks, we're checking your post”; the card shows Pending.
+5. **Submitted.** The dialog turns into the same **in review** detail the button opens later (post link, “Expect an answer by [date]”, timeline), and the button shows **In Review**.
 6. A person approves it → email + toast, credits added. Or Not approved, with the reason and Try again.
 
 ### Reviewing on G2
