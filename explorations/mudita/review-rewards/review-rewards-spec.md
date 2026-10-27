@@ -107,21 +107,19 @@ Each platform button carries its own state; the row's grey line explains the lat
 | Available | Outlined, platform icon + name | What to do |
 | Pending | Dashed, platform name + “In Review” in orange | “Checking your X post, usually within 2 working days.” |
 | Waiting for G2 | Dashed, “G2” + “In Review” in orange | “Credits arrive once G2 publishes it, usually within 3 business days.” |
-| Not published by G2 | Red outline, “Edit on G2” | “G2 didn’t publish your review. They’ve emailed you why; you can edit it on G2.” |
+| Not published by G2 | Red outline, “Edit on G2”: opens the review on G2 | “G2 didn’t publish your review and emailed you why. Edit it on G2; the credits arrive once it’s published.”, in red |
 | Credited | Grey fill, green check | (G2) “+400 credits added.” |
-| Not approved | Red outline, “Try X again” | The reason, in red |
+| Not approved | Red outline, “Retry X”: opens the paste-link step | “Your X post wasn’t approved.” + the reason + “Make it public, then retry.”, in red |
 
 ### Status details
 
-Every button that isn't “available” opens a small dialog with: the post link with **View post** right under the title (socials), a coloured status box, and a three-step timeline (sent → checked → credits) with dates.
+Failed buttons retry directly (the reason is already on the card), so no dialog. Every other button that isn't “available” opens a small dialog with: the post link with **View post** right under the title (socials), a coloured status box, and a three-step timeline (sent → checked → credits) with dates.
 
 | State | Status box | Actions |
 |---|---|---|
 | Pending | “We’re checking your post. Expect an answer by **[date]**. We’ll email you either way.” | Change the link · Done |
 | Waiting for G2 | “G2 checks every review, usually within 3 business days. Expect it by **[date]**.” | Open G2 · Done |
 | Credited | “+200 credits added on **[date]**.” | Done |
-| Not approved | The reason, then “Fix it and send the link again. No time limit.” | Write a new post · **Send the link again** |
-| Not published by G2 | “G2 emailed you the reason. Edit it on G2 and resubmit.” | **Edit on G2** |
 
 **Reasons a post isn't approved:** the post isn't public · the link doesn't open a post · the post isn't about presentations.ai · it has no #ad or paid-partnership label · this account was already rewarded.
 

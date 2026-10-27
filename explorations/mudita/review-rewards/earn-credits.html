@@ -462,10 +462,14 @@ function pbtn(k) {
   if (st === 'credited') return `<button class="pbtn done" data-detail="${k}">${icon}${k === 'g2' ? 'Reviewed' : t.name}<i class="ph-bold ph-check ok"></i></button>`;
   if (st === 'pending') return `<button class="pbtn wait" data-detail="${k}">${icon}${t.name}<span class="inrev">In Review</span></button>`;
   if (st === 'waiting') return `<button class="pbtn wait" data-detail="${k}">${icon}G2<span class="inrev">In Review</span></button>`;
-  if (st === 'g2rejected') return `<button class="pbtn bad" data-detail="${k}">${icon}Not published</button>`;
-  if (st === 'rejected') return `<button class="pbtn bad" data-detail="${k}">${icon}${t.name}: not approved</button>`;
+  // failed states retry straight from the button; the reason is on the card
+  if (st === 'g2rejected') return `<button class="pbtn bad" data-toast="Opens your review on G2">${icon}Edit on G2<i class="ph ph-arrow-up-right"></i></button>`;
+  if (st === 'rejected') return `<button class="pbtn bad" data-relink="${k}">${icon}Retry ${t.name}<i class="ph ph-arrow-clockwise"></i></button>`;
   return `<button class="pbtn" data-open="${k}">${icon}${k === 'g2' ? 'Write a review' : t.name}</button>`;
 }
+
+// why a social post wasn't approved (shown on the card and in the detail dialog)
+const REASONS = { x: 'We couldn’t see it. It may be on a private or protected account.', li: 'We couldn’t see it. It may be shared with connections only.', fb: 'We couldn’t see it. Its audience isn’t set to Public.' };
 
 // sample history behind each state (dates in the prototype's "today", 27 Oct 2026)
 const HISTORY = {
@@ -480,7 +484,6 @@ function timeline(rows) {
 function detailDialog(k) {
   const t = TASKS[k], st = S[k], h = HISTORY[k], g2 = k === 'g2';
   const title = g2 ? 'Your G2 review' : `Your ${t.name} post`;
-  const reasons = { x: 'We couldn’t see the post. It may be set to a private or protected account.', li: 'We couldn’t see the post. It may be shared with connections only.', fb: 'We couldn’t see the post. Its audience isn’t set to Public.' };
   let head = '', rows = [], foot = '';
   const postLink = g2 ? '' : `<div class="linkline"><i class="ph ph-link"></i><span>${h.link}</span>${btn('<i class="ph ph-arrow-square-out"></i>View post', 'button-small button-ghost', 'data-toast="Opens your post"')}</div>`;
   if (st === 'pending') {
@@ -496,7 +499,7 @@ function detailDialog(k) {
     rows = [['done', g2 ? 'Review started on G2' : 'Link sent', h.sent], ['done', g2 ? 'Published by G2' : 'Approved', h.done], ['done', `+${t.reward} credits added`, h.done]];
     foot = `<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
   } else if (st === 'rejected') {
-    head = `<div class="dstat bad"><i class="ph-fill ph-x-circle"></i><div><b>This post wasn’t approved</b><span>${reasons[k]} Fix it and send the link again. No time limit.</span></div></div>`;
+    head = `<div class="dstat bad"><i class="ph-fill ph-x-circle"></i><div><b>This post wasn’t approved</b><span>${REASONS[k]} Fix it and send the link again. No time limit.</span></div></div>`;
     rows = [['done', 'Link sent', h.rsent || h.sent], ['fail', 'Not approved', h.checked], ['', `+${t.reward} credits`, 'Still available once a post is approved']];
     foot = `${btn('Write a new post', 'button-medium button-ghost', `data-open="${k}"`)}<span style="flex:1"></span>${btn('Send the link again', 'button-medium button-primary', `data-relink="${k}"`)}`;
   } else if (st === 'g2rejected') {
@@ -512,13 +515,13 @@ function openDetail(k) { D.k = null; $('#dlg').innerHTML = detailDialog(k); $('#
 function postLine() {
   const ks = ['li', 'x', 'fb'];
   const rej = ks.find(k => S[k] === 'rejected'), pend = ks.filter(k => S[k] === 'pending');
-  if (rej) return `<p class="bad">Your ${TASKS[rej].name} post wasn’t approved. Click it to see why.</p>`;
+  if (rej) return `<p class="bad">Your ${TASKS[rej].name} post wasn’t approved. ${REASONS[rej]} Make it public, then retry.</p>`;
   if (pend.length) return `<p>Checking your ${pend.map(k => TASKS[k].name).join(' and ')} post. Click it for details.</p>`;
   return '<p>A public post about your honest experience. One per platform.</p>';
 }
 function g2Line() {
   return { waiting: '<p>Credits arrive once G2 publishes it, usually within 3 business days.</p>', credited: '<p>+400 credits added. Thanks for the review.</p>',
-    g2rejected: '<p class="bad">G2 didn’t publish your review. Click it to see what to do.</p>' }[S.g2]
+    g2rejected: '<p class="bad">G2 didn’t publish your review and emailed you why. Edit it on G2; the credits arrive once it’s published.</p>' }[S.g2]
     || '<p>An honest review on G2. Any rating counts.</p>';
 }
 
