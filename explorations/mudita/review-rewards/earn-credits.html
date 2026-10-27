@@ -415,7 +415,7 @@ const TASKS = {
 const PRESETS = {
   fresh: { li: 'available', x: 'available', fb: 'available', g2: 'available' },
   progress: { li: 'credited', x: 'pending', fb: 'available', g2: 'waiting' },
-  rejected: { li: 'credited', x: 'rejected', fb: 'available', g2: 'credited' },
+  rejected: { li: 'credited', x: 'rejected', fb: 'available', g2: 'g2rejected' },
 };
 let preset = 'fresh';
 let S = { ...PRESETS.fresh };
@@ -427,6 +427,7 @@ function pbtn(k) {
   if (st === 'credited') return `<span class="pbtn done">${icon}${k === 'g2' ? 'Reviewed' : t.name}<i class="ph-bold ph-check ok"></i></span>`;
   if (st === 'pending') return `<span class="pbtn wait" title="Checking your post">${icon}${t.name}<i class="ph ph-hourglass-medium hg"></i></span>`;
   if (st === 'waiting') return `<span class="pbtn wait" title="Waiting for G2">${icon}Waiting for G2<i class="ph ph-hourglass-medium hg"></i></span>`;
+  if (st === 'g2rejected') return `<button class="pbtn bad" data-toast="Opens your review on G2 to edit and resubmit">${icon}Edit on G2</button>`;
   if (st === 'rejected') return `<button class="pbtn bad" data-open="${k}">${icon}Try ${t.name} again</button>`;
   return `<button class="pbtn" data-open="${k}">${icon}${k === 'g2' ? 'Write a review' : t.name}</button>`;
 }
@@ -438,7 +439,8 @@ function postLine() {
   return '<p>A public post about your honest experience. One per platform.</p>';
 }
 function g2Line() {
-  return { waiting: '<p>Credits arrive when G2 publishes your review.</p>', credited: '<p>+400 credits added. Thanks for the review.</p>' }[S.g2]
+  return { waiting: '<p>Credits arrive once G2 publishes it, usually within 3 business days.</p>', credited: '<p>+400 credits added. Thanks for the review.</p>',
+    g2rejected: '<p class="bad">G2 didn’t publish your review. They’ve emailed you why; you can edit it on G2.</p>' }[S.g2]
     || '<p>An honest review on G2. Any rating counts.</p>';
 }
 
@@ -551,7 +553,8 @@ function g2Dialog() {
       <ul class="facts">
         <li><i class="ph ph-pencil-simple-line"></i><span>You write the review on G2. It takes about 5 minutes.</span></li>
         <li><i class="ph ph-scales"></i><span>Any honest rating counts. Your reward doesn’t depend on what you say.</span></li>
-        <li><i class="ph ph-coins"></i><span><b>+400 credits</b> once G2 publishes it. G2 marks it as a review with a small reward.</span></li>
+        <li><i class="ph ph-coins"></i><span><b>+400 credits</b> once G2 publishes it, usually within 3 business days. G2 marks it as a review with a small reward.</span></li>
+        <li><i class="ph ph-envelope-simple"></i><span>G2’s form opens here with your email, so we know it’s your review. Nothing to paste back.</span></li>
       </ul>
       <div class="dlg-f"><span style="flex:1"></span>${btn('Not now', 'button-medium button-ghost', 'data-close')}${btn('Write my review <i class="ph ph-arrow-up-right"></i>', 'button-medium button-primary', 'data-g2go')}</div>
     </div>`;
@@ -601,7 +604,7 @@ document.addEventListener('click', e => {
   else if ('submit' in d) submit();
   else if ('paste' in d) pasteLink();
   else if ('sample' in d) { const i = $('#url'); i.value = SAMPLES[D.k]; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); }
-  else if ('g2go' in d) { S.g2 = 'waiting'; closeDialog(); render(); toast('Opens our G2 review page in a new tab'); }
+  else if ('g2go' in d) { S.g2 = 'waiting'; closeDialog(); render(); toast('Opens G2’s review form with your email'); }
   else if (d.toast) { e.preventDefault(); toast(d.toast); }
 });
 $('#scrim').addEventListener('mousedown', e => { if (e.target.id === 'scrim') closeDialog(); });

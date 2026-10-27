@@ -14,7 +14,7 @@ Users earn credits for sharing their honest experience of presentations.ai: **+2
 | Public post on **LinkedIn** | +200 credits | Once | They paste the post link; we check it |
 | Public post on **X** | +200 credits | Once | Same |
 | Public post on **Facebook** | +200 credits | Once | Same |
-| Review on **G2** | +400 credits | Once | G2 confirms the review was published |
+| Review on **G2** | +400 credits | Once | G2 reports the review as published (daily check by email) |
 | Review on **Trustpilot** | No reward | – | Not part of this feature |
 
 Most a user can earn here: **1,000 credits** (3 posts + G2). This is separate from the 2,000-a-year referral cap.
@@ -57,10 +57,28 @@ Storyboard for each platform: `posting-flows.html`. A three-step dialog: **Write
 
 ### Reviewing on G2
 
-1. User clicks **Review us on G2**.
-2. A dialog explains: the review is written on G2; credits arrive once G2 publishes it; G2 marks it as incentivized; honest reviews of any rating count.
-3. **Write my review** opens our G2 campaign page in a new tab. The card shows **Waiting for G2**.
-4. When G2 confirms, the card shows **Credited**.
+Nothing to paste. We pass G2 the user's email, and G2 tells us when the review is live.
+
+1. User clicks **Write a review**.
+2. A dialog explains: written on G2, about 5 minutes; any honest rating counts; +400 credits once G2 **publishes** it (usually within 3 business days); G2 marks it as rewarded.
+3. **Write my review** opens **G2's in-app review form** with the signed-in user's email. G2 ties the review to that email, whether they have a G2 account or review anonymously. The card shows **Waiting for G2**.
+4. G2 moderates the review (up to 3 business days).
+5. **A daily server job** checks G2 for every user in Waiting for G2:
+   - **Published** → add +400 credits, email + toast → **Credited**.
+   - **Rejected** → **Not published by G2**. G2 has already emailed them the reason; they can edit and resubmit on G2, and the job keeps checking.
+
+```
+Write a review ─► G2 form (our email) ─► G2 moderates ─► Published ─► +400 credits
+                                                      └► Rejected  ─► "Not published by G2" · Edit on G2
+Card meanwhile: Waiting for G2
+```
+
+**How we check, in order of preference** (to confirm with G2):
+- G2's `review_status` lookup by email, if it returns submitted / published / rejected.
+- G2's reviews data feed filtered to published reviews, matched by email.
+- Stopgap only: G2's "review went live" email alert, matched to users by hand.
+
+Credits are added on **published**, never on submitted. G2 documents no webhook, so a daily check is the plan.
 
 ### Trustpilot
 
@@ -85,7 +103,8 @@ Each platform button carries its own state; the row's grey line explains the lat
 |---|---|---|
 | Available | Outlined, platform icon + name | What to do |
 | Pending | Dashed, hourglass | “Checking your X post, usually within 2 working days.” |
-| Waiting for G2 | Dashed, “Waiting for G2” | “Credits arrive when G2 publishes your review.” |
+| Waiting for G2 | Dashed, “Waiting for G2” | “Credits arrive once G2 publishes it, usually within 3 business days.” |
+| Not published by G2 | Red outline, “Edit on G2” | “G2 didn’t publish your review. They’ve emailed you why; you can edit it on G2.” |
 | Credited | Grey fill, green check | (G2) “+400 credits added.” |
 | Not approved | Red outline, “Try X again” | The reason, in red |
 
@@ -121,7 +140,10 @@ The placeholder makes it clear they should write their own experience. We don't 
 
 ## Open questions
 
-1. **G2:** confirm with our G2 rep that in-product credits work as the campaign reward, and how G2 tells us a review was published.
+1. **G2, three things to confirm with our rep:**
+   - Can **our credits** be the reward (disclosed to G2), rather than G2's gift cards?
+   - Does `review_status` say **submitted / published / rejected**, or only "a review exists"?
+   - Does our plan include **API access** to the in-app review form and the reviews data feed?
 2. **Value:** what 400 credits are worth in dollars, to confirm it's under G2's $100 cap.
 3. **Review owner:** who checks submitted posts, and where (an admin queue).
 4. **Deleted posts:** do we take credits back if a post is deleted soon after?
