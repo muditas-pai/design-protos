@@ -113,7 +113,7 @@ Each platform button carries its own state; the row's grey line explains the lat
 
 ### Status details
 
-Every button that isn't “available” opens a small dialog with: a coloured status box, the post link with **View post** (socials), and a three-step timeline (sent → checked → credits) with dates.
+Every button that isn't “available” opens a small dialog with: the post link with **View post** right under the title (socials), a coloured status box, and a three-step timeline (sent → checked → credits) with dates.
 
 | State | Status box | Actions |
 |---|---|---|
