@@ -239,7 +239,7 @@
   .brief .eyebrow button:hover { background: rgb(var(--brand-50)); }
   .brief p { margin: 0; font-size: 14px; line-height: 24px; color: rgb(var(--ink-2)); }
   .brief .tok .caret { display: none; }
-  .brief p .tok svg.i { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 2px; }
+  .brief p .tok svg.i:not(.caret), .brief .extras .tok svg.i:not(.caret) { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 2px; }
   .brief .extras { margin-top: 6px; font-size: 13px; }
   .brief .extras svg.i { display: inline-block; width: 14px; height: 14px; vertical-align: -3px; margin-right: 2px; }
   .brief p b { font-weight: 500; color: rgb(var(--ink)); }
@@ -594,10 +594,13 @@ function sync() {
     const len = S.slides === "auto" ? "auto-length" : S.slides === "summary" ? "one slide" : s.label.toLowerCase();
     const t = topic();
     const extras = [S.notes && "speaker notes", S.deep && "deep search"].filter(Boolean);
+    const ucRaw = S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], uc = ucRaw ? lc1(ucRaw) : "";
+    const nr = S.narrative ? lc1(NARRATIVES.find((x) => x[0] === S.narrative)[1]) : "";
+    const storyN = !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "estimate");
     br.innerHTML = `
-      <span class="eyebrow">Your brief ${n || S.look !== "auto" || S.slides !== "auto" ? `<button data-reset>Reset</button>` : ""}</span>
-      <p>Make ${/^[aeiou]/.test(len) ? "an" : "a"} ${tok("slides", len)} deck about ${t ? `<b>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</b>` : `<b class="empty">your topic</b>`} from ${tok("attach", S.files.length ? esc(S.files.length === 1 ? S.files[0] : S.files.length + " files") : ic("plus") + "your files", S.files.length ? "" : "add")} for ${tok("role", plural(S.role))}, in ${tok("lang", S.lang === "Auto" ? "the language I write in" : S.lang)}, at ${tok("detail", DETAIL.find((d) => d.id === S.detail).label.toLowerCase() + " detail")}, using <span class="pop-anchor"><button class="tok" data-looks aria-haspopup="dialog" aria-expanded="false">${l ? dotsHTML(l) + " " + esc(l.name) : "a look that fits"}</button></span>${S.budget !== "auto" ? `, ${tok("budget", budgetObj().label.toLowerCase() + " effort")}` : ""}${extras.length ? `, with ${extras.map((e) => tok("extras", e)).join(" and ")}` : ""}.</p>
-      <div class="extras">${S.budget === "auto" ? tok("budget", ic(budgetObj().icon) + "Automatic effort", "add") + " · " : ""}${!S.notes || !S.deep ? tok("extras", ic("plus") + (extras.length ? "Add more" : "Add speaker notes or deep search"), "add") : ""}</div>`;
+      <span class="eyebrow">Your brief ${n || S.look !== "auto" || S.slides !== "auto" || S.budget !== "auto" ? `<button data-reset>Reset</button>` : ""}</span>
+      <p>Make ${art(len)} ${tok("slides", len)} deck ${t ? `about <b>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</b> ` : S.files.length ? "" : `about <b class="empty">your topic</b> `}from ${tok("attach", S.files.length ? esc(S.files.length === 1 ? S.files[0] : S.files.length + " files") : ic("plus") + "your files", S.files.length ? "" : "add")} for ${tok("role", plural(S.role))}, in ${tok("lang", S.lang === "Auto" ? "the language I write in" : S.lang)}, at ${tok("detail", DETAIL.find((d) => d.id === S.detail).label.toLowerCase() + " detail")}, using <span class="pop-anchor"><button class="tok" data-looks aria-haspopup="dialog" aria-expanded="false">${l ? dotsHTML(l) + " " + esc(l.name) : "a look that fits"}</button></span>, with ${tok("budget", budgetObj().label.toLowerCase() + " effort")}${extras.length ? ` and ${extras.map((e) => tok("extras", e)).join(" and ")}` : ""}${uc ? `. Treat it as ${art(uc)} ${tok("story", esc(uc))}` : ""}${nr ? `${uc ? ", told as" : ". Tell it as"} ${art(nr)} ${tok("story", esc(nr))}` : ""}${S.shown ? `${uc || nr ? "," : ". It's"} ${tok("story", SHOWN_PHRASE[S.shown])}` : ""}${S.missing === "placeholder" ? `${uc || nr || S.shown ? "," : ". Use"} ${uc || nr || S.shown ? "with " : ""}${tok("story", "placeholders where data is missing")}` : ""}.</p>
+      <div class="extras">${!S.notes || !S.deep ? tok("extras", ic("plus") + (extras.length ? "Add more" : "Add speaker notes or deep search"), "add") : ""}${!S.notes || !S.deep ? " · " : ""}${tok("story", ic("plus") + (storyN ? "Edit story and audience" : "Add story and audience"), "add")}</div></div>`;
   }
 }
 const roleLabel = (r) => ({ Founder: "founders", Sales: "sales teams", Marketing: "marketers", Consultant: "consultants", Teacher: "teachers", Student: "students", "Product manager": "product managers" }[r] || r);
@@ -614,16 +617,13 @@ function popHTML(id) {
   if (id === "role") return `<div class="menu" style="width:220px"><span class="eyebrow">Your role</span>${ROLES.map((x) => `<button class="mi ${S.role === x ? "sel" : ""}" data-role="${x}"><span>${x}</span>${ic("check", "ck")}</button>`).join("")}</div>`;
   if (id === "detail") return `<div class="menu" style="width:260px">${DETAIL.map((d) => `<button class="mi ${S.detail === d.id ? "sel" : ""}" data-detail="${d.id}"><span>${d.label}<small>${d.sub}</small></span>${ic("check", "ck")}</button>`).join("")}</div>`;
   if (id === "extras") return `<div class="menu" style="width:300px">${togs()}</div>`;
+  if (id === "story") return `<div class="menu" style="width:320px"><div class="pop-h"><b>Story and audience</b></div>${storyFieldsHTML()}</div>`;
   if (id === "budget") return `<div class="menu" style="width:320px"><div class="pop-h"><b>Budget tier</b></div>${budgetList()}</div>`;
   const storySet = () => [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "estimate" && "Placeholders"].filter(Boolean);
   const foot = () => (changedCount() ? `<div class="pop-f"><button class="link" data-reset style="height:32px">Reset</button></div>` : "");
   if (id === "options" && S.optView === "story") return `<div class="menu" style="width:320px">
       <div class="pop-h" style="justify-content:flex-start;gap:6px"><button class="icon-btn" data-opt-view="main" aria-label="Back" style="width:28px;height:28px;margin-left:-4px">${ic("back")}</button><b>Story and audience</b></div>
-      <div class="field"><label for="oUse">Use case</label><select class="input" id="oUse"><option value="" ${S.useCase ? "" : "selected"}>Detect from the request</option>${USE_CASES.map(([g, items]) => `<optgroup label="${esc(g)}">${items.map(([v, l]) => `<option value="${v}" ${S.useCase === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</optgroup>`).join("")}</select></div>
-      <div class="field"><label for="oShown">Shown</label>${optSel("oShown", SHOWN, S.shown)}</div>
-      <div class="field"><label for="oNarr">Narrative</label>${optSel("oNarr", NARRATIVES, S.narrative)}</div>
-      <div class="field"><label id="missLbl">Missing data</label><div class="segmented" style="display:flex" role="group" aria-labelledby="missLbl">${MISSING.map(([v, l]) => `<button style="flex:1" data-miss="${v}" aria-pressed="${S.missing === v}">${l}</button>`).join("")}</div></div>
-      <div class="field" style="font-size:12px;line-height:16px;color:rgb(var(--ink-3))">Leave these on auto and we read them from your prompt.</div>
+      ${storyFieldsHTML()}
       ${foot()}</div>`;
   if (id === "options") { const set = storySet(), so = slideObj(); return `<div class="menu" style="width:320px">
       <div class="pop-h"><b>Options</b><span style="font-size:12px;color:rgb(var(--ink-3))">Remembered for next time</span></div>
@@ -635,6 +635,15 @@ function popHTML(id) {
       <div class="sep"></div>${togs()}
       ${foot()}</div>`; }
 }
+const storyFieldsHTML = () => `
+      <div class="field"><label for="oUse">Use case</label><select class="input" id="oUse"><option value="" ${S.useCase ? "" : "selected"}>Detect from the request</option>${USE_CASES.map(([g, items]) => `<optgroup label="${esc(g)}">${items.map(([v, l]) => `<option value="${v}" ${S.useCase === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</optgroup>`).join("")}</select></div>
+      <div class="field"><label for="oShown">Shown</label>${optSel("oShown", SHOWN, S.shown)}</div>
+      <div class="field"><label for="oNarr">Narrative</label>${optSel("oNarr", NARRATIVES, S.narrative)}</div>
+      <div class="field"><label id="missLbl">Missing data</label><div class="segmented" style="display:flex" role="group" aria-labelledby="missLbl">${MISSING.map(([v, l]) => `<button style="flex:1" data-miss="${v}" aria-pressed="${S.missing === v}">${l}</button>`).join("")}</div></div>
+      <div class="field" style="font-size:12px;line-height:16px;color:rgb(var(--ink-3))">Leave these on auto and we read them from your prompt.</div>`;
+const SHOWN_PHRASE = { stage: "for a big stage", meeting: "for a meeting room", video: "for a video call", read: "to be read on its own", print: "for print" };
+const lc1 = (t) => (/^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t);
+const art = (t) => (/^[aeiou]/i.test(t) ? "an" : "a");
 const slideText = (s) => (s.id === "auto" || s.id === "summary" ? s.label : `${s.label} (${s.sub})`);
 const slidesDD = () => SLIDES.map((s) => `<button class="nr ${S.slides === s.id ? "sel" : ""}" role="option" aria-selected="${S.slides === s.id}" data-slides="${s.id}"><span class="nr-ck">${S.slides === s.id ? ic("check") : ""}</span><span class="nr-t">${slideText(s)}</span>${s.pro ? `<span class="nr-pro">${ic("crown")}Pro</span>` : ""}</button>`).join("") + (S.proHint ? `<div class="nr-note">Long and Very long need Pro. <a href="#" data-method="upgrade">See plans</a></div>` : "");
 const slidesList = () => `${SLIDES.map((s) => `<button class="mi ${S.slides === s.id ? "sel" : ""}" data-slides="${s.id}"><span>${s.label}<small>${s.sub}</small></span>${s.pro ? '<span class="badge badge-brand" style="margin-left:auto">Pro</span>' : ""}${ic("check", "ck")}</button>`).join("")}${S.proHint ? `<div class="sep"></div><div style="padding:6px 10px 8px;font-size:12px;line-height:16px;color:rgb(var(--ink-3))">Long and Very long need Pro. <a href="#" data-method="upgrade" style="color:rgb(var(--brand-fg));font-weight:500;text-decoration:none">See plans</a></div>` : ""}`;
@@ -649,6 +658,17 @@ function place(el) {
   const a = el.parentElement.getBoundingClientRect();
   const w = el.offsetWidth;
   el.style.left = Math.max(16 - a.left, Math.min(0, innerWidth - 16 - a.left - w)) + "px";
+}
+/* Sync, but keep an open popover alive when its anchor was redrawn (the C2 brief redraws on every change). */
+function syncKeep() {
+  const was = openPop && openPop.id, fid = document.activeElement?.id, fmiss = document.activeElement?.dataset?.miss;
+  sync();
+  if (openPop && !document.body.contains(openPop.el)) {
+    openPop = null;
+    const b = $(`#brief .extras [data-pop="${was}"]`) || $(`#brief [data-pop="${was}"]`);
+    if (b) { togglePop(b); const m = $(".menu", openPop.el); if (m) m.classList.add("still"); }
+  } else refreshPop();
+  if (openPop) { const f = fid ? $("#" + fid, openPop.el) : fmiss ? $(`[data-miss="${fmiss}"]`, openPop.el) : null; f?.focus({ preventScroll: true }); }
 }
 function dropOrphanPop() { if (openPop && !document.body.contains(openPop.el)) openPop = null; }
 function closePop() { S.optView = "main"; S.slDD = false; S.proHint = false; if (!openPop) return; const b = openPop.btn; openPop.el.remove(); b.setAttribute("aria-expanded", "false"); openPop = null; if (document.body.contains(b) && !document.activeElement?.closest?.("textarea")) b.focus({ preventScroll: true }); }
@@ -679,7 +699,7 @@ function bindPopInputs(el) {
   const lang = $("#oLang", el), role = $("#oRole", el);
   if (lang) lang.onchange = () => { S.lang = lang.value; sync(); refreshPop(); };
   if (role) role.onchange = () => { S.role = role.value; sync(); refreshPop(); };
-  [["#oDetail", "detail"], ["#oUse", "useCase"], ["#oShown", "shown"], ["#oNarr", "narrative"]].forEach(([sel, key]) => { const x = $(sel, el); if (x) x.onchange = () => { S[key] = x.value; sync(); refreshPop(); }; });
+  [["#oDetail", "detail"], ["#oUse", "useCase"], ["#oShown", "shown"], ["#oNarr", "narrative"]].forEach(([sel, key]) => { const x = $(sel, el); if (x) x.onchange = () => { S[key] = x.value; syncKeep(); }; });
 }
 
 
@@ -800,7 +820,7 @@ document.addEventListener("click", (e) => {
   if (tg) { e.preventDefault(); S[tg.dataset.toggle] = !S[tg.dataset.toggle]; sync(); dropOrphanPop(); refreshPop(); return; }
   if (t.closest("[data-reset]")) { Object.assign(S, { lang: "Auto", detail: "auto", useCase: "", shown: "", narrative: "", missing: "estimate", notes: false, slides: "auto" }); if (t.closest("#brief")) Object.assign(S, { look: "auto", budget: "auto", deep: false }); sync(); dropOrphanPop(); refreshPop(); return; }
   const ms = t.closest("[data-miss]");
-  if (ms) { S.missing = ms.dataset.miss; sync(); refreshPop(); return; }
+  if (ms) { S.missing = ms.dataset.miss; syncKeep(); return; }
   if (t.closest("[data-adv]")) { S.adv = !S.adv; refreshPop(); $("[data-adv]", openPop.el)?.focus({ preventScroll: true }); return; }
   if (t.closest("[data-close]")) { closePop(); return; }
   const at = t.closest("[data-attach]");
