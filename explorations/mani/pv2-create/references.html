@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create Screen References</title>
+<link rel="stylesheet" href="tokens.css">
+<script type="importmap">
+{ "imports": {
+  "react": "https://esm.sh/react@18.3.1",
+  "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+  "agentation": "https://esm.sh/agentation@3.1.2?deps=react@18.3.1,react-dom@18.3.1"
+} }
+</script>
+<script type="module">
+  // Agentation: click-to-annotate toolbar (bottom right). React component, so it needs a React root.
+  try {
+    const [React, { createRoot }, { Agentation }] = await Promise.all([import("react"), import("react-dom/client"), import("agentation")]);
+    const host = document.createElement("div"); host.id = "agentation-host"; document.body.appendChild(host);
+    createRoot(host).render(React.createElement(Agentation, { appName: "PV2 create references", useHashLocation: true }));
+  } catch (e) { console.warn("Agentation failed to load", e); }
+</script>
+<style>
+  .review { position: sticky; top: 0; z-index: 60; background: rgb(var(--ink)); color: rgb(var(--canvas)); }
+  .review-in { display: flex; align-items: center; gap: 12px; padding: 8px 16px; flex-wrap: wrap; }
+  .review b { font-weight: 600; font-size: 13px; }
+  .review .rl { height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid rgb(var(--canvas) / .18); color: rgb(var(--canvas)); font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; background: transparent; cursor: pointer; }
+  .review .rr { margin-left: auto; display: flex; gap: 6px; }
+  [data-theme="dark"] .review { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+  [data-theme="dark"] .review .rl { color: rgb(var(--ink)); border-color: rgb(var(--line)); }
+  main { max-width: 1120px; margin: 0 auto; padding: 40px 16px 96px; }
+  h1 { margin: 0; font-size: 32px; line-height: 40px; letter-spacing: -.02em; font-weight: 600; }
+  .lede { margin: 8px 0 0; font-size: 16px; line-height: 24px; color: rgb(var(--ink-2)); max-width: 720px; }
+  .eyebrow { font-size: 12px; line-height: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: rgb(var(--ink-3)); }
+  .takeaways { margin: 24px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .takeaways { grid-template-columns: 1fr; } }
+  .tk { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 12px; padding: 16px; }
+  .tk b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .tk p { margin: 0; font-size: 13px; line-height: 18px; color: rgb(var(--ink-2)); }
+  .tk .who { margin-top: 8px; font-size: 12px; color: rgb(var(--ink-3)); }
+  h2 { margin: 48px 0 12px; font-size: 18px; line-height: 26px; letter-spacing: -.005em; font-weight: 600; display: flex; align-items: center; gap: 12px; }
+  h2::after { content: ""; flex: 1; height: 1px; background: rgb(var(--line)); }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .ref { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 12px; overflow: hidden; transition: box-shadow .2s var(--ease); }
+  .ref:hover { box-shadow: var(--sh-menu); }
+  .ref .img { display: block; aspect-ratio: 1920/1322; background: rgb(var(--sunken)); border-bottom: 1px solid rgb(var(--line)); position: relative; }
+  .ref .img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .ref .body { padding: 14px 16px 16px; }
+  .ref .top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .ref .top b { font-size: 14px; font-weight: 600; }
+  .ref .top .badge { margin-left: auto; }
+  .ref p { margin: 0; font-size: 13px; line-height: 18px; color: rgb(var(--ink-2)); }
+  .ref .used { margin-top: 10px; font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); }
+  .ref .used b { font-weight: 500; color: rgb(var(--ink-2)); }
+  .ref a.open { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; font-size: 13px; font-weight: 500; color: rgb(var(--brand-fg)); text-decoration: none; }
+  .ref a.open:hover { text-decoration: underline; }
+  .lightbox { position: fixed; inset: 0; z-index: 90; background: rgb(var(--scrim) / .6); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; box-shadow: var(--sh-dialog); background: #fff; }
+  .lightbox .close { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgb(var(--surface)); color: rgb(var(--ink)); cursor: pointer; display: grid; place-items: center; box-shadow: var(--sh-menu); }
+
+  .tiers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 760px) { .tiers { grid-template-columns: 1fr; } }
+  .tier-col .eyebrow { display: block; margin-bottom: 10px; }
+  .tier-col .rec, .tk .rec { color: rgb(var(--brand-fg)); font-weight: 500; }
+  .tmenu { width: 100%; max-width: 360px; background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 12px; padding: 6px; box-shadow: var(--sh-menu); }
+  .tmenu .th { padding: 8px 10px 6px; font-size: 14px; font-weight: 600; }
+  .tmi { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 10px; border-radius: 6px; font-size: 13px; color: rgb(var(--ink-2)); }
+  .tmi.sel { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+  .tmi .ico { width: 32px; height: 32px; border-radius: 6px; background: rgb(var(--sunken)); display: grid; place-items: center; color: rgb(var(--ink-2)); flex-shrink: 0; }
+  .tmi.sel .ico { background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); }
+  .tmi b { display: block; font-size: 14px; font-weight: 500; color: rgb(var(--ink)); }
+  .tmi small { display: block; font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); }
+  .tmi .ck { margin-left: auto; color: rgb(var(--brand-fg)); }
+  .tmi svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .tmi svg .dim { opacity: .3; }
+  .tmi svg .bar { stroke-width: 2.5; }
+  .tmenu .tf { padding: 8px 10px 4px; border-top: 1px solid rgb(var(--line)); margin-top: 6px; font-size: 12px; color: rgb(var(--ink-3)); }
+  .tier-note { font-size: 13px; line-height: 18px; color: rgb(var(--ink-2)); margin: 10px 0 0; max-width: 360px; }
+</style>
+</head>
+<body>
+<div class="review"><div class="review-in"><b>PV2 create · references</b><span class="rr"><a class="rl" href="v2/index.html?opt=a">v2 proto</a><a class="rl" href="index.html?opt=a">v1 proto</a><button class="rl" id="theme">Dark mode</button></span></div></div>
+
+<main>
+  <span class="eyebrow">Mobbin research · 29 Oct 2026</span>
+  <h1 style="margin-top:8px">Create screen references</h1>
+  <p class="lede">30 screens from AI tools: prompt boxes that start a project, and the tier or effort pickers inside them. Each card says what the screen does well and what we took from it. Click any image to see it full size.</p>
+
+  <div class="takeaways">
+    <div class="tk"><b>1. One box, nothing else competes</b><p>The prompt is the only large element. Everything else is small, grey and below it.</p><div class="who">Perplexity, Copilot, Writer, Manus, Notion</div></div>
+    <div class="tk"><b>2. Settings live inside the box as chips</b><p>Model, mode, sources and attachments sit on the bottom edge of the box. No separate settings bar.</p><div class="who">Perplexity, Manus, Gemini, Langdock, Higgsfield</div></div>
+    <div class="tk"><b>3. Examples under the box, by intent</b><p>Four to six short prompts the user can tap. The best ones match the user's role or job.</p><div class="who">Gamma, Writer, Chronicle, Emergent, Sana</div></div>
+  </div>
+
+
+  <h2>Tier and effort pickers</h2>
+  <p class="lede" style="margin-bottom:20px">For the Budget tier menu (Automatic, Fast, Efficient, Standard, Premium). Two icon families below, drawn in our 16px 1.5 stroke style, on the real menu layout. Then the screens they come from.</p>
+  <div class="tiers">
+    <div class="tier-col">
+      <span class="eyebrow">A · Level bars <span class="rec">(recommended)</span></span>
+      <div class="tmenu" id="tmA"></div>
+      <p class="tier-note">One family shows the level: 1, 2, 3 bars for Efficient, Standard, Premium. Automatic gets the sparkle, Fast gets the bolt. Same idea as Replit's Lite / Economy / Power icons getting denser and Gamma's speed meter.</p>
+    </div>
+    <div class="tier-col">
+      <span class="eyebrow">B · Semantic</span>
+      <div class="tmenu" id="tmB"></div>
+      <p class="tier-note">A picture per tier: leaf for Efficient, scales for Standard, diamond for Premium. Reads well alone, but the five icons do not line up as a scale, so the order is harder to feel. Twenty and Relevance AI use this style.</p>
+    </div>
+  </div>
+  <div class="grid" id="g4"></div>
+
+  <h2 id="deep-search" style="scroll-margin-top:24px">Deep search toggles</h2>
+  <p class="lede" style="margin-bottom:20px">How chat tools surface their research mode in the prompt box. Four patterns in the wild, none of them a bare switch.</p>
+  <div class="takeaways" style="margin:0 0 20px">
+    <div class="tk"><b>1. Toggle pill in the toolbar <span class="rec">(recommended)</span></b><p>A chip with an icon and a one word label. Tap turns it on: tinted fill, brand text. Headline and placeholder change to match ("What are you researching?", "Get a detailed report"). This is what v2 A and B do.</p><div class="who">ChatGPT</div></div>
+    <div class="tk"><b>2. Removable mode chip</b><p>Picked from the + menu, then sits in the box as a tinted chip with an x. The box prefills "Create a research report on". Clear with the x.</p><div class="who">Copilot</div></div>
+    <div class="tk"><b>3. Mode dropdown</b><p>One "Search" chip with a caret. Menu swaps the mode: Search, Research, Labs. Telescope icon for Deep research. Good when modes are exclusive, worse for a yes or no extra.</p><div class="who">Perplexity</div></div>
+  </div>
+  <p class="lede" style="margin-bottom:20px">Claude hides Research inside the + menu as a checked row, next to a Web search toggle. Fine for power users, invisible for first timers. Telescope is the common icon for research (ChatGPT, Perplexity). Copilot shows the remaining quota on the menu row ("5 remaining"), which maps to our credits per slide line.</p>
+  <div class="grid" id="g5"></div>
+
+  <h2>Presentation tools</h2>
+  <div class="grid" id="g1"></div>
+  <h2>AI home screens</h2>
+  <div class="grid" id="g2"></div>
+  <h2>Design and style pickers</h2>
+  <div class="grid" id="g3"></div>
+</main>
+
+<div class="lightbox" id="lb" role="dialog" aria-modal="true" aria-label="Full size screen"><button class="close" aria-label="Close">✕</button><img alt=""></div>
+
+<script>
+const REFS = {
+  g4: [
+    ["replit-modes", "Replit", "Agent modes", "https://mobbin.com/screens/0ef4776c-bb48-4125-abed-898fd3de2203", "Lite, Economy, Power. Each row has an icon that gets denser as the level rises, the model name on the right, and a one line description under the list.", "Icons as a scale. Our family A bars."],
+    ["replit-effort", "Replit", "Effort slider", "https://mobbin.com/screens/e8b8267d-782c-4cdb-9da0-881faf6a7b6b", "Model picker with a Recommended tag, then an Effort slider from Low to High with a line explaining the current setting.", "Effort as a separate control with a plain explanation. Our footer line."],
+    ["twenty", "Twenty", "AI models", "https://mobbin.com/screens/1d6ceb31-c5ac-47da-9822-f81bbac13093", "Smart Model with a brain icon, Fast Model with a bolt icon, each with a use case line and its own model dropdown.", "Bolt for Fast. Both families."],
+    ["gamma-model", "Gamma", "Image model menu", "https://mobbin.com/screens/7b5c17bb-6f64-4e5a-ab1a-88b5a2571e32", "Auto-select at the top with a wand icon, then Recommended and Basic groups with brand icons and New badges.", "Wand or sparkle for Automatic. Both families."],
+    ["gamma-hover", "Gamma", "Model hover card", "https://mobbin.com/screens/f059805b-ca58-4470-9c3e-0a27988a1621", "Hovering a model shows a card with a 4 bar Speed meter, cost per image and what it is best for.", "Bars as a meter. Our family A."],
+    ["elicit", "Elicit", "Rigor picker", "https://mobbin.com/screens/ca53926d-2ff5-4764-b794-210918cbb215", "Fast, Balanced, Comprehensive as full width option cards with Plus badges and a line of what each one does.", "Three levels with a paid badge. Same as our Premium with Pro."],
+    ["gemini-thinking", "Google Gemini", "Model and thinking level", "https://mobbin.com/screens/85f830b1-e0bf-4f8b-9fa4-c578e1963bf3", "Flash-Lite, Flash, Pro with a tagline each, then a Thinking level sub-menu: Standard or Extended.", "Names plus a tagline, no icons. The current PV2 menu is already this."],
+    ["claude-model", "Claude", "Model menu", "https://mobbin.com/screens/a584de73-9ae1-4c5c-851d-73c1131e0a21", "Opus, Sonnet, Haiku with a line each, an Extended thinking toggle, and More models.", "Keep taglines short. Toggle for the one extra."],
+    ["chatgpt-model", "ChatGPT", "Plan menu", "https://mobbin.com/screens/83ee2b5a-1692-4041-896b-67d85ac1696d", "Two rows: Plus with a sparkle icon and an Upgrade button, free with a check.", "Sparkle for the premium row, inline upgrade."],
+    ["cursor", "Cursor", "Effort multiplier", "https://mobbin.com/screens/5086a06b-e76b-49ad-a5e4-c2100759b758", "Models listed as High, Fast, Extra High Fast, with a 1x to 4x effort multiplier on each.", "Effort as a number. Clear but cold."],
+    ["relevance", "Relevance AI", "Model picker", "https://mobbin.com/screens/94a61b0c-d8b5-4254-8147-426391e60452", "Performance-optimized and Cost-optimized at the top with icons, then a long model list with credit use per row.", "Credit use on every row. Pair with our footer line."],
+    ["magnific", "Magnific", "Model list", "https://mobbin.com/screens/d0059628-3b84-4d3e-9e93-1a90abc18611", "Rows tagged with small chips: Fast with a bolt, High-res, Photorealism, plus time and cost.", "Bolt chip for Fast."],
+  ],
+  g5: [
+    ["chatgpt-research-idle", "ChatGPT", "Research on, empty box", "https://mobbin.com/screens/e4eaf168-29b4-4161-be40-8bb97e1d9042", "Research pill next to + turns blue when on. Headline becomes What are you researching, placeholder Get a detailed report.", "Toggle pill in the toolbar, state shown by tint not a switch"],
+    ["chatgpt-research-typed", "ChatGPT", "Research on, typed", "https://mobbin.com/screens/c3f1aa21-87cc-4212-919d-7e9e8337ce5e", "Same pill stays on while typing. Send arrow fills black once there is text.", "Mode and text are independent, nothing else moves"],
+    ["copilot-research-chip", "Copilot", "Research report chip", "https://mobbin.com/screens/37fac5ed-56d5-481c-bd08-1de23c1a7f55", "Mode shows as a removable x chip inside the box. Box prefills Create a research report on.", "Active mode is visible and one tap to clear"],
+    ["copilot-plus-menu", "Copilot", "+ menu with deep research", "https://mobbin.com/screens/c5641997-242d-414a-a77a-74ee09954943", "Start deep research lives in the + menu with a 5 remaining quota badge.", "Quota next to the mode, like our credits per slide"],
+    ["perplexity-search-mode", "Perplexity", "Search mode chip", "https://mobbin.com/screens/764b4870-3557-4a3b-a76a-b8dc57e74914", "Search caret chip is the mode picker. Model dropdown sits at the right of the same row.", "Exclusive modes as a dropdown, not toggles"],
+    ["perplexity-deep-research", "Perplexity", "Deep research picked", "https://mobbin.com/screens/2f2784e2-8e9e-4774-9a84-f15a90bbd2a6", "Mode chip reads Deep research with a telescope icon once picked. Sources chip beside it.", "Telescope as the research icon"],
+    ["claude-plus-menu", "Claude", "Research in + menu", "https://mobbin.com/screens/16cc5d91-2f00-4a92-9777-6dd57a63a6a4", "Research is a row in the + menu, Web search is a checked row next to it. Nothing in the toolbar.", "Hidden mode, low discoverability"],
+  ],
+  g1: [
+    ["gamma", "Gamma", "Generate", "https://mobbin.com/screens/a6743227-4087-4d86-9219-621f42ec727a", "Type tabs on top (Presentation, Webpage, Document), one input, slide count and language as small dropdowns, example prompts below in a grid.", "Slide count as a dropdown with Plus and Pro badges on the long options. Our Length chip."],
+    ["manus-slides", "Manus", "Slides mode", "https://mobbin.com/screens/10fcbb26-3619-4697-8613-eeeacc7b89b1", "A long prompt with an attached image, Slides mode chip and model chip on the bottom edge, sample prompts, then a template row.", "Template row under the box. Our option B look strip."],
+    ["chronicle", "Chronicle", "Generate from prompt", "https://mobbin.com/screens/65efebb0-b008-4210-9ff1-7d50a1575086", "Dark, minimal. One input, four try-these chips, then a fixed bottom bar with Auto, chapters, rewrite level and language.", "Settings as a readable row. Our option C brief, made into a sentence."],
+    ["pitch", "Pitch", "Generating", "https://mobbin.com/screens/7221818d-b940-4db5-8730-cc4f5f0a21fd", "After the prompt: fonts and colour palettes on the right, slides filling in on the left.", "Where the look lives after Create. Not on the first screen."],
+    ["writer", "Writer", "Make presentation", "https://mobbin.com/screens/c61e1ac6-9bfc-49a0-b8ed-0f4dfd5305f7", "Big structured prompt, Agent and Presentation chips inside the box, action chips and four example cards below.", "Example cards tied to a task. Our role-aware examples."],
+    ["gamma-editor", "Gamma", "Prompt editor", "https://mobbin.com/screens/8c466815-f620-4f47-96f2-10024cff43d2", "Full settings panel on the left: text mode, amount of text, language, theme. Content in the middle, tips on the right.", "Every setting we have, shown all at once. Too heavy for a landing screen. Our Options panel keeps the grouping, not the layout."],
+  ],
+  g2: [
+    ["perplexity", "Perplexity", "Pro home", "https://mobbin.com/screens/6ee91718-b057-4e8e-a8b8-ac384fda7b3a", "Wordmark, one box, Search and Computer chips, model picker right, six task chips below.", "The chip row inside the box. Our option A toolbar."],
+    ["copilot", "Microsoft Copilot", "Home with files", "https://mobbin.com/screens/2ff3d94d-adb2-4937-818d-de633b9757c3", "Attached files sit as cards at the top of the box, above the text. Mode chip bottom left, send bottom right.", "File chips inside the box above the text. Same in all our options."],
+    ["manus-home", "Manus", "Home", "https://mobbin.com/screens/156621d5-5d04-427e-acd0-a20be1c8d1ca", "Serif greeting, a box with three small icons, five mode chips under it (Create slides, Build website, Develop apps, Design, More).", "Mode chips under the box. Our other ways to start."],
+    ["notion", "Notion", "AI chat", "https://mobbin.com/screens/176a7fae-1de4-4d50-a28b-cb14eef8b18b", "Mascot, one line greeting, slim box with model chip, a strip of connected apps, then recent and suggested lists.", "Keep the hero short. One line of greeting, one line of help."],
+    ["langdock", "Langdock", "Home", "https://mobbin.com/screens/70660ec5-569e-4cd1-ade3-778e3d9a4517", "Minimal box, Tools and model chips, seven intent chips under it in two rows.", "Intent chips as a second row. Our examples row."],
+    ["emergent", "Emergent", "First prompt", "https://mobbin.com/screens/b3300bfc-15fd-4459-89c6-e0b79a3db52d", "Sky background, Web App and Mobile App tabs, model chip, five example chips with small icons.", "Example chips with icons. Our examples row."],
+    ["sana", "Sana AI", "Home", "https://mobbin.com/screens/eb1a7750-d1c0-4b4c-8fc0-2ec45ef08cfa", "Short input, Create and Sources chips below it, a list of six suggestions with bold keywords.", "Bold keywords inside suggestions. Our option C brief."],
+    ["gemini", "Google Gemini", "Slides", "https://mobbin.com/screens/1581f730-26aa-4d35-9bc6-7e5fa7f599b1", "Chat left, canvas right. Prompt collapses into a card while slides generate.", "What happens after Create. Not this screen."],
+  ],
+  g3: [
+    ["higgsfield", "Higgsfield", "Sites", "https://mobbin.com/screens/dfb05d42-c95d-46cc-80de-c1156fe2d809", "Dark box with a logo attached, mode chips, Portfolio and Playful style chips, then a row of ready workflows with large previews.", "Style as a chip inside the box. Our Design chip with a mini cover."],
+    ["leonardo", "Leonardo AI", "Home", "https://mobbin.com/screens/dfb9dc5a-1fdb-4937-95a4-38e8ff82c42d", "Prompt with reference image, Image and Video tabs, aspect ratio, style, model and Generate on the bottom edge.", "Generate button on the box edge next to the settings. Our Create button."],
+  ],
+};
+
+// Budget tier mock menus
+const TI = {
+  sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+  wand: '<path d="m4 20 11-11M14 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2ZM19 11l.6 1.4L21 13l-1.4.6L19 15l-.6-1.4L17 13l1.4-.6L19 11Z"/>',
+  bolt: '<path d="M13 3 5 13h6l-1 8 8-10h-6l1-8Z"/>',
+  bars: (n) => `<path class="bar ${n >= 1 ? "" : "dim"}" d="M6 20v-4"/><path class="bar ${n >= 2 ? "" : "dim"}" d="M12 20v-9"/><path class="bar ${n >= 3 ? "" : "dim"}" d="M18 20V6"/>`,
+  leaf: '<path d="M5 19c0-8 5-13 14-13-1 9-6 13-14 13Z"/><path d="M5 19c3-4 6-7 9-9"/>',
+  scales: '<path d="M12 4v16M5 20h14M12 7l6 1M12 7 6 8"/><path d="M3 14a3 3 0 0 0 6 0L6 8l-3 6ZM15 14a3 3 0 0 0 6 0l-3-6-3 6Z"/>',
+  diamond: '<path d="M7 4h10l4 5-9 11L3 9l4-5Z"/><path d="M3 9h18M9 4l3 5 3-5M12 9l-3 11M12 9l3 11"/>',
+};
+const TIERS = [
+  ["Automatic", "Picks Premium, Standard or Efficient from your topic", true],
+  ["Fast", "No questions, a quick first draft"],
+  ["Efficient", "Basic effort for simple work"],
+  ["Standard", "Balanced effort for regular work"],
+  ["Premium", "Maximum effort for important work"],
+];
+const FAM = { A: [TI.sparkle, TI.bolt, TI.bars(1), TI.bars(2), TI.bars(3)], B: [TI.wand, TI.bolt, TI.leaf, TI.scales, TI.diamond] };
+for (const k of ["A", "B"]) {
+  document.getElementById("tm" + k).innerHTML = `<div class="th">Budget tier</div>` + TIERS.map(([t, sub, sel], i) => `<div class="tmi ${sel ? "sel" : ""}"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${FAM[k][i]}</svg></span><span><b>${t}</b><small>${sub}</small></span>${sel ? '<svg class="ck" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg>' : ""}</div>`).join("") + `<div class="tf">Higher effort uses more credits</div>`;
+}
+
+const lb = document.getElementById("lb");
+for (const [gid, list] of Object.entries(REFS)) {
+  document.getElementById(gid).innerHTML = list.map(([f, app, screen, url, what, took]) => `
+    <article class="ref">
+      <a class="img" href="refs/${f}.webp" data-lb><img src="refs/${f}.webp" alt="${app} ${screen}" loading="lazy"></a>
+      <div class="body">
+        <div class="top"><b>${app}</b><span style="color:rgb(var(--ink-3))">·</span><span style="font-size:13px;color:rgb(var(--ink-2))">${screen}</span></div>
+        <p>${what}</p>
+        <div class="used"><b>What we took:</b> ${took}</div>
+        <a class="open" href="${url}" target="_blank" rel="noopener">Open on Mobbin ↗</a>
+      </div>
+    </article>`).join("");
+}
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-lb]");
+  if (a) { e.preventDefault(); const im = lb.querySelector("img"); im.src = a.href; im.alt = a.querySelector("img").alt; lastTrigger = a; lb.classList.add("open"); document.body.style.overflow = "hidden"; lb.querySelector(".close").focus(); return; }
+  if (e.target.closest("#lb")) closeLb();
+});
+let lastTrigger = null;
+function closeLb() { if (!lb.classList.contains("open")) return; lb.classList.remove("open"); document.body.style.overflow = ""; lastTrigger?.focus(); }
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLb(); });
+const th = document.getElementById("theme");
+const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+th.textContent = isDark() ? "Light mode" : "Dark mode";
+th.onclick = () => { const d = isDark(); document.documentElement.dataset.theme = d ? "light" : "dark"; th.textContent = d ? "Dark mode" : "Light mode"; };
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Options popover explore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<script type="importmap">
+{ "imports": {
+  "react": "https://esm.sh/react@18.3.1",
+  "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+  "agentation": "https://esm.sh/agentation@3.1.2?deps=react@18.3.1,react-dom@18.3.1"
+} }
+</script>
+<script type="module">
+  try {
+    const [React, { createRoot }, { Agentation }] = await Promise.all([import("react"), import("react-dom/client"), import("agentation")]);
+    const host = document.createElement("div"); host.id = "agentation-host"; document.body.appendChild(host);
+    createRoot(host).render(React.createElement(Agentation, { appName: "PV2 options explore" }));
+  } catch (e) { console.warn("Agentation failed to load", e); }
+</script>
+<style>
+  body { margin: 0; background: rgb(var(--canvas)); color: rgb(var(--ink)); font-family: Geist, ui-sans-serif, system-ui; font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; }
+  svg.i { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .eyebrow { font-size: 12px; line-height: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: rgb(var(--ink-3)); }
+  main { max-width: 1160px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 24px; line-height: 32px; letter-spacing: -.015em; font-weight: 600; margin: 0 0 6px; }
+  .lede { margin: 0 0 8px; color: rgb(var(--ink-2)); max-width: 760px; }
+  .issues { margin: 16px 0 32px; padding: 14px 16px; border: 1px solid rgb(var(--line)); border-radius: 12px; background: rgb(var(--surface)); max-width: 760px; }
+  .issues ul { margin: 8px 0 0; padding-left: 18px; color: rgb(var(--ink-2)); font-size: 13px; line-height: 20px; }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 1060px) { .cols { grid-template-columns: 1fr; justify-items: center; } }
+  .col { width: 100%; max-width: 340px; }
+  .col-h { margin-bottom: 10px; }
+  .col-h .rec { color: rgb(var(--brand-fg)); }
+  .col-note { margin-top: 12px; font-size: 13px; line-height: 19px; color: rgb(var(--ink-2)); }
+  .col-note b { color: rgb(var(--ink)); font-weight: 500; }
+
+  /* popover, copied from v2 */
+  .menu { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 12px; padding: 6px; box-shadow: var(--sh-menu); width: 320px; max-width: 100%; }
+  .menu.scroll { max-height: 560px; overflow: auto; }
+  .pop-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 8px; }
+  .pop-h b { font-size: 14px; font-weight: 600; }
+  .pop-h .sub { font-size: 12px; color: rgb(var(--ink-3)); }
+  .field { padding: 6px 8px; }
+  .field label, .field .lbl { display: block; font-size: 12px; font-weight: 500; color: rgb(var(--ink-3)); margin-bottom: 4px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  select.input, .pick { width: 100%; height: 36px; border: 1px solid rgb(var(--line)); border-radius: 6px; background-color: rgb(var(--canvas)); color: rgb(var(--ink)); font: inherit; font-size: 14px; }
+  select.input { appearance: none; padding: 0 32px 0 10px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='rgb(108,108,124)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  .pick { display: flex; align-items: center; gap: 8px; padding: 0 10px; cursor: pointer; text-align: left; }
+  .pick:hover, select.input:hover { border-color: rgb(var(--ink-3) / .4); }
+  .pick .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pick .hint { font-size: 12px; color: rgb(var(--ink-3)); white-space: nowrap; }
+  .pick > svg.i:first-child { color: rgb(var(--ink-3)); }
+  .dd { position: relative; }
+  .pick .chev-d { color: rgb(var(--ink-3)); width: 16px; height: 16px; transition: transform .15s var(--ease); }
+  .pick[aria-expanded="true"] { border-color: rgb(var(--brand-600)); box-shadow: 0 0 0 3px rgb(var(--brand-600) / .15); }
+  .pick[aria-expanded="true"] .chev-d { transform: rotate(180deg); }
+  .dd-list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 6px); padding: 6px; background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 12px; box-shadow: var(--sh-menu); }
+  .dd-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: rgb(var(--ink-2)); font-size: 14px; text-align: left; cursor: pointer; }
+  .dd-row:hover { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+  .dd-row.sel { background: rgb(var(--sunken)); color: rgb(var(--ink)); font-weight: 500; }
+  .dd-note { margin-top: 6px; padding: 8px 10px 4px; border-top: 1px solid rgb(var(--line)); font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); }
+  .dd-note a { color: rgb(var(--brand-fg)); font-weight: 500; text-decoration: none; }
+  .menu.scroll .dd-list { position: static; margin-top: 6px; }
+  .pick .chev { transform: rotate(-90deg); color: rgb(var(--ink-3)); width: 14px; height: 14px; }
+  .segmented { display: flex; padding: 2px; background: rgb(var(--sunken)); border-radius: 6px; }
+  .segmented button { flex: 1; height: 30px; padding: 0 8px; border: 0; background: transparent; border-radius: 5px; font-size: 13px; font-weight: 500; color: rgb(var(--ink-2)); cursor: pointer; white-space: nowrap; }
+  .segmented button[aria-pressed="true"] { background: rgb(var(--surface)); color: rgb(var(--ink)); box-shadow: 0 1px 2px rgb(16 12 60 / .12); }
+  .sep { height: 1px; background: rgb(var(--line)); margin: 6px 0; }
+  .tog { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 8px; border: 0; border-radius: 6px; background: transparent; text-align: left; cursor: pointer; }
+  .tog:hover { background: rgb(var(--sunken) / .6); }
+  .tog .tx { flex: 1; }
+  .tog .tx b { display: block; font-size: 13px; font-weight: 500; }
+  .tog .tx small { display: block; font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); margin-top: 2px; }
+  .switch { position: relative; width: 32px; height: 18px; border-radius: 999px; background: rgb(var(--line)); flex-shrink: 0; margin-top: 1px; transition: background .15s var(--ease); }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(16 12 60 / .2); transition: transform .15s var(--ease); }
+  .switch.on { background: rgb(var(--brand-600)); }
+  .switch.on::after { transform: translateX(14px); }
+  .pop-f { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 4px; border-top: 1px solid rgb(var(--line)); margin-top: 6px; }
+  .link { height: 32px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: rgb(var(--ink-2)); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .link:hover { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+  .back { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: rgb(var(--ink-2)); cursor: pointer; margin-left: -4px; }
+  .back:hover { background: rgb(var(--sunken)); }
+  .grp { padding: 10px 8px 2px; }
+  .tabs { padding: 2px 8px 6px; }
+  .count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); font-size: 11px; font-weight: 600; margin-left: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Options popover, three layouts</h1>
+  <p class="lede">Every setting from the live PV2 dropdown, built on the previous layout you liked. Budget tier and Deep search stay in the toolbar. Click around: the drill-in, tabs and toggles work.</p>
+  <div class="issues">
+    <span class="eyebrow">What went wrong in the last version</span>
+    <ul>
+      <li>Slide count looked different from the fields around it: an icon chip and a side caret next to plain dropdowns.</li>
+      <li>"Advanced options" hid five of the nine settings behind a collapse with no hint of what is inside.</li>
+      <li>Level of detail lost its one-tap segmented control and became a dropdown.</li>
+      <li>Opened, the menu became a tall list of identical dropdowns. Nothing stood out.</li>
+    </ul>
+  </div>
+
+  <div class="cols">
+    <section class="col">
+      <div class="col-h"><span class="eyebrow">A · Previous layout + Story drill-in <span class="rec">(recommended)</span></span></div>
+      <div class="menu" id="mA"></div>
+      <p class="col-note"><b>The menu you liked, with one extra row.</b> Slide count, language, role, detail and speaker notes stay exactly as before. A "Story and audience" row opens the four new settings, the same drill-in pattern Slide count already uses. The row shows what is set, so nothing is hidden by surprise.</p>
+    </section>
+    <section class="col">
+      <div class="col-h"><span class="eyebrow">B · Two tabs</span></div>
+      <div class="menu" id="mB"></div>
+      <p class="col-note"><b>Basics and Story side by side.</b> Same short height as before. The Story tab shows a count when something is set. Tabs make the extra settings easy to find, but most people never need the second tab.</p>
+    </section>
+    <section class="col">
+      <div class="col-h"><span class="eyebrow">C · All visible, grouped</span></div>
+      <div class="menu scroll" id="mC"></div>
+      <p class="col-note"><b>Nothing hidden.</b> Three small groups: Deck, Content, Story. Short choices become segmented controls (Missing data, Detail) so the menu is not a wall of dropdowns. It still scrolls, so it is the heaviest option.</p>
+    </section>
+  </div>
+</main>
+
+<script>
+const P = {
+  layers: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
+  caret: '<path d="m6 9 6 6 6-6"/>',
+  back: '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+  book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+};
+const ic = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const LANGS = ["Auto", "English", "Spanish", "French", "German", "Hindi", "Japanese", "Portuguese"];
+const ROLES = ["Founder", "Sales", "Marketing", "Consultant", "Teacher", "Student", "Product manager"];
+const SLIDES = [["auto", "Let AI decide", "", false], ["summary", "One summary slide", "", false], ["short", "Short", "2 to 5 slides", false], ["medium", "Medium", "6 to 10 slides", false], ["long", "Long", "11 to 20 slides", true], ["vlong", "Very long", "21+ slides", true]];
+const DETAIL = [["auto", "Auto"], ["brief", "Brief"], ["standard", "Standard"], ["detailed", "Detailed"]];
+const USE = [["", "Detect from the request"], ["seed_pitch", "Seed or Series A pitch"], ["investor_update", "Investor update"], ["sales_pitch", "Sales pitch"], ["qbr", "Quarterly business review"], ["product_launch", "Product launch keynote"], ["marketing_plan", "Marketing plan"], ["all_hands", "All-hands / town hall"], ["market_research", "Market research readout"], ["product_roadmap", "Product roadmap"], ["university_lecture", "University lecture"]];
+const SHOWN = [["", "Not said"], ["stage", "A big room or stage"], ["meeting", "A meeting room"], ["video", "A video call"], ["read", "Read on its own"], ["print", "Printed"]];
+const NARR = [["", "The use case’s arc"], ["investor_pitch", "Investor pitch"], ["answer_first", "Answer first (SCR)"], ["performance_report", "Performance report"], ["problem_solution_proof", "Problem, solution, proof"], ["proposal", "Proposal"], ["case_study", "Case study"], ["launch_reveal", "Launch reveal"], ["explainer", "Explainer"]];
+const MISS = [["placeholder", "Placeholders"], ["estimate", "Estimates"]];
+
+const fresh = () => ({ dd: false, proHint: false, view: "main", tab: "basics", lang: "Auto", role: "Founder", slides: "auto", detail: "auto", use: "", shown: "", narr: "", miss: "estimate", notes: false });
+const ST = { A: fresh(), B: fresh(), C: fresh() };
+
+const lbl = (list, v) => (list.find((x) => x[0] === v) || list[0])[1];
+const sel = (k, key, list, val) => `<select class="input" data-k="${k}" data-key="${key}">${list.map(([v, l]) => `<option value="${esc(v)}" ${v === val ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+const seg = (k, key, list, val) => `<div class="segmented" role="group">${list.map(([v, l]) => `<button data-k="${k}" data-key="${key}" data-v="${v}" aria-pressed="${v === val}">${l}</button>`).join("")}</div>`;
+const field = (label, body) => `<div class="field"><span class="lbl">${label}</span>${body}</div>`;
+const head = () => `<div class="pop-h"><b>Options</b><span class="sub">Remembered for next time</span></div>`;
+const changed = (k) => { const f = fresh(), s = ST[k]; return ["lang", "role", "slides", "detail", "use", "shown", "narr", "miss", "notes"].some((x) => s[x] !== f[x]); };
+const foot = (k) => changed(k) ? `<div class="pop-f"><button class="link" data-reset="${k}">Reset</button></div>` : "";
+const notes = (k, s) => `<button class="tog" data-tog="${k}" role="switch" aria-checked="${s.notes}"><span class="tx"><b>Speaker notes</b><small>Talking points under every slide</small></span><span class="switch ${s.notes ? "on" : ""}"></span></button>`;
+const slideText = ([, l, sub]) => sub ? `${l} (${sub})` : l;
+const slidesPick = (k, s) => `<div class="dd">
+  <button class="pick" data-dd="${k}" aria-haspopup="listbox" aria-expanded="${s.dd}"><span class="v">${slideText(SLIDES.find((x) => x[0] === s.slides))}</span>${ic("caret", "chev-d")}</button>
+  ${s.dd ? `<div class="dd-list" role="listbox">${SLIDES.map((o) => `<button class="dd-row ${o[0] === s.slides ? "sel" : ""}" role="option" aria-selected="${o[0] === s.slides}" data-slide="${k}:${o[0]}"><span>${slideText(o)}</span>${o[3] ? '<span class="badge badge-brand">Pro</span>' : ""}</button>`).join("")}${s.proHint ? `<div class="dd-note">Long and Very long need Pro. <a href="#" onclick="return false">See plans</a></div>` : ""}</div>` : ""}
+</div>`;
+const storySet = (s) => [s.use && lbl(USE, s.use), s.shown && lbl(SHOWN, s.shown), s.narr && lbl(NARR, s.narr), s.miss !== "estimate" && "Placeholders"].filter(Boolean);
+const drill = (k, title, body) => `<div class="pop-h" style="justify-content:flex-start;gap:6px"><button class="back" data-view="${k}:main" aria-label="Back">${ic("back")}</button><b>${title}</b></div>${body}`;
+const slidesList = (k, s) => SLIDES.map(([v, l, sub]) => `<button class="tog" data-k="${k}" data-key="slides" data-v="${v}" data-pickback="1"><span class="tx"><b>${l}</b>${sub ? `<small>${sub}</small>` : ""}</span>${v === s.slides ? '<span style="color:rgb(var(--brand-fg))">&#10003;</span>' : ""}</button>`).join("");
+const storyFields = (k, s, missSeg) => field("Use case", sel(k, "use", USE, s.use)) + field("Shown", sel(k, "shown", SHOWN, s.shown)) + field("Narrative", sel(k, "narr", NARR, s.narr)) + field("Missing data", seg(k, "miss", MISS, s.miss));
+
+function renderA() {
+  const k = "A", s = ST.A;
+  if (s.view === "slides") return drill(k, "Slide count", slidesList(k, s));
+  if (s.view === "story") return drill(k, "Story and audience", storyFields(k, s, false) + `<div class="field" style="font-size:12px;color:rgb(var(--ink-3));line-height:16px">Leave these on auto and we read them from your prompt.</div>`);
+  const set = storySet(s);
+  return head()
+    + field("Slide count", slidesPick(k, s))
+    + field("Language", sel(k, "lang", LANGS.map((x) => [x, x]), s.lang))
+    + field("Your role", sel(k, "role", ROLES.map((x) => [x, x]), s.role))
+    + field("Level of detail", seg(k, "detail", DETAIL, s.detail))
+    + field("Story and audience", `<button class="pick" data-view="A:story">${ic("book")}<span class="v">${set.length ? esc(set.join(", ")) : "Auto from your prompt"}</span>${set.length ? `<span class="count">${set.length}</span>` : ""}${ic("caret", "chev")}</button>`)
+    + `<div class="sep"></div>` + notes(k, s) + foot(k);
+}
+function renderB() {
+  const k = "B", s = ST.B, n = storySet(s).length;
+  const tabs = `<div class="tabs"><div class="segmented" role="tablist"><button data-tab="basics" aria-pressed="${s.tab === "basics"}">Basics</button><button data-tab="story" aria-pressed="${s.tab === "story"}">Story${n ? `<span class="count">${n}</span>` : ""}</button></div></div>`;
+  if (s.view === "slides") return drill(k, "Slide count", slidesList(k, s));
+  const body = s.tab === "basics"
+    ? field("Slide count", slidesPick(k, s)) + field("Language", sel(k, "lang", LANGS.map((x) => [x, x]), s.lang)) + field("Your role", sel(k, "role", ROLES.map((x) => [x, x]), s.role)) + field("Level of detail", seg(k, "detail", DETAIL, s.detail)) + `<div class="sep"></div>` + notes(k, s)
+    : storyFields(k, s, true);
+  return head() + tabs + body + foot(k);
+}
+function renderC() {
+  const k = "C", s = ST.C;
+  return head()
+    + `<div class="grp"><span class="eyebrow">Deck</span></div>`
+    + `<div class="two">${field("Language", sel(k, "lang", LANGS.map((x) => [x, x]), s.lang))}${field("Your role", sel(k, "role", ROLES.map((x) => [x, x]), s.role))}</div>`
+    + field("Slide count", slidesPick(k, s))
+    + `<div class="grp"><span class="eyebrow">Content</span></div>`
+    + field("Level of detail", seg(k, "detail", DETAIL, s.detail))
+    + field("Missing data", seg(k, "miss", MISS, s.miss))
+    + notes(k, s)
+    + `<div class="grp"><span class="eyebrow">Story</span></div>`
+    + field("Use case", sel(k, "use", USE, s.use))
+    + `<div class="two">${field("Shown", sel(k, "shown", SHOWN, s.shown))}${field("Narrative", sel(k, "narr", NARR, s.narr))}</div>`
+    + foot(k);
+}
+const R = { A: renderA, B: renderB, C: renderC };
+const draw = (k) => { document.getElementById("m" + k).innerHTML = R[k](); };
+["A", "B", "C"].forEach(draw);
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button");
+  ["A", "B", "C"].forEach((kk) => { if (ST[kk].dd && !(t && t.closest(".dd") && t.closest("#m" + kk))) { ST[kk].dd = false; ST[kk].proHint = false; draw(kk); } });
+  if (!t) return;
+  const box = t.closest(".menu"), k = box && box.id.slice(1);
+  if (t.dataset.dd) { const kk = t.dataset.dd; ST[kk].dd = !ST[kk].dd; ST[kk].proHint = false; draw(kk); return; }
+  if (t.dataset.slide) { const [kk, v] = t.dataset.slide.split(":"); const o = SLIDES.find((x) => x[0] === v); if (o[3]) { ST[kk].proHint = true; draw(kk); return; } Object.assign(ST[kk], { slides: v, dd: false, proHint: false }); draw(kk); return; }
+  if (t.dataset.view) { const [kk, v] = t.dataset.view.split(":"); ST[kk].view = v; draw(kk); return; }
+  if (t.dataset.tab) { ST[k].tab = t.dataset.tab; draw(k); return; }
+  if (t.dataset.tog) { ST[k].notes = !ST[k].notes; draw(k); return; }
+  if (t.dataset.reset) { ST[k] = fresh(); draw(k); return; }
+  if (t.dataset.key && t.dataset.v !== undefined) { ST[k][t.dataset.key] = t.dataset.v; if (t.dataset.pickback) ST[k].view = "main"; draw(k); }
+});
+document.addEventListener("change", (e) => { const x = e.target; if (x.dataset.key) { ST[x.dataset.k][x.dataset.key] = x.value; draw(x.dataset.k); } });
+</script>
+</body>
+</html>
