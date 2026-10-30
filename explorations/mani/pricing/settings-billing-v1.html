@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Plan and billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<style>
+  /* Settings > Plan and billing, and the cancel-renewal flow, rebuilt from pitchdeckdoclist:
+     listing/core/screens/views/settings/Settings.jsx (shell), settings/billings/BillingSettings.jsx,
+     CancelRenewalFlow.jsx, CreditHistoryPopup.jsx, TrialActivatePopup, NudgeFeaturePopup (the
+     cancel offer, pricingNew/upgradePopup) and ExpiryBanner. Copy from en.json. Every state and
+     every step has its own link (?state=…&open=…&step=…). Nothing navigates. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --surface: #ffffff; --canvas: #f8f8fb; --sunken: #f3f3f7; --line: #e4e4ec; --line2: #d4d4de;
+    --brand: #3427ff; --brand-hover: #2a1fd6; --tint: #ecebff;
+    --ink: #14141f; --ink2: #4e4e5e; --ink3: #6c6c7c; --ink-off: #a3a3b0; --gray-500: #6b7280;
+    --good: #15803d; --good-bg: #dcfce7; --warn: #b45309; --warn-bg: #fef3c7; --bad: #b91c1c; --bad-bg: #fee2e2;
+    --scrim: rgba(16,12,60,0.45); --navy: #0b0a3a;
+  }
+  html, body { height: 100%; }
+  body { font-family: 'Inter', sans-serif; font-size: 14px; line-height: 20px; color: var(--ink); background: var(--canvas); -webkit-font-smoothing: antialiased; }
+  i[class*="ph-"] { display: block; line-height: 1; font-style: normal; }
+  svg.hi { display: block; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .tab { font-variant-numeric: tabular-nums; }
+  button { font: inherit; color: inherit; }
+
+  /* ---------- app shell (dashboard host) ---------- */
+  .app { display: flex; height: 100vh; }
+  .expiry { position: fixed; inset: 0 0 auto 0; z-index: 60; display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; background: var(--navy); color: #fff; font-size: 12px; }
+  .expiry[hidden] { display: none; }
+  .expiry .crown { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: linear-gradient(135deg, #3427ff, #3566fe); }
+  .expiry .crown i { font-size: 15px; }
+  .expiry button { border: 0; background: none; color: #fff; font-weight: 600; text-decoration: underline; cursor: pointer; }
+  body.expired .app { padding-top: 40px; }
+  aside.side { display: flex; flex-direction: column; gap: 4px; width: 256px; flex: none; padding: 12px; border-right: 1px solid var(--line); background: var(--surface); }
+  .ws { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 6px; }
+  .ws .av { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; background: var(--brand); color: #fff; font-weight: 700; font-size: 13px; }
+  .ws b { display: block; font-size: 14px; font-weight: 600; }
+  .ws small { display: block; font-size: 12px; line-height: 16px; color: var(--ink3); }
+  .ws i { margin-left: auto; color: var(--ink3); }
+  .newdeck { display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; margin: 8px 0; border: 0; border-radius: 6px; background: var(--brand); color: #fff; font-weight: 500; cursor: pointer; }
+  .snav { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: none; color: var(--ink2); text-align: left; cursor: pointer; }
+  .snav:hover { background: var(--sunken); color: var(--ink); }
+  .snav i { font-size: 20px; }
+  .side .grp { margin: 14px 10px 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); }
+  .col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  header.top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 6px; height: 56px; flex: none; padding: 0 24px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); }
+  .search { display: flex; align-items: center; gap: 8px; width: min(448px, 100%); height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--canvas); color: var(--ink3); }
+  .search kbd { margin-left: auto; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; font: 500 11px 'Inter', sans-serif; }
+  .meter { display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: 8px; font-size: 13px; color: var(--ink2); }
+  .meter .tr { width: 48px; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .meter .tr span { display: block; height: 100%; border-radius: 999px; background: var(--brand); }
+  .meter b { font-weight: 600; color: var(--ink); }
+  .ib { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 6px; background: none; color: var(--ink2); cursor: pointer; }
+  .ib:hover { background: var(--sunken); color: var(--ink); }
+  .ib i { font-size: 20px; }
+  .me { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: 4px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 13px; font-weight: 600; }
+  .scroll { flex: 1; overflow-y: auto; }
+
+  /* ---------- Settings shell (Settings.jsx) ---------- */
+  main.set { width: 100%; max-width: 1152px; margin: 0 auto; padding: 32px 24px 96px; }
+  main.set h1 { font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; }
+  .sgrid { display: grid; grid-template-columns: 220px 1fr; gap: 24px; margin-top: 24px; }
+  .setnav { display: flex; flex-direction: column; }
+  .setnav .g { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .setnav .gl { padding: 0 10px 4px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); }
+  .setnav button { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: none; color: var(--ink2); text-align: left; cursor: pointer; }
+  .setnav button:hover { background: var(--sunken); color: var(--ink); }
+  .setnav button.on { background: var(--sunken); color: var(--ink); font-weight: 500; }
+  .setnav svg { width: 20px; height: 20px; }
+  .content { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 768px; padding-bottom: 80px; animation: up .18s ease; }
+  @keyframes up { from { opacity: 0; transform: translateY(6px); } }
+
+  /* ds primitives */
+  section.sec { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .sh { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .sh h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 18px; line-height: 26px; font-weight: 600; letter-spacing: -0.005em; }
+  .sh .d { margin-top: 2px; color: var(--ink2); }
+  .sh .d s { color: var(--gray-500); }
+  .sh .r { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sb { margin-top: 16px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap; }
+  .badge.brand { background: var(--tint); color: var(--brand); }
+  .badge.good { background: var(--good-bg); color: var(--good); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.neutral { background: var(--sunken); color: var(--ink2); }
+  .badge svg { width: 12px; height: 12px; stroke-width: 2; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border: 1px solid transparent; border-radius: 6px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+  .btn.lg { height: 44px; padding: 0 20px; }
+  .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+  .btn.pri { background: var(--brand); color: #fff; box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 1px 2px rgba(16,12,60,0.2); }
+  .btn.pri:hover { background: var(--brand-hover); }
+  .btn.sec { background: var(--surface); border-color: var(--line); color: var(--ink); }
+  .btn.sec:hover { background: var(--sunken); border-color: rgba(108,108,124,0.4); }
+  .btn.ghost { background: none; color: var(--ink2); }
+  .btn.ghost:hover { background: var(--sunken); color: var(--ink); }
+  .btn[disabled] { background: var(--sunken); border-color: transparent; color: var(--ink-off); box-shadow: none; cursor: not-allowed; }
+  .btn .spin { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 999px; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* plan card body */
+  .pbody { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  .cap { font-size: 13px; line-height: 18px; color: var(--gray-500); }
+  .disc { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink2); }
+  .hold { position: relative; display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--warn); }
+  .hold svg { width: 14px; height: 14px; }
+  .hold .why { display: inline-flex; border: 0; background: none; color: var(--warn); cursor: help; }
+  .hold .tip { position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: 300px; padding: 6px 8px; border-radius: 6px; background: var(--ink); color: var(--canvas); font-size: 12px; line-height: 16px; font-weight: 500; box-shadow: 0 8px 24px -6px rgba(16,12,60,0.16); opacity: 0; pointer-events: none; transition: opacity .15s ease .2s; }
+  .hold .why:hover + .tip, .hold .why:focus-visible + .tip { opacity: 1; }
+  .callout { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 6px; background: rgba(254,226,226,0.4); }
+  .callout svg { width: 20px; height: 20px; fill: var(--bad); stroke: #fff; color: var(--bad); }
+  .callout b { display: block; font-weight: 600; color: var(--bad); }
+  .callout span { font-size: 13px; line-height: 18px; color: var(--ink2); }
+
+  /* trial banner */
+  .trial { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 16px; border: 1px solid rgba(52,39,255,0.3); border-radius: 12px; background: rgba(236,235,255,0.6); }
+  .trial .tile { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none; border-radius: 6px; background: linear-gradient(135deg, #3427ff, #3566fe); color: #fff; }
+  .trial .tile i { font-size: 20px; }
+  .trial .tx { flex: 1; min-width: 240px; }
+  .trial .tx b { display: block; font-weight: 600; }
+  .trial .tx span { font-size: 13px; line-height: 18px; color: var(--ink2); }
+
+  /* upgrade ladder (CreditPlansV2 redesign rows) */
+  .ladder { display: flex; flex-direction: column; gap: 12px; }
+  .prow { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; cursor: pointer; transition: border-color .15s ease; }
+  .prow:hover { border-color: var(--line2); }
+  .prow .tile { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none; border-radius: 6px; background: var(--tint); color: var(--brand); }
+  .prow .tile svg { width: 20px; height: 20px; }
+  .prow .mid { flex: 1; min-width: 0; }
+  .prow .l1 { font-weight: 600; }
+  .prow .l1 .dot { color: var(--gray-500); font-weight: 400; }
+  .prow .l1 .cr { color: var(--brand); font-weight: 500; }
+  .prow .l2 { display: flex; align-items: center; gap: 4px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .prow .l2 svg { width: 14px; height: 14px; color: var(--ink3); }
+  .prow .pr { text-align: right; }
+  .prow .pr b { font-size: 18px; line-height: 26px; font-weight: 600; }
+  .prow .pr small { display: block; font-size: 12px; line-height: 16px; color: var(--gray-500); }
+  .prow .chev { width: 20px; height: 20px; color: var(--ink-off); }
+
+  /* invoices */
+  table.inv { width: 100%; border-collapse: collapse; }
+  table.inv td { padding: 10px 0; border-top: 1px solid var(--line); }
+  table.inv tr:first-child td { border-top: 0; }
+  table.inv td.dt { color: var(--ink2); }
+  table.inv td.em { font-size: 13px; color: var(--gray-500); }
+  table.inv td.am { text-align: right; padding-right: 16px; }
+  table.inv td.st { width: 1%; }
+
+  /* credits */
+  .cmeter { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .cmeter span { display: block; height: 100%; border-radius: 999px; background: var(--brand); animation: fill .8s cubic-bezier(.2,0,0,1); }
+  @keyframes fill { from { width: 0; } }
+  .crow { display: flex; justify-content: space-between; margin-top: 6px; font-size: 13px; color: var(--gray-500); }
+  .cbtns { display: flex; gap: 8px; margin-top: 16px; }
+  .need { margin: 20px 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); }
+  ul.packs { list-style: none; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  ul.packs li + li { border-top: 1px solid var(--line); }
+  .pack { display: flex; align-items: center; gap: 16px; width: 100%; padding: 16px 20px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .pack:hover { background: var(--sunken); }
+  .pack img { width: 48px; height: 48px; object-fit: contain; }
+  .pack .mid { flex: 1; }
+  .pack .mid b { display: block; font-size: 18px; line-height: 26px; font-weight: 600; }
+  .pack .mid span { color: var(--ink3); }
+  .pack .pr { display: flex; align-items: center; gap: 10px; }
+  .pack .pr s { color: var(--gray-500); }
+  .pack .pr b { font-size: 24px; line-height: 32px; font-weight: 600; }
+  .pack .chev { width: 24px; height: 24px; color: var(--ink-off); }
+
+  /* ---------- ds Dialog ---------- */
+  .ov { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: 12px; background: var(--scrim); backdrop-filter: blur(2px); animation: fade .18s ease; }
+  .ov[hidden] { display: none; }
+  @keyframes fade { from { opacity: 0; } }
+  .dlg { position: relative; width: 100%; max-height: calc(100vh - 24px); overflow-y: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 2px 6px rgba(16,12,60,0.08), 0 24px 64px -12px rgba(16,12,60,0.28); animation: pop .2s cubic-bezier(.2,0,0,1); }
+  @keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+  .dlg .hd { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px 8px; }
+  .dlg h3 { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.015em; }
+  .dlg h3 .acc { color: var(--brand); }
+  .dlg .ds { margin-top: 4px; color: var(--ink2); }
+  .dlg .bd { padding: 12px 24px 24px; }
+  .xb { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: none; margin: -4px -8px 0 0; border: 0; border-radius: 6px; background: none; color: var(--ink2); cursor: pointer; }
+  .xb:hover { background: var(--sunken); color: var(--ink); }
+  .xb svg { width: 20px; height: 20px; }
+  .acts { display: flex; gap: 10px; margin-top: 24px; }
+  .acts .btn { flex: 1 1 0; }
+  .lrows { display: flex; flex-direction: column; gap: 8px; }
+  .lrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+  .lrow .n { display: flex; align-items: center; gap: 12px; font-weight: 500; }
+  .lrow img { width: 40px; height: 40px; object-fit: contain; }
+  .reasons { display: flex; flex-direction: column; }
+  .reasons label { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 6px; cursor: pointer; }
+  .reasons label:hover { background: var(--sunken); }
+  .reasons input { width: 16px; height: 16px; accent-color: var(--brand); }
+  textarea.other { display: block; width: 100%; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--canvas); font: inherit; resize: none; outline: none; }
+  textarea.other:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(52,39,255,0.2); }
+
+  /* credit history */
+  table.hist { width: 100%; border-collapse: collapse; }
+  table.hist th { padding: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); text-align: left; }
+  table.hist td { padding: 10px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  table.hist th:last-child, table.hist td:last-child { text-align: right; }
+  table.hist td .ev { font-size: 15px; }
+  table.hist td small { display: block; font-size: 13px; color: var(--ink3); }
+  table.hist td.dt { color: var(--ink2); }
+
+  /* trial activate */
+  .sum { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+  .sum .l { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; color: var(--ink2); }
+  .sum .l b { color: var(--ink); font-weight: 500; }
+  .sum .l.dis span:last-child { color: var(--good); }
+  .sum hr { margin: 8px 0; border: 0; border-top: 1px solid var(--line); }
+  .sum .l.tot { color: var(--ink); font-weight: 600; font-size: 16px; }
+  .consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; font-size: 13px; line-height: 18px; color: var(--ink2); cursor: pointer; }
+  .consent input { width: 16px; height: 16px; margin-top: 1px; accent-color: var(--brand); }
+  .consent a { color: var(--brand); }
+
+  /* success */
+  .won { padding: 40px; text-align: center; }
+  .won .ok { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 999px; background: var(--good-bg); color: var(--good); }
+  .won .ok svg { width: 32px; height: 32px; stroke-width: 2; }
+  .won h3 { margin-top: 16px; }
+  .won p { margin-top: 6px; color: var(--ink2); }
+  .won .btn { width: 260px; margin-top: 24px; }
+  .won .foot { margin-top: 14px; font-size: 13px; color: var(--gray-500); }
+
+  /* ---------- the cancel offer: NudgeFeaturePopup shell (.pn-up-*) ---------- */
+  .nf { position: relative; width: 940px; max-width: calc(100vw - 24px); height: 542px; overflow: hidden; border-radius: 16px; background: var(--surface); box-shadow: 0 2px 6px rgba(9,15,21,0.09), 0 24px 64px -12px rgba(9,15,21,0.28); animation: pop .2s cubic-bezier(.2,0,0,1); }
+  .nf::after { content: ''; position: absolute; top: 0; left: 340px; width: 1px; height: 100%; background: var(--line); pointer-events: none; z-index: 2; }
+  .nf .left { position: absolute; top: 30px; left: 30px; bottom: 30px; width: 280px; display: flex; flex-direction: column; gap: 16px; z-index: 3; }
+  .nf h3 { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.015em; }
+  .nf h3 .acc { color: var(--brand); }
+  .nf .feats { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 4px; scrollbar-width: thin; -webkit-mask-image: linear-gradient(to bottom, black 0%, black 92%, transparent 100%); mask-image: linear-gradient(to bottom, black 0%, black 92%, transparent 100%); }
+  .nf .fi { display: flex; align-items: center; gap: 10px; width: 100%; flex: none; padding: 8px 10px; border: 0; border-radius: 6px; background: none; text-align: left; cursor: pointer; transition: background .15s ease; }
+  .nf .fi:hover { background: var(--sunken); }
+  .nf .fi.on { background: var(--sunken); font-weight: 500; cursor: default; }
+  .nf .fi i { font-size: 20px; color: var(--ink2); }
+  .nf .fi.on i { color: var(--brand); }
+  .nf .prev { position: absolute; top: 0; left: 340px; width: 600px; height: 338px; background: var(--sunken) center/cover no-repeat; overflow: hidden; z-index: 1; }
+  .nf .prev img { display: block; width: 100%; height: 100%; object-fit: contain; animation: fade .55s ease; }
+  .nf .capn { position: absolute; left: 370px; top: 368px; width: 540px; display: flex; flex-direction: column; gap: 4px; z-index: 3; }
+  .nf .capn b { font-size: 18px; line-height: 26px; font-weight: 600; letter-spacing: -0.005em; }
+  .nf .capn span { max-width: 460px; color: var(--ink2); }
+  .nf .bar { position: absolute; left: 370px; right: 30px; top: 466px; height: 48px; display: flex; gap: 12px; z-index: 3; }
+  .nf .cta { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1 1 0; min-width: 0; height: 48px; border: 1px solid transparent; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+  .nf .cta.out { background: var(--surface); border-color: var(--line); color: var(--ink); }
+  .nf .cta.out:hover { background: var(--sunken); border-color: var(--line2); }
+  .nf .cta.main { flex: 1.6 1 0; background: var(--brand); color: #fff; box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 1px 2px rgba(9,15,21,0.2); }
+  .nf .cta.main:hover { background: var(--brand-hover); }
+  .nf .brk { position: absolute; right: 0; bottom: calc(100% + 10px); width: 280px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 1px 2px rgba(16,12,60,0.06), 0 8px 24px -6px rgba(16,12,60,0.16); color: var(--ink2); font-weight: 400; font-size: 13px; text-align: left; opacity: 0; pointer-events: none; transform: translateY(4px); transition: opacity .16s ease, transform .16s ease; }
+  .nf .cta.main:hover .brk, .nf .cta.main:focus-visible .brk { opacity: 1; transform: none; }
+  .nf .brk b { display: block; margin-bottom: 8px; color: var(--ink); font-weight: 600; font-size: 14px; }
+  .nf .brk .l { display: flex; justify-content: space-between; padding: 3px 0; }
+  .nf .brk .l.g span:last-child { color: var(--good); }
+  .nf .brk .l.t { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--ink); font-weight: 600; }
+  @media (max-height: 600px) { .nf { transform: scale(.98); } }
+
+  /* toast (top centre) */
+  .toast { position: fixed; left: 50%; top: 64px; z-index: 995; display: flex; align-items: center; gap: 10px; width: min(420px, calc(100vw - 32px)); padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 1px 2px rgba(16,12,60,0.06), 0 8px 24px -6px rgba(16,12,60,0.16); transform: translateX(-50%); animation: tin .22s cubic-bezier(.2,0,0,1); }
+  .toast[hidden] { display: none; }
+  .toast i { font-size: 20px; color: var(--good); }
+  @keyframes tin { from { opacity: 0; transform: translate(-50%, -8px) scale(.98); } }
+
+  /* proto controls (not product UI) */
+  .proto { position: fixed; right: 12px; bottom: 12px; z-index: 990; width: 296px; border-radius: 12px; background: rgba(20,20,31,0.94); color: #fff; font-size: 11px; box-shadow: 0 12px 32px -10px rgba(0,0,0,0.4); }
+  .proto .phd { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 12px; border: 0; background: none; color: #fff; font: 600 11px 'Inter', sans-serif; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .proto.shut .pb2 { display: none; }
+  .proto.shut .phd i { transform: rotate(180deg); }
+  .pb2 { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 12px; }
+  .pb2 b { width: 100%; margin-top: 4px; font-weight: 500; opacity: .6; }
+  .pb2 button { height: 22px; padding: 0 8px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.14); color: #fff; font: 500 11px 'Inter', sans-serif; cursor: pointer; }
+  .pb2 button.on { background: #fff; color: #14141f; }
+
+  @media (max-width: 1100px) { aside.side { display: none; } }
+  @media (max-width: 760px) { .sgrid { grid-template-columns: 1fr; } .setnav { flex-direction: row; overflow-x: auto; } .setnav .g { flex-direction: row; margin: 0; } .setnav .gl { display: none; } main.set { padding: 20px 16px 96px; } }
+  @media (max-height: 700px) { main.set { padding-top: 20px; } main.set h1 { font-size: 28px; line-height: 36px; } .sgrid { margin-top: 16px; } .dlg .hd { padding-top: 16px; } .dlg h3 { font-size: 20px; line-height: 28px; } .acts { margin-top: 18px; } }
+</style>
+</head>
+<body>
+<div class="expiry" id="expiry" hidden><span class="crown"><i class="ph-fill ph-crown"></i></span><span>Your plan has expired. Renew now to continue access.</span><button type="button" data-a="renew">Renew now</button></div>
+<div class="app">
+  <aside class="side">
+    <div class="ws"><span class="av">S</span><span><b>Scaling Operations</b><small id="ws-sub">Pro · 1 member</small></span><i class="ph ph-caret-up-down"></i></div>
+    <button type="button" class="newdeck"><i class="ph ph-plus"></i>New deck</button>
+    <button type="button" class="snav"><i class="ph ph-house"></i>Home</button>
+    <button type="button" class="snav"><i class="ph ph-cards"></i>Templates</button>
+    <button type="button" class="snav"><i class="ph ph-palette"></i>Brand Kit</button>
+    <button type="button" class="snav"><i class="ph ph-upload-simple"></i>Import a deck</button>
+    <button type="button" class="snav"><i class="ph ph-briefcase"></i>Hire an expert</button>
+    <div class="grp">Projects</div>
+    <button type="button" class="snav"><i class="ph ph-folder"></i>Quarterly reviews</button>
+  </aside>
+  <div class="col">
+    <header class="top">
+      <div class="search"><i class="ph ph-magnifying-glass"></i>Search decks, settings, actions<kbd>⌘K</kbd></div>
+      <div class="meter" id="meter"></div>
+      <button type="button" class="ib" aria-label="Theme"><i class="ph ph-sun"></i></button>
+      <button type="button" class="ib" aria-label="Help"><i class="ph ph-question"></i></button>
+      <button type="button" class="ib" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+      <span class="me">M</span>
+    </header>
+    <div class="scroll">
+      <main class="set">
+        <h1>Settings</h1>
+        <div class="sgrid">
+          <nav class="setnav" id="setnav" aria-label="Settings"></nav>
+          <div class="content" id="content"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov" hidden></div>
+<div class="toast" id="toast" role="status" hidden><i class="ph-fill ph-check-circle"></i><span id="toast-t"></span></div>
+
+<div class="proto" id="proto">
+  <button type="button" class="phd" id="proto-t"><span>Proto: billing state</span><i class="ph-bold ph-caret-down"></i></button>
+  <div class="pb2" id="proto-b"></div>
+</div>
+
+<script>
+  /* ---------- heroicons 24/outline (the real nav and billing icons) ---------- */
+  const HI = {
+    user: 'M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+    office: 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z',
+    users: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z',
+    cpu: 'M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z',
+    card: 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z',
+    bolt: 'm3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z',
+    gift: 'M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z',
+    shield: 'M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z',
+    lock: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z',
+    warn: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z',
+    chev: 'm8.25 4.5 7.5 7.5-7.5 7.5',
+    info: 'm11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z',
+    rocket: 'M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z',
+    sparkles: 'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z',
+    x: 'M6 18 18 6M6 6l12 12',
+    check: 'm4.5 12.75 6 6 9-13.5',
+  };
+  const hi = (k, cls) => '<svg class="hi' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"><path d="' + HI[k] + '"/></svg>';
+
+  /* ---------- plans (pricingV2Config) and the states the billing screen supports ---------- */
+  const PLANS = {
+    basic: { name: 'Basic', annual: 48, credits: 1000, icon: 'bolt' },
+    pro: { name: 'Pro', annual: 240, credits: 5000, icon: 'rocket' },
+    gold: { name: 'Gold', annual: 600, credits: 25000, icon: 'sparkles' },
+  };
+  // free: no billing record · paid: plan + renewal · cancel: renewal off · trial: 7-day Pro trial
+  const STATES = {
+    free:            { label: 'Free', plan: null },
+    basic:           { label: 'Basic', plan: 'basic', cadence: 'year', balance: 640 },
+    pro:             { label: 'Pro', plan: 'pro', cadence: 'year', balance: 3200 },
+    'pro-discount':  { label: 'Pro, 20% applied', plan: 'pro', cadence: 'year', balance: 3200, discount: true },
+    gold:            { label: 'Gold', plan: 'gold', cadence: 'year', balance: 18400 },
+    team:            { label: 'Team', plan: 'pro', cadence: 'year', balance: 21000, team: true },
+    weekly:          { label: 'Weekly', plan: 'pro', cadence: 'week', price: 2.99, credits: 100, balance: 60 },
+    cancelled:       { label: 'Renewal off', plan: 'pro', cadence: 'year', balance: 3200, cancel: true },
+    trial:           { label: 'Trial', plan: 'pro', cadence: 'year', balance: 500, trial: true },
+    'trial-hold':    { label: 'Trial, 24h hold', plan: 'pro', cadence: 'year', balance: 500, trial: true, hold: true },
+    expired:         { label: 'Expired', plan: 'pro', cadence: 'year', balance: 0, expired: true, cancel: true },
+  };
+  const S = { state: 'pro', dialog: null, step: null, reasons: [], other: '', feat: 0, consent: false, coupon: false, busy: null };
+  const money = (n) => '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2));
+  const num = (n) => n.toLocaleString('en-US');
+  const kfmt = (n) => (n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : String(Math.floor(n)));
+  const TODAY = new Date(2026, 9, 30);
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const fmtLong = (d) => d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }); // "Oct 05, 2027"
+  const fmtShort = (d) => d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }); // "Oct 5, 2027"
+  const st = () => STATES[S.state];
+  const plan = () => PLANS[st().plan];
+  const price = () => (st().price != null ? st().price : st().team ? 720 : plan().annual);
+  const credits = () => (st().credits != null ? st().credits : st().team ? 30000 : plan().credits);
+  const endDate = () => {
+    const s = st();
+    if (s.trial) return addDays(TODAY, s.hold ? 7 : 6);
+    if (s.expired) return new Date(2026, 9, 5);
+    if (s.cadence === 'week') return addDays(TODAY, 4);
+    return new Date(2027, 9, 5);
+  };
+  const paidOn = () => (st().trial ? addDays(endDate(), -7) : st().cadence === 'week' ? addDays(endDate(), -7) : new Date(2026, 9, 5));
+  const planLabel = () => (st().plan ? plan().name : 'Free');
+
+  /* ---------- settings nav (Settings.jsx groups) ---------- */
+  const drawNav = () => {
+    const G = [
+      ['Account', [['user', 'Profile']]],
+      ['Workspace', [['office', 'General'], ['users', 'Members'], ['cpu', 'AI assistants and API']]],
+      ['Billing', [['card', 'Plan and billing', true], ['bolt', 'Credits and usage'], ['gift', 'Refer a colleague']]],
+      ['Privacy', [['shield', 'Data and privacy']]],
+    ];
+    document.getElementById('setnav').innerHTML = G.map((g) => '<div class="g"><div class="gl">' + g[0] + '</div>' +
+      g[1].map((i) => '<button type="button" class="' + (i[2] ? 'on' : '') + '"' + (i[2] ? ' aria-current="page"' : ' data-a="nav" data-v="' + i[1] + '"') + '>' + hi(i[0]) + i[1] + '</button>').join('') + '</div>').join('');
+  };
+
+  /* ---------- the billing screen (BillingSettings.jsx) ---------- */
+  const drawBilling = () => {
+    const s = st(), p = plan(), free = !s.plan;
+    document.body.classList.toggle('expired', !!s.expired);
+    document.getElementById('expiry').hidden = !s.expired;
+    document.getElementById('ws-sub').textContent = (free ? 'Free' : s.team ? 'Team' : p.name) + (s.team ? ' · 5 members' : ' · 1 member');
+    const bal = free ? 200 : s.balance, tot = free ? 200 : credits();
+    document.getElementById('meter').innerHTML = '<span class="tr"><span style="width:' + Math.max(4, Math.round(bal / tot * 100)) + '%"></span></span><b>' + num(bal) + '</b>credits';
+
+    // plan card
+    const cad = s.cadence;
+    const seat = s.team ? '' : ' · 1 seat';
+    const desc = free ? '1 Editor · 200 Credits'
+      : (s.discount ? '<s>' + money(price()) + '</s> ' + money(Math.round(price() * 0.8)) : money(price())) + '/' + cad + seat + ' · ' + num(credits()) + ' Credits';
+    let right = '';
+    if (free) right += '<button type="button" class="btn pri" data-a="plans">See plans</button>';
+    else if (s.team) right += '';
+    else if (!s.trial && p !== PLANS.gold && !s.expired) right += '<button type="button" class="btn sec" data-a="plans">Change plan</button>';
+    if (!free && !s.cancel) right += '<button type="button" class="btn ghost" data-a="cancel"' + (s.hold ? ' disabled' : '') + '>Cancel renewal</button>';
+    if (s.cancel && !s.expired) right += '<button type="button" class="btn pri" data-a="reactivate">Re-activate renewal</button>';
+    if (s.expired) right += '<button type="button" class="btn pri" data-a="renew">Renew now</button>';
+    let body = '';
+    if (!free && !s.cancel) body += '<p class="cap">Your next billing date is ' + (s.hold ? endDate().toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' }) : fmtLong(endDate())) + '</p>';
+    if (s.discount) body += '<div class="disc"><span class="badge good">20% renewal discount applied</span>Next renewal: ' + money(Math.round(price() * 0.8)) + '</div>';
+    if (s.hold) body += '<div class="hold">' + hi('lock') + 'You can cancel any time after the first 24 hours (opens ' + addDays(TODAY, 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ')' +
+      '<button type="button" class="why" aria-label="Why the hold?">' + hi('info') + '</button><span class="tip" role="tooltip">This short hold helps prevent trial abuse. Genuine users like you won’t be affected, and we apologise for the minor inconvenience.</span></div>';
+    if (s.cancel && !s.expired) body += '<div class="callout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + HI.warn + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Your auto-renewal has been cancelled.</b><span>Your subscription will remain active until ' + fmtLong(endDate()) + '</span></div></div>';
+    if (s.expired) body += '<p class="cap">Your plan ended on ' + fmtLong(endDate()) + '. Your decks are saved.</p>';
+    let html = '<section class="sec"><div class="sh"><div><h2>' + planLabel() + '<span class="badge brand">Current plan</span></h2><p class="d">' + desc + '</p></div>' +
+      (right ? '<div class="r">' + right + '</div>' : '') + '</div>' + (body ? '<div class="pbody">' + body + '</div>' : '') + '</section>';
+
+    // trial banner
+    if (s.trial) html += '<div class="trial"><span class="tile"><i class="ph-fill ph-lightning"></i></span><div class="tx"><b>Activate your full ' + p.name + ' plan now</b>' +
+      '<span>You’re on a 7-day trial with ' + num(s.balance) + ' credits. Pay ' + money(p.annual) + ' today to end the trial and unlock all ' + num(p.credits) + ' plan credits immediately.</span></div>' +
+      '<button type="button" class="btn pri" data-a="activate">Activate full plan now</button></div>';
+
+    // upgrade ladder, free only (CreditPlansV2, tier-1 segment: Pro + Gold)
+    if (free) html += '<section class="sec"><div class="sh"><div><h2>Upgrade Plans</h2></div></div><div class="sb ladder">' +
+      ['pro', 'gold'].map((k) => { const q = PLANS[k]; return '<button type="button" class="prow" data-a="plans"><span class="tile">' + hi(q.icon) + '</span><span class="mid">' +
+        '<span class="l1">Get ' + q.name + ' <span class="dot">·</span> <span class="cr">' + num(q.credits) + ' credits</span></span>' +
+        '<span class="l2">+ ' + (k === 'pro' ? 3 : 4) + ' more features' + hi('info') + '</span></span>' +
+        '<span class="pr"><b>' + money(q.annual / 12) + '</b><small>per user/month</small><small>' + money(q.annual) + ' billed annually</small></span>' + hi('chev', 'chev') + '</button>'; }).join('') +
+      '</div></section>';
+
+    // invoices
+    if (!free && !s.trial) html += '<section class="sec"><div class="sh"><div><h2>Invoices</h2></div></div><div class="sb"><table class="inv"><tbody>' +
+      [paidOn()].concat(s.cadence === 'week' ? [addDays(paidOn(), -7)] : s.discount || s.cancel ? [] : []).map((d) =>
+        '<tr><td class="dt">' + fmtShort(d) + '</td><td class="em">mani@company.com</td><td class="am tab">' + money(price()) + '</td><td class="st"><span class="badge good">Paid</span></td></tr>').join('') +
+      '</tbody></table></div></section>';
+
+    // credits (hidden on a trial)
+    if (!s.trial) {
+      html += '<section class="sec"><div class="sh"><div><h2>' + kfmt(bal) + ' credits left</h2></div></div><div class="sb">' +
+        '<div class="cmeter"><span style="width:' + Math.round(bal / tot * 100) + '%"></span></div>' +
+        '<div class="crow tab"><span>' + num(tot - bal) + ' Credits used</span><span>' + num(tot) + ' Total</span></div>' +
+        '<div class="cbtns"><button type="button" class="btn sec" data-a="buy">Buy more credits</button><button type="button" class="btn ghost" data-a="history">View credit history</button></div>';
+      if (!free && !s.expired) html += '<div class="need">Need more credits?</div><ul class="packs">' +
+        [[2500, 50, 'credits1.png'], [5000, 90, 'credits2.png']].map((k) => '<li><button type="button" class="pack" data-a="pack" data-v="' + k[0] + '"><img src="assets/billing/' + k[2] + '" alt="" /><span class="mid"><b>' + num(k[0]) + ' credits</b><span>' + money(Math.round(k[1] / k[0] * 1000) / 1000) + ' per credit</span></span>' +
+          '<span class="pr"><span class="badge good">50% off</span><s>' + money(k[1] * 2) + '</s><b>' + money(k[1]) + '</b></span>' + hi('chev', 'chev') + '</button></li>').join('') + '</ul>';
+      html += '</div></section>';
+    }
+    document.getElementById('content').innerHTML = html;
+  };
+
+  /* ---------- cancel renewal flow (CancelRenewalFlow.jsx) ---------- */
+  const ov = document.getElementById('ov');
+  const stepsFor = () => {
+    const s = st();
+    if (s.discount) return ['offer'];
+    const steps = s.trial ? ['lose', 'feedback', 'offer'] : ['reminder', 'stays', 'feedback', 'offer'];
+    return s.cadence === 'week' ? steps.filter((x) => x !== 'offer') : steps;
+  };
+  const keepRows = (badge) => [['icon_presentations.png', '12 Presentations'], ['icon_newdecks.png', 'Generating New Decks'], ['icon_credits.png', num(st().balance) + ' Unused Credits']]
+    .map((r) => '<div class="lrow"><span class="n"><img src="assets/billing/' + r[0] + '" alt="" />' + r[1] + '</span>' + badge + '</div>').join('');
+  const twoBtns = '<div class="acts"><button type="button" class="btn sec lg" data-a="cnext">Continue to cancel</button><button type="button" class="btn pri lg" data-a="keep">Keep my plan</button></div>';
+  const dlg = (w, inner) => '<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-t" style="max-width:' + w + 'px">' + inner + '</div>';
+  const head = (t, d, x) => '<div class="hd"><div><h3 id="dlg-t">' + t + '</h3>' + (d ? '<p class="ds">' + d + '</p>' : '') + '</div>' + (x ? '<button type="button" class="xb" data-a="close" aria-label="Close">' + hi('x') + '</button>' : '') + '</div>';
+  const FEATS = [
+    ['ph-export', 'triggerbrandkit.jpg', 'Export presentations', 'Download your presentations as PowerPoint, PDF, or image files for offline use and sharing.', 'export.png'],
+    ['ph-swatches', 'triggerbrandkit.jpg', 'Brand Kit', 'Add your logo, fonts, and colors once, and every deck comes out on-brand.'],
+    ['ph-book-open', 'triggerprojectknowledge.jpg', 'Shared knowledge base', 'Upload your files once. The AI references them on every slide, so your decks stay accurate and on-message.'],
+    ['ph-users-three', 'triggercollaborations.jpg', 'Collaborations', 'Invite your team to co-edit decks in real time, leave comments, and assign slides to the right teammate.'],
+    ['ph-sparkle', 'triggeraimodels.jpg', 'Ultra AI model', 'Our most powerful model, for the highest quality content and design output.'],
+    ['ph-chart-bar', 'analytics.jpg', 'Analytics', 'Track views, engagement, and viewer location. See exactly how your deck performs after you share it.'],
+    ['ph-folder', 'triggerproject.jpg', 'Projects', 'Group related decks into shared spaces, so everyone knows where the latest version lives.'],
+    ['ph-text-aa', 'triggerfonts.jpg', 'Color and Font pair', 'Set your brand colors and fonts once, and every deck you create stays on-brand.'],
+    ['ph-presentation-chart', 'triggercolorsmeetandpresent.jpg', 'Meet and present', 'Present live to remote audiences in real time, straight from the editor.'],
+    ['ph-cards', 'triggerverylongslides.jpg', 'Slide count', 'Generate longer decks, up to 21+ slides in one go, without splitting your story.'],
+    ['ph-star-four', 'triggerpromodelupgrade.jpg', 'Pro AI model', 'Enhanced quality on every generation: smarter content, sharper design.'],
+  ];
+  FEATS[0][1] = 'export.png';
+  const REASONS = ['Too expensive', 'Not using it enough', 'Missing features I need', 'Found a better alternative', 'Technical issues or bugs', 'Taking a temporary break', 'Other'];
+
+  const drawDialog = () => {
+    const s = st(), p = plan(), d = S.dialog;
+    if (!d) { ov.hidden = true; ov.innerHTML = ''; return; }
+    ov.hidden = false;
+    if (d === 'cancel') {
+      const k = S.step;
+      if (k === 'lose') ov.innerHTML = dlg(448, head('By cancelling, you’ll lose access to') + '<div class="bd"><div class="lrows">' + keepRows('<span class="badge neutral">' + hi('lock') + 'Locked</span>') + '</div>' + twoBtns + '</div>');
+      else if (k === 'reminder') ov.innerHTML = dlg(448, head('Worried about being charged next year without notice?', 'Keep your plan and we’ll email you a reminder before your renewal, so there are no surprises.') + '<div class="bd">' + twoBtns + '</div>');
+      else if (k === 'stays') ov.innerHTML = dlg(448, head('Nothing changes today, you’re on ' + p.name + ' until <span class="acc">' + fmtLong(endDate()) + '</span>', 'Cancelling only stops next year’s renewal. You keep full ' + p.name + ' access until then, here’s what stays yours:') +
+        '<div class="bd"><div class="lrows">' + keepRows('<span class="badge good">' + hi('check') + 'Till ' + fmtLong(endDate()) + '</span>') + '</div>' + twoBtns + '</div>');
+      else if (k === 'feedback') ov.innerHTML = dlg(448, head(s.trial ? 'What’s making you leave?' : 'Mind sharing why you’re cancelling?', s.trial ? 'Pick any that apply:' : 'It helps us improve. Pick any that apply.') +
+        '<div class="bd"><div class="reasons">' + REASONS.map((r) => '<label><input type="checkbox" data-r="' + r + '"' + (S.reasons.includes(r) ? ' checked' : '') + ' />' + r + '</label>').join('') + '</div>' +
+        (S.reasons.includes('Other') ? '<textarea class="other" rows="3" placeholder="Share details to help us improve…" id="other">' + S.other + '</textarea>' : '') + twoBtns + '</div>');
+      else if (k === 'offer') {
+        const f = FEATS[S.feat], save = Math.round(p.annual * 0.2);
+        const title = s.trial ? 'Before you cancel, here’s <span class="acc">20%</span> off to stay on ' + p.name + '.' : 'Before you cancel, here’s <span class="acc">20%</span> off your next renewal.';
+        ov.innerHTML = '<div class="nf" role="dialog" aria-modal="true" aria-labelledby="nf-t"><div class="left"><h3 id="nf-t">' + title + '</h3><div class="feats">' +
+          FEATS.map((x, i) => '<button type="button" class="fi' + (i === S.feat ? ' on' : '') + '" data-a="feat" data-v="' + i + '"><i class="ph' + (i === S.feat ? '-fill' : '') + ' ' + x[0] + '"></i>' + x[2] + '</button>').join('') + '</div></div>' +
+          '<div class="prev" style="background-image:url(assets/billing/nudge/dots.jpg)"><img src="assets/billing/nudge/' + f[1] + '" alt="" /></div>' +
+          '<div class="capn"><b>' + f[2] + '</b><span>' + f[3] + '</span></div>' +
+          '<div class="bar"><button type="button" class="cta out" data-a="docancel">Continue to cancel</button>' +
+          '<button type="button" class="cta main" data-a="stay">' + (s.trial ? 'Keep ' + p.name + ' at 20% off' : 'Stay on ' + p.name + ', save 20% off') +
+          '<span class="brk" role="tooltip"><b>' + (s.trial ? 'Your discount if you stay' : 'Your discount for next renewal') + '</b><span class="l"><span>' + p.name + ' Annual</span><span>' + money(p.annual) + '</span></span>' +
+          '<span class="l g"><span>Loyalty discount</span><span>-' + money(save) + '</span></span><span class="l t"><span>You pay</span><span>' + money(p.annual - save) + '/year</span></span></span></button></div></div>';
+      }
+    } else if (d === 'history') {
+      const H = [['New slides', 'Mani', 'Oct 29, 2026', 40], ['Rewrite with AI', 'Mani', 'Oct 28, 2026', 10], ['New presentation', 'Mani', 'Oct 24, 2026', 100], ['Image generation', 'Mani', 'Oct 22, 2026', 30], ['New slides', 'Mani', 'Oct 15, 2026', 20]];
+      ov.innerHTML = dlg(576, head('Credit History', '', true) + '<div class="bd"><table class="hist"><thead><tr><th style="width:52%">Event</th><th style="width:30%">Date</th><th>Credits</th></tr></thead><tbody>' +
+        (st().plan ? H : H.slice(2, 3)).map((h) => '<tr><td><span class="ev">' + h[0] + '</span><small>by ' + h[1] + '</small></td><td class="dt">' + h[2] + '</td><td class="tab">' + h[3] + '</td></tr>').join('') + '</tbody></table></div>');
+    } else if (d === 'activate') {
+      const off = S.coupon ? Math.round(p.annual * 0.2) : 0, renew = fmtLong(addDays(endDate(), 365));
+      ov.innerHTML = dlg(500, head('Unlock your full plan early', 'Skip the wait. Activate now to get all ' + num(p.credits) + ' ' + p.name + ' credits today instead of on day 7.', true) +
+        '<div class="bd"><div class="sum"><div class="l"><b>' + p.name + ' Plan</b><b>' + money(p.annual) + '</b></div><div class="l"><span>Full plan credits unlock (' + num(p.credits) + ')</span><span></span></div>' +
+        (off ? '<div class="l dis"><span>Discount (20% off applied)</span><span>-' + money(off) + '</span></div>' : '') + '<hr /><div class="l tot"><span>Due today:</span><span>' + money(p.annual - off) + '</span></div></div>' +
+        '<label class="consent"><input type="checkbox" id="consent"' + (S.consent ? ' checked' : '') + ' /><span>I agree to the <a href="#" onclick="return false">Terms</a>. Renews at ' + money(p.annual) + '/year on ' + renew + '</span></label>' +
+        '<div class="acts" style="justify-content:flex-end"><button type="button" class="btn ghost lg" data-a="close" style="flex:0 0 auto">Cancel</button><button type="button" class="btn pri lg" data-a="pay"' + (S.consent ? '' : ' disabled') + '>' +
+        (S.busy === 'pay' ? '<span class="spin"></span>' : '') + (S.coupon ? 'Activate now and get 20% off' : 'Activate full plan now') + '</button></div></div>');
+    } else if (d === 'success') {
+      ov.innerHTML = dlg(600, '<div class="won"><span class="ok">' + hi('check') + '</span><h3>Payment Successful</h3><p>You will receive a confirmation email with the order details.</p><p class="tab">Your Order ID: 4F7K-29QX</p>' +
+        '<button type="button" class="btn pri lg" data-a="done">Continue</button><p class="foot">You can review all your invoices in the Settings > Billing section.</p></div>');
+    }
+  };
+  const openCancel = (step) => { const steps = stepsFor(); S.dialog = 'cancel'; S.step = step && steps.includes(step) ? step : steps[0]; S.reasons = []; S.other = ''; S.feat = 0; drawDialog(); };
+
+  /* ---------- toast ---------- */
+  let tt;
+  const toast = (t) => { const el = document.getElementById('toast'); document.getElementById('toast-t').textContent = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => { el.hidden = true; }, 3200); };
+
+  /* ---------- wiring ---------- */
+  const setState = (k) => { S.state = k; S.dialog = null; drawBilling(); drawDialog(); paintProto(); };
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-a]');
+    if (!b) { if (e.target === ov && S.dialog && S.dialog !== 'success') { S.dialog = null; drawDialog(); } return; }
+    const a = b.dataset.a, v = b.dataset.v, s = st();
+    if (a === 'nav') return toast(v + ' is outside this proto.');
+    if (a === 'plans') return toast('Opens the plans (pricing screen).');
+    if (a === 'renew') return toast('Opens the plans with 20% off your first year, for returning subscribers.');
+    if (a === 'buy') return s.plan && !s.expired ? toast('Opens the credit packs.') : toast('Opens the plans (pricing screen).');
+    if (a === 'pack') return toast('Opens checkout for ' + num(Number(v)) + ' credits.');
+    if (a === 'history') { S.dialog = 'history'; return drawDialog(); }
+    if (a === 'activate') { S.dialog = 'activate'; S.coupon = false; S.consent = false; return drawDialog(); }
+    if (a === 'cancel') return openCancel();
+    if (a === 'close' || a === 'keep') { S.dialog = null; return drawDialog(); }
+    if (a === 'cnext') { const steps = stepsFor(), i = steps.indexOf(S.step); if (i < steps.length - 1) { S.step = steps[i + 1]; return drawDialog(); } }
+    if (a === 'cnext' || a === 'docancel') {
+      // Payment.cancelSubscriptionRenewal: renewal off, access stays to the end date (a trial just ends)
+      S.dialog = null; drawDialog();
+      if (s.trial) { setState('free'); return toast('Your auto-renewal has been cancelled.'); }
+      setState('cancelled'); return toast('Your auto-renewal has been cancelled.');
+    }
+    if (a === 'stay') {
+      if (s.trial) { S.dialog = 'activate'; S.coupon = true; S.consent = false; return drawDialog(); }
+      setState('pro-discount'); return toast('Your 20% renewal discount has been applied');
+    }
+    if (a === 'reactivate') { setState('pro'); return toast('Cancellation removed'); }
+    if (a === 'feat') { S.feat = Number(v); return drawDialog(); }
+    if (a === 'pay') { S.busy = 'pay'; drawDialog(); setTimeout(() => { S.busy = null; S.dialog = 'success'; drawDialog(); }, 900); return; }
+    if (a === 'done') { setState('pro'); return; }
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.dataset.r) { const r = e.target.dataset.r; S.reasons = e.target.checked ? S.reasons.concat(r) : S.reasons.filter((x) => x !== r); if (r === 'Other') drawDialog(); }
+    if (e.target.id === 'consent') { S.consent = e.target.checked; drawDialog(); }
+  });
+  document.addEventListener('input', (e) => { if (e.target.id === 'other') S.other = e.target.value; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.dialog && S.dialog !== 'success') { S.dialog = null; drawDialog(); } });
+
+  /* ---------- proto controls ---------- */
+  const proto = document.getElementById('proto');
+  document.getElementById('proto-t').addEventListener('click', () => proto.classList.toggle('shut'));
+  const paintProto = () => {
+    document.getElementById('proto-b').innerHTML = '<b>Workspace</b>' + Object.keys(STATES).map((k) => '<button type="button" class="' + (k === S.state ? 'on' : '') + '" data-st="' + k + '">' + STATES[k].label + '</button>').join('');
+  };
+  document.getElementById('proto-b').addEventListener('click', (e) => { const b = e.target.closest('[data-st]'); if (b) setState(b.dataset.st); });
+
+  /* ---------- deep links: ?state=…&open=cancel|history|activate&step=… ---------- */
+  const q = new URLSearchParams(location.search);
+  if (STATES[q.get('state')]) S.state = q.get('state');
+  drawNav(); drawBilling(); paintProto();
+  if (q.get('open') === 'cancel') openCancel(q.get('step'));
+  if (q.get('open') === 'history') { S.dialog = 'history'; drawDialog(); }
+  if (q.get('open') === 'activate') { S.dialog = 'activate'; S.coupon = q.get('coupon') === '1'; drawDialog(); }
+  if (q.get('open') === 'success') { S.dialog = 'success'; drawDialog(); }
+  if (q.get('feat')) { S.feat = Number(q.get('feat')) || 0; drawDialog(); }
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
