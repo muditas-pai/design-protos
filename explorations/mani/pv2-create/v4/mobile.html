@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PV2 Create Mobile v4</title>
+<link rel="stylesheet" href="../tokens.css">
+<script type="importmap">
+{ "imports": {
+  "react": "https://esm.sh/react@18.3.1",
+  "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+  "agentation": "https://esm.sh/agentation@3.1.2?deps=react@18.3.1,react-dom@18.3.1"
+} }
+</script>
+<script type="module">
+  try {
+    const [React, { createRoot }, { Agentation }] = await Promise.all([import("react"), import("react-dom/client"), import("agentation")]);
+    const host = document.createElement("div"); host.id = "agentation-host"; document.body.appendChild(host);
+    createRoot(host).render(React.createElement(Agentation, { appName: "PV2 create v4 mobile", useHashLocation: true }));
+  } catch (e) { console.warn("Agentation failed to load", e); }
+</script>
+<style>
+  body { margin: 0; background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; background: rgb(var(--ink)); color: rgb(var(--canvas)); }
+  .bar b { font-size: 13px; font-weight: 600; }
+  .bar small { font-size: 12px; color: rgb(var(--canvas) / .65); flex: 1 1 260px; }
+  .bar a, .bar button { height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid rgb(var(--canvas) / .18); background: transparent; color: rgb(var(--canvas)); font: inherit; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; }
+  .bar button[aria-pressed="true"] { background: rgb(var(--canvas)); color: rgb(var(--ink)); }
+  .seg { display: inline-flex; gap: 4px; }
+  .tabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 6px; background: rgb(var(--canvas) / .1); }
+  .tabs a, .tabs span { height: 28px; padding: 0 12px; border-radius: 6px; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; text-decoration: none; color: rgb(var(--canvas) / .7); border: 0; }
+  .tabs a:hover { color: rgb(var(--canvas)); }
+  .tabs [aria-current] { background: rgb(var(--canvas)); color: rgb(var(--ink)); }
+  .wall { display: flex; gap: 40px; padding: 32px 24px 48px; overflow-x: auto; align-items: flex-start; justify-content: safe center; }
+  .dev { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .dev h2 { margin: 0; font-size: 13px; font-weight: 600; }
+  .dev h2 span { font-weight: 400; color: rgb(var(--ink-3)); }
+  .dev .note { margin: -6px 0 0; max-width: 390px; text-align: center; font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); }
+  .frame { padding: 12px; border-radius: 48px; background: #14141f; box-shadow: var(--sh-dialog); }
+  .screen { position: relative; overflow: hidden; border-radius: 36px; background: #fff; }
+  .frame.android { border-radius: 32px; padding: 10px; } .frame.android .screen { border-radius: 22px; }
+  .screen iframe { display: block; border: 0; background: #fff; transition: height .25s cubic-bezier(.2,0,0,1); }
+  /* On-screen keyboard. Opening it shrinks the page above, like a real phone. */
+  .kb { position: absolute; left: 0; right: 0; bottom: 0; transform: translateY(100%); transition: transform .25s cubic-bezier(.2,0,0,1); user-select: none; -webkit-user-select: none; font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; }
+  .kb.on { transform: none; }
+  .kb .sug { display: flex; height: 40px; align-items: center; }
+  .kb .sug span { flex: 1; text-align: center; font-size: 15px; color: #1c1c1e; }
+  .kb .sug span + span { border-left: 1px solid rgb(0 0 0 / .12); }
+  .kb .rows { padding: 4px 3px 30px; display: flex; flex-direction: column; gap: 11px; }
+  .kb .row { display: flex; justify-content: center; gap: 6px; }
+  .kb .k { flex: 0 0 auto; width: calc((100% - 54px) / 10); height: 42px; border: 0; border-radius: 5px; background: #fff; color: #000; font: inherit; font-size: 22px; display: grid; place-items: center; box-shadow: 0 1px 0 rgb(0 0 0 / .3); cursor: pointer; padding: 0; }
+  .kb .k:active { background: #c9ccd3; }
+  .kb .k.fn { background: #abb0ba; font-size: 15px; }
+  .kb .k.wide { width: calc((100% - 54px) / 10 * 1.35); }
+  .kb .k.space { flex: 1; font-size: 15px; }
+  .kb .k.ret { width: 88px; font-size: 15px; }
+  .kb .k.on { background: #fff; }
+  .kb.ios { background: #d1d4db; }
+  .kb.android { background: #eef0f6; }
+  .kb.android .rows { padding-bottom: 18px; gap: 8px; }
+  .kb.android .k { height: 46px; border-radius: 8px; box-shadow: none; font-family: Roboto, system-ui, sans-serif; font-size: 20px; }
+  .kb.android .k.fn { background: #d6dbe8; }
+  .kb.android .k.ret { background: #3d5afe; color: #fff; border-radius: 22px; width: 56px; }
+  .kb.android .sug span { font-family: Roboto, system-ui, sans-serif; color: #3a3d46; }
+  .dev a { font-size: 12px; color: rgb(var(--brand-fg)); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="tabs" role="group" aria-label="Platform"><a href="./">Web</a><span aria-current="page">Mobile</span></span>
+  <b>PV2 create · mobile</b>
+  <small>iPhone 390×844. Tap a prompt to bring up the keyboard; its keys type. Keyboard keeps it open on both.</small>
+  <span class="seg"><button id="kbPin" aria-pressed="false" title="Keep the keyboard open">Keyboard</button></span>
+</div>
+<div class="wall" id="wall"></div>
+<script>
+const DEVICES = [
+  ["i", "b", "Box at the bottom", "Prompt in the thumb zone, rides on the keyboard. Express, Deep search, Cite sources and Design are one-tap chips; Options opens a full-screen page.", 390, 844, "", 300],
+];
+const ROWS = { abc: ["qwertyuiop", "asdfghjkl", "zxcvbnm"], num: ["1234567890", "-/:;()$&@\"", ".,?!'"] };
+let pinned = false, mode = "abc", shift = true;
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+function kbHTML(c) {
+  const r = ROWS[mode], cap = (ch) => (shift && mode === "abc" ? ch.toUpperCase() : ch);
+  const keys = (str) => [...str].map((ch) => `<button class="k" data-k="${ch.replace(/"/g, "&quot;")}">${cap(ch).replace(/</g, "&lt;")}</button>`).join("");
+  return `<div class="sug">${c ? "<span>the</span><span>deck</span><span>for</span>" : "<span>&ldquo;the&rdquo;</span><span>deck</span><span>for</span>"}</div>
+    <div class="rows">
+      <div class="row">${keys(r[0])}</div>
+      <div class="row">${keys(r[1])}</div>
+      <div class="row"><button class="k fn wide ${shift && mode === "abc" ? "on" : ""}" data-f="${mode === "abc" ? "shift" : "abc"}">${mode === "abc" ? "⇧" : "ABC"}</button>${keys(r[2])}<button class="k fn wide" data-f="del" aria-label="Delete">⌫</button></div>
+      <div class="row"><button class="k fn wide" data-f="${mode === "abc" ? "num" : "abc"}">${mode === "abc" ? "123" : "ABC"}</button><button class="k space" data-f="space">${c ? "" : "space"}</button><button class="k fn ret" data-f="ret">${c ? "↵" : "return"}</button></div>
+    </div>`;
+}
+function draw() {
+  $("#wall").innerHTML = DEVICES.map(([o, m, n, note, w, hh, c, kh], i) => {
+    const src = `./?opt=${o}${m ? "&m=" + m : ""}`;
+    return `<div class="dev"><h2>${n}</h2><p class="note">${note}</p><div class="frame ${c}"><div class="screen" style="width:${w}px;height:${hh}px" data-h="${hh}" data-kh="${kh}"><iframe src="${src}" width="${w}" height="${hh}" title="${n}"></iframe><div class="kb ${c || "ios"}" style="height:${kh}px" data-dev="${i}">${kbHTML(c)}</div></div></div><a href="${src}" target="_blank" rel="noopener">Open full page</a></div>`;
+  }).join("");
+  $$(".screen").forEach(wire);
+}
+const typable = (el) => el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && /^(text|search|)$/.test(el.type))) && !el.readOnly;
+function setKb(scr, on) {
+  on = on || pinned;
+  const f = $("iframe", scr), kb = $(".kb", scr);
+  kb.classList.toggle("on", on);
+  f.style.height = (on ? scr.dataset.h - scr.dataset.kh : scr.dataset.h) + "px";
+  if (on) { const el = f.contentDocument?.activeElement; if (typable(el)) setTimeout(() => el.scrollIntoView?.({ block: "nearest" }), 260); }
+}
+function wire(scr) {
+  const f = $("iframe", scr), kb = $(".kb", scr);
+  f.addEventListener("load", () => {
+    const d = f.contentDocument; if (!d) return;
+    d.addEventListener("focusin", (e) => setKb(scr, typable(e.target)));
+    // The page focuses the prompt on load, so a tap may not fire a new focus event: open on tap too.
+    ["pointerdown", "click"].forEach((t) => d.addEventListener(t, (e) => { if (typable(e.target)) setKb(scr, true); }));
+    d.addEventListener("focusout", () => setTimeout(() => setKb(scr, typable(d.activeElement)), 0));
+    setKb(scr, false);
+  });
+  // Keys never steal focus from the page, so the caret stays in the prompt.
+  kb.addEventListener("mousedown", (e) => e.preventDefault());
+  kb.addEventListener("click", (e) => {
+    const b = e.target.closest(".k"); if (!b) return;
+    const w = f.contentWindow, el = f.contentDocument?.activeElement;
+    const fn = b.dataset.f;
+    if (fn === "shift") { shift = !shift; return redrawKb(); }
+    if (fn === "num" || fn === "abc") { mode = fn; return redrawKb(); }
+    if (!typable(el)) return;
+    const s0 = el.selectionStart ?? el.value.length, s1 = el.selectionEnd ?? s0;
+    let text = null;
+    if (fn === "del") { if (s0 === s1 && s0 > 0) el.setRangeText("", s0 - 1, s0, "end"); else el.setRangeText("", s0, s1, "end"); }
+    else if (fn === "space") text = " ";
+    else if (fn === "ret") text = el.tagName === "TEXTAREA" ? "\n" : null;
+    else { const ch = b.dataset.k; text = shift && mode === "abc" ? ch.toUpperCase() : ch; }
+    if (text !== null) el.setRangeText(text, s0, s1, "end");
+    el.dispatchEvent(new w.Event("input", { bubbles: true }));
+    if (shift && mode === "abc" && !fn) { shift = false; redrawKb(); }
+    if (fn === "space" || fn === "ret") { const v = el.value.trimEnd(); if (/[.?!]$/.test(v) || !v) { shift = true; redrawKb(); } }
+  });
+}
+function redrawKb() { $$(".kb").forEach((kb) => { kb.innerHTML = kbHTML(kb.classList.contains("android") ? "android" : ""); }); }
+$("#kbPin").addEventListener("click", () => { pinned = !pinned; $("#kbPin").setAttribute("aria-pressed", pinned); $$(".screen").forEach((scr) => setKb(scr, typable($("iframe", scr).contentDocument?.activeElement))); });
+draw();
+</script>
+</body>
+</html>
