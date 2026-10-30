@@ -111,7 +111,9 @@
   /* Popovers */
   .pop-anchor { position: relative; display: inline-flex; }
   .pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 40; min-width: 240px; max-width: calc(100vw - 32px); }
-  .pop .menu { padding: 6px; max-width: calc(100vw - 32px); max-height: calc(100vh - var(--review-h, 44px) - 180px); overflow: auto; overscroll-behavior: contain; }
+  .pop .menu { padding: 6px; max-width: calc(100vw - 32px); overflow: auto; overscroll-behavior: contain; }
+  .pop.up { top: auto; bottom: calc(100% + 8px); }
+  .pop.up .menu { transform-origin: bottom left; }
   .pop-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 8px; }
   .pop-h b { font-size: 14px; font-weight: 600; color: rgb(var(--ink)); }
   .pop .eyebrow { padding: 8px 8px 6px; display: block; }
@@ -124,6 +126,7 @@
   .mi .ico { width: 32px; height: 32px; border-radius: 6px; background: rgb(var(--sunken)); display: grid; place-items: center; color: rgb(var(--ink-2)); flex-shrink: 0; }
   .sep { height: 1px; background: rgb(var(--line)); margin: 6px 0; }
   .mi .ico.on { background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); }
+  .mi:hover .ico:not(.on), .mi:focus-visible .ico:not(.on) { background: rgb(var(--surface)); box-shadow: inset 0 0 0 1px rgb(var(--line)); }
   .pick { display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 0 10px; border: 1px solid rgb(var(--line)); border-radius: 6px; background: rgb(var(--canvas)); color: rgb(var(--ink)); font-size: 14px; cursor: pointer; text-align: left; }
   .pick:hover { border-color: rgb(var(--ink-3) / .4); }
   .pick .caret { width: 14px; height: 14px; color: rgb(var(--ink-3)); }
@@ -246,12 +249,16 @@
   .brief p b.empty { color: rgb(var(--ink-3)); font-weight: 400; font-style: italic; }
   .tok { display: inline; padding: 2px 0 1px 1px; margin: 0; border: 0; border-radius: 4px; background: transparent; color: rgb(var(--brand-fg)); font-size: inherit; font-weight: 500; line-height: inherit; cursor: pointer; text-decoration: underline dotted rgb(var(--brand-fg) / .5); text-underline-offset: 4px; transition: background .15s var(--ease); }
   .tok:hover, .tok[aria-expanded="true"] { background: rgb(var(--brand-50)); text-decoration-color: transparent; }
+  .tok.tog-tok { color: rgb(var(--ink-3)); text-decoration: none; font-weight: 400; padding: 2px 6px; }
+  .tok.tog-tok:hover { color: rgb(var(--ink)); background: rgb(var(--sunken)); }
+  .tok.tog-tok.on { color: rgb(var(--brand-fg)); background: rgb(var(--brand-50)); font-weight: 500; }
   .tok.add { color: rgb(var(--ink-3)); text-decoration: none; font-weight: 400; }
   .tok.add:hover { color: rgb(var(--ink)); background: rgb(var(--sunken)); }
   .tok .dots { vertical-align: -2px; margin-right: 2px; }
   .tok .caret { display: inline-block; width: 11px; height: 11px; vertical-align: -1px; margin-left: 0; opacity: .6; }
   .brief .pop-anchor { display: inline; position: relative; }
   .brief .pop { top: calc(100% + 6px); }
+  .brief .pop.up { top: auto; bottom: calc(100% + 6px); }
 
   /* Toasts and motion */
   #toasts { position: fixed; top: calc(var(--review-h, 44px) + 68px); left: 50%; transform: translateX(-50%); z-index: 80; width: min(420px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
@@ -264,6 +271,9 @@
   .rise.d1 { animation-delay: .05s; } .rise.d2 { animation-delay: .1s; } .rise.d3 { animation-delay: .15s; }
   .menu.still, .still .rise, .still .ex, .still .cta-row { animation: none !important; }
   @media (prefers-reduced-motion: reduce) { .rise, .ex, .toast, .menu { animation: none !important; } }
+  /* Short screens (Windows laptops at 125% scaling): pull the box up so menus have room. */
+  @media (max-height: 820px) { .stage { padding-top: 28px; } .hero { margin-bottom: 14px; } .hero h1 { font-size: 26px; line-height: 32px; } textarea.prompt { min-height: 84px; } .topbar { height: 56px; } }
+  @media (max-height: 680px) { .stage { padding-top: 16px; } .hero h1 { font-size: 22px; line-height: 28px; } textarea.prompt { min-height: 64px; } }
   @media (max-width: 640px) { .chip, .look-pill { height: 40px; }   .role-btn { min-height: 36px; min-width: 36px; } .file button { width: 32px; height: 32px; }
   .credits .bar { display: none; } .hero h1 { font-size: 26px; line-height: 32px; } .stage { padding-top: 28px; } }
 
@@ -360,7 +370,7 @@
 <script>
 /* ---------- Data (mirrors PV2: OnboardLandingUI + ChatSettingsPopover + LooksPicker) ---------- */
 const OPTS = {
-  a: { name: "A2 · Composer", rec: true, note: "Recommended. Design opens today's Brand Kit modal. Budget tier and Deep search sit in the toolbar, Length lives inside Options. Credits beside Create, examples follow your role." },
+  a: { name: "A2 · Composer", rec: true, note: "Recommended. Design opens today's Brand Kit modal. Budget tier, Fast and Deep search sit in the toolbar, Length lives inside Options. Credits beside Create, examples follow your role." },
   c: { name: "C2 · Brief", note: "Settings read as one brief under the prompt, with the topic pulled in as you type. Dotted words change in place. Credits at the end." },
 };
 const LOOKS = [
@@ -384,7 +394,6 @@ const LANGS = ["Auto", "English", "Spanish", "French", "German", "Hindi", "Japan
 const ROLES = ["Founder", "Sales", "Marketing", "Consultant", "Teacher", "Student", "Product manager"];
 const BUDGET = [
   { id: "auto", label: "Automatic", sub: "Picks Premium, Standard or Efficient from your topic", icon: "sparkle", x: 1 },
-  { id: "fast", label: "Fast", sub: "No questions, a quick first draft", icon: "bolt", x: .5 },
   { id: "efficient", label: "Efficient", sub: "Basic effort for simple work", icon: "bars1", x: .5 },
   { id: "standard", label: "Standard", sub: "Balanced effort for regular work", icon: "bars2", x: 1 },
   { id: "premium", label: "Premium", sub: "Maximum effort for important work", icon: "bars3", x: 2 },
@@ -419,7 +428,7 @@ const PLACEHOLDERS = [
 const METHODS = [
   { id: "import", ico: "ppt", title: "Import PowerPoint", sub: "Redesign an existing deck" },
   { id: "template", ico: "grid", title: "Choose a template", sub: "Start from a ready layout" },
-  { id: "expert", ico: "spark", title: "Hire an expert", sub: "A designer builds it for you" },
+  { id: "expert", ico: "penRuler", title: "Hire an expert", sub: "A designer builds it for you" },
   { id: "update", ico: "refresh", title: "Update a presentation", sub: "Refresh numbers in a deck" },
 ];
 const CREDITS_PER_SLIDE = 10, DEEP_PER_SLIDE = 20, CREDITS_LEFT = 124;
@@ -440,10 +449,12 @@ const P = {
   ppt: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 16V8h3.5a2.5 2.5 0 0 1 0 5H9"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+  penRuler: '<path d="M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13"/><path d="m8 6 2-2"/><path d="m18 16 2-2"/><path d="m17 11 4.3 4.3c.94.94.94 2.46 0 3.4l-2.6 2.6c-.94.94-2.46.94-3.4 0L11 17"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
   refresh: '<path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/>',
   rocket: '<path d="M5 15c-1.5 1.5-2 5-2 5s3.5-.5 5-2M14 4c3-1 6-1 6-1s0 3-1 6l-6 6-5-5 6-6Z"/><circle cx="15" cy="9" r="1.5"/>',
   chart: '<path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2 .8 3.5 2.8 3.5 5.5"/>',
+  rocket: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
   crown: '<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/>',
   bookOpen: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
   book: '<path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2V5Z"/><path d="M4 20a2 2 0 0 0 2 1h13"/>',
@@ -463,15 +474,18 @@ const P = {
 const ic = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || ""}</svg>`;
 
 /* ---------- State ---------- */
-const S = { opt: "a", prompt: "", files: [], look: "auto", slides: "auto", proHint: false, budget: "auto", optView: "main", slDD: false, lang: "Auto", role: "Founder", detail: "auto", useCase: "", shown: "", narrative: "", missing: "estimate", adv: false, notes: false, deep: false, busy: false, bTab: "foryou" };
+const S = { opt: "a", prompt: "", files: [], look: "auto", slides: "auto", proHint: false, budget: "auto", optView: "main", slDD: false, lang: "Auto", role: "Founder", detail: "auto", useCase: "", shown: "", narrative: "", missing: "estimate", adv: false, notes: false, deep: false, fast: false, busy: false, bTab: "foryou" };
 const q = new URLSearchParams(location.search);
 if (OPTS[q.get("opt")]) S.opt = q.get("opt");
+/* C2 (brief) opens with a look already picked; A2 starts on Auto. */
+const LOOK_DEFAULT = { a: "auto", c: "slate" };
+S.look = LOOK_DEFAULT[S.opt] || "auto";
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const lookObj = () => (S.look === "kit" ? KIT : LOOKS.find((l) => l.id === S.look));
 const slideObj = () => SLIDES.find((s) => s.id === S.slides);
-const changedCount = () => (S.lang !== "Auto") + (S.detail !== "auto") + (S.slides !== "auto") + !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "estimate") + S.notes + (S.opt === "c" ? S.deep : 0);
+const changedCount = () => (S.lang !== "Auto") + (S.detail !== "auto") + (S.slides !== "auto") + !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "estimate") + S.notes + (S.opt === "c" ? S.deep + S.fast : 0);
 const budgetObj = () => BUDGET.find((b) => b.id === S.budget);
 const canGo = () => !S.busy && (S.prompt.trim().length >= 10 || S.files.length > 0);
 const estimate = () => { const n = slideObj().n; return Math.round((n * CREDITS_PER_SLIDE + (S.deep ? n * DEEP_PER_SLIDE : 0)) * budgetObj().x); };
@@ -496,6 +510,7 @@ function composer({ design = true, budget = true, deep = true, options = true, l
         ${design ? `<button class="chip lk-trigger" data-looks aria-haspopup="dialog" aria-expanded="false" data-bind="designChip"></button>` : ""}
         ${lookPill ? `<button class="chip lk-trigger" data-looks aria-haspopup="dialog" aria-expanded="false" data-bind="designChip"></button>` : ""}
         ${budget ? `<span class="pop-anchor"><button class="chip" data-pop="budget" aria-haspopup="true" aria-expanded="false" data-bind="budgetChip"></button></span>` : ""}
+        ${deep ? `<button class="chip" data-toggle="fast" role="switch" aria-checked="false" title="No questions, a quick first draft" data-bind="fastChip"></button>` : ""}
         ${deep ? `<button class="chip" data-toggle="deep" role="switch" aria-checked="false" title="Consultant-grade research and exhibits" data-bind="deepChip"></button>` : ""}
         ${options ? `<span class="pop-anchor"><button class="chip" data-pop="options" aria-haspopup="true" aria-expanded="false" data-bind="optChip"></button></span>` : ""}
       </div>
@@ -561,6 +576,7 @@ function sync() {
       ? `<span class="kl" style="background:${l.a}">N</span><span class="nm">${esc(l.name)}</span>${dotsHTML(l)}${ic("caret", "caret")}`
       : `${ic("palette")}<span>Design</span>${l ? dotsHTML(l) : ""}${ic("caret", "caret")}`;
   });
+  $$('[data-bind="fastChip"]').forEach((b) => { b.innerHTML = `${ic("rocket")}<span>Fast</span>`; b.classList.toggle("on", S.fast); b.setAttribute("aria-checked", S.fast); });
   $$('[data-bind="deepChip"]').forEach((b) => { b.innerHTML = `${ic("telescope")}<span>Deep search</span>`; b.classList.toggle("on", S.deep); b.setAttribute("aria-checked", S.deep); });
   $$('[data-bind="budgetChip"]').forEach((b) => (b.innerHTML = `${ic(budgetObj().icon)}<span>${budgetObj().label}</span>${ic("caret", "caret")}`));
   $$('[data-bind="optChip"]').forEach((b) => { b.innerHTML = `${ic("sliders")}<span>Options</span>${n ? `<span class="count">${n}</span>` : ""}`; b.classList.toggle("on", n > 0); });
@@ -598,9 +614,9 @@ function sync() {
     const nr = S.narrative ? lc1(NARRATIVES.find((x) => x[0] === S.narrative)[1]) : "";
     const storyN = !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "estimate");
     br.innerHTML = `
-      <span class="eyebrow">Your brief ${n || S.look !== "auto" || S.slides !== "auto" || S.budget !== "auto" ? `<button data-reset>Reset</button>` : ""}</span>
-      <p>Make ${art(len)} ${tok("slides", len)} deck ${t ? `about <b>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</b> ` : S.files.length ? "" : `about <b class="empty">your topic</b> `}from ${tok("attach", S.files.length ? esc(S.files.length === 1 ? S.files[0] : S.files.length + " files") : ic("plus") + "your files", S.files.length ? "" : "add")} for ${tok("role", plural(S.role))}, in ${tok("lang", S.lang === "Auto" ? "the language I write in" : S.lang)}, at ${tok("detail", DETAIL.find((d) => d.id === S.detail).label.toLowerCase() + " detail")}, using <span class="pop-anchor"><button class="tok" data-looks aria-haspopup="dialog" aria-expanded="false">${l ? dotsHTML(l) + " " + esc(l.name) : "a look that fits"}</button></span>, with ${tok("budget", budgetObj().label.toLowerCase() + " effort")}${extras.length ? ` and ${extras.map((e) => tok("extras", e)).join(" and ")}` : ""}${uc ? `. Treat it as ${art(uc)} ${tok("story", esc(uc))}` : ""}${nr ? `${uc ? ", told as" : ". Tell it as"} ${art(nr)} ${tok("story", esc(nr))}` : ""}${S.shown ? `${uc || nr ? "," : ". It's"} ${tok("story", SHOWN_PHRASE[S.shown])}` : ""}${S.missing === "placeholder" ? `${uc || nr || S.shown ? "," : ". Use"} ${uc || nr || S.shown ? "with " : ""}${tok("story", "placeholders where data is missing")}` : ""}.</p>
-      <div class="extras">${!S.notes || !S.deep ? tok("extras", ic("plus") + (extras.length ? "Add more" : "Add speaker notes or deep search"), "add") : ""}${!S.notes || !S.deep ? " · " : ""}${tok("story", ic("plus") + (storyN ? "Edit story and audience" : "Add story and audience"), "add")}</div></div>`;
+      <span class="eyebrow">Your brief ${n || S.look !== LOOK_DEFAULT.c || S.slides !== "auto" || S.budget !== "auto" ? `<button data-reset>Reset</button>` : ""}</span>
+      <p>Make ${art(len)} ${tok("slides", len)} deck ${t ? `about <b>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</b> ` : S.files.length ? "" : `about <b class="empty">your topic</b> `}from ${tok("attach", S.files.length ? esc(S.files.length === 1 ? S.files[0] : S.files.length + " files") : ic("plus") + "your files", S.files.length ? "" : "add")} for ${tok("role", plural(S.role))}, in ${tok("lang", S.lang === "Auto" ? "the language I write in" : S.lang)}, at ${tok("detail", DETAIL.find((d) => d.id === S.detail).label.toLowerCase() + " detail")}, using <span class="pop-anchor"><button class="tok" data-looks aria-haspopup="dialog" aria-expanded="false">${l ? dotsHTML(l) + " " + esc(l.name) : "a look that fits"}</button></span>, with ${tok("budget", budgetObj().label.toLowerCase() + " effort")}${extras.length ? ` and ${extras.map((e) => tok("extras", e)).join(" and ")}` : ""}${uc ? `. Treat it as ${art(uc)} ${tok("story", esc(uc))}` : ""}${nr ? `${uc ? ", told as" : ". Tell it as"} ${art(nr)} ${tok("story", esc(nr))}` : ""}${S.shown ? `${uc || nr ? "," : ". It's"} ${tok("story", SHOWN_PHRASE[S.shown])}` : ""}${S.missing === "placeholder" ? `${uc || nr || S.shown ? "," : ". Use"} ${uc || nr || S.shown ? "with " : ""}${tok("story", "placeholders where data is missing")}` : ""}${S.fast ? `. <button class="tok" data-toggle="fast" role="switch" aria-checked="true" title="Turn off Fast">${ic("rocket")}No questions, straight to slides</button>` : ""}.</p>
+      <div class="extras"><button class="tok tog-tok ${S.fast ? "on" : ""}" data-toggle="fast" role="switch" aria-checked="${S.fast}" title="No questions, a quick first draft">${ic("rocket")}Fast</button> · ${!S.notes || !S.deep ? tok("extras", ic("plus") + (extras.length ? "Add more" : "Add speaker notes or deep search"), "add") + " · " : ""}${tok("story", ic("plus") + (storyN ? "Edit story and audience" : "Add story and audience"), "add")}</div></div>`;
   }
 }
 const roleLabel = (r) => ({ Founder: "founders", Sales: "sales teams", Marketing: "marketers", Consultant: "consultants", Teacher: "teachers", Student: "students", "Product manager": "product managers" }[r] || r);
@@ -654,10 +670,29 @@ const togs = (withDeep = S.opt === "c") => `
 
 let openPop = null;
 // Keep the popover fully on screen: clamp its left edge between 16px gutters.
-function place(el) {
+/* Popover placement, built for short Windows laptop screens (often 600 to 700px of usable height).
+   Opens below when it fits, flips above when there is more room there, caps its height to the room
+   it has and scrolls inside. Keeps the same direction while open so it never jumps on a re-render. */
+const POP_GAP = 8, POP_EDGE = 12, POP_MIN = 320;
+function chromeBottom() { const t = $(".topbar"); return t ? Math.max(0, t.getBoundingClientRect().bottom) : 0; }
+function place(el, opts = {}) {
+  const m = el.firstElementChild; if (!m) return;
   const a = el.parentElement.getBoundingClientRect();
   const w = el.offsetWidth;
   el.style.left = Math.max(16 - a.left, Math.min(0, innerWidth - 16 - a.left - w)) + "px";
+  m.style.maxHeight = "none";
+  const need = m.scrollHeight;
+  let below = innerHeight - a.bottom - POP_GAP - POP_EDGE, above = a.top - chromeBottom() - POP_GAP - POP_EDGE;
+  /* Not enough room either way: nudge the page so the opener sits higher, once, on open. */
+  if (opts.open && Math.max(below, above) < Math.min(need, POP_MIN)) {
+    const want = Math.min(need, POP_MIN) - below;
+    const room = document.documentElement.scrollHeight - innerHeight - scrollY;
+    if (want > 0 && room > 0) { scrollBy({ top: Math.min(want, room), behavior: "instant" }); const b = el.parentElement.getBoundingClientRect(); below = innerHeight - b.bottom - POP_GAP - POP_EDGE; above = b.top - chromeBottom() - POP_GAP - POP_EDGE; }
+  }
+  let dir = opts.open || !el.dataset.dir ? (need <= below || below >= above ? "down" : "up") : el.dataset.dir;
+  el.dataset.dir = dir;
+  el.classList.toggle("up", dir === "up");
+  m.style.maxHeight = Math.max(160, Math.floor(dir === "up" ? above : below)) + "px";
 }
 /* Sync, but keep an open popover alive when its anchor was redrawn (the C2 brief redraws on every change). */
 function syncKeep() {
@@ -680,7 +715,7 @@ function togglePop(btn) {
   el.className = "pop";
   el.innerHTML = popHTML(id);
   btn.parentElement.appendChild(el);
-  place(el); requestAnimationFrame(() => place(el));
+  place(el, { open: true }); requestAnimationFrame(() => place(el));
   btn.setAttribute("aria-expanded", "true");
   openPop = { btn, el, id, view: S.optView };
   bindPopInputs(el);
@@ -765,7 +800,7 @@ function submit() {
   if (!canGo()) { if (!S.busy) toast("Add a few more words", "Write at least 10 characters, or add a file.", "text"); return; }
   S.busy = true; sync();
   const l = lookObj();
-  toast("Creating your deck", `${slideObj().short} · ${l ? l.name : "Auto design"} . Opens the outline next.`);
+  toast("Creating your deck", `${slideObj().short} · ${l ? l.name : "Auto design"}${S.fast ? ". No questions, building your slides now." : ". Opens the outline next."}`);
   setTimeout(() => { S.busy = false; sync(); }, 2200);
 }
 function toast(title, sub, icon = "check") {
@@ -780,7 +815,7 @@ const METHOD_TOAST = { back: "Goes back to the dashboard", close: "Closes create
 document.addEventListener("click", (e) => {
   const t = e.target;
   const opt = t.closest("[data-opt]");
-  if (opt) { S.opt = opt.dataset.opt; closePop(); history.replaceState(null, "", "?opt=" + S.opt); render(); return; }
+  if (opt) { if (S.look === (LOOK_DEFAULT[S.opt] || "auto")) S.look = LOOK_DEFAULT[opt.dataset.opt] || "auto"; S.opt = opt.dataset.opt; closePop(); history.replaceState(null, "", "?opt=" + S.opt); render(); return; }
   dropOrphanPop();
   if (t.closest("[data-lk-close]")) { closeLooks(); return; }
   const lkt = t.closest("[data-lk-tab]");
@@ -818,7 +853,7 @@ document.addEventListener("click", (e) => {
   if (dt) { S.detail = dt.dataset.detail; sync(); if (openPop && openPop.id === "options") refreshPop(); else closePop(); return; }
   const tg = t.closest("[data-toggle]");
   if (tg) { e.preventDefault(); S[tg.dataset.toggle] = !S[tg.dataset.toggle]; sync(); dropOrphanPop(); refreshPop(); return; }
-  if (t.closest("[data-reset]")) { Object.assign(S, { lang: "Auto", detail: "auto", useCase: "", shown: "", narrative: "", missing: "estimate", notes: false, slides: "auto" }); if (t.closest("#brief")) Object.assign(S, { look: "auto", budget: "auto", deep: false }); sync(); dropOrphanPop(); refreshPop(); return; }
+  if (t.closest("[data-reset]")) { Object.assign(S, { lang: "Auto", detail: "auto", useCase: "", shown: "", narrative: "", missing: "estimate", notes: false, slides: "auto" }); if (t.closest("#brief")) Object.assign(S, { look: LOOK_DEFAULT.c, budget: "auto", deep: false, fast: false }); sync(); dropOrphanPop(); refreshPop(); return; }
   const ms = t.closest("[data-miss]");
   if (ms) { S.missing = ms.dataset.miss; syncKeep(); return; }
   if (t.closest("[data-adv]")) { S.adv = !S.adv; refreshPop(); $("[data-adv]", openPop.el)?.focus({ preventScroll: true }); return; }
@@ -864,7 +899,7 @@ function packTags() {
   });
   let k = 0; rows.forEach((r) => r.items.forEach((el) => { el.style.order = k++; }));
 }
-let packT; addEventListener("resize", () => { clearTimeout(packT); packT = setTimeout(packTags, 80); });
+let packT; addEventListener("resize", () => { clearTimeout(packT); packT = setTimeout(packTags, 80); if (openPop) place(openPop.el); });
 document.fonts?.ready?.then(packTags);
 
 render(); setReviewH();
