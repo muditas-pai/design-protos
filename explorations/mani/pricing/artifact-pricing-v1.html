@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Artifact pricing, close flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<style>
+  /* artifact-pricing v1: our editor, our pricing picker and checkout (from pricing-oct-2026-v1),
+     with the close flow from the Presentations.AI Redesign artifact (W5qtcQj3JLqB2FwDTqFPj8):
+     "What stopped you?" asked once, then each answer's rescue steps.
+
+     The live pricingV2 flow, rebuilt as one page.
+     Ported from pitchdeckdoclist/src/common/components/payment/pricingV2 (the redesign
+     branch behind usesRedesignCreateFlow): PricingScreenV2 redesignPicker, PlanCardV2
+     PlanCardRedesign, CloseNudgeV2 redesign, CheckoutScreenV2 + CheckoutSummaryV2
+     redesign, PaymentSuccessScreenNew. Copy comes from en.json, prices and credits from
+     pricingV2Config. Everything is a layer over the editor: nothing navigates. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    /* ds tokens, pai.tailwind.config.js light values */
+    --surface: #ffffff;
+    --canvas: #f8f8fb;
+    --sunken: #f3f3f7;
+    --line: #e4e4ec;
+    --line-soft: rgba(228,228,236,0.6);
+    --brand: #3427ff;
+    --brand-hover: #2a1fd6;
+    --tint: #ecebff;
+    --ink: #14141f;
+    --ink2: #4e4e5e;
+    --ink3: #6c6c7c;
+    --ink-off: #a3a3b0;
+    --gray-500: #6b7280;
+    --good: #15803d;
+    --scrim: rgba(16,12,60,0.45);
+    /* editor chrome, from the key screen */
+    --e-ink: #171717; --e-ink2: #525252; --e-ink3: #737373;
+    --e-line: #e5e5e5; --e-line2: #ececec; --e-soft: #fafbfc;
+  }
+  html, body { height: 100%; }
+  body { font-family: 'Inter', sans-serif; color: var(--ink); background: #f8f8fb; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  i[class*="ph-"] { display: block; margin: 0; line-height: 1; font-style: normal; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* ---------- editor behind the flow ---------- */
+  .ed-strip { position: fixed; left: 11px; top: 60px; bottom: 56px; width: 180px; z-index: 5; display: flex; flex-direction: column; overflow: hidden; border-radius: 6px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.07), 0 1px 2px rgba(10,25,37,0.08); }
+  .ed-strip .hd { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 0; color: var(--e-ink3); font-size: 15px; }
+  .ed-strip .hd span { display: flex; align-items: center; gap: 8px; }
+  .ed-new { display: flex; align-items: center; justify-content: center; gap: 7px; height: 28px; margin: 6px 8px 8px; border: 1px solid var(--e-line); border-radius: 4px; background: #fff; font: 500 12px 'Inter', sans-serif; color: var(--e-ink); cursor: pointer; }
+  .ed-new:hover { background: var(--e-soft); }
+  .ed-strip .list { flex: 1; border-top: 1px solid var(--e-line2); padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+  .ed-strip .th { position: relative; cursor: pointer; }
+  .ed-strip .th img { display: block; width: 100%; border-radius: 4px; }
+  .ed-strip .th .n { position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 4px; background: rgba(0,0,0,0.4); color: #fff; font-size: 12px; font-weight: 500; display: grid; place-items: center; }
+  .ed-strip .th.on img { box-shadow: 0 0 0 2px rgba(11,15,20,0.48); }
+  .ed-canvas { position: fixed; left: 203px; right: 11px; top: 60px; bottom: 56px; z-index: 4; display: flex; align-items: center; justify-content: center; padding: 8px 10px; }
+  .ed-canvas img { max-width: 100%; max-height: 100%; width: auto; border-radius: 6px; box-shadow: 0 1px 2px rgba(10,25,37,0.1); }
+  .ed-bottom { position: fixed; bottom: 11px; left: calc(50% + 96px); transform: translateX(-50%); z-index: 6; }
+
+  .bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 20; display: flex; align-items: center; gap: 10px; padding: 0 11px; }
+  .grp { display: flex; align-items: center; height: 36px; padding: 0 3px; border-radius: 6px; background: #fff; box-shadow: 0 0 0 1px rgba(10,25,37,0.08); }
+  .grp .sp { width: 1px; height: 22px; background: var(--e-line); margin: 0 2px; }
+  .ib { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--e-ink); font-size: 16px; cursor: pointer; }
+  .ib:hover { background: var(--e-soft); }
+  .tb { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border: 0; border-radius: 4px; background: none; font: 500 13.5px 'Inter', sans-serif; color: var(--e-ink); cursor: pointer; white-space: nowrap; }
+  .tb:hover { background: var(--e-soft); }
+  .tb i { font-size: 15px; }
+  .tb--dark { background: var(--e-ink); color: #fff; }
+  .tb--dark:hover { background: #000; }
+  .deck { max-width: 180px; padding: 0 10px; font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .av { display: flex; align-items: center; gap: 4px; padding: 0 6px 0 3px; }
+  .av .f { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: #f97316; color: #fff; font-size: 11px; font-weight: 600; }
+  .av .n { font-size: 12px; font-weight: 600; color: var(--e-ink2); }
+  .gap { flex: 1 1 auto; }
+  .cred-grp .c { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 13.5px; white-space: nowrap; }
+  .emo { font-size: 15px; line-height: 1; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+  .act { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px; border: 0; border-radius: 4px; background: linear-gradient(96deg, #00225C 0%, #003C9E 24%, #0055ED 50%, #0F60EF 66%, #1C6BF3 78%, #2A75F6 86%, #3F82FA 92%, #5990FC 96%, #74A6FF 100%); color: #fff; font: 600 13.5px 'Inter', sans-serif; cursor: pointer; transition: filter .15s ease, transform .12s ease; }
+  .act i { font-size: 14px; }
+  .act:hover { filter: brightness(1.08); }
+  .act:active { transform: scale(0.97); }
+  /* paid: the upgrade action goes, the plan pill arrives */
+  .plan-pill { display: none; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 4px; background: var(--tint); color: var(--brand); font-size: 13px; font-weight: 600; }
+  body.paid .plan-pill { display: inline-flex; }
+  body.paid .act { display: none; }
+  @media (max-width: 1180px) { .hide-sm { display: none; } }
+
+  /* ---------- shared dialog chrome (ds Dialog) ---------- */
+  .ov { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: 12px; background: var(--scrim); backdrop-filter: blur(2px); }
+  .ov[hidden] { display: none; }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .pop { animation: pop .22s cubic-bezier(.16,1,.3,1); }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .fade { animation: fadein .18s ease; }
+  .panel { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 24px 60px -18px rgba(16,12,60,0.28), 0 2px 6px rgba(16,12,60,0.08); }
+  .scroller { max-height: calc(100vh - 24px); overflow-y: auto; scrollbar-width: thin; }
+  .xbtn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: none; border: 0; border-radius: 6px; background: none; color: var(--ink2); font-size: 18px; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .xbtn:hover { background: var(--sunken); color: var(--ink); }
+
+  /* ds buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border: 1px solid transparent; border-radius: 6px; font: 500 14px 'Inter', sans-serif; cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+  .btn.lg { height: 44px; font-size: 15px; }
+  .btn.pri { background: var(--brand); color: #fff; }
+  .btn.pri:hover { background: var(--brand-hover); }
+  .btn.sec { background: var(--surface); border-color: var(--line); color: var(--ink); }
+  .btn.sec:hover { background: var(--sunken); }
+  .btn.ghost { background: none; color: var(--ink2); }
+  .btn.ghost:hover { background: var(--sunken); color: var(--ink); }
+  .btn.wide { width: 100%; }
+
+  .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1; }
+  .badge.brand { background: var(--tint); color: var(--brand); }
+  .badge.neutral { background: var(--sunken); color: var(--ink2); }
+
+  /* offer timer pill (OfferTimerPill) */
+  .otp { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 11px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 600; z-index: 0; }
+  .otp::after { content: ''; position: absolute; left: 50%; bottom: -3px; width: 8px; height: 8px; margin-left: -4px; border-radius: 2px; transform: rotate(45deg); background: var(--brand); z-index: -2; }
+  .otp .sep { width: 1px; height: 12px; background: rgba(255,255,255,0.4); }
+  /* the pill keeps a small bounce so the clock pulls the eye without a flashing timer */
+  @keyframes otp-bounce {
+    0%, 62%, 100% { transform: translateY(0); }
+    72% { transform: translateY(-6px); }
+    82% { transform: translateY(0); }
+    88% { transform: translateY(-2px); }
+    94% { transform: translateY(0); }
+  }
+  .otp { animation: otp-bounce 2.4s cubic-bezier(.3,.8,.4,1) infinite; }
+  @media (prefers-reduced-motion: reduce) { .otp { animation: none; } }
+  .otp .clk { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+
+  /* ---------- plan picker (PricingScreenV2 redesignPicker) ---------- */
+  .pk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px 8px; }
+  .pk-head h2 { font-size: 24px; line-height: 32px; font-weight: 600; color: var(--ink); }
+  .pk-head p { margin-top: 4px; font-size: 14px; line-height: 20px; color: var(--ink2); }
+  .pk-body { padding: 0 24px 24px; }
+  .pk-grid { display: grid; gap: 12px; margin-top: 8px; padding-top: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pk-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .card { position: relative; display: flex; flex-direction: column; height: 100%; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .card.hot { border-color: var(--brand); background: rgba(236,235,255,0.4); box-shadow: 0 0 0 1px rgba(52,39,255,0.3); }
+  .card .tagline { min-height: 36px; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .card h3 { font-size: 18px; line-height: 26px; font-weight: 600; color: var(--ink); }
+  .card .flag { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 2px 10px; border: 1px solid var(--brand); border-radius: 999px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 500; line-height: 16px; }
+  .card .cr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 12px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .card .cr b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meter { display: flex; align-items: stretch; gap: 3px; height: 16px; margin-top: 8px; }
+  .meter span { flex: 1; border-radius: 1px; background: var(--sunken); }
+  .meter span.on { background: var(--ink); }
+  .pz { display: flex; align-items: baseline; gap: 4px; margin-top: 16px; }
+  .pz .was { font-size: 20px; line-height: 1; color: var(--gray-500); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+  .pz .now { font-size: 30px; line-height: 1; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .pz .per { font-size: 13px; color: var(--gray-500); }
+  .pz-sub { min-height: 34px; margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--gray-500); }
+  .pz-sub b { font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .pz-sub .save { font-weight: 500; color: var(--good); }
+  .card .feats { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .card .lead { margin-bottom: 6px; font-size: 13px; font-weight: 500; color: var(--ink); }
+  .card ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .card ul li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .card ul li i { margin-top: 1px; font-size: 14px; color: var(--brand); }
+  .card .btn { margin-top: 12px; }
+
+  .band { display: flex; align-items: center; gap: 24px; margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .band .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .band h3 { font-size: 18px; line-height: 26px; font-weight: 600; }
+  .band p { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .band .pricecol { flex: none; text-align: right; }
+  .band .pz { justify-content: flex-end; margin-top: 0; }
+  .band .pz .now { font-size: 24px; }
+  .band .pz-sub { min-height: 0; text-align: right; }
+  .pk-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .pk-foot p { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; line-height: 18px; color: var(--gray-500); }
+  .pk-foot p i { margin-top: 2px; font-size: 14px; }
+  .lnk { border: 0; background: none; padding: 0; font: 500 13px 'Inter', sans-serif; color: var(--brand); cursor: pointer; }
+  .lnk:hover { text-decoration: underline; }
+
+  /* ---------- close nudge (CloseNudgeV2 redesign) ---------- */
+  .nudge { max-width: 480px; }
+  .nudge .hd { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px 8px; }
+  .nudge .pillrow { display: flex; margin: 8px 0 12px; }
+  .nudge h2 { font-size: 24px; line-height: 32px; font-weight: 600; }
+  .nudge .sub { margin-top: 4px; font-size: 14px; line-height: 20px; color: var(--ink2); }
+  .nudge .bd { display: flex; flex-direction: column; gap: 16px; padding: 12px 24px 24px; }
+  .nudge .rows { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+  .nudge .r { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .nudge .r + .r { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .nudge .r .n { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .nudge .r .n i { font-size: 20px; color: var(--ink2); }
+  .nudge .r .p { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+  .nudge .r .p .was { font-size: 14px; color: var(--gray-500); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+  .nudge .r .p .now { font-size: 20px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .nudge .r .p .now small { font-size: 14px; font-weight: 400; color: var(--ink2); }
+  .nudge .note { text-align: center; font-size: 13px; color: var(--gray-500); }
+
+  /* ---------- checkout (CheckoutScreenV2 + CheckoutSummaryV2 redesign) ---------- */
+  .co-ov { align-items: flex-start; padding: 16px; overflow-y: auto; }
+  .co-wrap { position: relative; width: 100%; max-width: 1080px; margin: auto; }
+  .co-wrap.offered { padding-top: 42px; }
+  .eyebrow { position: absolute; left: 12px; right: 12px; top: -38px; z-index: 0; display: flex; align-items: center; justify-content: center; gap: 8px; height: 50px; padding: 0 16px 12px; border-radius: 12px 12px 0 0; background: var(--brand); color: #fff; font-size: 13px; font-weight: 500; white-space: nowrap; transform: translateY(38px); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .5s; }
+  .co-wrap.offered .eyebrow { transform: translateY(0); opacity: 1; }
+  .co-box { position: relative; z-index: 1; display: flex; width: 100%; max-height: calc(100vh - 40px); overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 24px 60px -18px rgba(16,12,60,0.28); }
+  .co-wrap.offered .co-box { max-height: calc(100vh - 82px); }
+  .co-x { position: absolute; right: 12px; top: 12px; z-index: 30; }
+  .co-sum { display: flex; flex-direction: column; width: 45%; min-width: 420px; flex: none; min-height: 0; overflow-y: auto; padding: 32px; border-right: 1px solid var(--line); background: var(--canvas); scrollbar-width: none; }
+  .co-sum::-webkit-scrollbar { display: none; }
+  .co-sum h2 { font-size: 24px; line-height: 32px; font-weight: 600; }
+  .co-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  .prow { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; cursor: pointer; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+  .prow:hover { border-color: #c9c9d6; }
+  .prow.on { border-color: var(--brand); background: rgba(236,235,255,0.5); box-shadow: 0 0 0 2px rgba(52,39,255,0.2); cursor: default; }
+  .prow .radio { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-top: 2px; flex: none; border: 2px solid #c9c9d6; border-radius: 999px; background: var(--surface); }
+  .prow.on .radio { border-color: var(--brand); }
+  .prow .radio b { display: none; width: 6px; height: 6px; border-radius: 999px; background: var(--brand); }
+  .prow.on .radio b { display: block; }
+  .prow .mid { flex: 1; min-width: 0; }
+  .prow .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .prow .nm > span { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+  .prow .nm i { font-size: 16px; color: var(--ink2); }
+  .prow .ds { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .prow .pr { text-align: right; white-space: nowrap; }
+  .prow .pr .line { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; }
+  .prow .pr .was { font-size: 13px; color: var(--gray-500); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+  .prow .pr .now { font-size: 18px; line-height: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .prow .pr .save { margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--good); }
+  .co-feats { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  .co-feats li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink2); }
+  .co-feats li i { flex: none; font-size: 16px; color: var(--gray-500); }
+  .co-feats li.cred { font-weight: 600; color: var(--ink); }
+  .co-feats li.cred i { color: var(--ink); }
+  .co-feats li.cred span { font-weight: 400; color: var(--ink2); }
+  .trust { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: auto; padding-top: 24px; font-size: 12px; color: var(--gray-500); }
+  .trust span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .co-pay { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: 32px; scrollbar-width: none; }
+  .co-pay::-webkit-scrollbar { display: none; }
+  .co-pay h2 { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .tab { display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 500 13px 'Inter', sans-serif; color: var(--ink2); cursor: pointer; }
+  .tab i { font-size: 16px; }
+  .tab.on { border-color: var(--brand); background: rgba(236,235,255,0.5); color: var(--ink); box-shadow: 0 0 0 1px rgba(52,39,255,0.25); }
+  .fld { margin-top: 14px; }
+  .fld label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: var(--ink2); }
+  .inp { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 14px; color: var(--ink-off); }
+  .inp i { font-size: 16px; color: var(--ink-off); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .co-pay .btn.pay { margin-top: 20px; }
+  .secure { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--gray-500); }
+
+  /* ---------- success (PaymentSuccessScreenNew) ---------- */
+  .won { max-width: 460px; padding: 32px; text-align: center; }
+  .won .seal { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 999px; background: var(--tint); color: var(--brand); font-size: 28px; }
+  .won h2 { font-size: 24px; line-height: 32px; font-weight: 600; }
+  .won h2 b { color: var(--brand); }
+  .won .mail { margin-top: 8px; font-size: 14px; line-height: 20px; color: var(--ink2); }
+  .won .got { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); font-size: 14px; line-height: 20px; color: var(--ink2); text-align: left; }
+  .won .got b { color: var(--ink); }
+  .won .btn { margin-top: 20px; }
+
+  /* ---------- proto switch ---------- */
+  .pswitch { position: fixed; left: 12px; bottom: 12px; z-index: 990; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 999px; background: rgba(20,20,31,0.92); color: #fff; font-size: 11px; }
+  .pswitch b { padding: 0 4px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; }
+  .pswitch button { height: 24px; padding: 0 10px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.14); color: #fff; font: 500 11px 'Inter', sans-serif; cursor: pointer; }
+  .pswitch button.on { background: #fff; color: #14141f; }
+
+  /* short laptop screens: the dialogs keep their actions reachable */
+  @media (max-height: 760px) {
+    .pk-head { padding: 16px 24px 6px; }
+    .pk-head h2 { font-size: 20px; line-height: 28px; }
+    .pk-grid { margin-top: 4px; padding-top: 8px; }
+    .card { padding: 14px; }
+    .card .tagline { min-height: 0; }
+    .pz { margin-top: 12px; }
+    .band { margin-top: 12px; padding: 12px 16px; }
+    .pk-foot { margin-top: 14px; }
+    .co-sum, .co-pay { padding: 24px; }
+    .won { padding: 24px; }
+  }
+  @media (max-height: 660px) {
+    .card .feats { margin-top: 12px; padding-top: 10px; }
+    .card ul { gap: 4px; }
+    .co-rows { margin-top: 14px; }
+    .co-feats { margin-top: 14px; }
+    .trust { padding-top: 16px; }
+  }
+
+  /* ---------- rescue dialogs (the artifact's close flow, on our ds dialog) ---------- */
+  :root { --warn: #b45309; --warn-bg: #fef3c7; --good-bg: #dcfce7; }
+  .dg { max-width: 448px; }
+  .dg .hd { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px 0; }
+  .dg h2 { font-size: 20px; line-height: 28px; font-weight: 600; color: var(--ink); }
+  .dg .desc { margin-top: 4px; font-size: 14px; line-height: 20px; color: var(--ink2); }
+  .dg .bd { display: flex; flex-direction: column; gap: 12px; padding: 16px 24px 24px; }
+  .dg .acts { display: flex; justify-content: flex-end; gap: 8px; }
+  .dg .stack { display: flex; flex-direction: column; gap: 8px; }
+  .dg .cap { font-size: 13px; line-height: 18px; color: var(--ink3); }
+  .dg .txt { font-size: 14px; line-height: 20px; color: var(--ink2); }
+  .opt { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 400 14px/20px 'Inter', sans-serif; color: var(--ink2); text-align: left; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+  .opt:hover { border-color: #c9c9d6; }
+  .opt .dot { width: 16px; height: 16px; flex: none; border: 2px solid var(--line); border-radius: 999px; }
+  .opt.on { border-color: var(--brand); background: rgba(236,235,255,0.5); color: var(--ink); }
+  .opt.on .dot { border-color: var(--brand); background: var(--brand); box-shadow: inset 0 0 0 2px #fff; }
+  .chips { display: grid; gap: 8px; }
+  .chip-r { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-family: inherit; text-align: left; cursor: pointer; }
+  .chip-r:hover { border-color: #c9c9d6; }
+  .chip-r.on { border-color: var(--brand); background: rgba(236,235,255,0.5); }
+  .chip-r .n { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .chip-r .s { font-size: 12px; font-weight: 500; color: var(--good); }
+  .chip-r .m { font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .ocard { padding: 16px; border: 1px solid var(--line); border-radius: 12px; animation: fadein .2s ease; }
+  .ocard .k { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--good); }
+  .ocard .row1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; margin-top: 4px; }
+  .ocard .big { font-size: 32px; line-height: 40px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ocard .was { font-size: 14px; color: var(--ink3); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+  .ocard .sm { font-size: 13px; color: var(--ink3); }
+  .ocard p { margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .ocard .ends { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .ocard ul { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .ocard ul li, .ticks li { display: flex; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .ocard ul li i, .ticks li i { margin-top: 2px; font-size: 14px; color: var(--good); flex: none; }
+  .ticks { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .ticks li { font-size: 14px; line-height: 20px; }
+  .warnbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; background: var(--warn-bg); color: var(--warn); font-size: 14px; font-weight: 500; }
+  .warnbar.over { background: var(--sunken); color: var(--ink3); }
+  .warnbar i { font-size: 18px; }
+  .ctab { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ctab td { padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--ink2); font-variant-numeric: tabular-nums; text-align: right; }
+  .ctab tr:last-child td { border-bottom: 0; }
+  .ctab td:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+  .ctab td:last-child { color: var(--ink); }
+  .fld2 label { display: block; font-size: 13px; font-weight: 500; color: var(--ink2); }
+  .fld2 input, .fld2 textarea { display: block; width: 100%; margin-top: 4px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 400 14px 'Inter', sans-serif; color: var(--ink); outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
+  .fld2 input { height: 40px; }
+  .fld2 textarea { padding: 10px 12px; resize: none; }
+  .fld2 input:focus, .fld2 textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(52,39,255,0.15); }
+  .fld2 input::placeholder, .fld2 textarea::placeholder { color: var(--ink-off); }
+  .gets { padding: 12px; border-radius: 6px; background: var(--sunken); font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .gets b { display: block; font-weight: 500; color: var(--ink); }
+  .paylist { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .payrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-family: inherit; text-align: left; cursor: pointer; }
+  .payrow:hover { border-color: var(--brand); }
+  .payrow b { display: block; font-size: 14px; font-weight: 500; color: var(--ink); }
+  .payrow span span { display: block; font-size: 13px; color: var(--ink3); }
+  .payrow .use { font-size: 13px; color: var(--brand); }
+  .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+  .btn.pri[disabled]:hover { background: var(--brand); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { width: 18px; height: 18px; border: 2px solid var(--tint); border-top-color: var(--brand); border-radius: 999px; animation: spin .8s linear infinite; }
+  .checking { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 28px 0; font-size: 14px; color: var(--ink2); }
+
+  /* picker: the live offer, above the cards */
+  .pk-offer { display: flex; margin-top: 10px; }
+  /* exit 20%: floats bottom-left while it runs and nothing is open */
+  .exitpill { position: fixed; left: 16px; bottom: 16px; z-index: 880; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid rgba(180,83,9,0.3); border-radius: 999px; background: var(--warn-bg); color: var(--warn); font: 500 13px 'Inter', sans-serif; box-shadow: 0 8px 24px -8px rgba(16,12,60,0.25); cursor: pointer; }
+  .exitpill[hidden] { display: none; }
+  .exitpill i { font-size: 16px; }
+
+  /* checkout: one-off items (first month, Seven Day Pass) */
+  .itemcard { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .itemcard .l1 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--ink); }
+  .itemcard .l1 b { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .itemcard p { margin-top: 8px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .paywith { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 6px 10px; border-radius: 6px; background: var(--tint); color: var(--brand); font-size: 13px; font-weight: 500; }
+
+  /* toast */
+  .toast { position: fixed; left: 50%; bottom: 68px; z-index: 995; display: flex; align-items: center; gap: 8px; max-width: min(520px, calc(100vw - 32px)); padding: 10px 14px; border-radius: 8px; background: var(--ink); color: #fff; font-size: 13px; line-height: 18px; box-shadow: 0 12px 32px -10px rgba(16,12,60,0.4); transform: translateX(-50%); animation: toast-in .24s cubic-bezier(.2,.8,.2,1); }
+  .toast[hidden] { display: none; }
+  .toast i { flex: none; font-size: 16px; color: #86efac; }
+  @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+  /* proto controls + the rescue path log (proto only, not product UI) */
+  .proto { position: fixed; right: 12px; bottom: 12px; z-index: 990; width: 300px; border-radius: 12px; background: rgba(20,20,31,0.94); color: #fff; font-size: 11px; box-shadow: 0 12px 32px -10px rgba(0,0,0,0.4); }
+  .proto .ph-head { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 12px; border: 0; background: none; color: #fff; font: 600 11px 'Inter', sans-serif; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .proto .ph-head i { font-size: 12px; transition: transform .2s ease; }
+  .proto.shut .ph-head i { transform: rotate(180deg); }
+  .proto.shut .pbody { display: none; }
+  .pbody { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+  .prow2 { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .prow2 > b { width: 64px; font-weight: 500; opacity: 0.6; }
+  .proto button.pb { height: 22px; padding: 0 8px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.14); color: #fff; font: 500 11px 'Inter', sans-serif; cursor: pointer; }
+  .proto button.pb.on { background: #fff; color: #14141f; }
+  .plog { padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.14); }
+  .plog .t { opacity: 0.6; }
+  .plog .why { margin-top: 2px; font-size: 12px; font-weight: 500; }
+  .plog ol { list-style: none; display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+  .plog li { display: flex; gap: 6px; opacity: 0.55; }
+  .plog li.cur { opacity: 1; font-weight: 600; }
+  .plog li.past { text-decoration: line-through; }
+  .plog li .w { opacity: 0.7; font-weight: 400; }
+  @media (max-height: 700px) { .dg .hd { padding-top: 16px; } .dg .bd { padding: 12px 20px 20px; gap: 10px; } .ocard .big { font-size: 28px; line-height: 34px; } }
+</style>
+</head>
+<body>
+
+<div class="ed-strip">
+  <div class="hd"><span><i class="ph ph-list-bullets"></i><i class="ph ph-film-strip"></i></span><i class="ph ph-arrows-in-simple"></i></div>
+  <button type="button" class="ed-new"><i class="ph ph-plus"></i>New slide</button>
+  <div class="list" id="strip"></div>
+</div>
+<div class="ed-canvas"><img id="canvas" src="assets/editor/ed-slide-1.jpg" alt="Slide 1" /></div>
+<div class="grp ed-bottom">
+  <button type="button" class="tb"><i class="ph ph-plus"></i>Insert</button>
+  <span class="sp"></span>
+  <button type="button" class="tb"><i class="ph ph-palette"></i>Theme</button>
+  <span class="sp"></span>
+  <button type="button" class="tb"><i class="ph ph-magic-wand"></i>Edit with AI</button>
+  <span class="sp"></span>
+  <button type="button" class="ib" aria-label="More"><i class="ph ph-dots-three-vertical"></i></button>
+</div>
+
+<div class="bar">
+  <div class="grp">
+    <button type="button" class="ib" aria-label="Home"><i class="ph ph-house"></i></button>
+    <span class="sp"></span>
+    <span class="deck">Scaling Operations</span>
+  </div>
+  <span class="gap"></span>
+  <div class="grp cred-grp">
+    <span class="c"><span class="emo">&#10024;</span><span id="credline">Credits: 160 left</span></span>
+    <button type="button" class="act" id="upgrade"><i class="ph-fill ph-rocket-launch"></i>Upgrade</button>
+    <span class="plan-pill" id="planpill"><i class="ph-fill ph-rocket-launch"></i><span id="planname">Pro</span></span>
+  </div>
+  <div class="grp av hide-sm"><span class="f">M</span><span class="n">+2</span></div>
+  <div class="grp">
+    <button type="button" class="tb hide-sm">Share</button>
+    <span class="sp"></span>
+    <button type="button" class="tb"><i class="ph ph-play"></i>Present</button>
+    <span class="sp"></span>
+    <button type="button" class="ib hide-sm" aria-label="Analytics"><i class="ph ph-chart-bar"></i></button>
+    <span class="sp hide-sm"></span>
+    <button type="button" class="tb tb--dark"><i class="ph-fill ph-microsoft-powerpoint-logo"></i>Export as PPT</button>
+    <span class="sp"></span>
+    <button type="button" class="ib" aria-label="More"><i class="ph ph-dots-three-vertical"></i></button>
+  </div>
+</div>
+
+<!-- plan picker -->
+<div class="ov" id="ov-pk" hidden><div class="panel pop" id="pk-panel" role="dialog" aria-modal="true" aria-labelledby="pk-title"><div class="scroller" id="pk"></div></div></div>
+
+<!-- checkout -->
+<div class="ov co-ov" id="ov-co" hidden><div class="co-wrap" id="co-wrap"></div></div>
+
+<!-- the close flow: one dialog at a time -->
+<div class="ov" id="ov-dg" hidden><div class="panel pop dg" id="dg-panel" role="dialog" aria-modal="true" aria-labelledby="dg-title"><div class="scroller" id="dg"></div></div></div>
+
+<!-- success -->
+<div class="ov" id="ov-won" hidden><div class="panel pop won" id="won" role="dialog" aria-modal="true"></div></div>
+
+<button type="button" class="exitpill" id="exitpill" hidden></button>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="proto" id="proto">
+  <button type="button" class="ph-head" id="proto-toggle"><span>Proto controls</span><i class="ph-bold ph-caret-down"></i></button>
+  <div class="pbody">
+    <div class="prow2"><b>Plans</b><button type="button" class="pb" data-seg="tier1">Pro, Gold</button><button type="button" class="pb" data-seg="standard">Basic, Pro, Gold</button></div>
+    <div class="prow2"><b>Persona</b><button type="button" class="pb" data-persona="individual">Individual</button><button type="button" class="pb" data-persona="sales">Sales</button><button type="button" class="pb" data-persona="student">Student</button></div>
+    <div class="prow2"><b>Account</b><button type="button" class="pb" data-lapsed="0">New</button><button type="button" class="pb" data-lapsed="1">Former subscriber</button></div>
+    <div class="prow2"><b>Offer cell</b><button type="button" class="pb" data-cohort="none">None</button><button type="button" class="pb" data-cohort="ten">10%</button><button type="button" class="pb" data-cohort="twenty">10% then 20%</button></div>
+    <div class="prow2"><b></b><button type="button" class="pb" id="reset">Reset everything</button></div>
+    <div class="plog" id="plog"><div class="t">Close the plans or checkout to start the close flow.</div></div>
+  </div>
+</div>
+
+<script>
+  /* ---------- the deck behind everything ---------- */
+  const DECK = ['ed-slide-1', 'ed-slide-2', 'ed-slide-3', 'ed-canvas', 'ed-slide-5'].map((n) => 'assets/editor/' + n + '.jpg');
+  const strip = document.getElementById('strip'), canvas = document.getElementById('canvas');
+  let slide = 0;
+  const drawStrip = () => {
+    strip.innerHTML = DECK.map((src, i) =>
+      '<div class="th' + (i === slide ? ' on' : '') + '" data-slide="' + i + '"><span class="n">' + (i + 1) + '</span>' +
+      '<img src="' + src + '" alt="Slide ' + (i + 1) + '" /></div>').join('');
+    canvas.src = DECK[slide];
+    canvas.alt = 'Slide ' + (slide + 1);
+  };
+  drawStrip();
+  strip.addEventListener('click', (e) => {
+    const th = e.target.closest('[data-slide]');
+    if (!th) return;
+    slide = Number(th.dataset.slide);
+    drawStrip();
+  });
+
+  /* ---------- plan catalog (pricingV2Config + the live yearly prices) ---------- */
+  const PLANS = {
+    basic: { name: 'Basic', icon: 'ph-lightning', annual: 48, credits: 1000 },
+    pro:   { name: 'Pro',   icon: 'ph-rocket-launch', annual: 240, credits: 5000 },
+    gold:  { name: 'Gold',  icon: 'ph-sketch-logo', annual: 600, credits: 25000 },
+    team:  { name: 'Team',  icon: 'ph-users-three', annual: 720, credits: 30000 },
+  };
+  const TIERS = {
+    basic: {
+      tagline: 'Create and export polished presentations',
+      features: [
+        { icon: 'ph-microsoft-powerpoint-logo', t: 'Editable PowerPoint export' },
+        { icon: 'ph-file-pdf', t: 'PDF export' },
+        { icon: 'ph-drop-slash', t: 'No watermark' },
+      ],
+    },
+    proNonTier1: {
+      tagline: 'Build presentations with advanced AI and your brand',
+      badge: '5x Basic',
+      features: [
+        { icon: 'ph-sparkle', t: 'Advanced AI models and agents' },
+        { icon: 'ph-paint-brush-broad', t: 'Full Brand Kit' },
+        { icon: 'ph-strategy', t: 'Research and planning tools' },
+        { icon: 'ph-chart-bar', t: 'Presentation analytics' },
+        { icon: 'ph-lightning', t: 'Everything in Basic', lead: true },
+      ],
+    },
+    proTier1: {
+      tagline: 'Everything you need for pro presentations',
+      features: [
+        { icon: 'ph-sparkle', t: 'Advanced AI models' },
+        { icon: 'ph-paint-brush-broad', t: 'Brand Kit' },
+        { icon: 'ph-strategy', t: 'Research and planning' },
+        { icon: 'ph-chart-bar', t: 'Analytics' },
+      ],
+    },
+    gold: {
+      tagline: 'For high-stakes, high-volume presentation work',
+      badge: '5x Pro',
+      features: [
+        { icon: 'ph-sparkle', t: 'Frontier AI models' },
+        { icon: 'ph-paint-brush-broad', t: 'Advanced brand controls' },
+        { icon: 'ph-book-open', t: 'Shared project knowledge' },
+        { icon: 'ph-gauge', t: 'Priority AI generation' },
+        { icon: 'ph-rocket-launch', t: 'Everything in Pro', lead: true },
+      ],
+    },
+    team: {
+      tagline: 'One workspace for everyone who creates presentations',
+      features: [
+        { icon: 'ph-users-three', t: 'Unlimited collaborators' },
+        { icon: 'ph-paint-brush-broad', t: 'Shared Brand Kit' },
+        { icon: 'ph-book-open', t: 'Shared project knowledge' },
+        { icon: 'ph-sparkle', t: 'Frontier AI models and agents' },
+        { icon: 'ph-chart-bar', t: 'Team analytics' },
+        { icon: 'ph-headset', t: 'Priority support' },
+      ],
+    },
+  };
+  // tierSpecFor(segment, tierKind)
+  const specFor = (seg, k) => k === 'gold' ? TIERS.gold : k === 'team' ? TIERS.team : k === 'pro' ? (seg === 'tier1' ? TIERS.proTier1 : TIERS.proNonTier1) : TIERS.basic;
+  // SEGMENT_CARD_SPECS: which cards the grid offers and which one is featured
+  const SEG_CARDS = {
+    tier1: [
+      { k: 'pro', buy: 'Buy Pro', featured: false },
+      { k: 'gold', buy: 'Buy Gold', featured: true },
+    ],
+    standard: [
+      { k: 'basic', buy: 'Buy Basic', featured: false },
+      { k: 'pro', buy: 'Buy Pro', featured: true },
+      { k: 'gold', buy: 'Buy Gold', featured: false },
+    ],
+  };
+  // CHECKOUT_SEGMENT_TIERS, with Team as a first-class row (low to high)
+  const CK_TIERS = { tier1: ['pro', 'gold', 'team'], standard: ['basic', 'pro', 'team'] };
+
+  /* ---------- state ---------- */
+  const S = {
+    seg: 'tier1', tier: 'pro', entry: 'pro', paid: null,
+    // proto cells, the same switches the artifact carries
+    persona: 'individual', lapsed: false, cohort: 'ten',
+    // the close flow
+    dialog: null, declineView: null, choice: null, reason: null,
+    declineAsked: false, abandonedAt: null, rescue: null,
+    offer: null, prevOffer: null, offersSeen: [], offerAccepted: false, exitShown: false,
+    passShown: false, managerAsked: false, managerPlan: 'pro', studentVerified: false, verifying: false,
+    startTerm: 'month', startPlan: 'pro', item: null, payMethod: null,
+  };
+  const money = (n) => Number.isInteger(n) ? '$' + n.toLocaleString('en-US') : '$' + (Math.round(n * 100) / 100).toFixed(2);
+  const live = () => !!S.offer && S.offer.expires > Date.now();
+  const pct = () => (live() ? Math.round(S.offer.pct * 100) : 0);
+  const monthly = (k) => Math.round(PLANS[k].annual / 12);
+  const off = (n) => Math.max(0, Math.round(n * (1 - pct() / 100)));
+  const offerLive = () => pct() > 0;
+  const secsLeft = () => (live() ? Math.max(0, Math.round((S.offer.expires - Date.now()) / 1000)) : 0);
+  const clock = (s) => s >= 86400 ? Math.floor(s / 86400) + 'd ' + Math.floor((s % 86400) / 3600) + 'h'
+    : s >= 3600 ? Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm'
+    : String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  // "7 days", "6 days 23 hours", "2 hours 5 minutes": a zero remainder is left out
+  const unit = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+  const words = (s) => s >= 86400 ? unit(Math.floor(s / 86400), 'day') + (Math.floor((s % 86400) / 3600) ? ' ' + unit(Math.floor((s % 86400) / 3600), 'hour') : '')
+    : s >= 3600 ? unit(Math.floor(s / 3600), 'hour') + (Math.floor((s % 3600) / 60) ? ' ' + unit(Math.floor((s % 3600) / 60), 'minute') : '')
+    : unit(Math.max(1, Math.ceil(s / 60)), 'minute');
+  const decks = (credits) => Math.floor(credits / 100);
+  const r10 = (n) => Math.round(n / 10) * 10;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const fmtDate = (d) => d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  const plusMonths = (n) => { const d = new Date(); d.setMonth(d.getMonth() + n); return d; };
+  const minusDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() - n); return x; };
+
+  /* ---------- the close flow's numbers (from the artifact) ---------- */
+  const PASS = { price: 19.99, credits: 1000, hours: 168 };
+  const SAVE10 = 0.1, WINBACK = 0.2, EXIT = { pct: 0.2, minutes: 15 }, WEEK = 7 * 864e5;
+  const STUDENT = { name: 'Student Plan', annual: 144, credits: 1500 };
+  const REASONS = [
+    { id: 'price', label: 'The price is too high' },
+    { id: 'annual', label: "I don't want to pay for a whole year" },
+    { id: 'payment', label: 'My payment method failed or is not listed', checkoutOnly: true },
+    { id: 'output', label: "The deck isn't good enough yet" },
+    { id: 'credits', label: "I'm not sure the credits are enough" },
+    { id: 'later', label: 'Just looking for now' },
+  ];
+  const STEP = {
+    product: ['Fix the deck first', 'Deck Score, outline edit or expert polish. No discount.'],
+    compare: ['What the credits cover', 'Plans side by side in decks.'],
+    save10: ['10% off, shown as money saved', '7 days, once per account.'],
+    winback: ['Win-back 20%', 'Former subscribers starting a new deck.'],
+    start: ['Short first term', 'One month (or a student semester), then yearly.'],
+    verify: ['Verify student status', 'Unlocks student prices and the semester start.'],
+    manager: ['Have your company pay', 'Payment link and invoice to a manager.'],
+    pay: ['Another way to pay', 'UPI, PayPal, card in INR, or an invoice.'],
+    pass: ['Seven Day Pass, ' + money(PASS.price), 'Last step. This deck only, nothing renews.'],
+    nurture: ['Nothing now', 'No offer. Lifecycle email in 24 hours.'],
+  };
+  // the plans an offer or a first term can be taken on: the cards this buyer saw
+  const offerPlans = () => SEG_CARDS[S.seg].map((c) => c.k);
+  // the plan the buyer was leaning to: the one at checkout, else Pro
+  const rec = () => {
+    const list = offerPlans();
+    if (S.abandonedAt === 'checkout' && list.includes(S.tier)) return S.tier;
+    return list.includes('pro') ? 'pro' : list[0];
+  };
+  const saveOn = (k, p) => PLANS[k].annual - Math.round(PLANS[k].annual * (1 - p));
+
+  /* ---------- credits meter (PlanCardV2 CreditsMeter) ---------- */
+  const METER_MAX = 25000, STEPS = 24;
+  const meter = (credits) => {
+    const scale = Math.max(METER_MAX, credits, 1);
+    const filled = Math.max(1, Math.round(Math.sqrt(credits / scale) * STEPS));
+    let out = '<div class="meter" role="img" aria-label="' + credits.toLocaleString('en-US') + ' credits">';
+    for (let i = 0; i < STEPS; i++) out += '<span class="' + (i < filled ? 'on' : '') + '"></span>';
+    return out + '</div>';
+  };
+
+  /* ---------- the price block the cards and the Team band use ---------- */
+  const priceBlock = (k) => {
+    const p = PLANS[k], m = monthly(k), dm = off(m), da = off(p.annual);
+    const head = '<div class="pz">' +
+      (offerLive() ? '<span class="was">' + money(m) + '</span>' : '') +
+      '<span class="now">' + money(offerLive() ? dm : m) + '</span><span class="per">/ mo</span></div>';
+    const sub = '<div class="pz-sub">' + (offerLive()
+      ? '<b>' + money(da) + '</b> first year, then ' + money(p.annual) +
+        '<div class="save">Save ' + money(p.annual - da) + ' on your first year (' + pct() + '% off)</div>'
+      : 'Billed ' + money(p.annual) + ' a year') + '</div>';
+    return '<div class="fade">' + head + sub + '</div>';
+  };
+  const timerPill = (prefix) => '<span class="otp"><span>' + pct() + '% off</span><span class="sep"></span>' +
+    '<span class="clk"><i class="ph-bold ph-clock"></i>' + prefix + ' <span data-clock>' + clock(secsLeft()) + '</span></span></span>';
+
+  /* ---------- plan picker (our pricing, not the artifact's) ---------- */
+  const panel = document.getElementById('pk-panel');
+  const drawPicker = () => {
+    const cards = SEG_CARDS[S.seg];
+    const three = cards.length > 2;
+    panel.style.maxWidth = three ? '1024px' : '768px';
+    const cardHTML = (c) => {
+      const spec = specFor(S.seg, c.k), p = PLANS[c.k];
+      const lead = spec.features.find((f) => f.lead);
+      const rows = spec.features.filter((f) => !f.lead);
+      return '<section class="card' + (c.featured ? ' hot' : '') + '" data-plan="' + c.k + '">' +
+        (c.featured ? '<span class="flag">Best for you</span>' : '') +
+        '<h3>' + p.name + '</h3>' +
+        '<p class="tagline">' + spec.tagline + '</p>' +
+        '<div class="cr"><span><b>' + p.credits.toLocaleString('en-US') + '</b> credits per year</span>' +
+        (spec.badge ? '<span class="badge brand">' + spec.badge + '</span>' : '') + '</div>' +
+        meter(p.credits) +
+        priceBlock(c.k) +
+        '<button type="button" class="btn ' + (c.featured ? 'pri' : 'sec') + ' wide" data-buy="' + c.k + '">' + c.buy + '</button>' +
+        '<div class="feats">' +
+        (lead ? '<div class="lead">' + lead.t + '</div>' : '') +
+        '<ul>' + rows.map((f) => '<li><i class="ph-bold ph-check"></i><span>' + f.t + '</span></li>').join('') + '</ul>' +
+        '</div></section>';
+    };
+    document.getElementById('pk').innerHTML =
+      '<div class="pk-head"><div>' +
+        '<h2 id="pk-title">Choose the plan that fits your work</h2>' +
+        '<p>Every paid plan includes editable PowerPoint and PDF export with no watermark.</p>' +
+        (offerLive() ? '<div class="pk-offer">' + timerPill('Ends in') + '</div>' : '') +
+      '</div><button type="button" class="xbtn" data-close-pk aria-label="Close"><i class="ph ph-x"></i></button></div>' +
+      '<div class="pk-body">' +
+        '<div class="pk-grid' + (three ? ' three' : '') + '">' + cards.map(cardHTML).join('') + '</div>' +
+        '<section class="band" aria-label="Team">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="nm"><h3>Team</h3><span class="badge brand">Unlimited collaborators</span></div>' +
+            '<p>One workspace for everyone who creates presentations</p>' +
+          '</div>' +
+          '<div class="pricecol">' + priceBlock('team') + '</div>' +
+          '<button type="button" class="btn sec" data-buy="team">Buy Team</button>' +
+        '</section>' +
+        '<div class="pk-foot">' +
+          '<p><i class="ph ph-lock-simple"></i><span>Cancel any time; access runs to the end of the term. Prefer someone to finish it for you? ' +
+          '<button type="button" class="lnk" data-hire>Hire an expert</button></span></p>' +
+          '<button type="button" class="btn ghost" data-close-pk>Not now</button>' +
+        '</div>' +
+      '</div>';
+  };
+
+  /* ---------- checkout (ours), plans or a one-off item ---------- */
+  const ckRows = () => {
+    const ladder = CK_TIERS[S.seg];
+    if (S.entry === 'gold') return ['gold'];
+    if (S.entry === 'team') return ['team'];
+    const i = ladder.indexOf(S.entry);
+    return i >= 0 ? ladder.slice(i) : [S.entry, 'team'];
+  };
+  const PAY_TABS = [['Card', 'ph-credit-card'], ['PayPal', 'ph-paypal-logo'], ['Google Pay', 'ph-google-logo']];
+  const drawCheckout = () => {
+    const it = S.item;
+    const sel = PLANS[S.tier], spec = specFor(S.seg, S.tier);
+    const due = it ? it.amount : off(sel.annual);
+    let left;
+    if (it) {
+      left = '<h2>' + it.title + '</h2>' +
+        '<div class="itemcard"><div class="l1"><span>' + it.name + '</span><b>' + money(it.amount) + '</b></div><p>' + it.note + '</p></div>' +
+        '<ul class="co-feats">' + it.feats.map((f) => '<li><i class="ph ' + f[0] + '"></i><span>' + f[1] + '</span></li>').join('') + '</ul>';
+    } else {
+      const rows = ckRows();
+      const rowHTML = (k) => {
+        const p = PLANS[k], sp = specFor(S.seg, k), on = k === S.tier;
+        const d = off(p.annual), saved = p.annual - d;
+        return '<div class="prow' + (on ? ' on' : '') + '" role="button" tabindex="' + (on ? -1 : 0) + '" aria-pressed="' + on + '" data-pick="' + k + '">' +
+          (rows.length > 1 ? '<span class="radio"><b></b></span>' : '') +
+          '<div class="mid"><div class="nm"><span>' + p.name + '<i class="ph ' + p.icon + '"></i></span>' +
+          (k === 'team' ? '<span class="badge brand">Unlimited collaborators</span>' : '') + '</div>' +
+          '<p class="ds">' + sp.tagline + '</p></div>' +
+          '<div class="pr"><div class="line">' +
+          (offerLive() ? '<span class="was">' + money(p.annual) + '</span>' : '') +
+          '<span class="now">' + money(d) + '</span></div>' +
+          (offerLive() && saved > 0 ? '<div class="save">Save ' + money(saved) + '</div>' : '') +
+          '</div></div>';
+      };
+      left = '<h2>Upgrade to ' + sel.name + '</h2>' +
+        (offerLive() ? '<div style="display:flex;justify-content:center;margin-top:12px">' + timerPill('Ends in') + '</div>' : '') +
+        '<div class="co-rows">' + rows.map(rowHTML).join('') + '</div>' +
+        '<ul class="co-feats">' +
+          '<li class="cred"><i class="ph-fill ph-star-four"></i><span style="color:var(--ink);font-weight:600">' + sel.credits.toLocaleString('en-US') + '</span>&nbsp;<span>Credits</span>' +
+          (spec.badge && S.tier !== 'pro' ? '&nbsp;<span class="badge brand">' + spec.badge + '</span>' : '') + '</li>' +
+          spec.features.map((f) => '<li><i class="ph ' + f.icon + '"></i><span>' + f.t + '</span></li>').join('') + '</ul>';
+    }
+    const tabs = S.payMethod && !PAY_TABS.some((t) => t[0] === S.payMethod) ? [[S.payMethod, 'ph-wallet']].concat(PAY_TABS.slice(0, 2)) : PAY_TABS;
+    const active = S.payMethod || 'Card';
+    document.getElementById('co-wrap').innerHTML =
+      '<button type="button" class="xbtn co-x" data-co-close aria-label="Close"><i class="ph ph-x"></i></button>' +
+      '<div class="co-box pop">' +
+        '<div class="co-sum">' + left +
+          '<div class="trust">' +
+            '<span><i class="ph ph-heart"></i>Loved by 12M+ Presenters</span>' +
+            '<span><i class="ph ph-shield-check"></i>GDPR compliant</span>' +
+            '<span><i class="ph ph-seal-check"></i>SOC 2 Type II</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="co-pay">' +
+          '<h2>Payment method</h2>' +
+          '<div class="tabs">' + tabs.map((t) => '<button type="button" class="tab' + (t[0] === active ? ' on' : '') + '" data-tab="' + t[0] + '"><i class="ph ' + t[1] + '"></i>' + t[0] + '</button>').join('') + '</div>' +
+          (active === 'Card' || active === 'Card in INR'
+            ? '<div class="fld"><label>Card number</label><div class="inp"><i class="ph ph-credit-card"></i><span>1234 1234 1234 1234</span></div></div>' +
+              '<div class="fld two"><div><label>Expiry</label><div class="inp"><span>MM / YY</span></div></div><div><label>CVC</label><div class="inp"><span>CVC</span></div></div></div>' +
+              '<div class="fld"><label>Name on card</label><div class="inp"><span>Full name</span></div></div>'
+            : '<div class="paywith"><i class="ph ph-wallet"></i>Paying with ' + active + '</div>' +
+              '<p class="cap" style="margin-top:10px;font-size:13px;color:var(--ink3)">You finish this step in ' + active + '. We bring you back here once it clears.</p>') +
+          '<div class="fld"><label>Country</label><div class="inp" style="justify-content:space-between"><span style="color:var(--ink)">India</span><i class="ph ph-caret-down"></i></div></div>' +
+          '<button type="button" class="btn pri lg wide pay" data-pay>Pay ' + money(due) + '</button>' +
+          '<p class="secure"><i class="ph ph-lock-simple"></i>Payments are encrypted and processed securely.</p>' +
+        '</div>' +
+      '</div>';
+  };
+
+  /* ---------- success ---------- */
+  const drawWon = () => {
+    const it = S.item, p = PLANS[S.tier];
+    if (it && it.kind === 'pass') {
+      document.getElementById('won').innerHTML =
+        '<div class="seal"><i class="ph-fill ph-ticket"></i></div>' +
+        '<h2>Your <b>Seven Day Pass</b> is on</h2>' +
+        '<p class="mail">We have sent you a receipt at mani@presentations.ai</p>' +
+        '<div class="got">You now have <b>' + PASS.credits.toLocaleString('en-US') + ' credits</b> and PowerPoint and PDF downloads for this deck. It ends exactly 168 hours after payment. Nothing renews.</div>' +
+        '<button type="button" class="btn pri lg wide" data-start>Back to my deck</button>';
+      return;
+    }
+    document.getElementById('won').innerHTML =
+      '<div class="seal"><i class="ph-fill ph-check-circle"></i></div>' +
+      '<h2>Welcome to <b>' + (it ? it.planName : p.name) + ' plan</b></h2>' +
+      '<p class="mail">We have sent you a confirmation email and invoice at mani@presentations.ai</p>' +
+      '<div class="got">' + (it
+        ? it.note
+        : 'You now have <b>1 license</b> and <b>' + p.credits.toLocaleString('en-US') + ' credits</b>, everything you need to create faster and explore premium features.') + '</div>' +
+      '<button type="button" class="btn pri lg wide" data-start>Start creating</button>';
+  };
+
+  /* ---------- the close flow: which steps follow each answer (artifact ur) ---------- */
+  const planFor = (reason) => {
+    const student = S.persona === 'student', work = S.persona === 'sales';
+    const h = [], m = (kind, x) => h.push(Object.assign({ kind }, x || {}));
+    const p = () => { if (!S.passShown && S.paid !== 'pass') m('pass'); };
+    switch (reason) {
+      case 'output': m('product'); break;
+      case 'later': m('nurture'); break;
+      case 'payment': m('pay'); p(); break;
+      case 'credits': m('compare'); m('start', { term: student ? 'semester' : 'month' }); p(); break;
+      case 'annual':
+        if (student && !S.studentVerified) m('verify');
+        m('start', { term: student ? 'semester' : 'month' }); p(); break;
+      case 'price':
+      default:
+        if (student) { if (!S.studentVerified) m('verify'); m('start', { term: 'semester' }); p(); break; }
+        if (S.lapsed) { m('winback'); m('start', { term: 'month' }); p(); break; }
+        if (work) m('manager');
+        if (S.cohort !== 'none') m('save10', { exit: S.cohort === 'twenty' });
+        m('start', { term: 'month' }); p();
+    }
+    return h;
+  };
+
+  // run step i of the rescue (artifact Ps): open its dialog, or skip it when it no longer applies
+  const runStep = (i) => {
+    const r = S.rescue;
+    r.i = i;
+    const st = r.steps[i];
+    if (!st) { r.done = true; return openDg(null); }
+    switch (st.kind) {
+      case 'product': case 'compare': S.declineView = st.kind; return openDg('decline');
+      case 'save10': {
+        if (S.offer && S.offer.id === 'general-10' && live()) return openDg('offer');
+        if (S.offersSeen.includes('general-10')) return runStep(i + 1);
+        S.offersSeen.push('general-10');
+        S.offer = { id: 'general-10', pct: SAVE10, plan: rec(), expires: Date.now() + WEEK, exit: st.exit,
+          why: 'Your first year, with the same credits and features. One offer per account, for 7 days.' };
+        return openDg('offer');
+      }
+      case 'winback': {
+        if (S.offersSeen.includes('winback-20')) return runStep(i + 1);
+        S.offersSeen.push('winback-20');
+        S.offer = { id: 'winback-20', pct: WINBACK, plan: rec(), expires: Date.now() + WEEK,
+          why: 'For former subscribers starting a new deck. Renews at the regular price.' };
+        return openDg('offer');
+      }
+      case 'start':
+        S.startTerm = st.term;
+        S.startPlan = st.term === 'semester' ? 'student' : rec();
+        return openDg('start');
+      case 'verify': return S.studentVerified ? runStep(i + 1) : openDg('student');
+      case 'manager':
+        if (S.managerAsked) return runStep(i + 1);
+        S.managerPlan = rec();
+        return openDg('manager');
+      case 'pay': return openDg('payAlt');
+      case 'pass':
+        if (S.passShown) return runStep(i + 1);
+        S.passShown = true;
+        return openDg('pass');
+      default:
+        r.done = true;
+        toast('No offer now. A lifecycle email picks this up in 24 hours.', false);
+        return openDg(null);
+    }
+  };
+  const nextStep = () => (S.rescue && !S.rescue.done ? runStep(S.rescue.i + 1) : openDg(null));
+  const endRescue = () => { if (S.rescue) S.rescue.done = true; openDg(null); };
+
+  // closing the plans or the checkout (artifact jj): ask once, then walk the answer's steps
+  const leave = (at) => {
+    if (S.paid === 'plan' || S.offerAccepted) return openDg(null);
+    if (S.rescue && !S.rescue.done) return nextStep();
+    if (S.declineAsked) {
+      if (!S.passShown && S.paid !== 'pass') { S.passShown = true; return openDg('pass'); }
+      return openDg(null);
+    }
+    S.declineAsked = true; S.abandonedAt = at; S.declineView = null; S.choice = null;
+    return openDg('decline');
+  };
+
+  /* ---------- the dialogs ---------- */
+  const dgPanel = document.getElementById('dg-panel'), dg = document.getElementById('dg');
+  const head = (title, desc) => '<div class="hd"><div><h2 id="dg-title">' + title + '</h2>' +
+    (desc ? '<p class="desc">' + desc + '</p>' : '') + '</div>' +
+    '<button type="button" class="xbtn" data-a="x" aria-label="Close"><i class="ph ph-x"></i></button></div>';
+  const tick = (t) => '<li><i class="ph-bold ph-check"></i><span>' + t + '</span></li>';
+  const startQuote = (k, term) => {
+    if (term === 'semester') {
+      const a = STUDENT.annual;
+      return { name: STUDENT.name, label: 'First semester', months: 5, price: Math.round(a * 5 / 12 * 1.2), credits: r10(STUDENT.credits * 5 / 12), renewal: a, renewLabel: money(a) + ' a year at the student price' };
+    }
+    const p = PLANS[k];
+    return { name: p.name, label: 'First month', months: 1, price: Math.round(p.annual / 12 * 1.5), credits: r10(p.credits / 12), renewal: p.annual, renewLabel: money(p.annual) + ' a year' };
+  };
+
+  const drawDialog = () => {
+    const d = S.dialog;
+    dgPanel.style.maxWidth = '448px';
+    if (d === 'decline') {
+      const v = S.declineView;
+      if (!v) {
+        const list = REASONS.filter((r) => !r.checkoutOnly || S.abandonedAt === 'checkout');
+        dg.innerHTML = head(S.abandonedAt === 'checkout' ? 'The payment didn’t finish' : 'What stopped you?',
+            'One question, asked once. Your answer decides what we show next, if anything.') +
+          '<div class="bd"><div class="stack" role="radiogroup" aria-label="Reason">' +
+          list.map((r) => '<button type="button" role="radio" aria-checked="' + (S.choice === r.id) + '" class="opt' + (S.choice === r.id ? ' on' : '') + '" data-a="reason" data-v="' + r.id + '"><span class="dot"></span>' + r.label + '</button>').join('') +
+          '</div><div class="acts"><button type="button" class="btn ghost" data-a="skip">Skip</button>' +
+          '<button type="button" class="btn pri" data-a="continue"' + (S.choice ? '' : ' disabled') + '>Continue</button></div></div>';
+      } else if (v === 'product') {
+        dg.innerHTML = head('Let’s fix the deck first') +
+          '<div class="bd"><p class="txt">No offer until the deck is right. These fix the most common problems:</p>' +
+          '<button type="button" class="btn sec wide" data-a="fix" data-v="Opening Deck Score">Open Deck Score and fix what it finds</button>' +
+          '<button type="button" class="btn sec wide" data-a="fix" data-v="Opening the outline">Edit the outline and rewrite slides</button>' +
+          '<button type="button" class="btn ghost wide" data-a="fix" data-v="Opening Hire an expert, Polish">Have an expert polish it</button></div>';
+      } else {
+        const used = DECK.length * 10;
+        dg.innerHTML = head('What the credits cover') +
+          '<div class="bd"><table class="ctab"><tbody>' +
+          offerPlans().map((k) => '<tr><td>' + PLANS[k].name + '</td><td>' + PLANS[k].credits.toLocaleString('en-US') + ' credits</td><td>≈ ' + decks(PLANS[k].credits) + ' decks</td><td>' + money(PLANS[k].annual) + '/yr</td></tr>').join('') +
+          '</tbody></table><p class="cap">A full deck is 10 new slides at 10 credits each. This deck used ' + used + ' credits to generate.</p>' +
+          '<div class="acts"><button type="button" class="btn ghost" data-a="next">Still not sure</button>' +
+          '<button type="button" class="btn pri" data-a="plans">Back to plans</button></div></div>';
+      }
+    } else if (d === 'offer') {
+      const o = S.offer, k = o.plan, p = PLANS[k], exit = o.id === 'exit-20', on = live();
+      const saved = saveOn(k, o.pct), first = p.annual - saved, pc = Math.round(o.pct * 100);
+      const title = exit ? 'Before you go: save ' + money(saved) + ' on ' + p.name
+        : (o.id === 'winback-20' ? 'Welcome back: save ' : 'Save ') + money(saved) + ' on ' + p.name;
+      const plans = offerPlans();
+      dg.innerHTML = head(title, o.why) + '<div class="bd">' +
+        (exit ? '<div class="warnbar' + (on ? '' : ' over') + '"><i class="ph ph-clock"></i>' + (on ? 'Ends in <span data-clock>' + clock(secsLeft()) + '</span>' : 'This offer has ended.') + '</div>' : '') +
+        '<div class="chips" role="radiogroup" aria-label="Plan" style="grid-template-columns:repeat(' + plans.length + ',1fr)">' +
+        plans.map((x) => '<button type="button" role="radio" aria-checked="' + (x === k) + '" class="chip-r' + (x === k ? ' on' : '') + '" data-a="oplan" data-v="' + x + '"><div class="n">' + PLANS[x].name + '</div><div class="s">Save ' + money(saveOn(x, o.pct)) + '</div></button>').join('') +
+        '</div>' +
+        '<div class="ocard"><div class="k">You save ' + money(saved) + '</div>' +
+          '<div class="row1"><span class="big">' + money(first) + '</span><span class="was">' + money(p.annual) + '</span><span class="sm">first year · ' + pc + '% off</span></div>' +
+          '<p>' + p.credits.toLocaleString('en-US') + ' credits, about ' + decks(p.credits) + ' decks. Renews at ' + money(p.annual) + ' a year unless cancelled.</p>' +
+          (!exit ? '<p class="ends"><i class="ph ph-clock"></i>Ends in ' + words(secsLeft()) + '. Coming back later does not restart it.</p>' : '') +
+          (exit && S.prevOffer ? '<p class="cap" style="margin-top:8px">When the timer ends, your ' + Math.round(S.prevOffer.pct * 100) + '% offer comes back for the rest of its ' + words(Math.round((S.prevOffer.expires - Date.now()) / 1000)) + '.</p>' : '') +
+        '</div>' +
+        '<button type="button" class="btn pri lg wide" data-a="takeoffer"' + (on ? '' : ' disabled') + '>Get ' + p.name + ' for ' + money(first) + '</button>' +
+        (S.persona === 'sales' ? '<button type="button" class="btn sec wide" data-a="company"><i class="ph ph-buildings"></i>Have my company pay</button>' : '') +
+        '<button type="button" class="btn ghost wide" data-a="nooffer">No thanks</button>' +
+        '<p class="cap">Offers never stack.</p></div>';
+    } else if (d === 'start') {
+      const term = S.startTerm, list = term === 'semester' ? ['student'] : offerPlans();
+      const k = S.startPlan, q = startQuote(k, term);
+      const end = fmtDate(plusMonths(q.months)), remind = fmtDate(minusDays(plusMonths(q.months), 3));
+      const needsVerify = term === 'semester' && !S.studentVerified;
+      dg.innerHTML = head(term === 'semester' ? 'Pay for one semester' : 'Start with one month',
+          term === 'semester' ? 'For this term only. After it, the plan renews yearly at the student price.' : 'Your first payment covers one month. After that, the plan renews yearly.') +
+        '<div class="bd"><div class="chips" role="radiogroup" aria-label="Plan" style="grid-template-columns:repeat(' + list.length + ',1fr)">' +
+        list.map((x) => { const qq = startQuote(x, term); return '<button type="button" role="radio" aria-checked="' + (x === k) + '" class="chip-r' + (x === k ? ' on' : '') + '" data-a="splan" data-v="' + x + '"><div class="n">' + qq.name + '</div><div class="m">' + money(qq.price) + ' · ' + qq.credits.toLocaleString('en-US') + ' credits</div></button>'; }).join('') +
+        '</div><div class="ocard"><div class="row1" style="margin-top:0"><span class="big">' + money(q.price) + '</span><span class="sm">' + (term === 'semester' ? 'for 5 months' : 'for your first month') + '</span></div><ul>' +
+          tick(q.credits.toLocaleString('en-US') + ' credits and every ' + q.name + ' feature until ' + end) +
+          tick('Then ' + q.renewLabel + ', charged on ' + end) +
+          tick('Email and in-app reminder on ' + remind + '. Cancel in two clicks before then and nothing more is charged.') +
+        '</ul></div>' +
+        (needsVerify ? '<button type="button" class="btn pri lg wide" data-a="toverify">Verify student status to continue</button>'
+          : '<button type="button" class="btn pri lg wide" data-a="takestart">Start ' + q.name + ' for ' + money(q.price) + '</button>') +
+        '<button type="button" class="btn ghost wide" data-a="next">No thanks</button>' +
+        '<p class="cap">' + (term === 'month'
+          ? 'A month costs ' + money(q.price) + ' against ' + money(Math.round(q.renewal / 12 * 100) / 100) + ' a month on the yearly plan. Offered for the first payment only.'
+          : 'Semester price is 20% above the pro-rata student price. Offered for the first payment only.') + '</p></div>';
+    } else if (d === 'student') {
+      dg.innerHTML = head('Verify you’re a student', 'For students currently enrolled. We keep your verification status and date, not your documents.') +
+        (S.verifying ? '<div class="bd"><div class="checking"><span class="spin"></span>Checking enrolment</div></div>'
+          : '<div class="bd"><div class="fld2"><label for="edu">Your school or college email</label><input id="edu" type="email" placeholder="you@college.edu" autocomplete="off" /></div>' +
+            '<p class="cap">We confirm current enrolment with our verification partner. If your college is not listed, support reviews it within 2 working days.</p>' +
+            '<div class="acts"><button type="button" class="btn ghost" data-a="notstudent">' + (S.rescue && !S.rescue.done ? 'Not a student' : 'Back') + '</button>' +
+            '<button type="button" class="btn pri" data-a="verify" id="verify-btn" disabled>Verify</button></div></div>');
+    } else if (d === 'manager') {
+      const p = PLANS[S.managerPlan];
+      dg.innerHTML = head('Have your company pay', 'We send ' + p.name + ' with a payment link and a pro-forma invoice. They pay by card or bank transfer; you get access the moment it clears.') +
+        '<div class="bd"><div class="fld2"><label for="mgr">Manager or finance email</label><input id="mgr" type="email" placeholder="finance@company.com" autocomplete="off" /></div>' +
+        '<div class="fld2"><label for="mgr-note">Note (optional)</label><textarea id="mgr-note" rows="2" placeholder="For the Q3 review deck."></textarea></div>' +
+        '<div class="gets"><b>They receive</b>You asked for Presentations.AI ' + p.name + ': ' + money(p.annual) + ' a year, ' + p.credits.toLocaleString('en-US') + ' credits, invoice with your company name and tax ID.</div>' +
+        '<button type="button" class="btn pri lg wide" data-a="sendmgr" id="mgr-btn" disabled>Send request</button>' +
+        '<button type="button" class="btn ghost wide" data-a="next">I’ll pay myself</button></div>';
+    } else if (d === 'payAlt') {
+      const k = S.tier, p = PLANS[k];
+      const ways = [['UPI', 'Any UPI app. India only.'], ['PayPal', 'PayPal balance or linked card.'], ['Card in INR', 'Charged in rupees at the regional price, no foreign transaction fee.'], ['Invoice', 'Bank transfer within 15 days. Access starts on payment.'], ['Apple Pay or Google Pay', 'On supported browsers.']];
+      dg.innerHTML = head('Other ways to pay', 'Same plan, same price: ' + p.name + ', ' + money(p.annual) + ' a year.') +
+        '<div class="bd"><ul class="paylist">' + ways.map((w) => '<li><button type="button" class="payrow" data-a="paywith" data-v="' + w[0] + '"><span><b>' + w[0] + '</b><span>' + w[1] + '</span></span><span class="use">Use</span></button></li>').join('') + '</ul>' +
+        '<button type="button" class="btn ghost wide" data-a="next">None of these work</button></div>';
+    } else if (d === 'pass') {
+      dg.innerHTML = head('Not ready for a year? ' + money(PASS.price) + ' for this deck', money(PASS.price) + ' once for seven days and ' + PASS.credits.toLocaleString('en-US') + ' credits for this presentation. No automatic renewal.') +
+        '<div class="bd"><ul class="ticks">' +
+          tick('PowerPoint and PDF downloads for “Scaling Operations”') +
+          tick(PASS.credits.toLocaleString('en-US') + ' credits for revisions on this deck, about ' + Math.floor(PASS.credits / 10) + ' new slides') +
+          tick('Ends exactly 168 hours after payment. Nothing renews.') +
+          tick('Upgrade while it runs and the ' + money(PASS.price) + ' counts towards an annual plan.') +
+        '</ul><button type="button" class="btn pri lg wide" data-a="takepass"><i class="ph ph-ticket"></i>Get the Seven Day Pass · ' + money(PASS.price) + '</button>' +
+        '<button type="button" class="btn ghost wide" data-a="nopass">No thanks</button>' +
+        '<p class="cap">Your deck stays free to present and share either way.</p></div>';
+    }
+  };
+
+  /* ---------- layers ---------- */
+  const ov = { pk: document.getElementById('ov-pk'), co: document.getElementById('ov-co'), dg: document.getElementById('ov-dg'), won: document.getElementById('ov-won') };
+  const show = (name) => Object.keys(ov).forEach((k) => { ov[k].hidden = k !== name; });
+  const restartPop = (el) => { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); };
+  function openDg(name) {
+    S.dialog = name;
+    if (name) { drawDialog(); show('dg'); restartPop(dgPanel); }
+    else show(null);
+    drawLog(); drawExitPill();
+  }
+  const openPicker = () => { S.dialog = null; drawPicker(); show('pk'); restartPop(panel); drawExitPill(); };
+  const openCheckout = (k, item) => {
+    S.dialog = null;
+    S.item = item || null;
+    if (k) { S.entry = k; S.tier = k; }
+    drawCheckout(); show('co'); drawExitPill();
+  };
+
+  /* ---------- toast ---------- */
+  const toastEl = document.getElementById('toast');
+  let toastT = null;
+  function toast(msg, good) {
+    clearTimeout(toastT);
+    toastEl.innerHTML = (good ? '<i class="ph-fill ph-check-circle"></i>' : '') + '<span>' + msg + '</span>';
+    toastEl.hidden = true;
+    void toastEl.offsetWidth;
+    toastEl.hidden = false;
+    toastT = setTimeout(() => { toastEl.hidden = true; }, 4200);
+  }
+
+  /* ---------- exit intent 20% (artifact: the 10% then 20% cell) ---------- */
+  const exitEligible = () => !S.paid && !S.exitShown && !S.offerAccepted && S.offer && S.offer.id === 'general-10' && live() && S.cohort === 'twenty' && S.persona !== 'student';
+  document.addEventListener('mouseout', (e) => {
+    if (e.relatedTarget || e.clientY > 0 || !exitEligible()) return;
+    if (!ov.pk.hidden || !ov.co.hidden || !ov.won.hidden || (S.dialog && S.dialog !== 'offer')) return;
+    fireExit();
+  });
+  function fireExit() {
+    S.exitShown = true;
+    S.prevOffer = S.offer;
+    S.offer = { id: 'exit-20', pct: EXIT.pct, plan: S.offer.plan || rec(), expires: Date.now() + EXIT.minutes * 6e4,
+      why: EXIT.minutes + ' minutes only, once. Replaces your 10% offer while it runs.' };
+    openDg('offer');
+  }
+  const exitPill = document.getElementById('exitpill');
+  function drawExitPill() {
+    const on = S.offer && S.offer.id === 'exit-20' && live() && !S.dialog && ov.pk.hidden && ov.co.hidden && ov.won.hidden;
+    exitPill.hidden = !on;
+    if (on) exitPill.innerHTML = '<i class="ph ph-clock"></i>' + pct() + '% off ' + PLANS[S.offer.plan].name + ' · <span data-clock>' + clock(secsLeft()) + '</span>';
+  }
+  exitPill.addEventListener('click', () => openDg('offer'));
+
+  /* ---------- the clock: text in place, redraw only when an offer ends ---------- */
+  setInterval(() => {
+    if (S.offer && S.offer.id === 'exit-20' && !live()) {
+      // the 20% ran out: the 10% comes back for the rest of its week
+      S.offer = S.prevOffer && S.prevOffer.expires > Date.now() ? S.prevOffer : null;
+      S.prevOffer = null;
+      if (S.dialog === 'offer' && !S.offer) openDg(null);
+      else if (S.dialog) drawDialog();
+      if (!ov.pk.hidden) drawPicker();
+      if (!ov.co.hidden) drawCheckout();
+      drawExitPill();
+      return;
+    }
+    document.querySelectorAll('[data-clock]').forEach((el) => { el.textContent = clock(secsLeft()); });
+  }, 1000);
+
+  /* ---------- proto: the rescue path log ---------- */
+  const plog = document.getElementById('plog');
+  function drawLog() {
+    if (!S.reason && !S.declineAsked) { plog.innerHTML = '<div class="t">Close the plans or checkout to start the close flow.</div>'; return; }
+    if (!S.reason) { plog.innerHTML = '<div class="t">Asked: ' + (S.abandonedAt === 'checkout' ? 'at checkout' : 'on the plans') + '</div><div class="why">Waiting for an answer</div>'; return; }
+    const r = REASONS.find((x) => x.id === S.reason);
+    const steps = S.rescue ? S.rescue.steps : [];
+    plog.innerHTML = '<div class="t">Answer, ' + (S.abandonedAt === 'checkout' ? 'at checkout' : 'on the plans') + '</div><div class="why">' + r.label + '</div><ol>' +
+      steps.map((s, i) => {
+        const cls = S.rescue.done ? 'past' : i < S.rescue.i ? 'past' : i === S.rescue.i ? 'cur' : '';
+        return '<li class="' + cls + '"><span>' + (i + 1) + '.</span><span>' + STEP[s.kind][0] + ' <span class="w">' + STEP[s.kind][1] + '</span></span></li>';
+      }).join('') + '</ol>' + (S.rescue && S.rescue.done ? '<div class="t" style="margin-top:6px">Done. Closing the plans again shows the Pass if not yet seen.</div>' : '');
+  }
+
+  /* ---------- wiring ---------- */
+  document.getElementById('upgrade').addEventListener('click', openPicker);
+
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'edu') document.getElementById('verify-btn').disabled = !/.+@.+\..+/.test(e.target.value);
+    if (e.target.id === 'mgr') document.getElementById('mgr-btn').disabled = !/.+@.+\..+/.test(e.target.value);
+  });
+
+  document.addEventListener('click', (e) => {
+    // picker
+    if (e.target.closest('[data-close-pk]')) { leave('paywall'); return; }
+    if (e.target.closest('[data-hire]')) { show(null); toast('Opening Hire an expert', false); return; }
+    const buy = e.target.closest('[data-buy]');
+    if (buy) { S.payMethod = null; openCheckout(buy.dataset.buy, null); return; }
+
+    // checkout
+    const pick = e.target.closest('[data-pick]');
+    if (pick) { S.tier = pick.dataset.pick; drawCheckout(); return; }
+    const tab = e.target.closest('[data-tab]');
+    if (tab) { S.payMethod = tab.dataset.tab; drawCheckout(); return; }
+    if (e.target.closest('[data-co-close]')) { leave('checkout'); return; }
+    if (e.target.closest('[data-pay]')) {
+      if (offerLive() && !S.item) S.offerAccepted = true;
+      drawWon(); show('won'); return;
+    }
+
+    // success
+    if (e.target.closest('[data-start]')) {
+      const it = S.item;
+      if (it && it.kind === 'pass') {
+        S.paid = 'pass';
+        document.getElementById('planname').textContent = 'Seven Day Pass';
+        document.getElementById('credline').textContent = 'Credits: ' + PASS.credits.toLocaleString('en-US') + ' left';
+      } else {
+        S.paid = 'plan';
+        document.getElementById('planname').textContent = it ? it.planName : PLANS[S.tier].name;
+        document.getElementById('credline').textContent = 'Credits: ' + (it ? it.credits : PLANS[S.tier].credits).toLocaleString('en-US') + ' left';
+      }
+      document.body.classList.add('paid');
+      if (S.rescue) S.rescue.done = true;
+      show(null); drawLog(); drawExitPill();
+      return;
+    }
+
+    // the close flow
+    const a = e.target.closest('[data-a]');
+    if (!a) return;
+    const v = a.dataset.v;
+    switch (a.dataset.a) {
+      case 'x':
+        // closing any step's dialog ends the walk; a student check returns to the plans outside a rescue
+        if (S.dialog === 'student' && !(S.rescue && !S.rescue.done)) { openPicker(); return; }
+        if (S.dialog === 'decline' || S.dialog === 'pass') S.rescue = S.rescue ? Object.assign(S.rescue, { done: true }) : null;
+        openDg(null); return;
+      case 'reason': S.choice = v; drawDialog(); return;
+      case 'skip': openDg(null); return;
+      case 'continue':
+        S.reason = S.choice;
+        S.rescue = { steps: planFor(S.choice), i: 0, done: false };
+        runStep(0); return;
+      case 'fix': endRescue(); toast(v, false); return;
+      case 'next': nextStep(); return;
+      case 'plans': endRescue(); openPicker(); return;
+      case 'oplan': S.offer.plan = v; drawDialog(); return;
+      case 'takeoffer': S.payMethod = null; openCheckout(S.offer.plan, null); return;
+      case 'company': S.managerPlan = S.offer.plan; openDg('manager'); return;
+      case 'nooffer': if (S.offer && S.offer.id === 'exit-20') openDg(null); else nextStep(); return;
+      case 'splan': S.startPlan = v; drawDialog(); return;
+      case 'toverify': openDg('student'); return;
+      case 'takestart': {
+        const term = S.startTerm, k = S.startPlan, q = startQuote(k, term);
+        const end = fmtDate(plusMonths(q.months)), remind = fmtDate(minusDays(plusMonths(q.months), 3));
+        const planKey = term === 'semester' ? 'pro' : k;
+        S.payMethod = null;
+        openCheckout(planKey, {
+          kind: 'start', title: term === 'semester' ? 'Pay for one semester' : 'Start with one month',
+          name: q.name + ', ' + q.label.toLowerCase(), planName: q.name, amount: q.price, credits: q.credits,
+          note: q.label + ': ' + q.credits.toLocaleString('en-US') + ' credits until ' + end + '. Then ' + q.renewLabel + ' unless you cancel; we remind you on ' + remind + '.',
+          feats: [['ph-star-four', q.credits.toLocaleString('en-US') + ' credits until ' + end], ['ph-arrows-clockwise', 'Then ' + q.renewLabel], ['ph-bell', 'Reminder on ' + remind + ', cancel in two clicks']],
+        });
+        return;
+      }
+      case 'notstudent': if (S.rescue && !S.rescue.done) nextStep(); else openPicker(); return;
+      case 'verify':
+        S.verifying = true; drawDialog();
+        setTimeout(() => {
+          S.verifying = false; S.studentVerified = true;
+          toast('Student status verified. Student prices applied.', true);
+          const cur = S.rescue && !S.rescue.done ? S.rescue.steps[S.rescue.i] : null;
+          if (S.startTerm === 'semester' && cur && cur.kind === 'start') { openDg('start'); return; }
+          if (cur && cur.kind === 'verify') { nextStep(); return; }
+          openPicker();
+        }, 1300);
+        return;
+      case 'sendmgr': {
+        const to = document.getElementById('mgr').value;
+        S.managerAsked = to;
+        endRescue();
+        toast('Request sent to ' + to + '. We’ll tell you the moment it’s paid.', true);
+        return;
+      }
+      case 'paywith': S.payMethod = v; openCheckout(S.tier, null); return;
+      case 'takepass':
+        S.payMethod = null;
+        openCheckout(null, {
+          kind: 'pass', title: 'Seven Day Pass', name: 'Seven Day Pass', amount: PASS.price,
+          note: 'One payment for seven days and ' + PASS.credits.toLocaleString('en-US') + ' credits on this deck. Nothing renews.',
+          feats: [['ph-microsoft-powerpoint-logo', 'PowerPoint and PDF downloads for this deck'], ['ph-star-four', PASS.credits.toLocaleString('en-US') + ' credits for revisions'], ['ph-clock', 'Ends 168 hours after payment']],
+        });
+        return;
+      case 'nopass': endRescue(); return;
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const pick = e.target.closest && e.target.closest('[data-pick]');
+    if (pick) { e.preventDefault(); S.tier = pick.dataset.pick; drawCheckout(); }
+  });
+
+  /* ---------- proto controls ---------- */
+  const proto = document.getElementById('proto');
+  if (window.innerHeight < 700) proto.classList.add('shut');
+  document.getElementById('proto-toggle').addEventListener('click', () => proto.classList.toggle('shut'));
+  const paintProto = () => {
+    proto.querySelectorAll('[data-seg]').forEach((b) => b.classList.toggle('on', b.dataset.seg === S.seg));
+    proto.querySelectorAll('[data-persona]').forEach((b) => b.classList.toggle('on', b.dataset.persona === S.persona));
+    proto.querySelectorAll('[data-lapsed]').forEach((b) => b.classList.toggle('on', (b.dataset.lapsed === '1') === S.lapsed));
+    proto.querySelectorAll('[data-cohort]').forEach((b) => b.classList.toggle('on', b.dataset.cohort === S.cohort));
+  };
+  proto.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.seg) { S.seg = b.dataset.seg; S.entry = S.seg === 'tier1' ? 'pro' : 'basic'; S.tier = S.entry; if (!ov.pk.hidden) drawPicker(); if (!ov.co.hidden) drawCheckout(); }
+    if (b.dataset.persona) S.persona = b.dataset.persona;
+    if (b.dataset.lapsed) S.lapsed = b.dataset.lapsed === '1';
+    if (b.dataset.cohort) S.cohort = b.dataset.cohort;
+    paintProto();
+  });
+  paintProto();
+  document.getElementById('reset').addEventListener('click', () => {
+    Object.assign(S, {
+      tier: S.seg === 'tier1' ? 'pro' : 'basic', entry: S.seg === 'tier1' ? 'pro' : 'basic', paid: null,
+      dialog: null, declineView: null, choice: null, reason: null, declineAsked: false, abandonedAt: null, rescue: null,
+      offer: null, prevOffer: null, offersSeen: [], offerAccepted: false, exitShown: false,
+      passShown: false, managerAsked: false, studentVerified: false, verifying: false, item: null, payMethod: null,
+    });
+    document.body.classList.remove('paid');
+    document.getElementById('credline').textContent = 'Credits: 160 left';
+    show(null); drawLog(); drawExitPill();
+    toast('Reset. Fresh free account.', false);
+  });
+
+  /* ---------- deep links: the flow map opens any state directly ---------- */
+  (() => {
+    const q = new URLSearchParams(location.search);
+    if (![...q.keys()].length) return;
+    if (q.get('seg')) S.seg = q.get('seg');
+    if (q.get('persona')) S.persona = q.get('persona');
+    if (q.get('lapsed') === '1') S.lapsed = true;
+    if (q.get('cohort')) S.cohort = q.get('cohort');
+    S.entry = S.tier = S.seg === 'tier1' ? 'pro' : 'basic';
+    paintProto();
+    const at = q.get('at') === 'checkout' ? 'checkout' : 'paywall';
+    const go = q.get('open');
+    if (go === 'plans') { openPicker(); return; }
+    if (go === 'checkout') { openCheckout('pro', null); return; }
+    if (!go && !q.get('reason') && !q.get('again')) return;
+    if (at === 'checkout') openCheckout('pro', null);
+    if (q.get('again') === '1') { S.declineAsked = true; leave(at); return; }
+    leave(at);
+    const reason = q.get('reason');
+    if (!reason) return;
+    S.choice = reason; S.reason = reason;
+    S.rescue = { steps: planFor(reason), i: 0, done: false };
+    runStep(0);
+    for (let n = Number(q.get('step') || 0); n > 0; n--) nextStep();
+    if (q.get('exit') === '1' && S.offer) fireExit();
+  })();
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>

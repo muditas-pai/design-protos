@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Close flow map</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  /* The map of artifact-pricing-v1 and v2: what happens after someone closes the plans or the
+     checkout without paying. Every step card opens that exact screen in the proto. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --surface: #ffffff; --canvas: #f8f8fb; --sunken: #f3f3f7; --line: #e4e4ec;
+    --brand: #3427ff; --tint: #ecebff; --ink: #14141f; --ink2: #4e4e5e; --ink3: #6c6c7c; --ink-off: #a3a3b0;
+    --good: #15803d; --good-bg: #dcfce7; --warn: #b45309; --warn-bg: #fef3c7; --bad: #b91c1c; --bad-bg: #fee2e2;
+  }
+  body { font-family: 'Inter', sans-serif; color: var(--ink); background: var(--canvas); -webkit-font-smoothing: antialiased; }
+  i[class*="ph-"] { display: inline-block; line-height: 1; font-style: normal; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: clamp(16px, 3vh, 32px) 16px 64px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  h1 { font-size: 28px; line-height: 36px; font-weight: 600; }
+  header p { max-width: 720px; margin-top: 6px; font-size: 14px; line-height: 20px; color: var(--ink2); }
+  .tabs { display: inline-flex; padding: 3px; border-radius: 8px; background: var(--sunken); }
+  .tabs button { height: 32px; padding: 0 14px; border: 0; border-radius: 6px; background: none; font: 500 13px 'Inter', sans-serif; color: var(--ink2); cursor: pointer; white-space: nowrap; }
+  .tabs button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(16,12,60,0.12); }
+  .proto-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; font-weight: 500; color: var(--brand); text-decoration: none; }
+  .proto-link:hover { text-decoration: underline; }
+
+  section.block { margin-top: 24px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+  .block h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+  .block > p.sub { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--ink3); }
+
+  /* entry: editor to the question */
+  .entry { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+  .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .node { display: flex; flex-direction: column; gap: 2px; width: 196px; min-height: 76px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: inherit; text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  a.node:hover { border-color: var(--brand); box-shadow: 0 6px 18px -8px rgba(52,39,255,0.35); transform: translateY(-1px); }
+  .node .k { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink3); }
+  .node .k i { font-size: 13px; color: var(--ink-off); }
+  a.node:hover .k i { color: var(--brand); }
+  .node b { font-size: 13px; line-height: 18px; font-weight: 600; }
+  .node span.d { font-size: 12px; line-height: 16px; color: var(--ink2); }
+  .node.q { border-color: var(--brand); background: var(--tint); }
+  .node.offer { border-left: 3px solid var(--good); }
+  .node.nooffer { border-left: 3px solid var(--ink-off); }
+  .node.side { border-left: 3px solid var(--brand); }
+  .node.warn { border-left: 3px solid var(--warn); }
+  .node.end { width: auto; min-height: 0; padding: 8px 12px; border-style: dashed; background: var(--canvas); }
+  .node.end b { font-weight: 500; color: var(--ink2); }
+  .node.wide { width: 300px; }
+  .node .opts { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+  .node .opts span { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; color: var(--ink2); }
+  .node .opts span::before { content: ''; width: 6px; height: 6px; flex: none; border-radius: 999px; background: var(--ink-off); }
+  .node .opts span.rec::before { background: var(--brand); }
+  .arrow { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 36px; color: var(--ink-off); }
+  .arrow i { font-size: 16px; }
+  .arrow small { font-size: 10px; line-height: 12px; color: var(--ink3); white-space: nowrap; }
+
+  /* lanes: one per answer */
+  .lanes { display: flex; flex-direction: column; margin-top: 14px; }
+  .lane { display: grid; grid-template-columns: 220px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .lane:first-child { border-top: 0; }
+  .ans { display: flex; flex-direction: column; gap: 6px; }
+  .ans .pill { align-self: flex-start; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); font-size: 13px; line-height: 18px; font-weight: 500; }
+  .ans .where { font-size: 11px; color: var(--ink3); }
+  .rows { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .cond { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--sunken); font-size: 11px; font-weight: 600; color: var(--ink2); white-space: nowrap; }
+  .cond.base { background: var(--tint); color: var(--brand); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--ink2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i.sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line); }
+
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
+  .rule { padding: 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .rule b { display: block; margin-bottom: 2px; color: var(--ink); }
+  .rule a { color: var(--brand); font-weight: 500; text-decoration: none; }
+  .rule a:hover { text-decoration: underline; }
+
+  /* v1 vs v2 */
+  table.cmp { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 13px; line-height: 18px; }
+  table.cmp th { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink3); }
+  table.cmp td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink2); }
+  table.cmp tr:last-child td { border-bottom: 0; }
+  table.cmp td:first-child { width: 22%; font-weight: 500; color: var(--ink); }
+  table.cmp td.v2 { color: var(--ink); }
+  .kept { margin-top: 10px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+
+  @media (max-width: 860px) {
+    .lane { grid-template-columns: 1fr; gap: 8px; }
+    .node, .node.wide { width: 100%; }
+    .arrow { flex-direction: row; gap: 6px; width: 100%; justify-content: flex-start; padding-left: 12px; }
+    .arrow i { transform: rotate(90deg); }
+    table.cmp td:first-child { width: 34%; }
+  }
+
+  /* screenshots: each step shows the real screen; click to see it large */
+  .node { width: 212px; }
+  .node.wide { width: 300px; }
+  .shot { display: block; width: 100%; margin: 0 0 8px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); overflow: hidden; cursor: zoom-in; }
+  .shot img { display: block; width: 100%; height: 150px; object-fit: contain; object-position: center top; }
+  .node.wide .shot img { height: 200px; }
+  .shot:hover { border-color: var(--brand); }
+  .node .k a { display: inline-flex; align-items: center; gap: 3px; color: var(--ink3); text-decoration: none; text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .node .k a:hover { color: var(--brand); }
+  .node .k a i { font-size: 12px; }
+
+  .lb { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(16,12,60,0.72); backdrop-filter: blur(2px); }
+  .lb[hidden] { display: none; }
+  .lb img { max-width: min(1100px, 100%); max-height: calc(100vh - 120px); border-radius: 12px; background: #fff; box-shadow: 0 24px 60px -18px rgba(0,0,0,0.5); }
+  .lb .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; max-width: 100%; color: #fff; font-size: 13px; }
+  .lb .bar b { margin-right: 8px; font-weight: 600; }
+  .lb .bar button, .lb .bar a { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: rgba(255,255,255,0.16); color: #fff; font: 500 13px 'Inter', sans-serif; text-decoration: none; cursor: pointer; }
+  .lb .bar button:hover, .lb .bar a:hover { background: rgba(255,255,255,0.26); }
+  .lb .bar .count { opacity: 0.7; }
+  @media (max-width: 860px) { .node, .node.wide { width: 100%; } .shot img, .node.wide .shot img { height: 220px; } }
+
+  /* answer on its own line, each variant's steps get the full width */
+  .lane { display: block; padding: 18px 0; }
+  .ans { flex-direction: row; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .ans .pill { font-size: 14px; font-weight: 600; }
+  .rows { gap: 16px; }
+  .row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .chain { align-items: center; row-gap: 12px; }
+  .arrow { min-width: 44px; }
+  .arrow small { max-width: 84px; white-space: normal; text-align: center; }
+</style>
+</head>
+<body>
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Screen">
+  <img id="lb-img" alt="" />
+  <div class="bar">
+    <b id="lb-title"></b>
+    <button type="button" id="lb-prev"><i class="ph ph-arrow-left"></i>Previous</button>
+    <span class="count" id="lb-count"></span>
+    <button type="button" id="lb-next">Next<i class="ph ph-arrow-right"></i></button>
+    <a id="lb-open" href="#" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out"></i>Open in proto</a>
+    <button type="button" id="lb-close"><i class="ph ph-x"></i>Close</button>
+  </div>
+</div>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Close flow map</h1>
+      <p>What happens when a free user closes the plans or the checkout without paying. Every step shows its real screen: click a screen to see it large and step through, or Open to try it live. <b>v1</b> follows the Redesign artifact step by step. <b>v2</b> keeps the same answers and offers but shows each answer's options on one screen. Click any step to open that exact screen in the proto.</p>
+      <a class="proto-link" id="proto-link" href="artifact-pricing-v1.html" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out"></i><span>Open v1 proto</span></a>
+    </div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-v="v1" class="on">v1, step by step</button>
+      <button type="button" role="tab" data-v="v2">v2, one screen</button>
+    </div>
+  </header>
+
+  <section class="block">
+    <h2>How someone gets to the question</h2>
+    <p class="sub">Same in both versions. The question is asked once per account, from whichever screen they closed first.</p>
+    <div class="entry" id="entry"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--tint);border-color:var(--brand)"></i>The question</span>
+      <span><i class="sw" style="border-left:3px solid var(--good)"></i>A price offer</span>
+      <span><i class="sw" style="border-left:3px solid var(--brand)"></i>A side step (verify, company pays, other ways to pay)</span>
+      <span><i class="sw" style="border-left:3px solid var(--ink-off)"></i>No offer</span>
+      <span><i class="sw" style="border-left:3px solid var(--warn)"></i>Timed 20%</span>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 id="lanes-title">Each answer, step by step</h2>
+    <p class="sub" id="lanes-sub"></p>
+    <div class="lanes" id="lanes"></div>
+  </section>
+
+  <section class="block">
+    <h2>Rules that apply to every path</h2>
+    <div class="rules" id="rules"></div>
+  </section>
+
+  <section class="block" id="cmp-block" hidden>
+    <h2>What v2 changes, and why</h2>
+    <p class="sub">Thought through twice: the artifact's logic is good, but walking it one offer at a time makes a person say no up to four times. v2 keeps every offer and puts the choice in one place.</p>
+    <table class="cmp">
+      <thead><tr><th></th><th>v1, step by step</th><th>v2, one screen</th></tr></thead>
+      <tbody>
+        <tr><td>Dialogs after one close (worst case)</td><td>5: question, company pays, 10%, one month, Pass</td><td class="v2">2: question, then one screen with every option</td></tr>
+        <tr><td>Clicks to see all options for "price is too high"</td><td>4: pick, Continue, No thanks, No thanks</td><td class="v2">1: pick an answer</td></tr>
+        <tr><td>Answering</td><td>Radio, then Continue</td><td class="v2">One tap per answer, with Change answer if it was the wrong one</td></tr>
+        <tr><td>A later close</td><td>Shows the Seven Day Pass once more</td><td class="v2">Never asks or offers again</td></tr>
+        <tr><td>Offer after closing</td><td>Only visible if they reopen the plans</td><td class="v2">Upgrade button carries "10% off" while it runs</td></tr>
+        <tr><td>Getting back</td><td>Back to plans only from the credits screen</td><td class="v2">Back to plans on every option screen</td></tr>
+        <tr><td>Students</td><td>Verify before seeing any student price</td><td class="v2">Student prices shown first, verify at the button</td></tr>
+        <tr><td>Comparing options</td><td>Each offer alone, so "is the month cheaper than 10% off?" can't be answered</td><td class="v2">Side by side with a plan switch, recommended one marked</td></tr>
+      </tbody>
+    </table>
+    <p class="kept"><b>Kept from the artifact:</b> the six answers (payment only at checkout), one question per account, offers never stack, 10% for 7 days shown as money saved, 20% win-back for former subscribers, the 15-minute 20% exit offer for the "10% then 20%" cell, first month at 1.5x the monthly price, the student semester, the $19.99 Seven Day Pass, company pays, other ways to pay, and no offer when the deck isn't good enough.</p>
+  </section>
+</div>
+
+<script>
+  // a step card: [kind, label, title, detail, deep link query]  kind: q | offer | side | nooffer | warn | end
+  const V = { v: 'v1' };
+  // the screenshot for a deep link (same naming the capture script uses)
+  const shotFor = (q) => 'assets/close-flow/' + V.v + '-' + (q ? q.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : 'editor') + '.jpg';
+  const node = (n) => {
+    if (n.end) return '<div class="node end"><b>' + n.t + '</b></div>';
+    const href = n.q != null ? 'artifact-pricing-' + V.v + '.html' + (n.q ? '?' + n.q : '') : null;
+    return '<div class="node ' + (n.kind || '') + (n.wide ? ' wide' : '') + '">' +
+      (href ? '<button type="button" class="shot" data-img="' + shotFor(n.q) + '" data-href="' + href + '" data-title="' + n.t.replace(/"/g, '&quot;') + '"><img loading="lazy" src="' + shotFor(n.q) + '" alt="' + n.t.replace(/"/g, '&quot;') + '" /></button>' : '') +
+      '<span class="k"><span>' + (n.k || '') + '</span>' + (href ? '<a href="' + href + '" target="_blank" rel="noopener">Open<i class="ph ph-arrow-up-right"></i></a>' : '') + '</span>' +
+      '<b>' + n.t + '</b>' + (n.d ? '<span class="d">' + n.d + '</span>' : '') +
+      (n.opts ? '<span class="opts">' + n.opts.map((o, i) => '<span class="' + (i === 0 && n.rec !== false ? 'rec' : '') + '">' + o + '</span>').join('') + '</span>' : '') +
+      '</div>';
+  };
+  const arrow = (label) => '<span class="arrow"><i class="ph ph-arrow-right"></i>' + (label ? '<small>' + label + '</small>' : '') + '</span>';
+  const chain = (nodes) => nodes.map((n, i) => (i ? arrow(n.via) : '') + node(n)).join('');
+
+  const ENTRY = () => [
+    { kind: '', k: 'Editor', t: 'Free user in the editor', d: 'Upgrade in the top bar', q: '' },
+    { via: 'Upgrade', kind: '', k: 'Plans', t: 'Choose the plan that fits your work', d: 'Our picker, unchanged', q: 'open=plans' },
+    { via: 'Buy', kind: '', k: 'Checkout', t: 'Upgrade to Pro', d: 'Our checkout, unchanged', q: 'open=checkout' },
+    { via: 'Close (X or Not now)', kind: 'q', k: 'Question', t: 'What stopped you?', d: 'From checkout: "The payment didn’t finish", plus a payment answer', q: 'again=0' },
+  ];
+
+  const NO = 'No thanks';
+  const LANES = {
+    v1: [
+      { a: 'The price is too high', w: 'Plans and checkout', rows: [
+        { c: 'Default, 10% cell', base: true, n: [
+          { kind: 'offer', k: 'Offer', t: 'Save $24 on Pro', d: '10% off the first year, shown as money. 7 days, once.', q: 'reason=price' },
+          { via: NO, kind: 'offer', k: 'First term', t: 'Start with one month', d: '$30 now, then $240 a year', q: 'reason=price&step=1' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass, $19.99', d: 'This deck only, nothing renews', q: 'reason=price&step=2' },
+          { via: NO, end: true, t: 'Nothing more' } ] },
+        { c: 'Sales persona', n: [
+          { kind: 'side', k: 'Side step', t: 'Have your company pay', d: 'Payment link and invoice to a manager', q: 'persona=sales&reason=price' },
+          { via: 'I’ll pay myself', kind: 'offer', k: 'Offer', t: 'Save $24 on Pro', d: 'With a "Have my company pay" button', q: 'persona=sales&reason=price&step=1' },
+          { via: NO, kind: 'offer', k: 'First term', t: 'One month', d: '$30', q: 'persona=sales&reason=price&step=2' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass', d: '$19.99', q: 'persona=sales&reason=price&step=3' } ] },
+        { c: 'Former subscriber', n: [
+          { kind: 'offer', k: 'Offer', t: 'Welcome back: save $48', d: '20% off the first year, 7 days', q: 'lapsed=1&reason=price' },
+          { via: NO, kind: 'offer', k: 'First term', t: 'One month', d: '$30', q: 'lapsed=1&reason=price&step=1' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass', d: '$19.99', q: 'lapsed=1&reason=price&step=2' } ] },
+        { c: 'Student', n: [
+          { kind: 'side', k: 'Side step', t: 'Verify you’re a student', d: 'College email, checked in a moment', q: 'persona=student&reason=price' },
+          { via: 'Not a student', kind: 'offer', k: 'First term', t: 'Pay for one semester', d: '$72 for 5 months, then $144 a year', q: 'persona=student&reason=price&step=1' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass', d: '$19.99', q: 'persona=student&reason=price&step=2' } ] },
+        { c: 'No-discount cell', n: [
+          { kind: 'offer', k: 'First term', t: 'Start with one month', d: 'No percentage off at all', q: 'cohort=none&reason=price' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass', d: '$19.99', q: 'cohort=none&reason=price&step=1' } ] },
+        { c: '10% then 20% cell', n: [
+          { kind: 'offer', k: 'Offer', t: 'Save $24 on Pro', d: 'Same 10% as the default', q: 'cohort=twenty&reason=price' },
+          { via: 'Mouse leaves the window', kind: 'warn', k: 'Timed', t: 'Before you go: save $48', d: '20% for 15 minutes, once. Replaces the 10% while it runs.', q: 'cohort=twenty&reason=price&exit=1' },
+          { via: 'Closed', end: true, t: 'Pill bottom left with the clock. The 10% comes back after.' } ] },
+      ] },
+      { a: 'I don’t want to pay for a whole year', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'offer', k: 'First term', t: 'Start with one month', d: '$30 now, then yearly', q: 'reason=annual' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass', d: '$19.99', q: 'reason=annual&step=1' } ] },
+        { c: 'Student', n: [
+          { kind: 'side', k: 'Side step', t: 'Verify student', q: 'persona=student&reason=annual' },
+          { via: 'Not a student', kind: 'offer', k: 'First term', t: 'One semester', d: '$72', q: 'persona=student&reason=annual&step=1' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass', q: 'persona=student&reason=annual&step=2' } ] },
+      ] },
+      { a: 'My payment method failed or is not listed', w: 'Checkout only', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'side', k: 'Side step', t: 'Other ways to pay', d: 'UPI, PayPal, card in INR, invoice, Apple or Google Pay', q: 'at=checkout&reason=payment' },
+          { via: 'Use', end: true, t: 'Back to checkout with that method' } ] },
+        { c: 'None of these work', n: [
+          { kind: 'offer', k: 'Last step', t: 'Seven Day Pass', d: '$19.99', q: 'at=checkout&reason=payment&step=1' } ] },
+      ] },
+      { a: 'The deck isn’t good enough yet', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'nooffer', k: 'No offer', t: 'Let’s fix the deck first', d: 'Deck Score, outline edit, or an expert polish', q: 'reason=output' },
+          { via: 'Any button', end: true, t: 'Leaves pricing for that tool' } ] },
+      ] },
+      { a: 'I’m not sure the credits are enough', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'nooffer', k: 'Explain', t: 'What the credits cover', d: 'Plans side by side in decks, and what this deck used', q: 'reason=credits' },
+          { via: 'Still not sure', kind: 'offer', k: 'First term', t: 'Start with one month', q: 'reason=credits&step=1' },
+          { via: NO, kind: 'offer', k: 'Last step', t: 'Seven Day Pass', q: 'reason=credits&step=2' } ] },
+      ] },
+      { a: 'Just looking for now', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'nooffer', k: 'No offer', t: 'Nothing now', d: 'A lifecycle email picks it up in 24 hours', q: 'reason=later' } ] },
+      ] },
+    ],
+    v2: [
+      { a: 'The price is too high', w: 'Plans and checkout', rows: [
+        { c: 'Default, 10% cell', base: true, n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'Here are cheaper ways in', opts: ['Save $24 on your first year (recommended)', 'Start with one month, $30', 'Just this deck, $19.99'], d: 'Plan switch on top. Back to plans or change answer below.', q: 'reason=price' },
+          { via: 'Pick one', end: true, t: 'Checkout for that option' } ] },
+        { c: 'Sales persona', n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'Here are cheaper ways in', opts: ['Same three options', 'Plus "Have my company pay"'], rec: false, q: 'persona=sales&reason=price' },
+          { via: 'Company pays', kind: 'side', k: 'Side step', t: 'Have your company pay', d: '"I’ll pay myself" comes back', q: 'persona=sales&reason=price' } ] },
+        { c: 'Former subscriber', n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'Here are cheaper ways in', opts: ['Welcome back: save $48 (20%)', 'One month, $30', 'Just this deck, $19.99'], q: 'lapsed=1&reason=price' } ] },
+        { c: 'Student', n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'Student prices', opts: ['Student Plan, $144 a year', 'One semester, $72', 'Just this deck, $19.99'], q: 'persona=student&reason=price' },
+          { via: 'Student option', kind: 'side', k: 'Side step', t: 'Verify you’re a student', d: 'Only at the button. Back returns to the screen.', q: 'persona=student&reason=price&sel=studentYear' } ] },
+        { c: 'No-discount cell', n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'Here are cheaper ways in', opts: ['One month, $30', 'Just this deck, $19.99'], q: 'cohort=none&reason=price' } ] },
+        { c: '10% then 20% cell', n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'Here are cheaper ways in', opts: ['Save $24 (10%)', 'One month', 'Just this deck'], q: 'cohort=twenty&reason=price' },
+          { via: 'Mouse leaves the window', kind: 'warn', k: 'Timed', t: 'Before you go: save $48', d: '20% for 15 minutes, once', q: 'cohort=twenty&reason=price&exit=1' } ] },
+      ] },
+      { a: 'I don’t want to pay for a whole year', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'You don’t have to pay for a year', opts: ['Start with one month, $30', 'Just this deck, $19.99'], q: 'reason=annual' },
+          { via: 'Pick one', end: true, t: 'Checkout for that option' } ] },
+        { c: 'Student', n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'You don’t have to pay for a year', opts: ['One semester, $72', 'Just this deck, $19.99'], q: 'persona=student&reason=annual' } ] },
+      ] },
+      { a: 'My payment method failed or is not listed', w: 'Checkout only', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'side', k: 'Side step', t: 'Other ways to pay', d: 'UPI, PayPal, card in INR, invoice, Apple or Google Pay', q: 'at=checkout&reason=payment' },
+          { via: 'Use', end: true, t: 'Back to checkout with that method' } ] },
+      ] },
+      { a: 'The deck isn’t good enough yet', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'nooffer', k: 'No offer', t: 'Let’s fix the deck first', d: 'Deck Score, outline edit, or an expert polish', q: 'reason=output' } ] },
+      ] },
+      { a: 'I’m not sure the credits are enough', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'offer', wide: true, k: 'One screen', t: 'What the credits cover', opts: ['Plans in credits, decks and price', 'Start with one month, $30'], rec: false, q: 'reason=credits' },
+          { via: 'Pick one', end: true, t: 'Checkout, or back to plans' } ] },
+      ] },
+      { a: 'Just looking for now', w: 'Plans and checkout', rows: [
+        { c: 'Everyone', base: true, n: [
+          { kind: 'nooffer', k: 'No offer', t: 'A short note, nothing else', d: '"Your deck is saved, plans stay under Upgrade."', q: 'reason=later' } ] },
+      ] },
+    ],
+  };
+
+  const RULES = {
+    v1: [
+      ['Skip', 'Closes with nothing. The question is still used up.'],
+      ['Closing the plans again later', 'Shows the Seven Day Pass once, then just closes. <a href="artifact-pricing-v1.html?again=1" target="_blank" rel="noopener">See it</a>'],
+      ['X on any step', 'Ends the walk. No thanks moves to the next step.'],
+      ['Offers never stack', 'One live offer at a time. The 20% exit offer pauses the 10% and gives it back.'],
+      ['Any main button', 'Opens our checkout for that plan or item, then the success screen.'],
+    ],
+    v2: [
+      ['Skip', 'Closes with nothing. The question is still used up.'],
+      ['Closing again later', 'Just closes. No second question, no Pass push. <a href="artifact-pricing-v2.html?again=1" target="_blank" rel="noopener">See it</a>'],
+      ['Change answer', 'Every option screen can go back to the question, or back to the plans.'],
+      ['Offer on Upgrade', 'While the 10% runs, the editor’s Upgrade button shows "10% off".'],
+      ['Shown once', 'Each option (10%, Pass) is granted the first time it is shown and not pushed again.'],
+      ['Any main button', 'Opens our checkout for that plan or item, then the success screen.'],
+    ],
+  };
+
+  const draw = () => {
+    document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.v === V.v));
+    const link = document.getElementById('proto-link');
+    link.href = 'artifact-pricing-' + V.v + '.html';
+    link.querySelector('span').textContent = 'Open ' + V.v + ' proto';
+    document.getElementById('entry').innerHTML = '<div class="chain">' + chain(ENTRY()) + '</div>';
+    document.getElementById('lanes-title').textContent = V.v === 'v1' ? 'Each answer, step by step' : 'Each answer, one screen';
+    document.getElementById('lanes-sub').textContent = V.v === 'v1'
+      ? 'No thanks moves to the next step. The X on any step ends it.'
+      : 'Every option for that answer sits on one screen. Pick one, or change the answer.';
+    document.getElementById('lanes').innerHTML = LANES[V.v].map((l) =>
+      '<div class="lane"><div class="ans"><span class="pill">' + l.a + '</span><span class="where">' + l.w + '</span></div>' +
+      '<div class="rows">' + l.rows.map((r) => '<div class="row"><span class="cond' + (r.base ? ' base' : '') + '">' + r.c + '</span><div class="chain">' + chain(r.n) + '</div></div>').join('') + '</div></div>').join('');
+    document.getElementById('rules').innerHTML = RULES[V.v].map((r) => '<div class="rule"><b>' + r[0] + '</b>' + r[1] + '</div>').join('');
+    document.getElementById('cmp-block').hidden = V.v !== 'v2';
+  };
+  document.querySelector('.tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    V.v = b.dataset.v;
+    try { localStorage.setItem('close-flow-tab', V.v); } catch (err) {}
+    draw();
+  });
+  try { const saved = localStorage.getItem('close-flow-tab'); if (saved === 'v1' || saved === 'v2') V.v = saved; } catch (err) {}
+  draw();
+
+  /* large view: every screen in this tab, in map order */
+  const lb = document.getElementById('lb');
+  let shots = [], at = 0;
+  const showShot = (i) => {
+    at = (i + shots.length) % shots.length;
+    const b = shots[at];
+    document.getElementById('lb-img').src = b.dataset.img;
+    document.getElementById('lb-img').alt = b.dataset.title;
+    document.getElementById('lb-title').textContent = b.dataset.title;
+    document.getElementById('lb-open').href = b.dataset.href;
+    document.getElementById('lb-count').textContent = (at + 1) + ' of ' + shots.length;
+    lb.hidden = false;
+  };
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.shot');
+    if (b) { shots = [...document.querySelectorAll('.shot')]; showShot(shots.indexOf(b)); return; }
+    if (e.target === lb || e.target.closest('#lb-close')) lb.hidden = true;
+  });
+  document.getElementById('lb-prev').addEventListener('click', () => showShot(at - 1));
+  document.getElementById('lb-next').addEventListener('click', () => showShot(at + 1));
+  document.addEventListener('keydown', (e) => {
+    if (lb.hidden) return;
+    if (e.key === 'Escape') lb.hidden = true;
+    if (e.key === 'ArrowRight') showShot(at + 1);
+    if (e.key === 'ArrowLeft') showShot(at - 1);
+  });
+</script>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+</body>
+</html>
