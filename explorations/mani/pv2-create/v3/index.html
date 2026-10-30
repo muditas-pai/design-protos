@@ -644,13 +644,51 @@
     /* Dock */
     .dock { padding: 6px; border-radius: 14px; }
   }
-  @media (max-width: 360px) { .chips .chip.icon { width: 36px; } .chips .lk-trigger, .chips [data-bind="optChip"] { padding: 0 9px; } }
+  /* Phones: every toolbar button is the same 40x40 square. State moves to corner marks. */
+  @media (max-width: 640px) {
+    .chips, .dock-t { gap: 6px; }
+    .chips .chip, .dock-t .chip, .composer .mic, .dock .mic, .composer .go-in, .dock .go-in { flex: 0 0 40px; width: 40px; height: 40px; padding: 0; justify-content: center; gap: 0; }
+    .composer .mic, .dock .mic { margin-left: auto; }
+    .composer .mic + .go-in, .dock .mic + .go-in { margin-left: 6px; }
+    .chips .lk-trigger .dots, .dock-t .lk-trigger .dots { display: none; }
+    .chips .lk-trigger:not(.looks-beam)::after, .dock-t .lk-trigger:not(.looks-beam)::after { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--brand-600)); box-shadow: 0 0 0 2px rgb(var(--surface)); }
+    .chips .lk-trigger .kl, .dock-t .lk-trigger .kl { width: 22px; height: 22px; }
+    .chips [data-bind="optChip"] .count, .dock-t [data-bind="optChip"] .count { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; font-size: 10px; box-shadow: 0 0 0 2px rgb(var(--surface)); }
+    .chips .chip svg, .dock-t .chip svg, .composer .mic svg, .dock .mic svg { width: 18px; height: 18px; }
+    .composer .go-in svg, .dock .go-in svg { width: 20px; height: 20px; }
+    .rec { gap: 6px; } .rec-b { width: 40px; height: 40px; }
+  }
   /* Phones: no proto review bar, no modal (E opens inline like A), Plus always in the box */
   .plus-phone { display: none; }
+  /* Phones scroll with overlay scrollbars: hide the desktop-style bar (shows up in the Android preview frame). */
+  @media (max-width: 640px) { html { scrollbar-width: none; } html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; } }
   @media (max-width: 640px) { #agentation-host { display: none !important; } .lk-add { display: none; } .review { display: none; } .plus-phone { display: inline-flex; } #toasts { top: 56px; } }
   /* Mic: outlined like the other toolbar buttons */
   .mic { border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); }
   .mic:hover { background: rgb(var(--sunken)); border-color: rgb(var(--ink-3) / .3); }
+  /* Phones, like Gemini and ChatGPT: four controls. Plus and Options left, mic and Create right.
+     Ghost round icons; Create is the only filled button. Design lives inside Options. */
+  @media (max-width: 640px) {
+    .chips .lk-trigger, .dock-t .lk-trigger { display: none !important; }
+    .chips .chip, .dock-t .chip, .composer .mic, .dock .mic { border-color: transparent !important; background: transparent; border-radius: 999px; color: rgb(var(--ink-2)); }
+    .chips .chip:hover, .dock-t .chip:hover, .composer .mic:hover, .dock .mic:hover, .chips .chip[aria-expanded="true"] { background: rgb(var(--sunken)); }
+    .chips .chip.on, .dock-t .chip.on { background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); }
+    .composer .go-in, .dock .go-in { border-radius: 999px; }
+    .rec-b { border-radius: 999px; }
+    .chips svg, .dock-t svg, .composer .mic svg, .dock .mic svg { width: 20px; height: 20px; }
+    .os-design { padding: 10px 0 12px; border-bottom: 1px solid rgb(var(--line)); }
+    .os-design .os-h { padding: 0 0 6px; }
+    .os-design .pick .dots { margin-left: auto; }
+    .os-design .pick .dots + .chev-r { margin-left: 6px; }
+    .os-design .pick .chev-r { margin-left: auto; }
+  }
+  /* Proto switcher: floating in the bottom-left corner (A / E and dark mode). The top bar scrolls with the page. */
+  .review { position: fixed; top: auto; left: 16px; bottom: 16px; z-index: 60; border-radius: 10px; box-shadow: var(--sh-dialog); }
+  .review-in { padding: 4px; gap: 4px; flex-wrap: nowrap; overflow: visible; }
+  .review b, .review-note, .review .rr a, #planTabs { display: none !important; }
+  .review .rr { margin-left: 0; }
+  .topbar { position: relative; top: 0; }
+  #toasts { top: 76px; }
 </style>
 </head>
 <body>
@@ -660,7 +698,7 @@
     <b>PV2 create · v3</b>
     <div class="opt-tabs" id="optTabs" role="group" aria-label="Options"></div>
     <span class="review-note" id="note"></span>
-    <span class="rr"><a class="rl" href="mobile.html">Mobile preview</a><a class="rl" href="../v2/">v2</a><button class="rl" id="theme">Dark mode</button></span>
+    <span class="rr"><a class="rl" href="../v2/">v2</a><button class="rl" id="theme">Dark mode</button></span>
   </div>
 </div>
 
@@ -1032,6 +1070,7 @@ const storyFieldsHTML = () => `
 const SEC = (title, body, cls = "", n = 0) => `<section class="os ${cls}"><div class="os-h"><span class="eyebrow">${title}${n ? `<span class="os-n">${n}</span>` : ""}</span></div>${body}</section>`;
 const resetBtn = () => (changedCount() ? `<button class="link" data-reset>Reset</button>` : "");
 const ROW = (title, sub, body) => `<section class="os os-row"><div class="os-h"><b>${title}</b><small>${sub}</small></div><div class="os-b">${body}</div></section>`;
+const designRow = () => { const l = lookObj(); return `<section class="os os-design"><div class="os-h"><span class="eyebrow">Design</span></div><button class="pick" data-looks aria-haspopup="dialog"><span class="ico-g">${ic("palette")}</span><span class="pv">${l ? esc(l.name) : "Auto, picked from your prompt"}</span>${l ? dotsHTML(l) : ""}${ic("caret", "chev-r")}</button></section>`; };
 const optHead = () => `<div class="opt-head"><b>Options</b><small>Remembered for next time</small><span class="sp"></span>${resetBtn()}</div>`;
 const effBody = () => `<div class="eff" role="radiogroup" aria-label="Effort">${BUDGET.map((b) => `<button class="eff-c" role="radio" aria-checked="${S.budget === b.id}" data-budget="${b.id}">${ic(b.icon)}<span>${b.id === "auto" ? "Auto" : b.label}</span></button>`).join("")}</div><p class="os-note">${budgetObj().sub}. Higher effort uses more credits.</p>`;
 const secEffort = () => SEC("Effort", effBody(), "", +(S.budget !== "auto"));
@@ -1060,6 +1099,7 @@ const tabsHTML = () => `<div class="segmented otabs" role="tablist">${TABS.map((
 function panelHTML(kind) {
   const head = (close) => `<div class="opt-head"><b>Options</b><small>Remembered for next time</small><span class="sp"></span>${resetBtn()}${close}</div>`;
   if (kind === "below") return `<div class="below-in" id="opanel" tabindex="-1" role="region" aria-label="Options">${head(`<button class="link" data-panel-close>Hide options</button>`)}
+    ${mobile() ? designRow() : ""}
     ${ROW("Effort", "How hard we work on it", effBody())}
     ${ROW("Mode", "Switch on what you need", modesFor().map(modeRow).join(""))}
     ${ROW("Deck", "Length, language and depth", deckBody())}
@@ -1451,7 +1491,8 @@ const isDark = () => document.documentElement.dataset.theme ? document.documentE
 th.textContent = isDark() ? "Light mode" : "Dark mode";
 th.onclick = () => { const d = isDark(); document.documentElement.dataset.theme = d ? "light" : "dark"; th.textContent = d ? "Dark mode" : "Light mode"; };
 $("#themeTop").onclick = () => th.onclick();
-const setReviewH = () => document.documentElement.style.setProperty("--review-h", $("#review").offsetHeight + "px");
+/* The proto switcher floats in the bottom-left corner, so nothing sits above the top bar. */
+const setReviewH = () => document.documentElement.style.setProperty("--review-h", "0px");
 addEventListener("resize", setReviewH);
 /* Masonry-style packing: keep tag order, but pull a later tag up into any row with room (first fit). */
 function packTags() {
