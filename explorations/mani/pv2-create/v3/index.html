@@ -689,6 +689,11 @@
   .review .rr { margin-left: 0; }
   .topbar { position: relative; top: 0; }
   #toasts { top: 76px; }
+  /* E: Create Presentation sits under the box once there is a prompt; the arrow in the box steps aside */
+  .composer.big-go .go-in { display: none; }
+  .cta-row .go { min-width: 220px; height: 44px; padding: 0 36px; font-size: 16px; font-weight: 600; }
+  .cta-row .go .spinner { margin-right: 4px; }
+  @media (max-width: 640px) { .composer.big-go .go-in { display: inline-flex; } .cta-row { display: none !important; } }
 </style>
 </head>
 <body>
@@ -869,7 +874,7 @@ function composer() {
   const kind = PANEL_OF[S.opt], dlg = kind === "sheet" || kind === "modal";
   const optBtn = `<button class="chip" data-panel="${kind}" ${dlg ? 'aria-haspopup="dialog"' : `aria-controls="${kind}"`} aria-expanded="false" data-bind="optChip"></button>`;
   return `
-  <div class="composer rise d1" id="composer">
+  <div class="composer rise d1 ${S.opt === "m" ? "big-go" : ""}" id="composer">
     <div class="files" id="files"></div>
     <textarea class="prompt" id="prompt" rows="3" aria-label="Describe your presentation" placeholder="${PLACEHOLDERS[0]}">${esc(S.prompt)}</textarea>
     <div class="tools">
@@ -889,6 +894,7 @@ function composer() {
     </div>
   </div>
   <div class="below" id="below" hidden></div>
+  ${S.opt === "m" ? `<div class="cta-row" id="ctaRow" hidden><button class="go" data-go></button></div>` : ""}
 `;
 }
 const examplesHTML = () => `
@@ -952,7 +958,14 @@ function render() {
 }
 function autosize() { const ta = $("#prompt"); if (!ta) return; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 320) + "px"; }
 
-const syncGo = () => $$("[data-go]").forEach((go) => { const ok = canGo(); go.disabled = !ok && !S.busy; go.setAttribute("aria-disabled", !ok); go.title = S.busy ? "Creating" : ok ? "Create" : "Write a few words or add a file first"; go.setAttribute("aria-label", S.busy ? "Creating your deck" : "Create"); go.classList.toggle("busy", !!S.busy); go.innerHTML = S.busy ? '<span class="spinner"></span>' : ic("arrowUp"); });
+const syncGo = () => $$("[data-go]").forEach((go) => {
+  const ok = canGo(), big = go.classList.contains("go");
+  go.disabled = !ok && !S.busy; go.setAttribute("aria-disabled", !ok);
+  go.title = big ? "" : S.busy ? "Creating" : ok ? "Create" : "Write a few words or add a file first";
+  if (!big) go.setAttribute("aria-label", S.busy ? "Creating your deck" : "Create");
+  go.classList.toggle("busy", !!S.busy);
+  go.innerHTML = big ? (S.busy ? '<span class="spinner"></span>Creating presentation' : "Create Presentation") : S.busy ? '<span class="spinner"></span>' : ic("arrowUp");
+});
 function sync() {
   const l = lookObj(), s = slideObj(), n = changedCount();
   // PV2 LooksTrigger: a picked kit shows logo + name + dots; a picked look shows "Design" + dots; nothing picked shows "Design" with the beam border.
@@ -972,6 +985,7 @@ function sync() {
   $$('[data-bind="exHead"]').forEach((b) => { const r = ROLES.includes(S.role) ? roleLabel(S.role) : S.role; b.textContent = `${r.charAt(0).toUpperCase() + r.slice(1)} are creating presentations for`; });
   $$('[data-bind="est"]').forEach((b) => { const e = estimate(), len = S.prompt.trim().length; b.innerHTML = len > 0 && len < 10 && !S.files.length ? `A few more words to start` : `About <b class="tabular">${e}</b> credits${e > CREDITS_LEFT ? ` · <a href="#" data-method="credits" style="color:rgb(var(--warn));font-weight:500;text-decoration:none">Over your ${CREDITS_LEFT}, get more</a>` : ""}`; });
   const hasContent = !!S.prompt.trim() || S.files.length > 0 || S.busy;
+  const cr = $("#ctaRow"); if (cr && cr.hidden === hasContent) cr.hidden = !hasContent;
   const aside = (hasContent && !S.busy) || S.panel === "below";
   const exw = $(".ex-wrap"); if (exw) exw.hidden = aside;
   $$(".section-label, .methods").forEach((el) => { el.hidden = aside; });
