@@ -1,0 +1,1435 @@
+<!-- forked from dashboard-flash-sale-expired.html · v2 adds monthly and weekly plans: plan labels, the yearly nudge, flash sale for free users only, weekly plan ending, renewal payment failed. No 7-day trial. -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard: monthly and weekly plans</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:       { primary: '#171717', secondary: '#525252', tertiary: '#a3a3a3' },
+          surface:   { primary: '#ffffff', secondary: '#fafafa', elevated: '#ffffff' },
+          border:    { primary: 'rgba(10,25,37,0.09)', secondary: 'rgba(26,26,26,0.09)' },
+          brand:     { 50: '#fff5ee', 100: '#ffe4d3', 500: '#ff5500', 600: '#e14a00', 700: '#b03a00' },
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  html, body { background: #fafafa; color: #171717; }
+  body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  /* Layered drop + inner shadow used on cards / buttons throughout the dashboard */
+  .ds-elev-2 {
+    box-shadow:
+      0 0 0 1px rgba(10,25,37,0.09),
+      0 1px 2px 0 rgba(10,25,37,0.09),
+      inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+  .ds-elev-1 {
+    box-shadow:
+      0 0 0 1px rgba(10,25,37,0.09),
+      inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+
+  /* Plan / Credits chip (was Trial / Credits in v1) — phrases scroll vertically in a seamless loop.
+     The track holds three lines (phrase 1, phrase 2, phrase 1 again); the
+     animation slides it from y=0 → −20 → −40 → restart. Since the third
+     line is identical to the first, the wrap-around is invisible — the
+     text reads as a continuous circle. */
+  .trial-chip-stack {
+    position: relative;
+    height: 20px;
+    width: 156px;
+    overflow: hidden;
+  }
+  .trial-chip-track {
+    display: flex;
+    flex-direction: column;
+    animation: trial-loop 8s ease-in-out infinite;
+    will-change: transform;
+  }
+  .trial-chip-track > span {
+    flex: 0 0 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  @keyframes trial-loop {
+    0%, 45%   { transform: translateY(0); }
+    50%, 95%  { transform: translateY(-20px); }
+    100%      { transform: translateY(-40px); }
+  }
+
+  /* Lightweight slide-thumbnail mockup used inside the "Paste an outline" tile */
+  .mini-deck { position: relative; width: 48px; height: 48px; background: #daf0fc; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+  .mini-deck .slide {
+    position: absolute; bottom: 4px; left: 50%;
+    width: 30px; height: 38px; background: #ffffff;
+    border-radius: 2px;
+    box-shadow: 0 0 0 0.5px rgba(0,0,0,0.06), 0 1.5px 4px rgba(0,0,0,0.08);
+    transform-origin: bottom center;
+  }
+  .mini-deck .slide-a { transform: translateX(-50%) rotate(0.8deg) translateX(2px); }
+  .mini-deck .slide-b { transform: translateX(-50%) rotate(-2.2deg) translateX(-3px); }
+  .mini-deck .slide .row { position: absolute; left: 5px; height: 2px; border-radius: 1px; background: rgba(0,0,0,0.12); }
+
+  /* Recent thumbnail tinted backgrounds (no external imagery needed) */
+  .thumb-mckinsey {
+    background:
+      radial-gradient(120% 80% at 70% 30%, rgba(255,255,255,0.10), transparent 55%),
+      linear-gradient(135deg, #1a3268 0%, #0a1d4d 100%);
+  }
+  .thumb-aethelgard {
+    background:
+      radial-gradient(140% 100% at 30% 70%, rgba(255,180,80,0.4), transparent 55%),
+      linear-gradient(180deg, #5a2920 0%, #2a1109 100%);
+  }
+  .thumb-anatomy {
+    background:
+      linear-gradient(180deg, #f0e9dc 0%, #d6c9b1 100%);
+  }
+  .thumb-title {
+    color: #fff;
+    font: 600 17px/1.2 Inter, sans-serif;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.4);
+  }
+  .thumb-anatomy .thumb-title {
+    color: #1f1f1f;
+    text-shadow: none;
+    font: 800 17px/1.05 Inter, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* Sidebar item active state */
+  .nav-item-active { background: rgba(10,25,37,0.08); }
+
+  /* Avatar gradients (no external image) */
+  .avatar-fs {
+    background:
+      radial-gradient(circle at 30% 30%, #ffd0c0, transparent 50%),
+      linear-gradient(135deg, #ff5500, #b03a00);
+  }
+  .avatar-john {
+    background:
+      radial-gradient(circle at 30% 30%, #fff0c8, transparent 55%),
+      linear-gradient(135deg, #f6b56b, #b76b1f);
+  }
+
+  /* Layout: full-viewport stage with a fixed-width sidebar and a fluid
+     content area. No mobile breakpoints — desktop-only design. */
+  .ds-sidebar { width: 260px; flex-shrink: 0; }
+  .recent-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .qa-grid     { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 960px; }
+
+  /* Pro-style discount chip — sits inline in the top nav, just left of the
+     Upgrade button. Same visual vocabulary as `.pro-bumped-pill` from the
+     pricing page (orange pill, white text, soft halo pulse), but the bob
+     runs horizontally so it nudges left ↔ right toward the CTA. */
+  .up-discount-chip {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    background: #ff5500;
+    color: #ffffff;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    z-index: 5;
+    animation:
+      up-chip-bob  1.8s cubic-bezier(.45, .05, .55, .95) infinite,
+      up-chip-glow 2.2s ease-in-out infinite;
+  }
+  /* Right-side arrow on the chip — sized so half the wedge sits *inside*
+     the orange pill (no visible gap), with the tip protruding to the right
+     at the Upgrade button. */
+  .up-discount-chip::after {
+    content: '';
+    position: absolute;
+    top: 50%; right: -3px;
+    width: 8px; height: 8px;
+    background: #ff5500;
+    transform: translateY(-50%) rotate(45deg);
+    border-radius: 1px;
+    z-index: -1;
+  }
+  .up-discount-chip i { font-size: 12px; color: #ffffff; }
+  @keyframes up-chip-bob {
+    0%, 100% { transform: translateX(0);    }
+    50%      { transform: translateX(-10px); }
+  }
+/* Shimmer sweep on the orange Upgrade CTA — a soft white highlight glides
+     diagonally across the button every ~2.6s. */
+  /* Nudge orange tag */
+  .nudge-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #ff5500; color: #ffffff;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.04em;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(255,85,0,0.32);
+    animation: nudge-glow 2.4s ease-in-out infinite;
+  }
+  .nudge-tag i { font-size: 13px; }
+  @keyframes nudge-glow {
+    0%, 100% { box-shadow: 0 4px 12px rgba(255,85,0,0.32), 0 0 0 0 rgba(255,85,0,0.45); }
+    70%      { box-shadow: 0 4px 12px rgba(255,85,0,0.32), 0 0 0 8px rgba(255,85,0,0); }
+  }
+
+  /* Missed-offer arrow bounce — left ↔ right, points at the Reactivate button */
+  .missed-arrow {
+    display: inline-flex;
+    animation: missed-arrow-bounce 1.2s ease-in-out infinite;
+  }
+  @keyframes missed-arrow-bounce {
+    0%, 100% { transform: translateX(0);   opacity: 0.85; }
+    50%      { transform: translateX(6px); opacity: 1;    }
+  }
+
+  /* Reactivate hover tooltip */
+  .reactivate-wrap { position: relative; display: inline-flex; }
+  .reactivate-tooltip {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: #171717;
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 12px 14px;
+    width: 300px;
+    font-size: 12px; line-height: 1.5;
+    letter-spacing: 0;
+    box-shadow: 0 12px 28px rgba(10,25,37,0.32),
+                0 2px 6px rgba(10,25,37,0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+    z-index: 30;
+    white-space: normal;
+    text-align: left;
+  }
+  .reactivate-wrap:hover .reactivate-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .reactivate-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: 50%;
+    width: 8px; height: 8px;
+    background: #171717;
+    transform: translateX(-50%) rotate(45deg);
+    border-radius: 1px;
+  }
+  .reactivate-tooltip strong {
+    display: block;
+    font-size: 13px; font-weight: 800; color: #fff;
+    margin-bottom: 4px;
+  }
+  .reactivate-tooltip .muted { display: block; color: #d4d4d4; }
+
+  /* Header state swap, driven by body[data-header-state]
+     States: active (default) · expired · nudge */
+  body[data-header-state="expired"] [data-state="active"],
+  body[data-header-state="expired"] [data-state="nudge"]    { display: none !important; }
+  body[data-header-state="nudge"]   [data-state="active"],
+  body[data-header-state="nudge"]   [data-state="expired"]  { display: none !important; }
+  body:not([data-header-state="expired"]):not([data-header-state="nudge"]) [data-state="expired"],
+  body:not([data-header-state="expired"]):not([data-header-state="nudge"]) [data-state="nudge"] {
+    display: none !important;
+  }
+
+  /* Fade in the incoming state block on swap */
+  [data-state] {
+    animation-duration: .45s;
+    animation-timing-function: ease-in-out;
+    animation-fill-mode: both;
+  }
+  body[data-header-state="active"]  [data-state="active"]  { animation-name: state-fade-in; }
+  body[data-header-state="expired"] [data-state="expired"] { animation-name: state-fade-in; }
+  body[data-header-state="nudge"]   [data-state="nudge"]   { animation-name: state-fade-in; }
+  @keyframes state-fade-in {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  /* Floating debug toggle to flip between Active and Expired in the prototype */
+  .state-toggle {
+    position: fixed; bottom: 20px; right: 20px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.10);
+    border-radius: 12px;
+    padding: 8px;
+    display: flex; gap: 4px; align-items: center;
+    z-index: 100;
+  }
+  .state-toggle .label {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+    color: #a3a3a3; padding: 0 8px;
+  }
+  .state-toggle button {
+    border: 0; cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px; font-weight: 700;
+    background: #f5f5f5; color: #525252;
+    transition: background .15s ease, color .15s ease;
+  }
+  .state-toggle button:hover { background: #e5e5e5; color: #171717; }
+  .state-toggle button.is-active { background: #ff5500; color: #fff; }
+
+  .shimmer-cta { position: relative; overflow: hidden; }
+  .shimmer-cta::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: -75%;
+    width: 50%;
+    background: linear-gradient(
+      100deg,
+      rgba(255,255,255,0)    0%,
+      rgba(255,255,255,0.45) 50%,
+      rgba(255,255,255,0)    100%
+    );
+    transform: skewX(-20deg);
+    pointer-events: none;
+    animation: shimmer-sweep 2.6s ease-in-out infinite;
+  }
+  @keyframes shimmer-sweep {
+    0%   { left: -75%; }
+    55%  { left: 130%; }
+    100% { left: 130%; }
+  }
+
+  /* =================================================================
+     Reactivation toast (Figma 6603:5977 — dark, center-bottom)
+     -----------------------------------------------------------------
+     Configurable via custom properties:
+       --toast-duration | --toast-bg | --toast-track-bg | --toast-fill-bg
+     See v2.html for full markup + dev notes.
+     ================================================================= */
+  .reactivate-toast {
+    --toast-duration: 6s;
+    --toast-bg: #0A1925;
+    --toast-track-bg: rgba(255,255,255,0.10);
+    --toast-fill-bg: rgba(255,255,255,0.55);
+
+    position: fixed;
+    bottom: 24px; left: 50%;
+    background: var(--toast-bg);
+    color: #fff;
+    border-radius: 4px;
+    padding: 12px;
+    width: auto;
+    max-width: calc(100vw - 32px);
+    display: inline-flex; align-items: center; gap: 12px;
+    white-space: nowrap;
+    transform: translate(-50%, 32px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1), opacity .25s ease;
+    box-shadow: 0 12px 32px rgba(10,25,37,0.32);
+    z-index: 200;
+  }
+  .reactivate-toast[data-open="true"] {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .reactivate-toast .icon {
+    width: 20px; height: 20px;
+    flex-shrink: 0;
+    color: #16a34a;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .reactivate-toast .icon i { font-size: 20px; }
+  .reactivate-toast .body { flex: 1; min-width: 0; }
+  .reactivate-toast h4 {
+    font-size: 14px; font-weight: 500;
+    color: #fff; line-height: 1.43; margin: 0;
+  }
+  .reactivate-toast .close-x {
+    width: 16px; height: 16px;
+    color: rgba(255,255,255,0.7); background: transparent; border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .reactivate-toast .close-x:hover { color: #fff; }
+  .reactivate-toast .close-x i { font-size: 16px; }
+
+  /* Bottom progress bar — drains via scaleX, paused on hover */
+  .reactivate-toast .progress {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    background: var(--toast-track-bg);
+    overflow: hidden;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+  }
+  .reactivate-toast .progress::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 100%;
+    background: var(--toast-fill-bg);
+    transform-origin: left center;
+    transform: scaleX(1);
+    will-change: transform;
+  }
+  .reactivate-toast[data-open="true"] .progress::after {
+    animation: toast-drain var(--toast-duration) linear forwards;
+  }
+  .reactivate-toast:hover .progress::after {
+    animation-play-state: paused;
+  }
+  @keyframes toast-drain {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+  }
+
+  @keyframes up-chip-glow {
+    0%, 100% { box-shadow: 0 6px 16px rgba(0,0,0,0.18),
+                           0 0 0 0   rgba(0, 85, 237, 0.55); }
+    70%      { box-shadow: 0 6px 16px rgba(0,0,0,0.18),
+                           0 0 0 9px rgba(0, 85, 237, 0); }
+    100%     { box-shadow: 0 6px 16px rgba(0,0,0,0.18),
+                           0 0 0 0   rgba(0, 85, 237, 0); }
+  }
+
+  /* =================================================================
+     v2 additions (dashboard-plans-v2)
+     ================================================================= */
+  /* Header slot for paid plans and lapsed workspaces: same chip as v1, no flash sale */
+  body[data-header-state="plan"] [data-state="active"],
+  body[data-header-state="plan"] [data-state="expired"],
+  body[data-header-state="plan"] [data-state="nudge"]  { display: none !important; }
+  body:not([data-header-state="plan"]) [data-state="plan"] { display: none !important; }
+  body[data-header-state="plan"] [data-state="plan"] { animation-name: state-fade-in; }
+
+  /* Sidebar plan chip: same pill as the PRO badge, plan name in sentence case */
+  .ws-plan { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; background: rgba(255,85,0,0.15); color: #ff5500; }
+  .ws-plan.is-gold { background: #fdeeba; color: #8a5a10; }
+  [hidden] { display: none !important; }
+
+  /* Plan banner: the app's ExpiryBanner (ported in settings-billing-v2.html), in flow above the dashboard */
+  .expiry { position: relative; z-index: 60; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 6px 48px; background: #0A1925; color: #fff; font-size: 12px; line-height: 16px; }
+  .expiry .crown { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none; border-radius: 999px; background: linear-gradient(135deg, #3427ff, #3566fe); }
+  .expiry.is-bad .crown { background: #b91c1c; }
+  .expiry .crown i { font-size: 15px; }
+  .expiry .cta { border: 0; background: none; color: #fff; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 0; font-size: 12px; }
+  .expiry .dismiss { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border: 0; border-radius: 6px; background: none; color: rgba(255,255,255,0.7); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .expiry .dismiss:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .expiry .dismiss i { font-size: 16px; }
+
+  /* Toast sits above the Manage your plan overlay */
+  .reactivate-toast { z-index: 1000; }
+
+  /* Overlay for the Manage your plan screen (ds Dialog scrim, from settings-billing-v2.html) */
+  .ov { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(16,12,60,0.45); backdrop-filter: blur(2px); animation: fade .18s ease; }
+  .ov[hidden] { display: none; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+
+  /* ---------- Manage your plan: ported from manage-plan.html, scoped to .mp ---------- */
+  .ov.mp-on { padding: 20px 72px 20px 20px; }
+.mp .modal-close {
+    position: absolute; top: 0; right: -54px; z-index: 5;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #fff; border: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #171717;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  }
+.mp .modal-close i { font-size: 18px; }
+.mp .modal-close:hover { background: #f2f6ff; }
+.mp .modal-card {
+    display: grid; grid-template-columns: 540px 1fr;
+    min-height: 600px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.4);
+  }
+.mp .left {
+    background: #f5f5f5;
+    border-right: 1px solid rgba(11,15,20,0.06);
+    border-radius: 12px 0 0 12px;
+    padding: 32px 28px 40px;
+    display: flex; flex-direction: column;
+  }
+.mp .meter-wrap { margin-bottom: 24px; }
+.mp .meter-row { display: flex; align-items: center; gap: 8px; }
+.mp .meter-row .spark-svg { color: #171717; width: 22px; height: 22px; flex: none; }
+.mp .meter-num { font-size: 24px; font-weight: 500; letter-spacing: -0.24px; color: #171717; }
+.mp .meter-label { font-size: 14px; color: #525252; }
+.mp .meter-of { margin-left: auto; font-size: 12px; color: #a3a3a3; }
+.mp .meter-bar { height: 6px; border-radius: 999px; background: rgba(11,15,20,0.06); overflow: hidden; margin-top: 10px; }
+.mp .meter-fill { height: 100%; border-radius: 999px; width: 0%; background: #005eff; transition: width .3s ease; }
+.mp .state-low .meter-fill { width: 8.6%; }
+.mp .plan-zone { display: none; }
+.mp #zone-silver-ind .big-cred, .mp #zone-gold-ind .big-cred { margin-top: 4px; }
+.mp .switch-team {
+    margin-top: 16px; padding: 0; border: 0; background: none;
+    width: fit-content; cursor: pointer;
+    font: 500 13px 'Inter', sans-serif; color: #1a6eff;
+  }
+.mp .switch-team:hover { text-decoration: underline; }
+.mp .team-seats { margin-top: 4px; font-size: 12px; font-weight: 600; width: fit-content; }
+.mp .unlimited-grad {
+    background: linear-gradient(90deg, #002464, #0059ff, #0095ff, #b6daff, #0095ff, #0059ff, #002464);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    background-position: 200% center;
+    animation: mp-unlimited-grad-move 3.5s linear infinite;
+  }
+@keyframes mp-unlimited-grad-move {
+    from { background-position: 200% center; }
+    to   { background-position: 0% center; }
+  }
+.mp .dd-label { margin: 18px 0 6px; font-size: 12px; font-weight: 500; color: #525252; }
+.mp .plan-zone .stack-math { margin-top: 12px; }
+.mp .credit-dd { position: relative; max-width: 300px; }
+.mp .credit-dd-trigger {
+    width: 100%; height: 40px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 0 12px; border: 0; border-radius: 4px;
+    background: #fff; color: #171717;
+    font: 600 14px 'Inter', sans-serif; cursor: pointer; text-align: left;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+  }
+.mp .credit-dd.is-open .credit-dd-trigger { box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px #0b0f14; }
+.mp .credit-dd-caret { color: #667085; font-size: 14px; transition: transform .15s ease; }
+.mp .credit-dd.is-open .credit-dd-caret { transform: rotate(180deg); }
+.mp .credit-dd-menu {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+    margin: 0; padding: 6px; list-style: none;
+    background: #fff; border: 1px solid #E4E7EC; border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(16,24,40,.14), 0 2px 6px rgba(16,24,40,.06);
+    display: none;
+  }
+.mp .credit-dd.is-open .credit-dd-menu { display: block; }
+.mp .credit-dd-opt {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 10px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: #171717; cursor: pointer;
+  }
+.mp .credit-dd-opt:hover, .mp .credit-dd-opt[aria-selected="true"] { background: #F2F4F7; }
+.mp .credit-dd-pill {
+    flex: none; padding: 3px 10px; border-radius: 999px;
+    background: #ECFDF3; color: #067647;
+    font-size: 11px; font-weight: 600; line-height: 1;
+  }
+.mp .credit-dd-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mp .credit-dd-left svg { color: #171717; flex: none; }
+.mp .left-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.mp .head-col { position: relative; }
+.mp .head-row { display: flex; align-items: center; gap: 6px; }
+.mp .info-tip { display: inline-flex; position: relative; color: #a3a3a3; cursor: pointer; }
+.mp .info-tip i { font-size: 17px; }
+.mp .info-tip:hover, .mp .info-tip:focus { color: #525252; }
+.mp .tip-bubble {
+    position: absolute; left: 50%; top: calc(100% + 8px); z-index: 20;
+    width: 320px; padding: 10px 12px; border-radius: 6px;
+    background: #171717; color: #fff;
+    font-size: 12px; line-height: 1.5; font-weight: 400; white-space: normal;
+    opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(-2px);
+    transition: opacity .15s ease, transform .15s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+.mp .info-tip:hover .tip-bubble, .mp .info-tip:focus .tip-bubble { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.mp .left-head h1 {
+    font-size: 24px; font-weight: 400; line-height: 1.3;
+    letter-spacing: -0.24px; color: #171717;
+  }
+.mp .left-head .sub { margin-top: 4px; font-size: 14px; line-height: 1.43; color: #171717; white-space: nowrap; }
+.mp .plan-card {
+    background: #fff; border-radius: 4px; padding: 20px 16px; margin-top: 24px;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+.mp .plan-card + .plan-card { margin-top: 16px; }
+.mp .plan-card--gold {
+    background-image: linear-gradient(180deg, #faf0d6 0%, #fdf9ec 40%, #ffffff 80%);
+    box-shadow: 0 0 0 1px #e6d19e, 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+.mp .plan-row { display: flex; gap: 20px; align-items: flex-start; cursor: pointer; }
+.mp .plan-row input { position: absolute; opacity: 0; pointer-events: none; }
+.mp .radio {
+    width: 16px; height: 16px; border-radius: 50%; flex: none; margin-top: 1px;
+    border: 1px solid #c2c7ce; background: #fff;
+    transition: border .12s ease;
+  }
+.mp .plan-row.is-selected .radio { border: 5px solid #0b0f14; }
+.mp .plan-body { flex: 1; min-width: 0; }
+.mp .plan-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mp .plan-name { font-size: 14px; font-weight: 500; color: #525252; white-space: nowrap; }
+.mp .plan-name .cred { font-size: 12px; font-weight: 400; color: #005eff; }
+.mp .plan-price { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.mp .strike { font-size: 14px; font-weight: 500; color: #a3a3a3; text-decoration: line-through; }
+.mp .price { font-size: 14px; font-weight: 500; color: #525252; }
+.mp .per { font-size: 12px; color: #525252; }
+.mp .save { font-size: 12px; color: #005eff; white-space: nowrap; }
+.mp .off-badge {
+    padding: 2px 4px; border-radius: 2px; margin-left: 6px;
+    background: rgba(0,85,237,0.12); color: #005eff;
+    font-size: 10px; font-weight: 500; vertical-align: 1px;
+  }
+.mp .current-badge {
+    padding: 2px 4px; border-radius: 2px; margin-left: 6px;
+    background: rgba(11,15,20,0.06); color: #525252;
+    font-size: 10px; font-weight: 500; vertical-align: 1px;
+  }
+.mp .big-cred { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.mp .big-cred .spark-svg { width: 22px; height: 22px; flex: none; color: #171717; }
+.mp .plan-split { height: 1px; background: rgba(11,15,20,0.09); margin: 12px 0 0; }
+.mp .plan-card--gold .big-cred .spark-svg { color: #c9932a; }
+.mp .plan-card--gold .big-cred { margin-top: 0; }
+.mp .big-cred .num { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: #171717; }
+.mp .big-cred .lbl { font-size: 14px; color: #525252; }
+.mp .save-line { display: flex; justify-content: flex-end; margin-top: 2px; }
+.mp .plan-card--gold .big-cred i { color: #c9932a; }
+.mp .plan-card--gold .big-cred .num {
+    background: linear-gradient(92deg, #8a5a10, #c9932a 40%, #f2d688 50%, #c9932a 60%, #8a5a10);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: mp-gold-shimmer 2.6s linear infinite;
+  }
+@keyframes mp-gold-shimmer {
+    0% { background-position: 120% 0; }
+    100% { background-position: -80% 0; }
+  }
+.mp .xbadge { background: #fdeeba; color: #8a5a10; border-radius: 999px; font-size: 10.5px; font-weight: 600; padding: 3px 8px; }
+.mp .stack-math {
+    margin-top: 8px; display: none;
+    align-items: center; gap: 5px;
+    font-size: 12px; color: #525252; font-weight: 500;
+  }
+.mp .state-low .stack-math { display: inline-flex; }
+.mp .info-tip--sm i { font-size: 14px; }
+.mp .info-tip--title { display: inline; margin-left: 6px; }
+.mp .info-tip--title > i { vertical-align: -1px; }
+.mp .gold-points {
+    list-style: none; margin: 12px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+.mp .gold-points li { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.4; color: #525252; }
+.mp .gold-points li i { font-size: 16px; flex: none; color: #525252; margin-top: 0px; }
+.mp .right { padding: 32px 24px 28px; display: flex; flex-direction: column; }
+.mp .right-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+.mp .right h2 {
+    font-size: 24px; font-weight: 400; line-height: 1.3;
+    letter-spacing: -0.24px; color: #171717; margin-bottom: 24px;
+  }
+.mp .pay-tabs { display: flex; border-bottom: 1px solid rgba(11,15,20,0.09); margin-bottom: 24px; }
+.mp .pay-tab {
+    display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 2px 8px;
+    border: 0; background: none; cursor: pointer;
+    font: 500 14px/1.43 'Inter', sans-serif; color: #171717;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+.mp .pay-tab.is-active { border-bottom-color: #0b0f14; }
+.mp .pay-tab i { font-size: 20px; }
+.mp .pay-tab .tab-logo { width: 20px; height: 20px; }
+.mp .upi-logos { display: flex; gap: 6px; align-items: center; }
+.mp .upi-logos img { width: 20px; height: 20px; display: block; }
+.mp .upi-logos .logo-circle {
+    width: 20px; height: 20px; border-radius: 50%; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+.mp .logo-circle--gray { background: #e5e5e5; }
+.mp .logo-circle--black { background: #000; }
+.mp .logo-circle--gray img { width: 13px; height: 11px; }
+.mp .logo-circle--black img { width: 9px; height: 10px; }
+.mp .field { margin-bottom: 20px; }
+.mp .field label { display: block; font-size: 14px; font-weight: 500; line-height: 1.43; color: #525252; margin-bottom: 5px; }
+.mp .input {
+    width: 100%; padding: 12px; border: 0; border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+    font: 400 14px/1.43 'Inter', sans-serif; color: #171717;
+    display: flex; align-items: center; gap: 8px;
+  }
+.mp .input.placeholder { color: #a3a3a3; }
+.mp .input .grow { flex: 1; min-width: 0; }
+.mp .brand-icons { display: flex; gap: 4px; align-items: center; }
+.mp .brand-icons img { width: 24px; height: 16px; display: block; }
+.mp .cvc-icon { width: 24px; height: 16px; display: block; margin-left: auto; }
+.mp .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.mp .select {
+    width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 4px;
+    background: #fff; cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 1px rgba(11,15,20,0.06),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    font: 400 14px/1.43 'Inter', sans-serif; color: #525252;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+.mp .select i { font-size: 16px; color: #525252; }
+.mp .disclaimer { font-size: 12px; line-height: 1.33; color: #525252; margin-bottom: 20px; }
+.mp .pay-btn {
+    width: 100%; height: 44px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #0b0f14; color: #fff;
+    font: 500 14px/1.43 'Inter', sans-serif;
+    box-shadow: 0 0 0 1px rgba(26,26,26,0.06), 0 1px 2px 0 rgba(26,26,26,0.09);
+    transition: background .15s ease, transform .16s ease;
+  }
+.mp .pay-btn:hover { background: #23272c; transform: translateY(-1px); }
+.mp .pay-btn:active { transform: translateY(0); }
+.mp .pay-foot {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    margin-top: 20px; font-size: 12px; color: #525252;
+  }
+.mp .pay-foot .powered { display: flex; align-items: center; gap: 8px; }
+.mp .pay-foot .powered img { height: 16px; display: block; }
+.mp .pay-foot .vsep { width: 1px; height: 18px; background: rgba(26,26,26,0.09); }
+.mp .pay-foot .links { display: flex; gap: 12px; }
+.mp .pay-foot a { color: #525252; text-decoration: none; }
+.mp .pay-foot a:hover { text-decoration: underline; }
+.mp .stripe-panel { display: flex; flex-direction: column; flex: 1; }
+.mp .stripe-panel .pay-foot { margin-top: auto; padding-top: 20px; }
+.mp .paddle-panel { display: none; }
+.mp .pp-box {
+    border-radius: 4px; padding: 16px; background: #fff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+  }
+.mp .pp-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.mp .pp-plan { font-size: 14px; font-weight: 500; }
+.mp .pp-off b { color: #16A34A; font-weight: 500; }
+.mp .pp-sub { margin-top: 6px; font-size: 13px; color: #525252; }
+.mp .pp-divider { border-bottom: 1px solid rgba(11,15,20,0.09); margin: 14px 0; }
+.mp .pp-due { font-size: 14px; font-weight: 500; }
+.mp .pp-card-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; font-size: 13px; color: #171717; font-weight: 500;
+  }
+.mp .pp-card-row i { font-size: 17px; color: #525252; }
+.mp .pp-change {
+    margin-left: auto; border: 0; background: none; cursor: pointer;
+    font: 500 12.5px 'Inter', sans-serif; color: #1a6eff;
+  }
+.mp .pp-change:hover { text-decoration: underline; }
+.mp .pp-agree {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin-top: 16px; font-size: 13px; color: #171717; line-height: 1.45; cursor: pointer;
+  }
+.mp .pp-agree input { accent-color: #0b0f14; width: 15px; height: 15px; margin-top: 2px; flex: none; }
+.mp .pp-actions { display: flex; margin-top: 22px; }
+.mp .pp-confirm {
+    width: 100%; height: 44px; padding: 0 20px; border-radius: 4px; border: 0; cursor: pointer;
+    background: #0b0f14; color: #fff;
+    font: 500 13.5px 'Inter', sans-serif;
+    transition: background .15s ease, transform .16s ease;
+  }
+.mp .pp-confirm:hover { background: #23272c; transform: translateY(-1px); }
+.mp .paddle-panel .pay-foot { margin-top: auto; padding-top: 20px; }
+@media (max-width: 980px) {
+  .mp .modal-card { grid-template-columns: 1fr; }
+  .mp .left { border-right: 0; border-bottom: 1px solid rgba(11,15,20,0.06); border-radius: 12px 12px 0 0; }
+}
+
+  .mp .modal-wrap { position: relative; width: 100%; max-width: 1068px; margin: 0 auto; animation: pop .2s cubic-bezier(.2,0,0,1); }
+  .mp .left { max-height: calc(100vh - 40px); overflow-y: auto; }
+  .mp .paddle-panel { display: flex; flex-direction: column; flex: 1; }
+  .mp .plan-row.is-cur { cursor: default; }
+  .mp .plan-row.is-cur .radio { visibility: hidden; }
+  .mp .cur-note { margin-top: 8px; font-size: 12px; line-height: 1.4; color: #525252; }
+  .mp .pp-sub.carry { color: #16A34A; }
+  .mp .pp-err { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 4px; background: #fef2f2; color: #b91c1c; font-size: 13px; line-height: 1.4; }
+  .mp .pp-err i { font-size: 16px; margin-top: 1px; }
+  .mp .pp-sub.warn { color: #b45309; }
+  .mp .stripe-panel .pay-btn[disabled] { background: #a3a3a3; cursor: not-allowed; transform: none; }
+  .mp .left-head .sub { white-space: normal; color: #525252; font-size: 13px; }
+  .callout.bad b { color: var(--bad); }
+  .note { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .note svg { width: 16px; height: 16px; margin-top: 1px; color: var(--ink3); }
+  .refill { margin-top: 10px; font-size: 13px; color: var(--ink2); }
+  .more { margin-top: 8px; border: 0; background: none; color: var(--brand); font-weight: 500; cursor: pointer; }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
+  .mp .pp-confirm[disabled] { background: #a3a3a3; cursor: not-allowed; transform: none; }
+
+  /* proto controls (not product UI), style from settings-billing-v2.html */
+  .proto { position: fixed; right: 12px; bottom: 12px; z-index: 990; width: 316px; border-radius: 12px; background: rgba(20,20,31,0.94); color: #fff; font-size: 11px; box-shadow: 0 12px 32px -10px rgba(0,0,0,0.4); }
+  .proto .phd { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 12px; border: 0; background: none; color: #fff; font: 600 11px 'Inter', sans-serif; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .proto.shut .pb2 { display: none; }
+  .proto.shut .phd i { transform: rotate(180deg); }
+  .pb2 { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 12px; }
+  .pb2 b { width: 100%; margin-top: 4px; font-weight: 500; opacity: .6; }
+  .pb2 button { height: 22px; padding: 0 8px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.14); color: #fff; font: 500 11px 'Inter', sans-serif; cursor: pointer; }
+  .pb2 button.on { background: #fff; color: #14141f; }
+  .pb2 button[disabled] { opacity: .35; cursor: not-allowed; }
+  .pb2 .note { width: 100%; margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.12); line-height: 1.45; opacity: .75; }
+</style>
+</head>
+<body>
+
+<!-- v2: plan banner (yearly nudge, weekly ending, past due). Rendered by the v2 script. -->
+<div class="expiry" id="plan-banner" role="status" hidden></div>
+
+<!-- ─── Stage (fills the full viewport) ──────────────────────────────────── -->
+<div class="bg-white" style="width:100%;">
+
+  <div class="flex w-full" style="min-height:100vh;">
+
+    <!-- ─── SIDEBAR ────────────────────────────────────────────────────── -->
+    <aside class="ds-sidebar flex flex-col justify-between bg-[#fafafa] border-r border-border-secondary">
+
+      <div class="flex flex-col">
+        <!-- Workspace switcher: avatar + name + inline Upgrade link + caret -->
+        <div class="border-b border-border-secondary px-3 py-2">
+          <div class="flex items-center gap-2 rounded-md px-1 py-0.5">
+            <span class="avatar-fs inline-flex items-center justify-center rounded-[5px] border-[1.5px] border-white text-white text-[14px] font-bold shrink-0" style="width:34px; height:34px;">N</span>
+            <span class="flex-1 min-w-0 flex items-center gap-2">
+              <span class="text-[14px] font-medium text-ink-primary truncate">Nvidia Works…</span>
+              <a href="#" id="ws-upgrade" data-a="pricing" class="text-[14px] font-semibold text-brand-500 hover:text-brand-600 shrink-0">Upgrade</a>
+              <span id="ws-plan" class="ws-plan shrink-0" hidden>Pro monthly</span>
+            </span>
+            <button class="size-7 inline-flex items-center justify-center rounded hover:bg-black/[0.04] shrink-0" aria-label="Switch workspace">
+              <i class="ph ph-caret-down text-[16px] text-ink-secondary"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Primary nav -->
+        <nav class="px-3 py-2 flex flex-col gap-0.5">
+          <a class="flex items-center gap-2 px-2 h-9 rounded nav-item-active">
+            <i class="ph ph-house text-[18px] text-ink-primary"></i>
+            <span class="text-[14px] font-medium text-ink-primary">Home</span>
+          </a>
+          <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]">
+            <i class="ph ph-file text-[18px] text-ink-secondary"></i>
+            <span class="text-[14px] text-ink-secondary">Created by me</span>
+          </a>
+        </nav>
+
+        <div class="border-t border-border-secondary mx-3"></div>
+
+        <!-- Projects -->
+        <nav class="px-3 py-2 flex flex-col gap-0.5">
+          <p class="text-[13px] text-ink-tertiary px-2 py-1.5">Projects</p>
+          <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]" data-a="locked" data-v="Projects">
+            <i class="ph ph-plus text-[18px] text-ink-secondary"></i>
+            <span class="flex-1 text-[14px] text-ink-secondary">Create project</span>
+            <span class="pro-lock inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3px]" style="background: rgba(255,85,0,0.15); color: #ff5500;">PRO</span>
+          </a>
+        </nav>
+
+        <div class="border-t border-border-secondary mx-3"></div>
+
+        <!-- Resources -->
+        <nav class="px-3 py-2 flex flex-col gap-0.5">
+          <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]">
+            <i class="ph ph-books text-[18px] text-ink-secondary"></i>
+            <span class="text-[14px] text-ink-secondary">Hire an expert</span>
+          </a>
+          <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]">
+            <i class="ph ph-layout text-[18px] text-ink-secondary"></i>
+            <span class="text-[14px] text-ink-secondary">Templates</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t border-border-secondary px-3 py-2 flex flex-col gap-0.5">
+        <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]">
+          <i class="ph ph-gear text-[18px] text-ink-secondary"></i>
+          <span class="text-[14px] text-ink-secondary">Workspace settings</span>
+        </a>
+        <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]" data-a="locked" data-v="Inviting members">
+          <i class="ph ph-users text-[18px] text-ink-secondary"></i>
+          <span class="flex-1 text-[14px] text-ink-secondary">Invite new members</span>
+          <span class="pro-lock inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3px]" style="background: rgba(255,85,0,0.15); color: #ff5500;">PRO</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ─── CONTENT ───────────────────────────────────────────────────────── -->
+    <main class="flex-1 flex flex-col bg-white border-l border-border-secondary min-w-0">
+
+      <!-- Top nav -->
+      <div class="flex items-center justify-end gap-3 h-14 border-b border-border-secondary px-6">
+
+        <!-- ACTIVE STATE (free users only): $60 off pill + Plan/Credits + Upgrade button -->
+        <div data-state="active" class="ds-state flex items-center gap-3">
+          <span class="up-discount-chip" id="up-discount-chip" aria-live="polite">
+            <span>$60 off</span>
+            <i class="ph-fill ph-clock"></i>
+            <span>Ends in <span class="timer" id="up-discount-timer">59:51</span></span>
+          </span>
+
+          <div class="trial-chip-wrap bg-white rounded-md flex items-center pl-2.5 pr-1 py-1" style="border: 1px solid rgba(255, 85, 0, 0.12);">
+            <div class="trial-chip-stack">
+              <div class="trial-chip-track">
+                <span class="text-[14px] font-medium text-ink-primary">Free plan</span>
+                <span class="text-[14px] font-medium text-ink-primary">✨ Credits: 60 left</span>
+                <span class="text-[14px] font-medium text-ink-primary">Free plan</span>
+              </div>
+            </div>
+            <button data-a="pricing" class="shimmer-cta ml-3 inline-flex items-center gap-1.5 h-7 px-3.5 rounded text-white text-[14px] font-medium" style="background:#ff5500;">
+              <i class="ph-fill ph-rocket-launch text-[16px]"></i>
+              Upgrade
+            </button>
+          </div>
+        </div>
+
+        <!-- EXPIRED STATE: missed-offer message + full-size Reactivate and Upgrade button -->
+        <div data-state="expired" class="ds-state flex items-center gap-3">
+          <span class="text-[14px] font-medium text-ink-primary inline-flex items-center gap-2">
+            <span style="font-size:16px;">⚡️</span>
+            <span>Missed <strong class="font-semibold">$60 off Pro Annual</strong></span>
+            <i class="ph-bold ph-arrow-right text-[16px] text-brand-500 missed-arrow" aria-hidden="true"></i>
+          </span>
+          <span class="reactivate-wrap">
+            <button id="reactivate-cta" class="shimmer-cta inline-flex items-center gap-2 h-9 px-5 rounded text-white text-[14px] font-bold" style="background:#ff5500;">
+              <i class="ph-bold ph-arrow-clockwise text-[16px]"></i>
+              Reactivate and Upgrade
+            </button>
+            <span class="reactivate-tooltip" role="tooltip">
+              <strong>One reactivation left</strong>
+              <span class="muted">Tap to bring back $60 off Pro Annual. Last time we can offer it.</span>
+            </span>
+          </span>
+        </div>
+
+        <!-- NUDGE STATE: "Help us improve and get $60 • Claim Discount" chip
+             + Plan/Credits cycler + Upgrade CTA (free users only) -->
+        <div data-state="nudge" class="ds-state flex items-center gap-3">
+          <span class="up-discount-chip" id="nudge-discount-chip">
+            <span style="font-size:14px;">🎁</span>
+            <span>Share feedback and get $60</span>
+            <span class="opacity-60">•</span>
+            <button id="claim-discount-btn" type="button" class="font-bold underline underline-offset-2 hover:opacity-90" style="background:transparent; border:0; padding:0; color:inherit; font:inherit; cursor:pointer;">Claim Discount</button>
+          </span>
+
+          <div class="trial-chip-wrap bg-white rounded-md flex items-center pl-2.5 pr-1 py-1" style="border: 1px solid rgba(255, 85, 0, 0.12);">
+            <div class="trial-chip-stack">
+              <div class="trial-chip-track">
+                <span class="text-[14px] font-medium text-ink-primary">Free plan</span>
+                <span class="text-[14px] font-medium text-ink-primary">✨ Credits: 60 left</span>
+                <span class="text-[14px] font-medium text-ink-primary">Free plan</span>
+              </div>
+            </div>
+            <button id="nudge-cta" class="shimmer-cta ml-3 inline-flex items-center gap-1.5 h-7 px-3.5 rounded text-white text-[14px] font-medium" style="background:#ff5500;">
+              <i class="ph-fill ph-rocket-launch text-[16px]"></i>
+              Upgrade
+            </button>
+          </div>
+        </div>
+
+        <!-- v2 PLAN STATE: paid plans (and workspaces that dropped to Free). Same chip as above,
+             no flash sale chip: the flash sale is for free users only. -->
+        <div data-state="plan" class="ds-state flex items-center gap-3">
+          <div id="plan-chip" class="trial-chip-wrap bg-white rounded-md flex items-center pl-2.5 pr-1 py-1" style="border: 1px solid rgba(255, 85, 0, 0.12);">
+            <div class="trial-chip-stack">
+              <div class="trial-chip-track" id="plan-track">
+                <span class="text-[14px] font-medium text-ink-primary">Pro monthly</span>
+                <span class="text-[14px] font-medium text-ink-primary">✨ Credits: 620 left</span>
+                <span class="text-[14px] font-medium text-ink-primary">Pro monthly</span>
+              </div>
+            </div>
+            <button id="plan-cta" data-a="plan-cta" class="shimmer-cta ml-3 inline-flex items-center gap-1.5 h-7 px-3.5 rounded text-white text-[14px] font-medium" style="background:#ff5500;">
+              <i class="ph-fill ph-rocket-launch text-[16px]"></i>
+              <span id="plan-cta-t">Upgrade</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Utility icons -->
+        <div class="flex items-center">
+          <button class="size-9 inline-flex items-center justify-center rounded-md hover:bg-black/[0.04]">
+            <i class="ph ph-magnifying-glass text-[18px] text-ink-secondary"></i>
+          </button>
+          <button class="size-9 inline-flex items-center justify-center rounded-md hover:bg-black/[0.04]">
+            <i class="ph ph-question text-[18px] text-ink-secondary"></i>
+          </button>
+          <button class="size-9 inline-flex items-center justify-center rounded-md hover:bg-black/[0.04]">
+            <i class="ph ph-bell text-[18px] text-ink-secondary"></i>
+          </button>
+        </div>
+
+        <!-- Profile avatar -->
+        <span class="avatar-john inline-flex rounded-full border-[1.5px] border-white shrink-0" style="width:28px; height:28px;"></span>
+      </div>
+
+      <!-- ─── HEADER (greeting + 3 quick action cards) ─────────────────────── -->
+      <section class="px-6 pt-16 pb-14 flex flex-col gap-10 border-b border-border-secondary">
+        <div class="leading-[1.3] tracking-[-0.01em]">
+          <p class="ds-greeting text-[24px] font-normal text-ink-tertiary">Great work on your last deck, John.</p>
+          <p class="ds-greeting text-[24px] font-normal text-ink-primary">What will you create next?</p>
+        </div>
+
+        <div class="qa-grid">
+
+          <!-- Paste an outline -->
+          <button class="ds-elev-2 bg-white rounded-md flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 text-left hover:translate-y-[-1px] transition-transform">
+            <img src="assets/dashboard/qa-outline.jpg" alt="" class="shrink-0 rounded-md object-cover" style="width:36px; height:36px;" />
+            <span class="flex-1 min-w-0 px-2 py-1 flex flex-col gap-0.5">
+              <span class="text-[13px] font-medium text-ink-primary leading-[1.4]">Paste an outline</span>
+              <span class="text-[12px] text-ink-secondary leading-[1.4]">Turn your structure into slides</span>
+            </span>
+            <i class="ph ph-caret-right text-[12px] text-ink-tertiary shrink-0"></i>
+          </button>
+
+          <!-- Upload a file or share a link -->
+          <button class="ds-elev-2 bg-white rounded-md flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 text-left hover:translate-y-[-1px] transition-transform">
+            <img src="assets/dashboard/qa-upload.jpg" alt="" class="shrink-0 rounded-md object-cover" style="width:36px; height:36px;" />
+            <span class="flex-1 min-w-0 px-2 py-1 flex flex-col gap-0.5">
+              <span class="text-[13px] font-medium text-ink-primary leading-[1.4]">Upload a file or share a link</span>
+              <span class="text-[12px] text-ink-secondary leading-[1.4]">Make slides from various sources</span>
+            </span>
+            <i class="ph ph-caret-right text-[12px] text-ink-tertiary shrink-0"></i>
+          </button>
+
+          <!-- Start with a prompt -->
+          <button class="ds-elev-2 bg-white rounded-md flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 text-left hover:translate-y-[-1px] transition-transform">
+            <img src="assets/dashboard/qa-prompt.jpg" alt="" class="shrink-0 rounded-md object-cover" style="width:36px; height:36px;" />
+            <span class="flex-1 min-w-0 px-2 py-1 flex flex-col gap-0.5">
+              <span class="text-[13px] font-medium text-ink-primary leading-[1.4]">Start with a prompt</span>
+              <span class="text-[12px] text-ink-secondary leading-[1.4]">Just describe what you need</span>
+            </span>
+            <i class="ph ph-caret-right text-[12px] text-ink-tertiary shrink-0"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- ─── RECENT GRID ─────────────────────────────────────────────────── -->
+      <section class="px-6 py-6 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <p class="text-[20px] font-medium text-ink-primary leading-none">Recent</p>
+        </div>
+
+        <div class="recent-grid">
+          <!-- Card 1 -->
+          <article class="ds-elev-2 bg-white rounded-md overflow-hidden flex flex-col">
+            <img src="assets/dashboard/recent-mckinsey.png" alt="" class="block w-full object-cover" style="aspect-ratio: 16 / 9; height: auto;" />
+            <div class="px-3 pt-2 pb-3 flex flex-col gap-1">
+              <p class="text-[14px] font-medium text-ink-primary leading-[1.43] truncate">McKinsey acquires S4G Consulting to help busin…</p>
+              <p class="text-[12px] text-ink-secondary">In Drafts • Created by You</p>
+            </div>
+          </article>
+
+          <!-- Card 2 (with starred badge) -->
+          <article class="ds-elev-2 bg-white rounded-md overflow-hidden flex flex-col relative">
+            <div class="relative w-full" style="aspect-ratio: 16 / 9;">
+              <img src="assets/dashboard/recent-aethelgard.png" alt="" class="block w-full h-full object-cover" />
+              <span class="absolute top-1.5 right-1.5 inline-flex items-center justify-center bg-[#fafafa] rounded ds-elev-1 px-2 py-1">
+                <i class="ph-fill ph-star text-[14px] text-[#f5b300]"></i>
+              </span>
+            </div>
+            <div class="px-3 pt-2 pb-3 flex flex-col gap-1">
+              <p class="text-[14px] font-medium text-ink-primary leading-[1.43]">Aethelgard Living - The New Standard of Legacy</p>
+              <p class="text-[12px] text-ink-secondary">In Drafts • Created by You</p>
+            </div>
+          </article>
+
+          <!-- Card 3 -->
+          <article class="ds-elev-2 bg-white rounded-md overflow-hidden flex flex-col">
+            <img src="assets/dashboard/recent-anatomy.png" alt="" class="block w-full object-cover" style="aspect-ratio: 16 / 9; height: auto;" />
+            <div class="px-3 pt-2 pb-3 flex flex-col gap-1">
+              <p class="text-[14px] font-medium text-ink-primary leading-[1.43]">The Anatomy of the Pitch</p>
+              <p class="text-[12px] text-ink-secondary">In Drafts • Created by You</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  // Pro-style discount countdown — 60 minutes, persists across reloads.
+  (function () {
+    const KEY = 'upDiscountEndsAt';
+    const DURATION_MS = 60 * 60 * 1000;
+    const timerEl = document.getElementById('up-discount-timer');
+    if (!timerEl) return;
+
+    let endsAt = parseInt(localStorage.getItem(KEY) || '0', 10);
+    const now = Date.now();
+    if (!endsAt || endsAt <= now) {
+      endsAt = now + DURATION_MS;
+      localStorage.setItem(KEY, String(endsAt));
+    }
+
+    const pad = (n) => String(n).padStart(2, '0');
+    function tick() {
+      const ms = Math.max(0, endsAt - Date.now());
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      timerEl.textContent = `${pad(m)}:${pad(s)}`;
+      if (ms <= 0) {
+        endsAt = Date.now() + DURATION_MS;
+        localStorage.setItem(KEY, String(endsAt));
+      }
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+
+<!-- Reactivation toast (non-blocking, slides from top-right) -->
+<div class="reactivate-toast" id="reactivate-toast" data-open="false" role="status" aria-live="polite">
+  <span class="icon"><i class="ph-fill ph-check-circle"></i></span>
+  <div class="body">
+    <h4>Reactivated discount for you, just this once</h4>
+  </div>
+  <button class="close-x" id="reactivate-toast-close" aria-label="Dismiss">
+    <i class="ph ph-x"></i>
+  </button>
+  <div class="progress" aria-hidden="true"></div>
+</div>
+
+<!-- Manage your plan overlay (ported from settings-billing-v2.html, which ports manage-plan.html) -->
+<div class="ov" id="ov" hidden></div>
+
+<!-- Proto controls (not product UI). Every combination is also a deep link:
+     ?plan=free|pro-year|pro-month|gold-month|pro-week
+     &status=active|ending|weekly-ended|past-due|past-due-ended
+     &flash=active|expired|nudge   (free users: the v1 flash sale header states)
+     &nudge=seen                   (monthly/weekly: yearly nudge already shown this week)
+     &open=manage&pick=<plan>&view=team -->
+<div class="proto" id="proto">
+  <button type="button" class="phd" id="proto-t"><span>Proto: workspace state</span><i class="ph-bold ph-caret-down"></i></button>
+  <div class="pb2" id="proto-b"></div>
+</div>
+
+<script>
+  (function () {
+    /* ---------- plans (catalog in pricing-rules; monthly and weekly prices are placeholders) ---------- */
+    const PLANS = {
+      free:         { label: 'Free',         plan: null,   balance: 60 },
+      'pro-year':   { label: 'Pro yearly',   plan: 'pro',  cadence: 'year',  price: 240,  credits: 5000,  balance: 3200 },
+      'pro-month':  { label: 'Pro monthly',  plan: 'pro',  cadence: 'month', price: 25,   credits: 1000,  balance: 620 },
+      'gold-month': { label: 'Gold monthly', plan: 'gold', cadence: 'month', price: 120,  credits: 5000,  balance: 3100 },
+      'pro-week':   { label: 'Pro weekly',   plan: 'pro',  cadence: 'week',  price: 2.99, credits: 100,   balance: 60 },
+      // reached only by buying in Manage your plan
+      'gold-year':  { label: 'Gold yearly',  plan: 'gold', cadence: 'year',  price: 1200, credits: 50000, balance: 0, hidden: true },
+      'pro-team':   { label: 'Pro Team',     plan: 'pro',  cadence: 'year',  team: true, balance: 0, hidden: true },
+      'gold-team':  { label: 'Gold Team',    plan: 'gold', cadence: 'year',  team: true, balance: 0, hidden: true },
+    };
+    const STATUS = {
+      active:           { label: 'Active' },
+      ending:           { label: 'Weekly ending', only: ['pro-week'] },
+      'weekly-ended':   { label: 'Weekly ended',  only: ['pro-week'] },
+      'past-due':       { label: 'Past due',      only: ['pro-year', 'pro-month', 'gold-month', 'pro-week'] },
+      'past-due-ended': { label: 'Past due ended', only: ['pro-year', 'pro-month', 'gold-month', 'pro-week'] },
+    };
+    const FLASH = { active: 'Flash sale on', expired: 'Flash sale missed', nudge: 'Close nudge' };
+
+    /* ---------- Manage your plan: CAT, LADDER, PATHS (ported from settings-billing-v2.html) ---------- */
+    const CAT = {
+      'pro-month':  { tier: 'pro',  cad: 'month', price: 25,   credits: 1000,  name: 'Pro monthly',  state: 'pro-month' },
+      'gold-month': { tier: 'gold', cad: 'month', price: 120,  credits: 5000,  name: 'Gold monthly', state: 'gold-month' },
+      'pro-year':   { tier: 'pro',  cad: 'year',  price: 240,  credits: 5000,  name: 'Pro yearly',   state: 'pro-year' },
+      'gold-year':  { tier: 'gold', cad: 'year',  price: 1200, credits: 50000, name: 'Gold yearly',  state: 'gold-year' },
+      'pro-team':   { tier: 'pro',  cad: 'year', team: true, unit: 5000,  list: 20,  pools: [15000, 25000, 50000, 75000, 100000], name: 'Pro Team', state: 'pro-team' },
+      'gold-team':  { tier: 'gold', cad: 'year', team: true, unit: 50000, list: 100, pools: [150000, 250000, 500000, 750000, 1000000], name: 'Gold Team', state: 'gold-team' },
+    };
+    const LADDER = [0.10, 0.20, 0.30, 0.40, 0.50];
+    // Up only. Weekly is its own plan: it never converts, the user buys a new plan (fresh: true).
+    const PATHS = {
+      'pro-year':   { ind: ['gold-year'], team: ['pro-team', 'gold-team'] },
+      'pro-month':  { ind: ['pro-year', 'gold-month', 'gold-year'], team: ['pro-team', 'gold-team'] },
+      'gold-month': { ind: ['gold-year'], team: ['gold-team'] },
+      'gold-year':  { ind: [], team: ['gold-team'] },
+      'pro-week':   { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true },
+    };
+    // Where the yearly nudge lands. Weekly lands on Pro monthly: yearly is not a saving for a weekly user.
+    const NUDGE_PICK = { 'pro-month': 'pro-year', 'gold-month': 'gold-year', 'pro-week': 'pro-month' };
+    const PERIOD = { week: 7, month: 30, year: 365 };
+
+    const S = { plan: 'free', status: 'active', flash: 'active', nudge: true, ov: null, bal: null, paid: false,
+                pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, dialog: null, consent: true, busy: null };
+    const money = (n) => '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2));
+    const num = (n) => n.toLocaleString('en-US');
+    const usd = (n) => 'US' + money(n);
+    const TODAY = new Date(2026, 9, 30);                     // Oct 30, 2026 (same "today" as settings-billing-v2)
+    const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+    const fmtLong = (d) => d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+    const fmtDay = (d) => d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });   // "Nov 3"
+    const GRACE_DAYS = 7;
+    const RENEW_FAILED = TODAY;                              // the renewal charge failed today
+    const st = () => Object.assign({}, PLANS[S.plan], S.ov || {});
+    const lapsed = () => S.status === 'weekly-ended' || S.status === 'past-due-ended';
+    const isFree = () => !st().plan || lapsed();
+    const planLabel = () => st().label;
+    const price = () => st().price;
+    const credits = () => st().credits;
+    const balance = () => (S.bal != null ? S.bal : st().balance);
+    const noun = () => st().cadence;
+    const endDate = () => {
+      const s = st();
+      if (S.paid) return addDays(TODAY, PERIOD[s.cadence]);
+      if (s.cadence === 'week') return addDays(TODAY, 4);    // Nov 3
+      if (s.cadence === 'month') return addDays(TODAY, 18);
+      return new Date(2027, 9, 5);
+    };
+
+    /* ---------- toast (v1's dark toast) ---------- */
+    const toastEl = document.getElementById('reactivate-toast');
+    let toastTimer = null;
+    const toast = (t) => {
+      toastEl.querySelector('h4').textContent = t;
+      toastEl.dataset.open = 'false'; void toastEl.offsetWidth; toastEl.dataset.open = 'true';
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.dataset.open = 'false'; }, 6000);
+    };
+    document.getElementById('reactivate-toast-close').addEventListener('click', () => { toastEl.dataset.open = 'false'; clearTimeout(toastTimer); });
+
+    /* ---------- dashboard render ---------- */
+    const banner = document.getElementById('plan-banner');
+    const drawBanner = () => {
+      const s = st(), name = planLabel(), tier = s.plan === 'gold' ? 'Gold' : 'Pro';
+      let icon = 'ph-crown', bad = false, html = '', x = false;
+      if (S.status === 'past-due') {
+        icon = 'ph-warning'; bad = true;
+        html = 'We couldn’t renew your ' + name + ' plan. Update your card by ' + fmtDay(addDays(RENEW_FAILED, GRACE_DAYS)) + ' to keep ' + tier + '.' +
+          '<button type="button" class="cta" data-a="card">Update card</button>';
+      } else if (S.status === 'past-due-ended') {
+        icon = 'ph-warning'; bad = true;
+        html = 'We couldn’t renew your ' + name + ' plan, so your workspace is on Free now. Your decks are saved.' +
+          '<button type="button" class="cta" data-a="card">Update card</button>';
+      } else if (S.status === 'ending') {
+        icon = 'ph-clock';
+        html = '<span>Your Pro weekly plan ends ' + fmtDay(endDate()) + '. <button type="button" class="cta" data-a="manage">Get a monthly or yearly plan</button> to keep Pro features.</span>';
+      } else if (S.status === 'weekly-ended') {
+        icon = 'ph-lock-simple';
+        html = 'Your Pro weekly plan ended on ' + fmtDay(endDate()) + '. Your decks are saved. Get a plan to use Pro features again.' +
+          '<button type="button" class="cta" data-a="pricing">See plans</button>';
+      } else if (S.nudge && !S.paid && NUDGE_PICK[S.plan]) {
+        x = true;
+        if (S.plan === 'pro-week') {
+          // Honest maths: weekly 100 credits / $2.99 = 33 per $1. Monthly 1,000 / $25 = 40 per $1. Yearly 5,000 / $240 = 21 per $1.
+          html = 'Pro monthly gives you 1,000 credits for $25, about 20% more credits per dollar than weekly, on one bill a month.' +
+            '<button type="button" class="cta" data-a="manage" data-v="pro-month">Get a monthly or yearly plan</button>';
+        } else {
+          const y = CAT[NUDGE_PICK[S.plan]];
+          html = 'Switch to ' + y.name + ' and save ' + money(price() * 12 - y.price) + ' a year.' +
+            '<button type="button" class="cta" data-a="manage" data-v="' + NUDGE_PICK[S.plan] + '">Switch to yearly</button>';
+        }
+      }
+      banner.hidden = !html;
+      banner.classList.toggle('is-bad', bad);
+      banner.innerHTML = html ? '<span class="crown"><i class="ph-fill ' + icon + '"></i></span>' + html +
+        (x ? '<button type="button" class="dismiss" data-a="dismiss" aria-label="Dismiss for this week"><i class="ph ph-x"></i></button>' : '') : '';
+    };
+
+    const render = () => {
+      const s = st(), free = isFree();
+      document.body.dataset.headerState = !s.plan && !lapsed() ? S.flash : 'plan';
+      // sidebar: Upgrade link for free, plan chip for paid
+      document.getElementById('ws-upgrade').hidden = !free;
+      const chip = document.getElementById('ws-plan');
+      chip.hidden = free; chip.textContent = planLabel(); chip.classList.toggle('is-gold', s.plan === 'gold');
+      // premium features: PRO badges show (locked) only when the workspace is Free
+      document.querySelectorAll('.pro-lock').forEach((el) => { el.hidden = !free; });
+      // plan chip in the top nav
+      const line = free ? 'Free plan' : planLabel();
+      const bal = free ? 60 : balance();
+      document.getElementById('plan-track').innerHTML = [line, '✨ Credits: ' + num(bal) + ' left', line]
+        .map((t) => '<span class="text-[14px] font-medium text-ink-primary">' + t + '</span>').join('');
+      let cta = null;
+      if (free) cta = 'Upgrade';
+      else if (S.status === 'past-due') cta = null;           // one action while payment is failing: Update card
+      else if (s.cadence === 'week') cta = 'Get a monthly or yearly plan';
+      else if (PATHS[S.plan] && !s.team) cta = 'Upgrade';
+      const btn = document.getElementById('plan-cta');
+      btn.hidden = !cta; if (cta) document.getElementById('plan-cta-t').textContent = cta;
+      document.getElementById('plan-chip').classList.toggle('pr-2.5', !cta);
+      drawBanner(); paintProto(); syncUrl();
+    };
+
+    /* ---------- Manage your plan (teamPrice, tgt, mpQuote, mpOptions, drawChange, openChange: ported) ---------- */
+    const ov = document.getElementById('ov');
+    const teamPrice = (k) => { const t = CAT[k], c = S.pool[k]; return Math.round((c / t.unit) * t.list * (1 - (LADDER[t.pools.indexOf(c)] || 0)) * 12); };
+    const tgt = (k) => { const t = CAT[k]; return t.team ? Object.assign({}, t, { price: teamPrice(k), credits: S.pool[k] }) : t; };
+    const GOLD_POINTS = [['ph-sparkle', 'Ultra AI model, our most powerful'], ['ph-swatches', 'Custom brand kit and moods, built for you'], ['ph-book-open', 'Projects with a shared knowledge base'], ['ph-headset', 'Priority support, with direct access to our Head of Product']];
+    const mpQuote = (k) => {
+      const o = tgt(k), fresh = !!PATHS[S.plan].fresh;
+      return { k, o, fresh, due: o.price, renew: fmtLong(addDays(TODAY, PERIOD[o.cad])), total: balance() + o.credits };
+    };
+    const mpOptions = () => { const P = PATHS[S.plan]; return S.mpView === 'team' || !P.ind.length ? P.team : P.ind; };
+    const drawChange = () => {
+      const s = st(), P = PATHS[S.plan], fresh = !!P.fresh, opts = mpOptions();
+      if (!opts.includes(S.pick)) S.pick = opts[0];
+      const q = mpQuote(S.pick), o = q.o, per = (c) => (c === 'year' ? 'year' : 'month');
+      const cur = '<div class="plan-card' + (s.plan === 'gold' ? ' plan-card--gold' : '') + '"><div class="plan-row is-cur"><span class="radio"></span><div class="plan-body">' +
+        '<div class="plan-line"><span class="plan-name">' + planLabel() + '<span class="current-badge">Current plan</span></span><span class="plan-price"><span class="price">' + money(price()) + '</span><span class="per">/' + noun() + '</span></span></div>' +
+        '<div class="big-cred"><span class="num">' + num(credits()) + '</span><span class="lbl">Credits</span></div>' +
+        (fresh ? '<div class="cur-note">Weekly is a separate plan, so it isn’t upgraded. Pick a new plan below. Your weekly plan then runs to ' + fmtLong(endDate()) + ' and doesn’t renew.</div>' : '') +
+        '</div></div></div>';
+      const card = (k) => {
+        const x = tgt(k), on = k === S.pick, gold = x.tier === 'gold';
+        const title = fresh ? 'Get ' + x.name : x.tier === s.plan && !x.team ? 'Switch to ' + x.name : x.team ? x.name : 'Upgrade to ' + x.name;
+        let badge = '';
+        if (!x.team && x.tier === s.plan && x.cad === 'year' && s.cadence === 'month') badge = '<span class="xbadge">Save ' + money(price() * 12 - x.price) + ' a year</span>';
+        else if (!x.team && gold && s.plan === 'pro' && !fresh) badge = '<span class="xbadge">' + Math.round(x.credits / CAT[x.cad === 'year' ? 'pro-year' : 'pro-month'].credits) + 'x Pro</span>';
+        let body = '<div class="plan-line"><span class="plan-name">' + title + '</span><span class="plan-price"><span class="price">' + money(x.price) + '</span><span class="per">/' + per(x.cad) + '</span></span></div>';
+        if (x.team) {
+          body += '<div class="team-seats unlimited-grad">Unlimited seats</div><div class="dd-label">How many credits?</div><div class="credit-dd' + (S.dd === k ? ' is-open' : '') + '">' +
+            '<button type="button" class="credit-dd-trigger" data-a="mpdd" data-v="' + k + '" aria-haspopup="listbox" aria-expanded="' + (S.dd === k) + '" aria-label="Credit pool size"><span class="credit-dd-left"><span class="credit-dd-value">' + num(S.pool[k]) + ' credits</span></span><i class="ph ph-caret-down credit-dd-caret" aria-hidden="true"></i></button>' +
+            '<ul class="credit-dd-menu" role="listbox" aria-label="Credit pool size">' + x.pools.map((c, i) => '<li class="credit-dd-opt" role="option" data-a="mppool" data-v="' + k + ':' + c + '" aria-selected="' + (c === S.pool[k]) + '"><span>' + num(c) + ' credits</span><span class="credit-dd-pill">' + Math.round(LADDER[i] * 100) + '% off</span></li>').join('') + '</ul></div>';
+        } else {
+          body += '<div class="big-cred"><span class="num">' + num(x.credits) + '</span><span class="lbl">Credits</span>' + badge + '</div>';
+          if (gold && s.plan !== 'gold') body += '<div class="plan-split"></div><ul class="gold-points">' + GOLD_POINTS.map((g) => '<li><i class="ph ' + g[0] + '"></i>' + g[1] + '</li>').join('') + '</ul>';
+        }
+        return '<div class="plan-card' + (gold ? ' plan-card--gold' : '') + '"><div class="plan-row' + (on ? ' is-selected' : '') + '" data-a="mppick" data-v="' + k + '" role="radio" aria-checked="' + on + '" tabindex="0"><span class="radio"></span><div class="plan-body">' + body + '</div></div></div>';
+      };
+      const sw = P.ind.length && P.team.length ? '<button type="button" class="switch-team" data-a="mpview">' + (S.mpView === 'team' ? 'Switch back to individual plans' : 'Managing a team? Switch to a Team plan') + '</button>' : '';
+      const tip = fresh
+        ? 'Weekly is a separate plan, so it isn’t upgraded or prorated. Your new plan starts today, running ' + fmtLong(TODAY) + ' to ' + q.renew + '. Your weekly plan runs to ' + fmtLong(endDate()) + ' and doesn’t renew. Team plans share one credit pool across unlimited seats.'
+        : 'Plan changes take effect today and start a fresh plan ' + per(o.cad) + ', running ' + fmtLong(TODAY) + ' to ' + q.renew + '. New plan credits land instantly and any unused credits carry over. Team plans share one credit pool across unlimited seats.';
+      const ppTitle = (fresh ? 'Get ' : o.tier === s.plan && !o.team ? 'Switch to ' : o.team ? 'Get ' : 'Upgrade to ') + o.name;
+      const weeklyLine = S.status === 'ending' ? 'Your weekly plan already stops renewing. It runs to ' + fmtLong(endDate()) + '.' : 'Your weekly plan stops renewing. It runs to ' + fmtLong(endDate()) + '.';
+      return '<div class="mp"><div class="modal-wrap"><button type="button" class="modal-close" data-a="close" aria-label="Close"><i class="ph-bold ph-x"></i></button><div class="modal-card">' +
+        '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div></div></div>' +
+        cur + opts.map(card).join('') + sw + '</div>' +
+        '<div class="right"><div class="right-inner"><div class="paddle-panel"><h2>' + ppTitle + '</h2><div class="pp-box">' +
+          '<div class="pp-line"><span class="pp-plan">' + o.name + ' Plan</span><span class="pp-price"><span class="price">' + usd(o.price) + '</span></span></div>' +
+          '<div class="pp-sub">' + (o.team ? 'Full pool credits unlock (' : 'Full plan credits unlock (') + num(o.credits) + ')</div>' +
+          (fresh ? '<div class="pp-sub">' + weeklyLine + '</div>'
+                 : '<div class="pp-sub carry">Your ' + num(balance()) + ' unused credits carry over</div>') +
+          '<div class="pp-divider"></div><div class="pp-line"><span class="pp-due">Due today:</span><span class="price">' + usd(q.due) + '</span></div></div>' +
+          '<div class="pp-card-row"><i class="ph ph-credit-card"></i><span>Visa &bull;&bull;&bull;&bull; 4242</span><button type="button" class="pp-change" data-a="nav" data-v="Changing the card">Change</button></div>' +
+          '<label class="pp-agree"><input type="checkbox" id="consent"' + (S.consent ? ' checked' : '') + ' /><span>I agree to the Terms. Renews at <b>' + usd(o.price) + '/' + per(o.cad) + '</b> on ' + q.renew + '</span></label>' +
+          '<div class="pp-actions"><button type="button" class="pp-confirm" data-a="pay"' + (S.consent && !S.busy ? '' : ' disabled') + '>' + (S.busy === 'pay' ? 'Confirming…' : 'Confirm Payment') + '</button></div>' +
+          '<div class="pay-foot"><span class="powered">Powered by <b style="color:#7a8699;font-size:14px;letter-spacing:-0.02em;">paddle</b></span><span class="vsep"></span><span class="links"><a href="#" onclick="return false">Terms</a><a href="#" onclick="return false">Privacy</a></span></div>' +
+        '</div></div></div></div></div></div>';
+    };
+    const drawDialog = () => {
+      if (S.dialog !== 'change') { ov.hidden = true; ov.innerHTML = ''; ov.classList.remove('mp-on'); return; }
+      ov.hidden = false; ov.classList.add('mp-on'); ov.innerHTML = drawChange();
+    };
+    const openChange = (pick, view) => {
+      if (!PATHS[S.plan]) return;
+      S.dialog = 'change'; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); syncUrl();
+    };
+    const closeChange = () => { S.dialog = null; S.busy = null; drawDialog(); syncUrl(); };
+
+    /* ---------- wiring ---------- */
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-a]');
+      if (!b) {
+        if (S.dd) { S.dd = null; return drawDialog(); }
+        if ((e.target === ov || e.target.classList.contains('mp')) && S.dialog) closeChange();
+        return;
+      }
+      if (b.tagName === 'A') e.preventDefault();
+      const a = b.dataset.a, v = b.dataset.v, s = st();
+      if (a === 'pricing') return toast('Opens the plans (pricing screen).');
+      if (a === 'locked') return isFree() ? toast(v + ' is a Pro feature. Get a plan to use it.') : toast(v + ' is outside this proto.');
+      if (a === 'card') return toast('Opens Paddle to update your card. We retry the renewal right away.');
+      if (a === 'nav') return toast(v + ' is outside this proto.');
+      if (a === 'dismiss') { S.nudge = false; render(); return toast('Got it. We’ll hold this for a week.'); }
+      if (a === 'manage') return openChange(v);
+      if (a === 'plan-cta') return isFree() ? toast('Opens the plans (pricing screen).') : openChange();
+      if (a === 'reactivate') { S.flash = 'active'; render(); return toast('Reactivated discount for you, just this once'); }
+      if (a === 'flash-active') { S.flash = 'active'; return render(); }
+      if (a === 'close') return closeChange();
+      if (a === 'mppick') { S.pick = v; S.dd = null; return drawDialog(); }
+      if (a === 'mpview') { S.mpView = S.mpView === 'team' ? 'ind' : 'team'; S.pick = null; S.dd = null; return drawDialog(); }
+      if (a === 'mpdd') { S.dd = S.dd === v ? null : v; return drawDialog(); }
+      if (a === 'mppool') { const [k, c] = v.split(':'); S.pool[k] = Number(c); S.pick = k; S.dd = null; return drawDialog(); }
+      if (a === 'pay') {
+        const q = mpQuote(S.pick); S.busy = 'pay'; drawDialog();
+        setTimeout(() => {
+          S.dialog = null; S.busy = null; drawDialog();
+          S.plan = q.o.state; S.status = 'active'; S.nudge = false; S.paid = true; S.bal = q.total;
+          S.ov = q.o.team ? { price: q.o.price, credits: q.o.credits } : null;
+          render();
+          toast(q.fresh ? 'You’re on ' + q.o.name + '. Your weekly plan won’t renew.' : 'You’re on ' + q.o.name + '. ' + num(q.o.credits) + ' credits added.');
+        }, 900);
+        return;
+      }
+    });
+    document.addEventListener('change', (e) => { if (e.target.id === 'consent') { S.consent = e.target.checked; drawDialog(); } });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.dialog) closeChange(); });
+    // v1 flash-sale header buttons
+    document.getElementById('reactivate-cta').dataset.a = 'reactivate';
+    document.getElementById('nudge-cta').dataset.a = 'flash-active';
+    document.getElementById('claim-discount-btn').dataset.a = 'flash-active';
+
+    /* ---------- proto controls ---------- */
+    const proto = document.getElementById('proto');
+    document.getElementById('proto-t').addEventListener('click', () => proto.classList.toggle('shut'));
+    const pbtn = (attr, k, label, on, off) => '<button type="button" data-' + attr + '="' + k + '" class="' + (on ? 'on' : '') + '"' + (off ? ' disabled' : '') + '>' + label + '</button>';
+    function paintProto() {
+      const s = st(), paid = !!s.plan && !lapsed();
+      let h = '<b>Plan</b>' + Object.keys(PLANS).filter((k) => !PLANS[k].hidden || k === S.plan).map((k) => pbtn('p', k, PLANS[k].label, k === S.plan)).join('');
+      h += '<b>Status</b>' + Object.keys(STATUS).map((k) => pbtn('s', k, STATUS[k].label, k === S.status, S.plan === 'free' && k !== 'active')).join('');
+      h += '<b>Flash sale (free users only)</b>' + Object.keys(FLASH).map((k) => pbtn('f', k, FLASH[k], k === S.flash && !paid && !lapsed(), !!s.plan)).join('');
+      h += '<b>Yearly nudge (monthly and weekly)</b>' + pbtn('n', '1', 'Show this week', S.nudge, !NUDGE_PICK[S.plan]) + pbtn('n', '0', 'Seen this week', !S.nudge, !NUDGE_PICK[S.plan]);
+      h += '<div class="note">' +
+        (paid ? 'Flash sale chip: hidden. The flash sale is for free users only, paid plans never see it.' : lapsed() ? 'Flash sale chip: hidden. This workspace just dropped to Free from a paid plan.' : 'Flash sale chip: shown (free user).') +
+        '<br>Yearly nudge: shows at most once a week. Dismissing it hides it for 7 days.' +
+        (S.status === 'past-due' || S.status === 'past-due-ended' ? '<br>Past due: 7-day grace from the failed renewal (Oct 30 to Nov 6), Pro stays on until then.' : '') +
+        '</div>';
+      document.getElementById('proto-b').innerHTML = h;
+    }
+    document.getElementById('proto-b').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b || b.disabled) return;
+      S.paid = false; S.ov = null; S.bal = null; S.dialog = null; drawDialog();
+      if (b.dataset.p) { S.plan = b.dataset.p; if (STATUS[S.status].only && !STATUS[S.status].only.includes(S.plan)) S.status = 'active'; S.nudge = true; }
+      if (b.dataset.s) { S.status = b.dataset.s; const o = STATUS[S.status].only; if (o && !o.includes(S.plan)) S.plan = o[0]; }
+      if (b.dataset.f) S.flash = b.dataset.f;
+      if (b.dataset.n) S.nudge = b.dataset.n === '1';
+      render();
+    });
+
+    /* ---------- deep links ---------- */
+    function syncUrl() {
+      try {
+        const p = new URLSearchParams();
+        if (S.paid) return;                                    // after a purchase the URL keeps the starting state
+        p.set('plan', S.plan);
+        if (S.status !== 'active') p.set('status', S.status);
+        if (!st().plan && S.flash !== 'active') p.set('flash', S.flash);
+        if (NUDGE_PICK[S.plan] && !S.nudge) p.set('nudge', 'seen');
+        if (S.dialog === 'change') { p.set('open', 'manage'); if (S.pick) p.set('pick', S.pick); if (S.mpView === 'team') p.set('view', 'team'); }
+        history.replaceState(null, '', location.pathname + '?' + p.toString());
+      } catch (err) { /* file:// or sandboxed: deep links still work on load */ }
+    }
+    const q = new URLSearchParams(location.search);
+    if (PLANS[q.get('plan')]) S.plan = q.get('plan');
+    if (STATUS[q.get('status')]) { S.status = q.get('status'); const o = STATUS[S.status].only; if (o && !o.includes(S.plan)) S.plan = o[0]; }
+    if (FLASH[q.get('flash')]) S.flash = q.get('flash');
+    if (q.get('nudge') === 'seen' || q.get('nudge') === '0') S.nudge = false;
+    render();
+    if (q.get('open') === 'manage') openChange(q.get('pick'), q.get('view'));
+  })();
+</script>
+
+<!-- Agentation: visual feedback toolbar (bottom-right). React + agentation
+     are loaded as ES modules from esm.sh because this page has no bundler. -->
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root'))
+    .render(React.createElement(Agentation));
+</script>
+
+</body>
+</html>
