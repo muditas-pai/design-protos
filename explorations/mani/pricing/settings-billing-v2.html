@@ -527,6 +527,17 @@
   .mp .plan-row.is-cur .radio { visibility: hidden; }
   .mp .cur-note { margin-top: 8px; font-size: 12px; line-height: 1.4; color: #525252; }
   .mp .pp-sub.carry { color: #16A34A; }
+  .mp .pp-err { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 4px; background: #fef2f2; color: #b91c1c; font-size: 13px; line-height: 1.4; }
+  .mp .pp-err i { font-size: 16px; margin-top: 1px; }
+  .mp .pp-sub.warn { color: #b45309; }
+  .mp .stripe-panel .pay-btn[disabled] { background: #a3a3a3; cursor: not-allowed; transform: none; }
+  .mp .left-head .sub { white-space: normal; color: #525252; font-size: 13px; }
+  .callout.bad b { color: var(--bad); }
+  .note { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .note svg { width: 16px; height: 16px; margin-top: 1px; color: var(--ink3); }
+  .refill { margin-top: 10px; font-size: 13px; color: var(--ink2); }
+  .more { margin-top: 8px; border: 0; background: none; color: var(--brand); font-weight: 500; cursor: pointer; }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
   .mp .pp-confirm[disabled] { background: #a3a3a3; cursor: not-allowed; transform: none; }
 
   /* success */
@@ -675,6 +686,11 @@
     weekly:          { label: 'Pro weekly', plan: 'pro', cadence: 'week', price: 2.99, credits: 100, balance: 60 },
     cancelled:       { label: 'Renewal off', plan: 'pro', cadence: 'year', balance: 3200, cancel: true },
     expired:         { label: 'Expired', plan: 'pro', cadence: 'year', balance: 0, expired: true, cancel: true },
+    'past-due':      { label: 'Payment failed', plan: 'pro', cadence: 'month', price: 25, credits: 1000, balance: 140, pastDue: true },
+    'weekly-store':  { label: 'Weekly, App Store', plan: 'pro', cadence: 'week', price: 2.99, credits: 100, balance: 60, store: 'App Store' },
+    'weekly-ended':  { label: 'Weekly ended', plan: null, endedWeekly: true },
+    member:          { label: 'Not the owner', plan: 'pro', cadence: 'month', price: 25, credits: 1000, balance: 620, member: true },
+    student:         { label: 'Student', plan: 'pro', cadence: 'year', price: 144, credits: 1500, balance: 900, student: true },
   };
   // Change plan targets (pricing-rules.md). Up only: no lower tier, no yearly to monthly, no team back to individual.
   // Weekly is its own plan: it never converts. The user buys a new plan and the weekly plan runs out (fresh: true).
@@ -696,9 +712,11 @@
     gold:           { ind: [], team: ['gold-team'] },
     'gold-month':   { ind: ['gold-year'], team: ['gold-team'] },
     weekly:         { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true },
+    'weekly-store': { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true },
+    'past-due':     { ind: ['pro-year', 'gold-month', 'gold-year'], team: ['pro-team', 'gold-team'] },
   };
   const PERIOD = { week: 7, month: 30, year: 365 };
-  const S = { state: 'pro', bal: null, pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, ov: null, dialog: null, step: null, reasons: [], other: '', feat: 0, consent: false, coupon: false, busy: null };
+  const S = { fail: false, failed: false, stripe: false, invAll: false, state: 'pro', bal: null, pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, ov: null, dialog: null, step: null, reasons: [], other: '', feat: 0, consent: false, coupon: false, busy: null };
   const money = (n) => '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2));
   const num = (n) => n.toLocaleString('en-US');
   const kfmt = (n) => (n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : String(Math.floor(n)));
@@ -713,6 +731,7 @@
   const endDate = () => {
     const s = st();
     if (s.expired) return new Date(2026, 9, 5);
+    if (s.pastDue) return addDays(TODAY, -1);
     if (S.paid) return addDays(TODAY, PERIOD[s.cadence]);   // just bought: a fresh term from today
     if (s.cadence === 'week') return addDays(TODAY, 4);
     if (s.cadence === 'month') return addDays(TODAY, 18);
@@ -720,7 +739,7 @@
   };
   const paidOn = () => (st().cadence === 'year' ? new Date(2026, 9, 5) : addDays(endDate(), -PERIOD[st().cadence]));
   const CADW = { week: 'weekly', month: 'monthly', year: '' };
-  const planLabel = () => (S.ov && S.ov.name ? S.ov.name : st().plan ? plan().name + (st().team ? '' : CADW[st().cadence] ? ' ' + CADW[st().cadence] : '') : 'Free');
+  const planLabel = () => (st().student ? 'Student' : S.ov && S.ov.name ? S.ov.name : st().plan ? plan().name + (st().team ? '' : CADW[st().cadence] ? ' ' + CADW[st().cadence] : '') : 'Free');
   const balance = () => (S.bal != null ? S.bal : st().balance);
   const noun = () => ({ week: 'week', month: 'month', year: 'year' })[st().cadence];
   const daysLeft = () => Math.max(0, Math.round((endDate() - TODAY) / 864e5));
@@ -754,14 +773,23 @@
     let right = '';
     if (free) right += '<button type="button" class="btn pri" data-a="plans">See plans</button>';
     else if (s.team) right += '';
+    else if (s.member || s.student) right += '';
+    else if (s.pastDue) right += '<button type="button" class="btn pri" data-a="card">Update card</button><button type="button" class="btn sec" data-a="change">Change plan</button>';
     else if (s.cadence === 'week') right += '<button type="button" class="btn sec" data-a="change">Get a monthly or yearly plan</button>';
     else if (PATHS[S.state] && !s.expired) right += '<button type="button" class="btn sec" data-a="change">Change plan</button>';
-    if (!free && !s.cancel) right += '<button type="button" class="btn ghost" data-a="cancel">Cancel renewal</button>';
+    if (s.store && !s.cancel) right += '<button type="button" class="btn ghost" data-a="store">Manage in App Store</button>';
+    else if (!free && !s.cancel && !s.member && !s.pastDue) right += '<button type="button" class="btn ghost" data-a="cancel">Cancel renewal</button>';
     if (s.cancel && !s.expired) right += '<button type="button" class="btn pri" data-a="reactivate">Re-activate renewal</button>';
     if (s.expired) right += '<button type="button" class="btn pri" data-a="renew">Renew now</button>';
     let body = '';
-    if (!free && !s.cancel) body += '<p class="cap">Your next billing date is ' + fmtLong(endDate()) + '</p>';
-    if (s.cadence === 'week' && !s.cancel) body += '<p class="cap">Weekly is a separate plan. To move to monthly or yearly, buy the new plan and we stop the weekly renewal.</p>';
+    const noteL = (t) => '<p class="note">' + hi('info') + '<span>' + t + '</span></p>';
+    if (s.pastDue) body += '<div class="callout bad"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + HI.warn + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>We couldn’t renew your ' + planLabel() + ' plan.</b><span>Your card was declined on ' + fmtLong(endDate()) + '. Update it by ' + fmtLong(addDays(endDate(), 7)) + ' to keep Pro. After that, the workspace moves to Free and your decks stay saved.</span></div></div>';
+    else if (!free && !s.cancel) body += '<p class="cap">Your next billing date is ' + fmtLong(endDate()) + '</p>';
+    if (s.store) body += noteL('Billed by the App Store. To cancel or change the card, use the App Store. If you buy a monthly or yearly plan here, cancel the weekly plan there so you’re not charged for both.');
+    if (s.member) body += noteL('Only the workspace owner can change or cancel the plan. Ask them if you need more credits or a bigger plan.');
+    if (s.student) body += noteL('Student plans can’t be changed from here. When you graduate, the plan renews at the regular Pro price unless you cancel.');
+    if (s.endedWeekly) body += noteL('Your Pro weekly plan ended on ' + fmtLong(addDays(TODAY, -3)) + '. Your decks are saved. Pick a plan to get Pro features back.');
+    if (s.cadence === 'week' && !s.cancel && !s.store) body += '<p class="cap">Weekly is a separate plan. To move to monthly or yearly, buy the new plan and we stop the weekly renewal.</p>';
     if (s.discount) body += '<div class="disc"><span class="badge good">20% renewal discount applied</span>Next renewal: ' + money(Math.round(price() * 0.8)) + '</div>';
     if (s.cancel && !s.expired) body += '<div class="callout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + HI.warn + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Your auto-renewal has been cancelled.</b><span>Your subscription will remain active until ' + fmtLong(endDate()) + '</span></div></div>';
     if (s.expired) body += '<p class="cap">Your plan ended on ' + fmtLong(endDate()) + '. Your decks are saved.</p>';
@@ -778,17 +806,18 @@
 
     // invoices
     if (!free) html += '<section class="sec"><div class="sh"><div><h2>Invoices</h2></div></div><div class="sb"><table class="inv"><tbody>' +
-      invRows().map(([d, amt]) =>
-        '<tr><td class="dt">' + fmtShort(d) + '</td><td class="em">mani@company.com</td><td class="am tab">' + money(amt) + '</td><td class="st"><span class="badge good">Paid</span></td></tr>').join('') +
-      '</tbody></table></div></section>';
+      (s.pastDue ? [[endDate(), price(), 'bad']] : []).concat(invRows()).slice(0, S.invAll ? 99 : 3).map(([d, amt, bad], i) =>
+        '<tr><td class="dt">' + fmtShort(d) + '</td><td class="em">' + (i === 0 && S.paid ? planLabel() + ', plan change' : planLabel()) + '</td><td class="am tab">' + money(amt) + '</td><td class="st">' + (bad ? '<span class="badge bad">Failed</span>' : '<span class="badge good">Paid</span>') + '</td></tr>').join('') +
+      '</tbody></table>' + (s.cadence === 'week' && !S.paid && !S.invAll ? '<button type="button" class="more" data-a="invall">Show all 12 invoices</button>' : '') + '</div></section>';
 
     // credits
     {
       html += '<section class="sec"><div class="sh"><div><h2>' + kfmt(bal) + ' credits left</h2></div></div><div class="sb">' +
         '<div class="cmeter"><span style="width:' + Math.round(bal / tot * 100) + '%"></span></div>' +
         '<div class="crow tab"><span>' + num(tot - bal) + ' Credits used</span><span>' + num(tot) + ' Total</span></div>' +
+        (!free && !s.cancel && !s.pastDue && s.cadence !== 'year' ? '<p class="refill">Your ' + num(credits()) + ' ' + (s.cadence === 'week' ? 'weekly' : 'monthly') + ' credits land again on ' + fmtLong(endDate()) + '. Unused credits carry over.</p>' : '') +
         '<div class="cbtns"><button type="button" class="btn sec" data-a="buy">Buy more credits</button><button type="button" class="btn ghost" data-a="history">View credit history</button></div>';
-      if (!free && !s.expired) html += '<div class="need">Need more credits?</div><ul class="packs">' +
+      if (!free && !s.expired && !s.member) html += '<div class="need">Need more credits?</div><ul class="packs">' +
         [[2500, 50, 'credits1.png'], [5000, 90, 'credits2.png']].map((k) => '<li><button type="button" class="pack" data-a="pack" data-v="' + k[0] + '"><img src="assets/billing/' + k[2] + '" alt="" /><span class="mid"><b>' + num(k[0]) + ' credits</b><span>' + money(Math.round(k[1] / k[0] * 1000) / 1000) + ' per credit</span></span>' +
           '<span class="pr"><span class="badge good">50% off</span><s>' + money(k[1] * 2) + '</s><b>' + money(k[1]) + '</b></span>' + hi('chev', 'chev') + '</button></li>').join('') + '</ul>';
       html += '</div></section>';
@@ -796,7 +825,7 @@
     document.getElementById('content').innerHTML = html;
   };
 
-  const invRows = () => S.paid ? [[TODAY, S.paid]].concat(S.prevInv || []) : [paidOn()].concat(st().cadence !== 'year' ? [addDays(paidOn(), -PERIOD[st().cadence])] : []).map((d) => [d, price()]);
+  const invRows = () => S.paid ? [[TODAY, S.paid]].concat(S.prevInv || []) : [paidOn()].concat(st().cadence === 'month' ? [addDays(paidOn(), -30)] : st().cadence === 'week' ? Array.from({ length: 11 }, (_, i) => addDays(paidOn(), -7 * (i + 1))) : []).map((d) => [d, price()]);
 
   /* ---------- cancel renewal flow (CancelRenewalFlow.jsx) ---------- */
   const ov = document.getElementById('ov');
@@ -856,7 +885,9 @@
     } else if (d === 'history') {
       const H = [['New slides', 'Mani', 'Oct 29, 2026', 40], ['Rewrite with AI', 'Mani', 'Oct 28, 2026', 10], ['New presentation', 'Mani', 'Oct 24, 2026', 100], ['Image generation', 'Mani', 'Oct 22, 2026', 30], ['New slides', 'Mani', 'Oct 15, 2026', 20]];
       ov.innerHTML = dlg(576, head('Credit History', '', true) + '<div class="bd"><table class="hist"><thead><tr><th style="width:52%">Event</th><th style="width:30%">Date</th><th>Credits</th></tr></thead><tbody>' +
-        (st().plan ? H : H.slice(2, 3)).map((h) => '<tr><td><span class="ev">' + h[0] + '</span><small>by ' + h[1] + '</small></td><td class="dt">' + h[2] + '</td><td class="tab">' + h[3] + '</td></tr>').join('') + '</tbody></table></div>');
+        (S.done && S.paid ? [[S.done.fresh ? 'Bought ' + S.done.o.name : 'Plan changed to ' + S.done.o.name, 'Mani', fmtShort(TODAY), '+' + num(S.done.o.credits)]].concat(S.done.fresh ? [] : [['Unused credits carried over', 'Mani', fmtShort(TODAY), num(S.done.total - S.done.o.credits)]]) : [])
+        .concat(st().cadence === 'week' ? [['Weekly credits', 'Pro weekly', fmtShort(addDays(endDate(), -7)), '+100']] : st().cadence === 'month' ? [['Monthly credits', planLabel(), fmtShort(paidOn()), '+' + num(credits())]] : [])
+        .concat(st().plan ? H : H.slice(2, 3)).map((h) => '<tr><td><span class="ev">' + h[0] + '</span><small>by ' + h[1] + '</small></td><td class="dt">' + h[2] + '</td><td class="tab">' + h[3] + '</td></tr>').join('') + '</tbody></table></div>');
     } else if (d === 'change') {
       ov.innerHTML = drawChange();
       ov.classList.add('mp-on');
@@ -906,22 +937,33 @@
       ? 'Weekly is a separate plan, so it isn’t upgraded or prorated. Your new plan starts today, running ' + fmtLong(TODAY) + ' to ' + q.renew + '. Your weekly plan runs to ' + fmtLong(endDate()) + ' and doesn’t renew. Team plans share one credit pool across unlimited seats.'
       : 'Plan changes take effect today and start a fresh plan ' + per(o.cad) + ', running ' + fmtLong(TODAY) + ' to ' + q.renew + '. New plan credits land instantly and any unused credits carry over. Team plans share one credit pool across unlimited seats.';
     const ppTitle = (fresh ? 'Get ' : o.tier === s.plan && !o.team ? 'Switch to ' : o.team ? 'Get ' : 'Upgrade to ') + o.name;
+    const err = S.failed ? '<div class="pp-err"><i class="ph ph-warning-circle"></i><span>Your card was declined, so nothing was charged. Try another card, or check with your bank.</span></div>' : '';
+    const payPanel = S.stripe
+      ? '<div class="stripe-panel"><h2>Payment Method</h2><div class="pay-tabs"><button class="pay-tab is-active" type="button"><i class="ph ph-credit-card"></i>Credit/Debit card</button></div>' +
+        '<div class="field"><label>Card details</label><div class="input placeholder"><span class="grow">1234 1234 1234 1234</span><span class="brand-icons"><img src="assets/er/visa.svg" alt="Visa" /><img src="assets/er/mastercard.svg" alt="Mastercard" /><img src="assets/er/amex.svg" alt="Amex" /><img src="assets/er/jcb.svg" alt="JCB" /></span></div></div>' +
+        '<div class="row-2"><div class="field"><label>Expiration date</label><div class="input placeholder">MM / YY</div></div><div class="field"><label>CVC</label><div class="input placeholder"><span class="grow">CVC</span><img class="cvc-icon" src="assets/er/cvc1.svg" alt="" /></div></div></div>' +
+        '<div class="field"><label>Country</label><button type="button" class="select">India<i class="ph ph-caret-down"></i></button></div>' +
+        '<p class="disclaimer">By providing your card information, you allow PRESENTATIONS AI PTE. LTD to charge your card for future payments in accordance with their terms. Renews at ' + usd(o.price) + '/' + per(o.cad) + ' on ' + q.renew + '.</p>' +
+        '<button class="pay-btn" type="button" data-a="pay">' + (S.busy === 'pay' ? 'Paying…' : 'Pay ' + money(q.due)) + '</button>' + err +
+        '<div class="pay-foot"><span class="powered">Powered by <img src="assets/er/stripe.svg" alt="Stripe" /></span><span class="vsep"></span><span class="links"><a href="#" onclick="return false">Terms</a><a href="#" onclick="return false">Privacy</a></span></div></div>'
+      : null;
     return '<div class="mp"><div class="modal-wrap"><button type="button" class="modal-close" data-a="close" aria-label="Close"><i class="ph-bold ph-x"></i></button><div class="modal-card">' +
-      '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div></div></div>' +
+      '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div><p class="sub">For the Scaling Operations workspace</p></div></div>' +
       cur + opts.map(card).join('') + sw + '</div>' +
-      '<div class="right"><div class="right-inner"><div class="paddle-panel"><h2>' + ppTitle + '</h2><div class="pp-box">' +
+      '<div class="right"><div class="right-inner">' + (payPanel || '<div class="paddle-panel"><h2>' + ppTitle + '</h2><div class="pp-box">' +
         '<div class="pp-line"><span class="pp-plan">' + o.name + ' Plan</span><span class="pp-price"><span class="price">' + usd(o.price) + '</span></span></div>' +
         '<div class="pp-sub">' + (o.team ? 'Full pool credits unlock (' : 'Full plan credits unlock (') + num(o.credits) + ')</div>' +
-        (fresh ? '<div class="pp-sub">Your weekly plan stops renewing. It runs to ' + fmtLong(endDate()) + '.</div>'
+        (fresh && s.store ? '<div class="pp-sub warn">Your weekly plan is billed by the App Store. Cancel it there so you’re not charged for both.</div>'
+         : fresh ? '<div class="pp-sub">Your weekly plan stops renewing. It runs to ' + fmtLong(endDate()) + '.</div>'
                : '<div class="pp-sub carry">Your ' + num(balance()) + ' unused credits carry over</div>') +
         '<div class="pp-divider"></div><div class="pp-line"><span class="pp-due">Due today:</span><span class="price">' + usd(q.due) + '</span></div></div>' +
-        '<div class="pp-card-row"><i class="ph ph-credit-card"></i><span>Visa &bull;&bull;&bull;&bull; 4242</span><button type="button" class="pp-change" data-a="nav" data-v="Changing the card">Change</button></div>' +
+        '<div class="pp-card-row"><i class="ph ph-credit-card"></i><span>Visa &bull;&bull;&bull;&bull; 4242</span><button type="button" class="pp-change" data-a="newcard">Change</button></div>' +
         '<label class="pp-agree"><input type="checkbox" id="consent"' + (S.consent ? ' checked' : '') + ' /><span>I agree to the Terms. Renews at <b>' + usd(o.price) + '/' + per(o.cad) + '</b> on ' + q.renew + '</span></label>' +
-        '<div class="pp-actions"><button type="button" class="pp-confirm" data-a="pay"' + (S.consent ? '' : ' disabled') + '>' + (S.busy === 'pay' ? 'Confirming…' : 'Confirm Payment') + '</button></div>' +
+        '<div class="pp-actions"><button type="button" class="pp-confirm" data-a="pay"' + (S.consent ? '' : ' disabled') + '>' + (S.busy === 'pay' ? 'Confirming…' : S.failed ? 'Try again' : 'Confirm Payment') + '</button></div>' + err +
         '<div class="pay-foot"><span class="powered">Powered by <b style="color:#7a8699;font-size:14px;letter-spacing:-0.02em;">paddle</b></span><span class="vsep"></span><span class="links"><a href="#" onclick="return false">Terms</a><a href="#" onclick="return false">Privacy</a></span></div>' +
-      '</div></div></div></div></div></div>';
+      '</div>') + '</div></div></div></div></div>';
   };
-  const openChange = (pick, view) => { S.dialog = 'change'; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); };
+  const openChange = (pick, view) => { S.failed = false; S.dialog = 'change'; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); };
 
   const openCancel = (step) => { const steps = stepsFor(); S.dialog = 'cancel'; S.step = step && steps.includes(step) ? step : steps[0]; S.reasons = []; S.other = ''; S.feat = 0; drawDialog(); };
 
@@ -930,7 +972,7 @@
   const toast = (t) => { const el = document.getElementById('toast'); document.getElementById('toast-t').textContent = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => { el.hidden = true; }, 3200); };
 
   /* ---------- wiring ---------- */
-  const setState = (k, bal, paid, ov) => { S.state = k; S.off = false; S.ov = ov || null; S.bal = bal == null ? null : bal; S.paid = paid || null; S.dialog = null; drawBilling(); drawDialog(); paintProto(); };
+  const setState = (k, bal, paid, ov) => { S.invAll = false; S.state = k; S.off = false; S.ov = ov || null; S.bal = bal == null ? null : bal; S.paid = paid || null; S.dialog = null; drawBilling(); drawDialog(); paintProto(); };
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-a]');
     if (!b) { if (S.dd) { S.dd = null; return drawDialog(); } if ((e.target === ov || e.target.classList.contains('mp')) && S.dialog && S.dialog !== 'success') { S.dialog = null; drawDialog(); } return; }
@@ -942,6 +984,10 @@
     if (a === 'pack') return toast('Opens checkout for ' + num(Number(v)) + ' credits.');
     if (a === 'history') { S.dialog = 'history'; return drawDialog(); }
     if (a === 'change') return openChange();
+    if (a === 'newcard') { S.stripe = true; S.failed = false; return drawDialog(); }
+    if (a === 'card') return toast('Opens the card form. We retry the payment as soon as the card is saved.');
+    if (a === 'store') return toast('Opens the App Store subscriptions page.');
+    if (a === 'invall') { S.invAll = true; return drawBilling(); }
     if (a === 'mppick') { S.pick = v; S.dd = null; return drawDialog(); }
     if (a === 'mpview') { S.mpView = S.mpView === 'team' ? 'ind' : 'team'; S.pick = null; S.dd = null; return drawDialog(); }
     if (a === 'mpdd') { S.dd = S.dd === v ? null : v; return drawDialog(); }
@@ -960,7 +1006,8 @@
     }
     if (a === 'reactivate') { if (S.off) { S.off = false; drawBilling(); return toast('Cancellation removed'); } setState('pro', balance()); return toast('Cancellation removed'); }
     if (a === 'feat') { S.feat = Number(v); return drawDialog(); }
-    if (a === 'pay') { S.done = mpQuote(S.pick); S.busy = 'pay'; drawDialog(); setTimeout(() => { S.busy = null; S.dialog = 'success'; drawDialog(); }, 900); return; }
+    if (a === 'pay' && S.dialog === 'change' && S.fail) { S.busy = 'pay'; S.failed = false; drawDialog(); setTimeout(() => { S.busy = null; S.failed = true; S.fail = false; drawDialog(); }, 900); return; }
+    if (a === 'pay') { S.done = mpQuote(S.pick); S.failed = false; S.busy = 'pay'; drawDialog(); setTimeout(() => { S.busy = null; S.dialog = 'success'; drawDialog(); }, 900); return; }
     if (a === 'done') {
       const q = S.done; if (!q) return setState('pro');
       const prev = invRows();
@@ -990,6 +1037,7 @@
   if (q.get('open') === 'cancel') openCancel(q.get('step'));
   if (q.get('open') === 'history') { S.dialog = 'history'; drawDialog(); }
   if (q.get('off') === '1') { S.off = true; drawBilling(); }
+  S.fail = q.get('fail') === '1'; S.stripe = q.get('pay') === 'stripe';
   if (q.get('open') === 'change' && PATHS[S.state]) openChange(q.get('pick'), q.get('view'));
   if (q.get('open') === 'success') { S.dialog = 'success'; drawDialog(); }
   if (q.get('feat')) { S.feat = Number(q.get('feat')) || 0; drawDialog(); }
