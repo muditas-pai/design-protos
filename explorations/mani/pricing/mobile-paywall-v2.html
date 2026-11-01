@@ -1,4 +1,4 @@
-<!-- forked from mobile-paywall.html · v2 adds paid-user states (Pro weekly via App Store, Google Play or card; Pro monthly, Gold monthly, Pro yearly), honest weekly vs yearly pricing at $2.99/week, deep links ?plan=...&store=apple|google|card -->
+<!-- forked from mobile-paywall.html · v2 adds paid-user states (Pro weekly via App Store, Google Play or card; Pro monthly, Gold monthly, Pro yearly), honest weekly vs yearly pricing at $2.99/week, deep links ?plan=...&store=apple|google|card. Round 2: Pro Team and Gold Team rows (smallest pool, bigger pool picked after checkout) for Pro weekly, Pro monthly, Gold monthly (Gold Team only) and Pro yearly, plus a Gold yearly state whose only option is Gold Team -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -189,7 +189,10 @@
     'pro-month':  { name: 'Pro monthly',  tier: 'pro',  per: 'month', price: 25,   credits: '1,000 credits a month' },
     'pro-year':   { name: 'Pro yearly',   tier: 'pro',  per: 'year',  price: 240,  credits: '5,000 credits on day one' },
     'gold-month': { name: 'Gold monthly', tier: 'gold', per: 'month', price: 120,  credits: '5,000 credits a month' },
-    'gold-year':  { name: 'Gold yearly',  tier: 'gold', per: 'year',  price: 1200, credits: '50,000 credits on day one' }
+    'gold-year':  { name: 'Gold yearly',  tier: 'gold', per: 'year',  price: 1200, credits: '50,000 credits on day one' },
+    /* round 2: team plans. No pool picker on mobile, so the row shows the smallest pool (Default, to confirm) */
+    'pro-team':   { name: 'Pro Team',     tier: 'pro',  per: 'year',  price: 648,  credits: 'Unlimited seats, 15,000 shared credits', from: true, team: true, pool: '15,000' },
+    'gold-team':  { name: 'Gold Team',    tier: 'gold', per: 'year',  price: 3240, credits: 'Unlimited seats, 150,000 shared credits', from: true, team: true, pool: '150,000' }
   };
   var money = function (n) { return '$' + (n % 1 ? n.toFixed(2) : n.toLocaleString('en-US')); };
   var CADENCE = { week: 'weekly', month: 'monthly', year: 'yearly' };
@@ -200,22 +203,23 @@
     weekly: { cta: 'Continue · $2.99/week', fine: 'Billed $2.99 today, renews weekly. Cancel anytime in Settings.', credits: '100 credits a week, about 1 deck', toast: 'Welcome to Pro. Your 100 credits for this week are ready.' }
   };
 
-  /* who can move to what on mobile. Up only. Team plans live on the web, so they are left out here. */
+  /* who can move to what on mobile. Up only. Round 2: team plans are listed too (smallest pool). */
   var PATHS = {
-    'pro-week':   { opts: ['pro-month', 'pro-year', 'gold-month', 'gold-year'], pick: 'pro-year' },
-    'pro-month':  { opts: ['pro-year', 'gold-month', 'gold-year'], pick: 'pro-year', save: { 'pro-year': 'Save $60 a year' } },
-    'gold-month': { opts: ['gold-year'], pick: 'gold-year', save: { 'gold-year': 'Save $240 a year' } },
-    'pro-year':   { opts: ['gold-year'], pick: 'gold-year' }
+    'pro-week':   { opts: ['pro-month', 'pro-year', 'gold-month', 'gold-year', 'pro-team', 'gold-team'], pick: 'pro-year' },
+    'pro-month':  { opts: ['pro-year', 'gold-month', 'gold-year', 'pro-team', 'gold-team'], pick: 'pro-year', save: { 'pro-year': 'Save $60 a year' } },
+    'gold-month': { opts: ['gold-year', 'gold-team'], pick: 'gold-year', save: { 'gold-year': 'Save $240 a year' } },
+    'pro-year':   { opts: ['gold-year', 'pro-team', 'gold-team'], pick: 'gold-year' },
+    'gold-year':  { opts: ['gold-team'], pick: 'gold-team' }   /* Gold yearly's only move is Gold Team (Default, to confirm) */
   };
   var STORES = {
     apple:  { name: 'the App Store', short: 'App Store', icon: 'ph-apple-logo' },
     google: { name: 'Google Play', short: 'Google Play', icon: 'ph-google-play-logo' }
   };
-  var WEEK_ENDS = 'Nov 6';
+  var WEEK_ENDS = 'Nov 3';   /* today is Oct 30, 2026 (Default, to confirm) */
   var NOTES = {
     free: 'Base paywall for a free user. v2 drops the "Save 54%" badge: at $2.99/week, weekly costs $155.48 a year for 5,200 credits, yearly costs $240 for 5,000, so yearly is not cheaper per credit. Yearly now leads with "5,000 credits on day one".',
-    'pro-week': 'Weekly is a separate plan, so it is never upgraded in place. This screen plays the role of Manage your plan ("Choose your new plan"): any monthly or yearly plan at full price. Team plans are left out on mobile.',
-    paid: 'Adaptation: on the web, a paid user’s upgrade opens Manage your plan. That screen has no mobile design, and this paywall is the only mobile screen, so the same rules (up only, full price, starts today, unused credits carry over) are shown in the paywall layout with the current plan marked. Team plans are left out on mobile.'
+    'pro-week': 'Weekly is a separate plan, so it is never upgraded in place. This screen plays the role of Manage your plan ("Choose your new plan"): any monthly, yearly or team plan at full price. Default, to confirm: there is no pool picker on mobile, so team rows show the smallest pool and the user picks a bigger pool after checkout.',
+    paid: 'Adaptation: on the web, a paid user’s upgrade opens Manage your plan. That screen has no mobile design, and this paywall is the only mobile screen, so the same rules (up only, full price, starts today, unused credits carry over) are shown in the paywall layout with the current plan marked. Default, to confirm: team rows show the smallest pool (no pool picker on mobile); the user picks a bigger pool after checkout. Gold yearly\u2019s only option is Gold Team.'
   };
 
   var q = new URLSearchParams(location.search);
@@ -231,7 +235,7 @@
       (o.ribbon ? '<span class="ribbon">' + o.ribbon + '</span>' : '') +
       '<div class="row"><span class="radio"><i class="ph-bold ph-check"></i></span>' +
       '<div class="txt"><div class="name">' + (o.name || c.name) + (c.tier === 'gold' && !o.name ? '<span class="gold-tag">GOLD</span>' : '') + '</div><div class="sub">' + (o.sub || c.credits) + '</div></div>' +
-      '<div class="price"><b>' + (o.price || money(c.price)) + '</b><span>/' + (o.per || c.per) + '</span></div></div></div>';
+      '<div class="price">' + (c.from && !o.price ? '<span>from&nbsp;</span>' : '') + '<b>' + (o.price || money(c.price)) + '</b><span>/' + (o.per || c.per) + '</span></div></div></div>';
   }
 
   function render() {
@@ -284,15 +288,16 @@
         ? 'Billed ' + money(pick.price) + ' today to Visa 4242, ' + renews + '. Your weekly plan won’t renew.'
         : 'Billed ' + money(pick.price) + ' today to Visa 4242, ' + renews + '. Full price, no proration.';
 
+    var pool = pick.team ? ' ' + pick.name + ' starts with the smallest pool, ' + pick.pool + ' shared credits. Pick a bigger pool after checkout.' : '';
     var note = $('note');
     note.hidden = false;
     if (weekly && store) {
-      note.innerHTML = '<i class="ph ' + store.icon + '"></i><div><p><b>Your weekly plan is billed by ' + store.name + '.</b> Cancel it in ' + store.name + ' so you’re not charged for both.</p>' +
+      note.innerHTML = '<i class="ph ' + store.icon + '"></i><div><p><b>Your weekly plan is billed by ' + store.name + '.</b> Cancel it in ' + store.name + ' so you’re not charged for both.' + pool + '</p>' +
         '<button type="button" class="store-btn" id="store-btn">Manage in ' + store.short + '<i class="ph-bold ph-arrow-up-right"></i></button></div>';
     } else if (weekly) {
-      note.innerHTML = '<i class="ph ph-calendar-check"></i><div><p><b>Your weekly plan stops renewing when your new plan starts.</b> It runs to ' + WEEK_ENDS + ', and we won’t charge you for it again.</p></div>';
+      note.innerHTML = '<i class="ph ph-calendar-check"></i><div><p><b>Your weekly plan stops renewing when your new plan starts.</b> It runs to ' + WEEK_ENDS + ', and we won’t charge you for it again.' + pool + '</p></div>';
     } else {
-      note.innerHTML = '<i class="ph ph-coins"></i><div><p><b>Your new plan starts today at full price.</b> Unused credits from ' + cur.name + ' carry over, and your plan renews a ' + (pick.per === 'year' ? 'year' : 'month') + ' from today.</p></div>';
+      note.innerHTML = '<i class="ph ph-coins"></i><div><p><b>Your new plan starts today at full price.</b> Unused credits from ' + cur.name + ' carry over, and your plan renews a ' + (pick.per === 'year' ? 'year' : 'month') + ' from today.' + pool + '</p></div>';
     }
   }
 
@@ -323,7 +328,7 @@
   });
 
   /* ---------- proto switcher ---------- */
-  var PLANS = [['free', 'Free'], ['pro-week', 'Pro weekly'], ['pro-month', 'Pro monthly'], ['gold-month', 'Gold monthly'], ['pro-year', 'Pro yearly']];
+  var PLANS = [['free', 'Free'], ['pro-week', 'Pro weekly'], ['pro-month', 'Pro monthly'], ['gold-month', 'Gold monthly'], ['pro-year', 'Pro yearly'], ['gold-year', 'Gold yearly']];
   var STORE_OPTS = [['apple', 'App Store'], ['google', 'Google Play'], ['card', 'Card']];
   function drawProto() {
     var b = '<b>Plan</b>' + PLANS.map(function (p) { return '<button type="button" data-plan="' + p[0] + '" class="' + (S.plan === p[0] ? 'on' : '') + '">' + p[1] + '</button>'; }).join('');
