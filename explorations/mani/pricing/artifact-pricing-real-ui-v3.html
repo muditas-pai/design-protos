@@ -1,4 +1,4 @@
-<!-- forked from artifact-pricing-real-ui-v2.html · v3 adds paid plans (?plan=pro-week|pro-month|pro-year): opening the plans shows Manage your plan and closing it starts no close flow; the start step sells Pro monthly; the Seven Day Pass step no longer links to a yearly plan -->
+<!-- forked from artifact-pricing-real-ui-v2.html · v3 adds paid plans (?plan=pro-week|pro-month|pro-year): opening the plans shows Manage your plan and closing it starts no close flow; the start step sells Pro monthly; the Seven Day Pass step no longer links to a yearly plan; variant ?pass=weekly sells Pro weekly ($2.99 a week) on that step instead -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -798,6 +798,7 @@
   .pnote[hidden] { display: none; }
   .pnote b { color: #fcd34d; font-weight: 600; }
   .pnote i { flex: none; margin-top: 1px; font-size: 14px; color: #fcd34d; }
+  .pnote a { color: #fcd34d; text-decoration: underline; text-underline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -850,7 +851,7 @@
 
 <button type="button" class="exitpill" id="exitpill" hidden></button>
 <div class="toast" id="toast" role="status" hidden></div>
-<div class="pnote" id="pnote" hidden><i class="ph-fill ph-question"></i><span><b>Open:</b> should this step sell the weekly plan ($2.99/week, renews weekly) instead of the Seven Day Pass?</span></div>
+<div class="pnote" id="pnote" hidden><i class="ph-fill ph-question"></i><span id="pnote-t"><b>Open:</b> should this step sell the weekly plan ($2.99/week, renews weekly) instead of the Seven Day Pass?</span></div>
 
 <div class="proto" id="proto">
   <button type="button" class="ph-head" id="proto-toggle"><span>Proto controls</span><i class="ph-bold ph-caret-down"></i></button>
@@ -860,6 +861,7 @@
     <div class="prow2"><b>Student plan</b><button type="button" class="pb" data-persona="individual">Off</button><button type="button" class="pb" data-persona="student">On</button></div>
     <div class="prow2"><b>Account</b><button type="button" class="pb" data-lapsed="0">New</button><button type="button" class="pb" data-lapsed="1">Former subscriber</button></div>
     <div class="prow2"><b>Offer cell</b><button type="button" class="pb" data-cohort="none">None</button><button type="button" class="pb" data-cohort="ten">10%</button><button type="button" class="pb" data-cohort="twenty">10% then 20%</button></div>
+    <div class="prow2"><b>Last step</b><button type="button" class="pb" data-passv="pass">Seven Day Pass</button><button type="button" class="pb" data-passv="weekly">Pro weekly</button></div>
     <div class="prow2"><b></b><button type="button" class="pb" id="reset">Reset everything</button></div>
     <div class="plog" id="plog"><div class="t">Close the plans or checkout to start the close flow.</div></div>
   </div>
@@ -1151,6 +1153,8 @@
 
   /* ---------- the close flow's numbers (from the artifact) ---------- */
   const PASS = { price: 19.99, credits: 1000, hours: 168 };
+  // v3 variant (?pass=weekly): the last step sells the weekly plan instead of the Seven Day Pass (price is a placeholder)
+  const WEEKLY = { name: 'Pro weekly', price: 2.99, credits: 100 };
   const SAVE10 = 0.1, WINBACK = 0.2, EXIT = { pct: 0.2, minutes: 15 }, WEEK = 7 * 864e5;
   const STUDENT = { name: 'Student Plan', annual: 144, credits: 1500 };
   // v3: the real Pro monthly plan (price is a placeholder): refills on the billing date, unused credits carry over
@@ -1175,6 +1179,7 @@
     pass: ['Seven Day Pass, ' + money(PASS.price), 'Last step. This deck only, nothing renews. Open question on this step.'],
     nurture: ['Nothing now', 'No offer. Lifecycle email in 24 hours.'],
   };
+  const PASS_STEP = { pass: STEP.pass, weekly: ['Pro weekly, ' + money(WEEKLY.price) + ' a week', 'Last step (variant). Renews weekly, cancel any time. Open question on this step.'] };
   // the plans an offer or a first term can be taken on: the cards this buyer saw
   const offerPlans = () => SEG_CARDS[S.seg].map((c) => c.k);
   // the plan the buyer was leaning to: the one at checkout, else Pro
@@ -1556,6 +1561,15 @@
       dg.innerHTML = head('Other ways to pay', 'Same plan, same price: ' + p.name + ', ' + money(p.annual) + ' a year.') +
         '<div class="bd"><div class="rows">' + ways.map((w) => '<button type="button" class="r go" data-a="paywith" data-v="' + w[1] + '"><span class="n"><i class="ph ' + w[0] + '"></i><span class="nm"><b>' + w[1] + '</b><small>' + w[2] + '</small></span></span><span class="use">Use</span></button>').join('') + '</div>' +
         later('next', 'None of these work') + '</div>';
+    } else if (d === 'pass' && S.passV === 'weekly') {
+      dg.innerHTML = head('Pro by the week, ' + money(WEEKLY.price) + ' a week', 'Not ready for a year? Pay weekly instead. Renews weekly, cancel any time.') +
+        '<div class="bd"><div class="rows"><div class="r static"><span class="n"><i class="ph ph-arrows-clockwise"></i><span class="nm"><b>Pro weekly</b><small>' + WEEKLY.credits + ' credits a week, renews weekly</small></span></span><span class="p"><span class="now">' + money(WEEKLY.price) + '<small>/week</small></span></span></div></div>' +
+        '<ul class="ticks">' +
+          tick('PowerPoint and PDF downloads, on every deck') +
+          tick(WEEKLY.credits + ' credits a week, about ' + Math.floor(WEEKLY.credits / 10) + ' new slides') +
+          tick('Renews weekly, cancel any time') +
+        '</ul><button type="button" class="btn pri lg wide" data-a="takepass">Get Pro weekly</button>' +
+        later('nopass', 'No thanks') + note('Your deck stays free to present and share either way.') + '</div>';
     } else if (d === 'pass') {
       dg.innerHTML = head('Just this deck for ' + money(PASS.price), 'Not ready for a year? Pay once for seven days on this presentation. Nothing renews.') +
         '<div class="bd"><div class="rows"><div class="r static"><span class="n"><i class="ph ph-ticket"></i><span class="nm"><b>Seven Day Pass</b><small>168 hours, ' + PASS.credits.toLocaleString('en-US') + ' credits</small></span></span><span class="p"><span class="now">' + money(PASS.price) + '<small>/once</small></span></span></div></div>' +
@@ -1570,6 +1584,13 @@
   /* ---------- layers ---------- */
   const ov = { pk: document.getElementById('ov-pk'), co: document.getElementById('ov-co'), dg: document.getElementById('ov-dg'), won: document.getElementById('ov-won') };
   const show = (name) => { Object.keys(ov).forEach((k) => { ov[k].hidden = k !== name; }); document.getElementById('pnote').hidden = !(name === 'dg' && S.dialog === 'pass'); };
+  // v3: the open question, with a link to the other version of this step (?again=1 opens the step directly)
+  const drawPnote = () => {
+    document.getElementById('pnote-t').innerHTML = S.passV === 'weekly'
+      ? '<b>Open:</b> variant. This step sells the weekly plan ($2.99/week, renews weekly) instead of the Seven Day Pass. <a href="?again=1">See the Seven Day Pass</a>'
+      : '<b>Open:</b> should this step sell the weekly plan ($2.99/week, renews weekly) instead of the Seven Day Pass? <a href="?again=1&amp;pass=weekly">See the weekly variant (?pass=weekly)</a>';
+  };
+  const setPassV = (v) => { S.passV = v === 'weekly' ? 'weekly' : 'pass'; STEP.pass = PASS_STEP[S.passV]; drawPnote(); if (S.dialog === 'pass' && !ov.dg.hidden) drawDialog(); };
   const restartPop = (el) => { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); };
   function openDg(name) {
     S.dialog = name;
@@ -1772,6 +1793,15 @@
       case 'paywith': S.payMethod = v; openCheckout(S.tier, null); return;
       case 'takepass':
         S.payMethod = null;
+        if (S.passV === 'weekly') {
+          const w = WEEKLY;
+          openCheckout('pro', {
+            kind: 'weekly', title: 'Pro weekly', name: w.name, planName: w.name, amount: w.price, credits: w.credits,
+            note: w.credits + ' credits now and every week. Renews weekly at ' + money(w.price) + '. Cancel any time.',
+            feats: [['ph-star-four', w.credits + ' credits a week'], ['ph-arrows-clockwise', 'Renews weekly at ' + money(w.price) + ', cancel any time'], ['ph-microsoft-powerpoint-logo', 'PowerPoint and PDF downloads, on every deck']],
+          });
+          return;
+        }
         openCheckout(null, {
           kind: 'pass', title: 'Seven Day Pass', name: 'Seven Day Pass', amount: PASS.price,
           note: 'One payment for seven days and ' + PASS.credits.toLocaleString('en-US') + ' credits on this deck. Nothing renews.',
@@ -1798,6 +1828,7 @@
     proto.querySelectorAll('[data-lapsed]').forEach((b) => b.classList.toggle('on', (b.dataset.lapsed === '1') === S.lapsed));
     proto.querySelectorAll('[data-cohort]').forEach((b) => b.classList.toggle('on', b.dataset.cohort === S.cohort));
     proto.querySelectorAll('[data-member]').forEach((b) => b.classList.toggle('on', b.dataset.member === (S.member || 'free')));
+    proto.querySelectorAll('[data-passv]').forEach((b) => b.classList.toggle('on', b.dataset.passv === S.passV));
   };
   proto.addEventListener('click', (e) => {
     const b = e.target.closest('button');
@@ -1807,8 +1838,10 @@
     if (b.dataset.lapsed) S.lapsed = b.dataset.lapsed === '1';
     if (b.dataset.cohort) S.cohort = b.dataset.cohort;
     if (b.dataset.member) { setMember(b.dataset.member); return; }
+    if (b.dataset.passv) setPassV(b.dataset.passv);
     paintProto();
   });
+  setPassV(new URLSearchParams(location.search).get('pass'));   // default (no param): the Seven Day Pass
   paintProto();
   document.getElementById('reset').addEventListener('click', () => {
     Object.assign(S, {
