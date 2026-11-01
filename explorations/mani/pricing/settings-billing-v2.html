@@ -682,10 +682,12 @@
     'pro-month':     { label: 'Pro monthly', plan: 'pro', cadence: 'month', price: 25, credits: 1000, balance: 620 },
     gold:            { label: 'Gold yearly', plan: 'gold', cadence: 'year', balance: 18400 },
     'gold-month':    { label: 'Gold monthly', plan: 'gold', cadence: 'month', price: 120, credits: 5000, balance: 3100 },
-    team:            { label: 'Team', plan: 'pro', cadence: 'year', balance: 21000, team: true },
+    team:            { label: 'Pro Team', name: 'Pro Team', plan: 'pro', cadence: 'year', price: 960, credits: 25000, pool: 25000, balance: 21000, team: true },
     weekly:          { label: 'Pro weekly', plan: 'pro', cadence: 'week', price: 2.99, credits: 100, balance: 60 },
     cancelled:       { label: 'Renewal off', plan: 'pro', cadence: 'year', balance: 3200, cancel: true },
     expired:         { label: 'Expired', plan: 'pro', cadence: 'year', balance: 0, expired: true, cancel: true },
+    'expired-month': { label: 'Expired monthly', plan: 'pro', cadence: 'month', price: 25, credits: 1000, balance: 0, expired: true, cancel: true },
+    'expired-week':  { label: 'Expired weekly', plan: 'pro', cadence: 'week', price: 2.99, credits: 100, balance: 0, expired: true, cancel: true },
     'past-due':      { label: 'Payment failed', plan: 'pro', cadence: 'month', price: 25, credits: 1000, balance: 140, pastDue: true },
     'weekly-store':  { label: 'Weekly, App Store', plan: 'pro', cadence: 'week', price: 2.99, credits: 100, balance: 60, store: 'App Store' },
     'weekly-ended':  { label: 'Weekly ended', plan: null, endedWeekly: true },
@@ -714,9 +716,13 @@
     weekly:         { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true },
     'weekly-store': { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true },
     'past-due':     { ind: ['pro-year', 'gold-month', 'gold-year'], team: ['pro-team', 'gold-team'] },
+    team:           { ind: [], team: ['pro-team', 'gold-team'] },
+    expired:         { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true, back: true },
+    'expired-month': { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true, back: true },
+    'expired-week':  { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true, back: true },
   };
   const PERIOD = { week: 7, month: 30, year: 365 };
-  const S = { fail: false, failed: false, stripe: false, invAll: false, state: 'pro', bal: null, pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, ov: null, dialog: null, step: null, reasons: [], other: '', feat: 0, consent: false, coupon: false, busy: null };
+  const S = { prorate: false, fail: false, failed: false, stripe: false, invAll: false, state: 'pro', bal: null, pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, ov: null, dialog: null, step: null, reasons: [], other: '', feat: 0, consent: false, coupon: false, busy: null };
   const money = (n) => '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2));
   const num = (n) => n.toLocaleString('en-US');
   const kfmt = (n) => (n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'k' : String(Math.floor(n)));
@@ -730,7 +736,7 @@
   const credits = () => (S.ov ? S.ov.credits : st().credits != null ? st().credits : st().team ? 30000 : plan().credits);
   const endDate = () => {
     const s = st();
-    if (s.expired) return new Date(2026, 9, 5);
+    if (s.expired) return s.cadence === 'week' ? addDays(TODAY, -3) : s.cadence === 'month' ? addDays(TODAY, -19) : new Date(2026, 9, 5);
     if (s.pastDue) return TODAY;   // declined today; 7-day grace to Nov 6 (matches dashboard-plans-v2)
     if (S.paid) return addDays(TODAY, PERIOD[s.cadence]);   // just bought: a fresh term from today
     if (s.cadence === 'week') return addDays(TODAY, 4);
@@ -739,7 +745,7 @@
   };
   const paidOn = () => (st().cadence === 'year' ? new Date(2026, 9, 5) : addDays(endDate(), -PERIOD[st().cadence]));
   const CADW = { week: 'weekly', month: 'monthly', year: '' };
-  const planLabel = () => (st().student ? 'Student' : S.ov && S.ov.name ? S.ov.name : st().plan ? plan().name + (st().team ? '' : CADW[st().cadence] ? ' ' + CADW[st().cadence] : '') : 'Free');
+  const planLabel = () => (S.ov && S.ov.name ? S.ov.name : st().name ? st().name : st().student ? 'Student' : S.ov && S.ov.name ? S.ov.name : st().plan ? plan().name + (st().team ? '' : CADW[st().cadence] ? ' ' + CADW[st().cadence] : '') : 'Free');
   const balance = () => (S.bal != null ? S.bal : st().balance);
   const noun = () => ({ week: 'week', month: 'month', year: 'year' })[st().cadence];
   const daysLeft = () => Math.max(0, Math.round((endDate() - TODAY) / 864e5));
@@ -772,7 +778,7 @@
       : (s.discount ? '<s>' + money(price()) + '</s> ' + money(Math.round(price() * 0.8)) : money(price())) + '/' + cad + seat + ' · ' + num(credits()) + ' Credits';
     let right = '';
     if (free) right += '<button type="button" class="btn pri" data-a="plans">See plans</button>';
-    else if (s.team) right += '';
+    else if (s.team) right += '<button type="button" class="btn sec" data-a="change">Change plan</button>';
     else if (s.member || s.student) right += '';
     else if (s.pastDue) right += '<button type="button" class="btn pri" data-a="card">Update card</button><button type="button" class="btn sec" data-a="change">Change plan</button>';
     else if (s.cadence === 'week') right += '<button type="button" class="btn sec" data-a="change">Get a monthly or yearly plan</button>';
@@ -901,23 +907,34 @@
   const tgt = (k) => { const t = CAT[k]; return t.team ? Object.assign({}, t, { price: teamPrice(k), credits: S.pool[k] }) : t; };
   const usd = (n) => 'US' + money(n);
   const GOLD_POINTS = [['ph-sparkle', 'Ultra AI model, our most powerful'], ['ph-swatches', 'Custom brand kit and moods, built for you'], ['ph-book-open', 'Projects with a shared knowledge base'], ['ph-headset', 'Priority support, with direct access to our Head of Product']];
+  const canRenewEarly = () => st().cadence === 'year' && !st().team && !st().cancel && !PATHS[S.state].fresh;
   const mpQuote = (k) => {
-    const o = tgt(k), fresh = !!PATHS[S.state].fresh;
-    return { k, o, fresh, due: o.price, renew: fmtLong(addDays(TODAY, PERIOD[o.cad])), total: balance() + o.credits };
+    const fresh = !!PATHS[S.state].fresh;
+    if (k === 'renew') {   // renew early (manage-plan.html: current plan card selected = renew)
+      const o = { name: planLabel(), price: price(), credits: credits(), cad: 'year', tier: st().plan, state: S.state, early: true };
+      return { k, o, fresh, credit: 0, due: o.price, renew: fmtLong(new Date(endDate().getFullYear() + 1, endDate().getMonth(), endDate().getDate())), total: balance() + o.credits };
+    }
+    const o = tgt(k);
+    const credit = !fresh && S.prorate ? Math.round(price() * Math.min(1, daysLeft() / PERIOD[st().cadence]) * 100) / 100 : 0;
+    return { k, o, fresh, credit, due: Math.max(0, Math.round((o.price - credit) * 100) / 100), renew: fmtLong(addDays(TODAY, PERIOD[o.cad])), total: balance() + o.credits };
   };
   const mpOptions = () => { const P = PATHS[S.state]; return S.mpView === 'team' || !P.ind.length ? P.team : P.ind; };
   const drawChange = () => {
     const s = st(), P = PATHS[S.state], fresh = !!P.fresh, opts = mpOptions();
-    if (!opts.includes(S.pick)) S.pick = opts[0];
+    if (!opts.includes(S.pick) && !(S.pick === 'renew' && canRenewEarly())) S.pick = opts[0];
+    const back = !!P.back;
     const q = mpQuote(S.pick), o = q.o, per = (c) => (c === 'year' ? 'year' : 'month');
-    const cur = '<div class="plan-card' + (s.plan === 'gold' ? ' plan-card--gold' : '') + '"><div class="plan-row is-cur"><span class="radio"></span><div class="plan-body">' +
-      '<div class="plan-line"><span class="plan-name">' + planLabel() + '<span class="current-badge">Current plan</span></span><span class="plan-price"><span class="price">' + money(price()) + '</span><span class="per">/' + noun() + '</span></span></div>' +
+    const re = canRenewEarly(), reOn = S.pick === 'renew';
+    const cur = '<div class="plan-card' + (s.plan === 'gold' ? ' plan-card--gold' : '') + '"><div class="plan-row' + (re ? (reOn ? ' is-selected' : '') : ' is-cur') + '"' + (re ? ' data-a="mppick" data-v="renew" role="radio" aria-checked="' + reOn + '" tabindex="0"' : '') + '><span class="radio"></span><div class="plan-body">' +
+      '<div class="plan-line"><span class="plan-name">' + (re ? 'Renew ' + planLabel() + ' early' : planLabel()) + '<span class="current-badge">' + (back ? 'Ended' : 'Current plan') + '</span></span><span class="plan-price"><span class="price">' + money(price()) + '</span><span class="per">/' + noun() + '</span></span></div>' +
       '<div class="big-cred"><span class="num">' + num(credits()) + '</span><span class="lbl">Credits</span></div>' +
-      (fresh ? '<div class="cur-note">Weekly is a separate plan, so it isn’t upgraded. Pick a new plan below. Your weekly plan then runs to ' + fmtLong(endDate()) + ' and doesn’t renew.</div>' : '') +
+      (back ? '<div class="cur-note">Your ' + planLabel() + ' plan ended on ' + fmtLong(endDate()) + '. Your decks are saved. Pick it again or choose another plan.</div>'
+       : fresh ? '<div class="cur-note">Weekly is a separate plan, so it isn’t upgraded. Pick a new plan below. Your weekly plan then runs to ' + fmtLong(endDate()) + ' and doesn’t renew.</div>' : '') +
+      (re ? '<div class="cur-note">Adds a year from ' + fmtLong(endDate()) + '. ' + num(credits()) + ' credits land today.</div>' : '') +
       '</div></div></div>';
     const card = (k) => {
       const x = tgt(k), on = k === S.pick, gold = x.tier === 'gold';
-      let title = fresh ? 'Get ' + x.name : x.tier === s.plan && !x.team ? 'Switch to ' + x.name : x.team ? x.name : 'Upgrade to ' + x.name;
+      let title = fresh ? 'Get ' + x.name : s.team && x.team && x.tier === s.plan ? 'Buy more credits' : s.team && x.team ? 'Upgrade to ' + x.name : x.tier === s.plan && !x.team ? 'Switch to ' + x.name : x.team ? x.name : 'Upgrade to ' + x.name;
       let badge = '';
       if (!x.team && x.tier === s.plan && x.cad === 'year' && s.cadence === 'month') badge = '<span class="xbadge">Save ' + money(price() * 12 - x.price) + ' a year</span>';
       else if (!x.team && gold && s.plan === 'pro' && !fresh) badge = '<span class="xbadge">' + Math.round(x.credits / CAT[x.cad === 'year' ? 'pro-year' : 'pro-month'].credits) + 'x Pro</span>';
@@ -925,18 +942,21 @@
       if (x.team) {
         body += '<div class="team-seats unlimited-grad">Unlimited seats</div><div class="dd-label">How many credits?</div><div class="credit-dd' + (S.dd === k ? ' is-open' : '') + '">' +
           '<button type="button" class="credit-dd-trigger" data-a="mpdd" data-v="' + k + '" aria-haspopup="listbox" aria-expanded="' + (S.dd === k) + '" aria-label="Credit pool size"><span class="credit-dd-left"><span class="credit-dd-value">' + num(S.pool[k]) + ' credits</span></span><i class="ph ph-caret-down credit-dd-caret" aria-hidden="true"></i></button>' +
-          '<ul class="credit-dd-menu" role="listbox" aria-label="Credit pool size">' + x.pools.map((c, i) => '<li class="credit-dd-opt" role="option" data-a="mppool" data-v="' + k + ':' + c + '" aria-selected="' + (c === S.pool[k]) + '"><span>' + num(c) + ' credits</span><span class="credit-dd-pill">' + Math.round(LADDER[i] * 100) + '% off</span></li>').join('') + '</ul></div>';
+          '<ul class="credit-dd-menu" role="listbox" aria-label="Credit pool size">' + x.pools.map((c, i) => (s.team && x.tier === s.plan && c <= s.pool ? '' : '<li class="credit-dd-opt" role="option" data-a="mppool" data-v="' + k + ':' + c + '" aria-selected="' + (c === S.pool[k]) + '"><span>' + num(c) + ' credits</span><span class="credit-dd-pill">' + Math.round(LADDER[i] * 100) + '% off</span></li>')).join('') + '</ul></div>';
       } else {
         body += '<div class="big-cred"><span class="num">' + num(x.credits) + '</span><span class="lbl">Credits</span>' + badge + '</div>';
         if (gold && s.plan !== 'gold') body += '<div class="plan-split"></div><ul class="gold-points">' + GOLD_POINTS.map((g) => '<li><i class="ph ' + g[0] + '"></i>' + g[1] + '</li>').join('') + '</ul>';
       }
       return '<div class="plan-card' + (gold ? ' plan-card--gold' : '') + '"><div class="plan-row' + (on ? ' is-selected' : '') + '" data-a="mppick" data-v="' + k + '" role="radio" aria-checked="' + on + '" tabindex="0"><span class="radio"></span><div class="plan-body">' + body + '</div></div></div>';
     };
+    const down = !fresh && !s.cancel ? '<p class="cur-note" style="margin-top:16px">Want a smaller plan? Turn off renewal, then pick it when this plan ends on ' + fmtLong(endDate()) + '.</p>' : '';
     const sw = P.ind.length && P.team.length ? '<button type="button" class="switch-team" data-a="mpview">' + (S.mpView === 'team' ? 'Switch back to individual plans' : 'Managing a team? Switch to a Team plan') + '</button>' : '';
-    const tip = fresh
+    const tip = back ? 'Your new plan starts today, running ' + fmtLong(TODAY) + ' to ' + q.renew + '. Team plans share one credit pool across unlimited seats.'
+      : o.early ? 'Renewing early adds a year to your plan, so it now runs to ' + q.renew + '. The credits land today and unused credits carry over.'
+      : fresh
       ? 'Weekly is a separate plan, so it isn’t upgraded or prorated. Your new plan starts today, running ' + fmtLong(TODAY) + ' to ' + q.renew + '. Your weekly plan runs to ' + fmtLong(endDate()) + ' and doesn’t renew. Team plans share one credit pool across unlimited seats.'
       : 'Plan changes take effect today and start a fresh plan ' + per(o.cad) + ', running ' + fmtLong(TODAY) + ' to ' + q.renew + '. New plan credits land instantly and any unused credits carry over. Team plans share one credit pool across unlimited seats.';
-    const ppTitle = (fresh ? 'Get ' : o.tier === s.plan && !o.team ? 'Switch to ' : o.team ? 'Get ' : 'Upgrade to ') + o.name;
+    const ppTitle = o.early ? 'Renew ' + o.name + ' early' : (fresh ? 'Get ' : s.team && o.team && o.tier === s.plan ? 'More credits for ' : o.tier === s.plan && !o.team ? 'Switch to ' : o.team ? 'Get ' : 'Upgrade to ') + o.name;
     const err = S.failed ? '<div class="pp-err"><i class="ph ph-warning-circle"></i><span>Your card was declined, so nothing was charged. Try another card, or check with your bank.</span></div>' : '';
     const payPanel = S.stripe
       ? '<div class="stripe-panel"><h2>Payment Method</h2><div class="pay-tabs"><button class="pay-tab is-active" type="button"><i class="ph ph-credit-card"></i>Credit/Debit card</button></div>' +
@@ -948,13 +968,16 @@
         '<div class="pay-foot"><span class="powered">Powered by <img src="assets/er/stripe.svg" alt="Stripe" /></span><span class="vsep"></span><span class="links"><a href="#" onclick="return false">Terms</a><a href="#" onclick="return false">Privacy</a></span></div></div>'
       : null;
     return '<div class="mp"><div class="modal-wrap"><button type="button" class="modal-close" data-a="close" aria-label="Close"><i class="ph-bold ph-x"></i></button><div class="modal-card">' +
-      '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div><p class="sub">For the Scaling Operations workspace</p></div></div>' +
-      cur + opts.map(card).join('') + sw + '</div>' +
+      '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (back ? 'Pick a plan to come back' : fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div><p class="sub">For the Scaling Operations workspace</p></div></div>' +
+      cur + opts.map(card).join('') + sw + down + '</div>' +
       '<div class="right"><div class="right-inner">' + (payPanel || '<div class="paddle-panel"><h2>' + ppTitle + '</h2><div class="pp-box">' +
         '<div class="pp-line"><span class="pp-plan">' + o.name + ' Plan</span><span class="pp-price"><span class="price">' + usd(o.price) + '</span></span></div>' +
         '<div class="pp-sub">' + (o.team ? 'Full pool credits unlock (' : 'Full plan credits unlock (') + num(o.credits) + ')</div>' +
-        (fresh && s.store ? '<div class="pp-sub warn">Your weekly plan is billed by the App Store. Cancel it there so you’re not charged for both.</div>'
-         : fresh ? '<div class="pp-sub">Your weekly plan stops renewing. It runs to ' + fmtLong(endDate()) + '.</div>'
+        (q.credit ? '<div class="pp-line" style="margin-top:6px"><span class="pp-sub" style="margin:0">Credit for ' + daysLeft() + ' unused days of ' + planLabel() + '</span><span class="pp-sub carry" style="margin:0">-' + usd(q.credit) + '</span></div>' : '') +
+        (s.discount && !o.early ? '<div class="pp-sub warn">Your 20% renewal discount stays with Pro yearly. It doesn’t carry to the new plan.</div>' : '') +
+        (o.early ? '<div class="pp-sub">Your plan now runs to ' + q.renew + '</div>' : '') +
+        (back ? '<div class="pp-sub">Starts today. Your decks and settings are as you left them.</div>' : fresh && s.store ? '<div class="pp-sub warn">Your weekly plan is billed by the App Store. Cancel it there so you’re not charged for both.</div>'
+         : fresh && s.cadence === 'week' && !back ? '<div class="pp-sub">Your weekly plan stops renewing. It runs to ' + fmtLong(endDate()) + '.</div>' : fresh ? ''
                : '<div class="pp-sub carry">Your ' + num(balance()) + ' unused credits carry over</div>') +
         '<div class="pp-divider"></div><div class="pp-line"><span class="pp-due">Due today:</span><span class="price">' + usd(q.due) + '</span></div></div>' +
         '<div class="pp-card-row"><i class="ph ph-credit-card"></i><span>Visa &bull;&bull;&bull;&bull; 4242</span><button type="button" class="pp-change" data-a="newcard">Change</button></div>' +
@@ -963,7 +986,7 @@
         '<div class="pay-foot"><span class="powered">Powered by <b style="color:#7a8699;font-size:14px;letter-spacing:-0.02em;">paddle</b></span><span class="vsep"></span><span class="links"><a href="#" onclick="return false">Terms</a><a href="#" onclick="return false">Privacy</a></span></div>' +
       '</div>') + '</div></div></div></div></div>';
   };
-  const openChange = (pick, view) => { S.failed = false; S.dialog = 'change'; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); };
+  const openChange = (pick, view) => { if (st().team) { S.pool['pro-team'] = CAT['pro-team'].pools.find((c) => c > st().pool) || 100000; } S.failed = false; S.dialog = 'change'; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); };
 
   const openCancel = (step) => { const steps = stepsFor(); S.dialog = 'cancel'; S.step = step && steps.includes(step) ? step : steps[0]; S.reasons = []; S.other = ''; S.feat = 0; drawDialog(); };
 
@@ -979,7 +1002,7 @@
     const a = b.dataset.a, v = b.dataset.v, s = st();
     if (a === 'nav') return toast(v + ' is outside this proto.');
     if (a === 'plans') return toast('Opens the plans (pricing screen).');
-    if (a === 'renew') return toast('Opens the plans with 20% off your first year, for returning subscribers.');
+    if (a === 'renew') return openChange({ week: 'pro-month', month: 'pro-month', year: 'pro-year' }[st().cadence]);
     if (a === 'buy') return s.plan && !s.expired ? toast('Opens the credit packs.') : toast('Opens the plans (pricing screen).');
     if (a === 'pack') return toast('Opens checkout for ' + num(Number(v)) + ' credits.');
     if (a === 'history') { S.dialog = 'history'; return drawDialog(); }
@@ -1011,7 +1034,8 @@
     if (a === 'done') {
       const q = S.done; if (!q) return setState('pro');
       const prev = invRows();
-      setState(q.o.state, q.total, q.due, { price: q.o.price, credits: q.o.credits, name: q.o.team ? q.o.name : null }); S.prevInv = prev; drawBilling();
+      setState(q.o.state, q.total, q.due, q.o.early ? null : { price: q.o.price, credits: q.o.credits, name: q.o.team ? q.o.name : null }); S.prevInv = prev; drawBilling();
+      if (q.o.early) return toast('Renewed early. Your plan now runs to ' + q.renew + '.');
       return toast(q.fresh ? 'You’re on ' + q.o.name + '. Your weekly plan won’t renew.' : 'You’re on ' + q.o.name + '. ' + num(q.o.credits) + ' credits added.');
     }
   });
@@ -1026,9 +1050,10 @@
   const proto = document.getElementById('proto');
   document.getElementById('proto-t').addEventListener('click', () => proto.classList.toggle('shut'));
   const paintProto = () => {
-    document.getElementById('proto-b').innerHTML = '<b>Workspace</b>' + Object.keys(STATES).map((k) => '<button type="button" class="' + (k === S.state ? 'on' : '') + '" data-st="' + k + '">' + STATES[k].label + '</button>').join('');
+    document.getElementById('proto-b').innerHTML = '<b>Workspace</b>' + Object.keys(STATES).map((k) => '<button type="button" class="' + (k === S.state ? 'on' : '') + '" data-st="' + k + '">' + STATES[k].label + '</button>').join('') +
+      '<b>Change plan billing (default to confirm)</b><button type="button" class="' + (S.prorate ? '' : 'on') + '" data-pr="0">Full price</button><button type="button" class="' + (S.prorate ? 'on' : '') + '" data-pr="1">Pro-rata credit</button>';
   };
-  document.getElementById('proto-b').addEventListener('click', (e) => { const b = e.target.closest('[data-st]'); if (b) setState(b.dataset.st); });
+  document.getElementById('proto-b').addEventListener('click', (e) => { const r = e.target.closest('[data-pr]'); if (r) { S.prorate = r.dataset.pr === '1'; paintProto(); return drawDialog(); } const b = e.target.closest('[data-st]'); if (b) setState(b.dataset.st); });
 
   /* ---------- deep links: ?state=…&open=cancel|history|change|success&step=…&pick=… ---------- */
   const q = new URLSearchParams(location.search);
@@ -1037,6 +1062,7 @@
   if (q.get('open') === 'cancel') openCancel(q.get('step'));
   if (q.get('open') === 'history') { S.dialog = 'history'; drawDialog(); }
   if (q.get('off') === '1') { S.off = true; drawBilling(); }
+  S.prorate = q.get('prorate') === '1'; paintProto();
   S.fail = q.get('fail') === '1'; S.stripe = q.get('pay') === 'stripe';
   if (q.get('open') === 'change' && PATHS[S.state]) openChange(q.get('pick'), q.get('view'));
   if (q.get('open') === 'success') { S.dialog = 'success'; drawDialog(); }
