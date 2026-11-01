@@ -1,0 +1,360 @@
+<!-- forked from mobile-paywall.html · v2 adds paid-user states (Pro weekly via App Store, Google Play or card; Pro monthly, Gold monthly, Pro yearly), honest weekly vs yearly pricing at $2.99/week, deep links ?plan=...&store=apple|google|card -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mobile paywall v2 · Pro weekly or yearly, plus paid states</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{background:#2b2f36;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif;color:#0b0f14;display:flex;align-items:center;justify-content:center;padding:32px 24px;-webkit-font-smoothing:antialiased}
+  .phone{position:relative;width:390px;height:844px;border-radius:48px;background:#fff;box-shadow:0 0 0 12px #0b0f14,0 0 0 14px #3a3f47,0 40px 80px -20px rgba(0,0,0,.7);overflow:hidden}
+  .notch{position:absolute;left:50%;top:12px;transform:translateX(-50%);width:120px;height:34px;border-radius:20px;background:#0b0f14;z-index:5}
+  .status{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px;font:600 15px -apple-system,'SF Pro Text','Inter',sans-serif;color:#0b0f14;z-index:4;pointer-events:none}
+  .status .ic{display:flex;gap:6px;align-items:center;font-size:14px}
+  /* v2: scrolls when a paid state lists more plans than fit */
+  .screen{position:absolute;inset:0;overflow-x:hidden;overflow-y:auto;padding-bottom:150px;scrollbar-width:none}
+  .screen::-webkit-scrollbar{display:none}
+  /* nav */
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:56px 16px 4px}
+  .nav .x{width:32px;height:32px;border-radius:999px;background:#f2f2f7;display:flex;align-items:center;justify-content:center;font-size:16px;color:#0b0f14;border:0}
+  .nav .restore{font:500 15px -apple-system,'Inter',sans-serif;color:#0055ED;background:none;border:0}
+  /* hero */
+  .hero{padding:8px 20px 0}
+  .brand{display:inline-flex;align-items:center;gap:8px;font:700 13px -apple-system,'Inter',sans-serif;letter-spacing:.02em;color:#0A1925}
+  .brand i{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#0055ED,#1a6eff);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+  .hero h1{font:700 24px/1.2 -apple-system,'SF Pro Display','Inter',sans-serif;letter-spacing:-.5px;color:#0b0f14;margin-top:4px}
+  .hero p{font:400 14px/1.35 -apple-system,'Inter',sans-serif;color:#525252;margin-top:6px}
+  .proof{display:flex;align-items:center;gap:8px;margin-top:10px;font:500 13px -apple-system,'Inter',sans-serif;color:#525252}
+  .proof .stars{color:#f5b301;letter-spacing:1px;font-size:12px}
+  .proof .av{display:flex}
+  .proof .av span{width:20px;height:20px;border-radius:999px;border:2px solid #fff;margin-left:-6px;background:#0055ED}
+  .proof .av span:first-child{margin-left:0}.proof .av span:nth-child(2){background:#c9932a}.proof .av span:nth-child(3){background:#16a34a}
+  /* toggle */
+  .seg{margin:20px 20px 0;display:grid;grid-template-columns:1fr 1fr;padding:3px;background:#f2f2f7;border-radius:12px;position:relative}
+  .seg button{position:relative;z-index:1;height:38px;border:0;background:transparent;border-radius:10px;font:600 15px -apple-system,'Inter',sans-serif;color:#525252;display:flex;align-items:center;justify-content:center;gap:6px}
+  .seg button.is-on{color:#0b0f14}
+  .seg .thumb{position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:38px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+  .seg[data-cycle="annual"] .thumb{transform:translateX(100%)}
+  .seg .save{font:700 10px -apple-system,'Inter',sans-serif;letter-spacing:.02em;color:#16a34a;background:#dcfce7;border-radius:999px;padding:3px 7px}
+  /* plan cards: one decision, radio left, price right */
+  .plans{padding:32px 20px 0;display:flex;flex-direction:column;gap:22px}
+  .plan{position:relative;border:1.5px solid #e5e5ea;border-radius:16px;padding:14px 14px;background:#fff;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s}
+  .plan.is-sel{border-color:#0055ED;background:#f3f7ff;box-shadow:0 0 0 3px rgba(0,85,237,.12)}
+  .plan .row{display:flex;align-items:center;gap:12px}
+  .plan .radio{width:22px;height:22px;border-radius:999px;border:1.5px solid #c7c7cc;display:flex;align-items:center;justify-content:center;flex:none;color:#fff;font-size:12px;background:#fff;transition:all .15s}
+  .plan.is-sel .radio{background:#0055ED;border-color:#0055ED}
+  .plan .txt{flex:1;min-width:0}
+  .plan .name{font:700 17px/1.2 -apple-system,'SF Pro Display','Inter',sans-serif;letter-spacing:-.2px;color:#0b0f14}
+  .plan .sub{margin-top:2px;font:400 12.5px/1.3 -apple-system,'Inter',sans-serif;color:#525252}
+  .plan .price{display:flex;align-items:baseline;gap:2px;flex:none}
+  .plan .price b{font:800 20px/1 -apple-system,'SF Pro Display','Inter',sans-serif;letter-spacing:-.4px;color:#0b0f14}
+  .plan .price span{font:500 12px -apple-system,'Inter',sans-serif;color:#525252}
+  .plan .ribbon{position:absolute;top:-11px;left:14px;height:22px;padding:0 10px;border-radius:999px;background:#0055ED;color:#fff;font:700 10.5px/22px -apple-system,'Inter',sans-serif;letter-spacing:.03em;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,85,237,.35)}
+  /* v2: current plan card (not selectable) and a gold tag on Gold rows */
+  .plan.is-cur{cursor:default;background:#f2f2f7;border-color:#f2f2f7;margin-bottom:6px}
+  .plan.is-cur .radio{background:#0A1925;border-color:#0A1925}
+  .plan.is-cur .ribbon{background:#0A1925;box-shadow:none}
+  .plan .gold-tag{display:inline-flex;align-items:center;height:16px;padding:0 6px;margin-left:6px;border-radius:999px;background:linear-gradient(90deg,#dcb05e,#b8893a);color:#fff;font:800 9px/16px -apple-system,'Inter',sans-serif;letter-spacing:.08em;vertical-align:3px}
+  .plans-label{margin:18px 20px -4px;font:600 13px -apple-system,'Inter',sans-serif;color:#525252;text-transform:uppercase;letter-spacing:.04em}
+  /* pro features */
+  .feat{margin:16px 20px 0;padding:0}
+  .feat-head{display:flex;align-items:center;gap:10px}
+  .brand-pro{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:#0A1925;color:#fff;font:800 11px -apple-system,'Inter',sans-serif;letter-spacing:.08em}
+  .brand-pro i{color:#8fb3ff;font-size:12px}
+  .feat-sub{font:600 14px -apple-system,'Inter',sans-serif;color:#0b0f14}
+  .feat ul{list-style:none;margin:0;display:flex;flex-direction:column;gap:10px;color:#0b0f14}
+  .feat ul li{display:flex;gap:12px;align-items:center}
+  .feat ul li .tile{width:32px;height:32px;border-radius:10px;background:#EFF6FF;border:0;display:flex;align-items:center;justify-content:center;color:#0055ED;font-size:18px;flex:none}
+  .feat ul li>span:last-child{font:500 14px/1.3 -apple-system,'Inter',sans-serif;color:#0b0f14;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .plans{padding-top:12px;gap:10px}
+  .plans.has-ribbon{padding-top:20px}
+  /* included strip (v2 reuses it as the billing note) */
+  .incl{margin:16px 20px 0;padding:14px 16px;border-radius:14px;background:#f2f2f7}
+  .incl h3{font:600 13px -apple-system,'Inter',sans-serif;color:#525252;text-transform:uppercase;letter-spacing:.04em}
+  .incl .row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .incl .row span{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:999px;background:#fff;font:500 12.5px -apple-system,'Inter',sans-serif;color:#0b0f14;border:1px solid rgba(11,15,20,.06)}
+  .incl .row span i{color:#0055ED;font-size:13px}
+  .incl.note{display:flex;gap:12px;align-items:flex-start;margin-top:12px}
+  .incl.note>i{font-size:20px;color:#0b0f14;flex:none;margin-top:1px}
+  .incl.note p{font:400 13.5px/1.4 -apple-system,'Inter',sans-serif;color:#0b0f14}
+  .incl.note p b{font-weight:600}
+  .incl.note .store-btn{margin-top:10px;height:36px;padding:0 14px;border-radius:10px;border:1.5px solid #0b0f14;background:#fff;color:#0b0f14;font:600 14px -apple-system,'Inter',sans-serif;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  .incl.note .store-btn:active{transform:scale(.98)}
+  .trust{margin:22px 20px 0;display:flex;align-items:center;justify-content:center;gap:22px;font:600 13px -apple-system,'Inter',sans-serif;color:#525252}
+  .trust span{display:inline-flex;align-items:center;gap:7px}
+  .trust img{width:26px;height:26px;opacity:.9}
+  /* bottom */
+  .bottom{position:absolute;left:0;right:0;bottom:0;padding:8px 20px 0;background:#fff;z-index:4}
+  .cta{width:100%;height:52px;border:0;border-radius:16px;background:#0055ED;color:#fff;font:600 17px -apple-system,'SF Pro Text','Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 24px -10px rgba(0,85,237,.7);transition:background .15s;cursor:pointer}
+  .cta.gold{background:linear-gradient(90deg,#dcb05e,#ca9e4c 40%,#b8893a);box-shadow:0 10px 24px -10px rgba(202,158,76,.8)}
+  .cta:active{transform:scale(.99)}
+  .fine{margin-top:8px;text-align:center;font:400 11.5px/1.35 -apple-system,'Inter',sans-serif;color:#8e8e93}
+  .links{display:flex;justify-content:center;gap:16px;margin-top:6px;font:500 12px -apple-system,'Inter',sans-serif;color:#8e8e93}
+  .links a{color:inherit;text-decoration:none}
+  .home{width:134px;height:5px;border-radius:999px;background:#0b0f14;margin:10px auto 8px}
+  /* toast */
+  .sheet-hint{position:absolute;left:50%;bottom:-70px;transform:translateX(-50%);color:#9aa0a8;font:500 12px 'Inter',sans-serif;white-space:nowrap}
+  .toast{position:absolute;left:16px;right:16px;top:58px;z-index:6;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#0b0f14;color:#fff;font:500 13.5px/1.35 -apple-system,'Inter',sans-serif;box-shadow:0 12px 28px -10px rgba(0,0,0,.5);animation:tin .22s cubic-bezier(.2,0,0,1)}
+  .toast[hidden]{display:none}
+  .toast i{font-size:18px;color:#4ade80;flex:none}
+  @keyframes tin{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+
+  /* proto controls (not product UI), style from settings-billing-v2.html */
+  .proto{position:fixed;right:12px;bottom:12px;z-index:990;width:296px;border-radius:12px;background:rgba(20,20,31,.94);color:#fff;font-size:11px;font-family:'Inter',sans-serif;box-shadow:0 12px 32px -10px rgba(0,0,0,.4)}
+  .proto .phd{display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 12px;border:0;background:none;color:#fff;font:600 11px 'Inter',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  .proto.shut .pb2{display:none}
+  .proto.shut .phd i{transform:rotate(180deg)}
+  .pb2{display:flex;flex-wrap:wrap;gap:4px;padding:0 12px 12px}
+  .pb2 b{width:100%;margin-top:4px;font-weight:500;opacity:.6}
+  .pb2 button{height:22px;padding:0 8px;border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:500 11px 'Inter',sans-serif;cursor:pointer}
+  .pb2 button.on{background:#fff;color:#14141f}
+  .pb2 button[disabled]{opacity:.35;cursor:default}
+  .pb2 .pnote{width:100%;margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,.14);font:400 11px/1.45 'Inter',sans-serif;opacity:.85}
+
+  /* v2: on a real phone the frame becomes the screen */
+  @media (max-width:500px){
+    body{padding:0;align-items:stretch}
+    .phone{width:100%;height:100vh;height:100dvh;border-radius:0;box-shadow:none}
+    .notch,.sheet-hint{display:none}
+    .proto{top:6px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);width:min(296px,calc(100vw - 32px))}
+  }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status"><span>9:41</span><span class="ic"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-full"></i></span></div>
+
+    <div class="screen" id="screen">
+      <div class="nav">
+        <span></span>
+        <button class="x" type="button" aria-label="Close"><i class="ph-bold ph-x"></i></button>
+      </div>
+
+      <div class="hero">
+        <h1 id="h1">Go Pro. Every feature, every deck.</h1>
+        <p id="lede">Real PowerPoint files, your brand applied for you, advanced AI. Pay weekly as you go, or get a full year of credits today.</p>
+        <div class="proof" id="proof"><span class="av"><span></span><span></span><span></span></span><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>4.8 · Loved by 12M+ presenters</div>
+      </div>
+
+      <div class="feat" id="feat">
+        <ul>
+          <li><span class="tile"><i class="ph ph-coins"></i></span><span id="feat-credits">5,000 credits on day one, about 50 decks</span></li>
+          <li><span class="tile"><i class="ph ph-microsoft-powerpoint-logo"></i></span><span>Editable PowerPoint and PDF, no watermark</span></li>
+          <li><span class="tile"><i class="ph ph-paint-brush-broad"></i></span><span>Brand Kit applied automatically</span></li>
+          <li><span class="tile"><i class="ph ph-sparkle"></i></span><span>Advanced AI, research and analytics</span></li>
+        </ul>
+      </div>
+
+      <div id="cur-wrap"></div>
+      <div class="incl note" id="note" hidden></div>
+      <div class="plans-label" id="plans-label" hidden>Pick your new plan</div>
+      <div class="plans" id="plans" role="radiogroup"></div>
+
+      <div class="trust" id="trust"><span><img src="assets/badges/badge-gdpr-gray.svg" alt="" />GDPR compliant</span><span><img src="assets/badges/badge-soc2-gray.svg" alt="" />SOC-2 secured</span></div>
+    </div>
+
+    <div class="toast" id="toast" role="status" hidden><i class="ph-fill ph-check-circle"></i><span id="toast-t"></span></div>
+
+    <div class="bottom">
+      <button class="cta" id="cta" type="button"><span id="cta-text">Continue · $240/year</span><i class="ph-bold ph-arrow-right"></i></button>
+      <p class="fine" id="fine">Billed $240 today, renews yearly. Cancel anytime in Settings.</p>
+      <div class="home"></div>
+    </div>
+    <div class="sheet-hint">One plan (Pro), weekly or annual · tap a card</div>
+  </div>
+
+  <div class="proto" id="proto">
+    <button type="button" class="phd" id="proto-t"><span>Proto: user state</span><i class="ph-bold ph-caret-down"></i></button>
+    <div class="pb2" id="proto-b"></div>
+  </div>
+
+<script>
+  /* ---------- plan catalog (monthly and weekly prices are placeholders) ----------
+     Honest weekly vs yearly math:
+       Pro weekly  $2.99 x 52 = $155.48 a year for 100 x 52 = 5,200 credits  ($0.0299 a credit)
+       Pro yearly  $240 a year for 5,000 credits                             ($0.048 a credit)
+     Yearly is NOT cheaper per credit, so v2 drops the base's "Save 54%" and leads with the
+     real difference: all 5,000 credits on day one, one payment a year. */
+  var CAT = {
+    'pro-week':   { name: 'Pro weekly',   tier: 'pro',  per: 'week',  price: 2.99, credits: '100 credits a week' },
+    'pro-month':  { name: 'Pro monthly',  tier: 'pro',  per: 'month', price: 25,   credits: '1,000 credits a month' },
+    'pro-year':   { name: 'Pro yearly',   tier: 'pro',  per: 'year',  price: 240,  credits: '5,000 credits on day one' },
+    'gold-month': { name: 'Gold monthly', tier: 'gold', per: 'month', price: 120,  credits: '5,000 credits a month' },
+    'gold-year':  { name: 'Gold yearly',  tier: 'gold', per: 'year',  price: 1200, credits: '50,000 credits on day one' }
+  };
+  var money = function (n) { return '$' + (n % 1 ? n.toFixed(2) : n.toLocaleString('en-US')); };
+  var CADENCE = { week: 'weekly', month: 'monthly', year: 'yearly' };
+
+  /* free: the base paywall (Weekly vs Annual), copy fixed to $2.99/week */
+  var CYCLES = {
+    annual: { cta: 'Continue · $240/year', fine: 'Billed $240 today, renews yearly. Cancel anytime in Settings.', credits: '5,000 credits on day one, about 50 decks', toast: 'Welcome to Pro. Your 5,000 credits are ready.' },
+    weekly: { cta: 'Continue · $2.99/week', fine: 'Billed $2.99 today, renews weekly. Cancel anytime in Settings.', credits: '100 credits a week, about 1 deck', toast: 'Welcome to Pro. Your 100 credits for this week are ready.' }
+  };
+
+  /* who can move to what on mobile. Up only. Team plans live on the web, so they are left out here. */
+  var PATHS = {
+    'pro-week':   { opts: ['pro-month', 'pro-year', 'gold-month', 'gold-year'], pick: 'pro-year' },
+    'pro-month':  { opts: ['pro-year', 'gold-month', 'gold-year'], pick: 'pro-year', save: { 'pro-year': 'Save $60 a year' } },
+    'gold-month': { opts: ['gold-year'], pick: 'gold-year', save: { 'gold-year': 'Save $240 a year' } },
+    'pro-year':   { opts: ['gold-year'], pick: 'gold-year' }
+  };
+  var STORES = {
+    apple:  { name: 'the App Store', short: 'App Store', icon: 'ph-apple-logo' },
+    google: { name: 'Google Play', short: 'Google Play', icon: 'ph-google-play-logo' }
+  };
+  var WEEK_ENDS = 'Nov 6';
+  var NOTES = {
+    free: 'Base paywall for a free user. v2 drops the "Save 54%" badge: at $2.99/week, weekly costs $155.48 a year for 5,200 credits, yearly costs $240 for 5,000, so yearly is not cheaper per credit. Yearly now leads with "5,000 credits on day one".',
+    'pro-week': 'Weekly is a separate plan, so it is never upgraded in place. This screen plays the role of Manage your plan ("Choose your new plan"): any monthly or yearly plan at full price. Team plans are left out on mobile.',
+    paid: 'Adaptation: on the web, a paid user’s upgrade opens Manage your plan. That screen has no mobile design, and this paywall is the only mobile screen, so the same rules (up only, full price, starts today, unused credits carry over) are shown in the paywall layout with the current plan marked. Team plans are left out on mobile.'
+  };
+
+  var q = new URLSearchParams(location.search);
+  var S = { plan: PATHS[q.get('plan')] ? q.get('plan') : 'free', store: q.get('store') || 'apple', cycle: q.get('cycle') === 'weekly' ? 'weekly' : 'annual', pick: null };
+  if (!STORES[S.store] && S.store !== 'card') S.store = 'apple';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var plans = $('plans');
+
+  function planRow(key, o) {
+    var c = CAT[key];
+    return '<div class="plan' + (o.sel ? ' is-sel' : '') + '" data-key="' + key + '" role="radio" aria-checked="' + (o.sel ? 'true' : 'false') + '" tabindex="0">' +
+      (o.ribbon ? '<span class="ribbon">' + o.ribbon + '</span>' : '') +
+      '<div class="row"><span class="radio"><i class="ph-bold ph-check"></i></span>' +
+      '<div class="txt"><div class="name">' + (o.name || c.name) + (c.tier === 'gold' && !o.name ? '<span class="gold-tag">GOLD</span>' : '') + '</div><div class="sub">' + (o.sub || c.credits) + '</div></div>' +
+      '<div class="price"><b>' + (o.price || money(c.price)) + '</b><span>/' + (o.per || c.per) + '</span></div></div></div>';
+  }
+
+  function render() {
+    var free = S.plan === 'free';
+    $('proof').hidden = !free; $('feat').hidden = !free; $('trust').hidden = !free;
+    $('plans-label').hidden = free;
+
+    if (free) {
+      $('h1').textContent = 'Go Pro. Every feature, every deck.';
+      $('lede').textContent = 'Real PowerPoint files, your brand applied for you, advanced AI. Pay weekly as you go, or get a full year of credits today.';
+      $('cur-wrap').innerHTML = '';
+      plans.className = 'plans has-ribbon';
+      plans.innerHTML =
+        planRow('pro-week', { sel: S.cycle === 'weekly', name: 'Weekly', sub: '100 credits a week' }).replace('data-key="pro-week"', 'data-key="pro-week" data-cycle="weekly"') +
+        planRow('pro-year', { sel: S.cycle === 'annual', name: 'Annual', sub: '$240 billed once a year', price: '$4.62', per: 'week', ribbon: '5,000 credits on day one' }).replace('data-key="pro-year"', 'data-key="pro-year" data-cycle="annual"');
+      var cy = CYCLES[S.cycle];
+      $('cta-text').textContent = cy.cta; $('fine').textContent = cy.fine; $('feat-credits').textContent = cy.credits;
+      $('cta').classList.remove('gold');
+      $('note').hidden = true;
+      return;
+    }
+
+    var cur = CAT[S.plan], path = PATHS[S.plan], weekly = S.plan === 'pro-week';
+    if (!S.pick || path.opts.indexOf(S.pick) < 0) S.pick = path.pick;
+    var pick = CAT[S.pick], store = weekly ? STORES[S.store] : null;
+
+    $('h1').textContent = weekly ? 'Choose your new plan' : 'Manage your plan';
+    $('lede').textContent = weekly
+      ? 'Weekly is a separate plan, so we don’t upgrade it. Pick a monthly or yearly plan and it starts today.'
+      : 'You can move up to a bigger plan anytime. Here\u2019s what you can switch to.';
+
+    var curSub = weekly
+      ? (store ? cur.credits + ' · billed by ' + store.short : cur.credits + ' · renews ' + WEEK_ENDS)
+      : cur.credits.replace(' on day one', ' a year') + ' · billed to Visa 4242';
+    $('cur-wrap').innerHTML = '<div class="plans" style="padding-top:20px">' +
+      planRow(S.plan, { name: 'You’re on ' + cur.name, sub: curSub, ribbon: 'Current plan' }).replace('class="plan"', 'class="plan is-cur"').replace('role="radio" aria-checked="false" tabindex="0"', 'aria-label="Current plan"') +
+      '</div>';
+
+    var save = path.save || {};
+    plans.className = 'plans' + (save[S.pick] || Object.keys(save).length ? ' has-ribbon' : '');
+    plans.innerHTML = path.opts.map(function (k) { return planRow(k, { sel: k === S.pick, ribbon: save[k] }); }).join('');
+
+    var price = money(pick.price) + '/' + pick.per;
+    $('cta-text').textContent = 'Get ' + pick.name + ' · ' + price;
+    $('cta').classList.toggle('gold', pick.tier === 'gold');
+    var renews = 'renews ' + CADENCE[pick.per];
+    $('fine').textContent = weekly && store
+      ? 'Billed ' + money(pick.price) + ' today by ' + store.name + ', ' + renews + '.'
+      : weekly
+        ? 'Billed ' + money(pick.price) + ' today to Visa 4242, ' + renews + '. Your weekly plan won’t renew.'
+        : 'Billed ' + money(pick.price) + ' today to Visa 4242, ' + renews + '. Full price, no proration.';
+
+    var note = $('note');
+    note.hidden = false;
+    if (weekly && store) {
+      note.innerHTML = '<i class="ph ' + store.icon + '"></i><div><p><b>Your weekly plan is billed by ' + store.name + '.</b> Cancel it in ' + store.name + ' so you’re not charged for both.</p>' +
+        '<button type="button" class="store-btn" id="store-btn">Manage in ' + store.short + '<i class="ph-bold ph-arrow-up-right"></i></button></div>';
+    } else if (weekly) {
+      note.innerHTML = '<i class="ph ph-calendar-check"></i><div><p><b>Your weekly plan stops renewing when your new plan starts.</b> It runs to ' + WEEK_ENDS + ', and we won’t charge you for it again.</p></div>';
+    } else {
+      note.innerHTML = '<i class="ph ph-coins"></i><div><p><b>Your new plan starts today at full price.</b> Unused credits from ' + cur.name + ' carry over, and your plan renews a ' + (pick.per === 'year' ? 'year' : 'month') + ' from today.</p></div>';
+    }
+  }
+
+  function doneToast() {
+    if (S.plan === 'free') return CYCLES[S.cycle].toast;
+    var n = CAT[S.pick].name;
+    if (S.plan === 'pro-week') return STORES[S.store]
+      ? 'You’re on ' + n + '. Cancel weekly in ' + STORES[S.store].name + ' so you’re not charged for both.'
+      : 'You’re on ' + n + '. Your weekly plan won’t renew.';
+    return 'You’re on ' + n + '. Your unused credits carried over.';
+  }
+
+  var tt;
+  function toast(msg) {
+    $('toast-t').textContent = msg; $('toast').hidden = false;
+    clearTimeout(tt); tt = setTimeout(function () { $('toast').hidden = true; }, 3200);
+  }
+
+  plans.addEventListener('click', function (e) {
+    var c = e.target.closest('.plan'); if (!c) return;
+    if (S.plan === 'free') S.cycle = c.dataset.cycle; else S.pick = c.dataset.key;
+    render();
+  });
+  plans.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('plan')) { e.preventDefault(); e.target.click(); } });
+  $('cta').addEventListener('click', function () { toast(doneToast()); });
+  $('note').addEventListener('click', function (e) {
+    if (e.target.closest('#store-btn')) toast('We’d open your ' + STORES[S.store].short + ' subscriptions here.');
+  });
+
+  /* ---------- proto switcher ---------- */
+  var PLANS = [['free', 'Free'], ['pro-week', 'Pro weekly'], ['pro-month', 'Pro monthly'], ['gold-month', 'Gold monthly'], ['pro-year', 'Pro yearly']];
+  var STORE_OPTS = [['apple', 'App Store'], ['google', 'Google Play'], ['card', 'Card']];
+  function drawProto() {
+    var b = '<b>Plan</b>' + PLANS.map(function (p) { return '<button type="button" data-plan="' + p[0] + '" class="' + (S.plan === p[0] ? 'on' : '') + '">' + p[1] + '</button>'; }).join('');
+    b += '<b>Weekly paid through</b>' + STORE_OPTS.map(function (s) { return '<button type="button" data-store="' + s[0] + '" class="' + (S.store === s[0] && S.plan === 'pro-week' ? 'on' : '') + '"' + (S.plan === 'pro-week' ? '' : ' disabled') + '>' + s[1] + '</button>'; }).join('');
+    b += '<div class="pnote">' + (S.plan === 'free' ? NOTES.free : S.plan === 'pro-week' ? NOTES['pro-week'] : NOTES.paid) + '</div>';
+    $('proto-b').innerHTML = b;
+  }
+  function sync() {
+    var u = new URLSearchParams();
+    u.set('plan', S.plan);
+    if (S.plan === 'pro-week') u.set('store', S.store);
+    history.replaceState(null, '', '?' + u.toString());
+  }
+  $('proto-b').addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t || t.disabled) return;
+    if (t.dataset.plan) { S.plan = t.dataset.plan; S.pick = null; }
+    if (t.dataset.store) S.store = t.dataset.store;
+    $('screen').scrollTop = 0; $('toast').hidden = true;
+    render(); drawProto(); sync();
+  });
+  $('proto-t').addEventListener('click', function () { $('proto').classList.toggle('shut'); });
+  if (window.matchMedia('(max-width: 500px)').matches || q.get('proto') === 'shut') $('proto').classList.add('shut');
+
+  render(); drawProto();
+</script>
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'https://esm.sh/react@18';
+  import { createRoot } from 'https://esm.sh/react-dom@18/client';
+  import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+</body>
+</html>
