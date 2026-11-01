@@ -1,0 +1,1217 @@
+<!-- forked from feature-modal.html · v2 adds paid users (Pro weekly, Pro monthly, Pro yearly) clicking a Gold-only feature: the upgrade CTA opens the Manage your plan screen (ported from settings-billing-v2.html) with a Gold plan preselected. Free keeps the existing modal. 7-day trial mode removed. -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Feature modal v2 · Gold for paid plans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #f5f5f5; color: #171717; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+  .reopen-btn {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    padding: 10px 20px; border-radius: 6px; border: 1px solid #d4d4d4;
+    background: #ffffff; font: 500 14px 'Inter', sans-serif; color: #171717; cursor: pointer;
+  }
+  .reopen-btn:hover { background: #fafafa; }
+  .demo-bar {
+    position: fixed; top: 12px; left: 12px; z-index: 500;
+    display: flex; gap: 4px; padding: 4px;
+    background: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.08);
+  }
+  .demo-btn {
+    padding: 6px 12px; border: none; border-radius: 6px;
+    background: transparent; font: 500 12px 'Inter', sans-serif;
+    color: #525252; cursor: pointer;
+  }
+  .demo-btn.is-active { background: #171717; color: #ffffff; }
+  body.mode-plain .dp-offer-chip { display: none; }
+  body.mode-plain .dp-cta .save { display: none; }
+  body.mode-plain .dp-box-title { top: 30px; }
+  body.mode-plain .dp-feat-list { top: 160px; }
+  .dp-box-title em {
+    font-style: normal;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    text-decoration-color: currentColor;
+  }
+
+  /* =================================================================
+     v5 discount popup (Figma 217:7704) — feature list + export preview
+     ================================================================= */
+  .dp-backdrop {
+    position: fixed; inset: 0;
+    display: flex;
+    align-items: center; justify-content: center;
+    background: rgba(10, 25, 37, 0.72);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+  }
+  .dp-backdrop[data-open="true"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.2s ease, visibility 0s linear 0s;
+  }
+  .dp-stack {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1), opacity 0.2s ease;
+  }
+  .dp-backdrop[data-open="true"] .dp-stack {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  /* Main box (940 x 540, white) — Figma 2132:1984 */
+  .dp-box {
+    position: relative;
+    z-index: 1;
+    width: 940px;
+    min-height: 580px;
+    background: #ffffff;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(10,25,37,0.09),
+      0 1px 2px 0 rgba(10,25,37,0.09),
+      0 4px 6px 0 rgba(10,25,37,0.09),
+      0 24px 40px -16px rgba(10,25,37,0.09);
+  }
+
+  /* Left column: offer chip + title + feature list */
+  /* Same chip treatment as the Pro/Gold Buy Now discount chip (bob + glow). */
+  .dp-offer-chip {
+    position: absolute;
+    top: 20px; left: 30px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px 6px 8px;
+    background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#0055ED 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%); color: #ffffff;
+    font-size: 12px; font-weight: 500; letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    border-radius: 999px;
+    z-index: 1;
+    animation: pro-chip-bob 2.6s ease-in-out infinite,
+               pro-chip-glow 2.2s ease-in-out infinite;
+  }
+  @keyframes pro-chip-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  @keyframes pro-chip-glow {
+    0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                           0 0 0 0   rgba(0, 85, 237, 0.55); }
+    70%      { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                           0 0 0 9px rgba(0, 85, 237, 0); }
+    100%     { box-shadow: 0 4px 10px rgba(0,0,0,0.18),
+                           0 0 0 0   rgba(0, 85, 237, 0); }
+  }
+  @keyframes gold-shimmer {
+    0%   { left: -75%; }
+    60%  { left: 125%; }
+    100% { left: 125%; }
+  }
+  .dp-offer-chip i { font-size: 12px; color: #ffffff; }
+  .dp-offer-chip::after {
+    content: '';
+    position: absolute;
+    left: 50%; margin-left: -4px; bottom: -4px;
+    width: 8px; height: 8px;
+    background: #0055ED;
+    border-radius: 1px;
+    transform: rotate(45deg);
+    z-index: -1;
+  }
+  .dp-box-title {
+    position: absolute;
+    top: 60px; left: 30px;
+    width: 280px;
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 32px;
+    letter-spacing: -0.02em;
+    color: #171717;
+    margin: 0;
+  }
+  .dp-box-title .accent {
+    font-weight: 600;
+    background: linear-gradient(96deg,#00225C 0%,#003C9E 24%,#0055ED 50%,#0F60EF 66%,#1C6BF3 78%,#2A75F6 86%,#3F82FA 92%,#5990FC 96%,#74A6FF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .dp-feat-list {
+    position: absolute;
+    top: 208px; left: 30px; bottom: 16px;
+    width: 288px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .dp-feat-list:hover { scrollbar-color: #d4d4d4 transparent; }
+  .dp-feat-list::-webkit-scrollbar { width: 4px; }
+  .dp-feat-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; }
+  .dp-feat-list:hover::-webkit-scrollbar-thumb { background: #d4d4d4; }
+  .dp-feat-list::-webkit-scrollbar-track { background: transparent; }
+  .dp-feat-fade {
+    position: absolute;
+    left: 30px; bottom: 16px;
+    width: 288px; height: 32px;
+    pointer-events: none;
+    z-index: 2;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.86) 58%, #ffffff 100%);
+  }
+  .dp-feat-fade--top {
+    top: 208px; bottom: auto;
+    background: linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.86) 58%, #ffffff 100%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  body.mode-plain .dp-feat-fade--top { top: 160px; }
+  .dp-feat-fade--top.is-visible { opacity: 1; }
+  .dp-feat-item {
+    display: flex; align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    color: #171717;
+    line-height: 1.43;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s ease;
+  }
+  .dp-feat-item:hover { background: #fafafa; }
+  .dp-feat-item.is-active { background: #f5f5f5; cursor: default; }
+  .dp-feat-item i { font-size: 20px; color: #171717; flex-shrink: 0; line-height: 1; }
+  .dp-feat-item .lbl { font-weight: 400; color: #171717; }
+  .dp-badge {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.3px; text-transform: uppercase;
+    line-height: 1.33;
+    padding: 2px 6px;
+    border-radius: 34px;
+    flex-shrink: 0;
+  }
+  .dp-badge--pro  { background: #e6efff; color: #005eff; }
+  .dp-badge--gold { background: #fefce8; color: #ca8a04; }
+
+  /* Right column: preview + description + offer box */
+  .dp-right {
+    position: absolute;
+    top: 0; left: 340px; bottom: 0;
+    width: 600px;
+    border-left: 1px solid rgba(11,15,20,0.09);
+  }
+  .dp-preview {
+    position: absolute;
+    top: 0; left: 0;
+    width: 600px; height: 338px;
+    background: #e9eff5;
+    overflow: hidden;
+  }
+  /* Two stacked media slots dissolve: incoming fades in on top while the
+     outgoing stays put underneath, so there is never an empty frame. */
+  .dp-slide { position: absolute; inset: 0; }
+  .dp-slide[hidden] { display: none; }
+  .dp-slide img, .dp-slide video {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .dp-slide.is-entering {
+    opacity: 0;
+    transition: none;
+    z-index: 2;
+  }
+  .dp-slide.is-in {
+    opacity: 1;
+    transition: opacity 0.55s ease;
+    z-index: 2;
+  }
+  .dp-slide.is-out { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .dp-slide.is-entering, .dp-slide.is-in { transition: none; }
+  }
+
+  /* Body under the preview: feature title + description + CTA row */
+  .dp-body {
+    position: absolute;
+    top: 338px; left: 0; right: 0; bottom: 0;
+    padding: 20px 30px 30px;
+    display: flex; flex-direction: column;
+  }
+  .dp-feat-title {
+    font-size: 20px; font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: #171717;
+    margin: 0 0 6px;
+  }
+  .dp-desc {
+    font-size: 14px; line-height: 1.5;
+    color: #525252;
+    margin: 0;
+  }
+  .dp-ctas {
+    margin-top: auto;
+    display: flex; gap: 10px;
+  }
+  .dp-cta .save { font-weight: 500; color: rgba(255,255,255,0.6); margin-left: 6px; }
+  .dp-cta .save::before { content: '\2022'; margin-right: 6px; }
+  .dp-cta {
+    flex: 1; height: 44px;
+    background: #0b0f14;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px; font-weight: 500;
+    border: 0; border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.06), 0 1px 2px rgba(11,15,20,0.09);
+    transition: background 0.2s ease, filter 0.16s ease;
+  }
+  .dp-cta:hover:not(:disabled) { background: #23303B; }
+  .dp-cta:disabled {
+    background: #c5cad1;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .dp-cta--gold {
+    position: relative; overflow: hidden;
+    background: linear-gradient(90deg, #dcb05e 0%, #ca9e4c 30%, #c39643 65%, #b8893a 100%);
+    box-shadow:
+      0 1px 2px 0 rgba(11,15,20,.09),
+      0 3px 12px rgba(202,158,76,.45);
+  }
+  .dp-cta--gold:hover:not(:disabled) {
+    background: linear-gradient(90deg, #dcb05e 0%, #ca9e4c 30%, #c39643 65%, #b8893a 100%);
+    filter: brightness(1.08);
+    box-shadow:
+      0 1px 2px 0 rgba(11,15,20,.09),
+      0 4px 18px rgba(202,158,76,.65);
+  }
+  .dp-cta--gold::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,.06) 45%, transparent 55%);
+    pointer-events: none;
+  }
+  .dp-cta--gold::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -75%;
+    width: 50%;
+    background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,.65) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    animation: gold-shimmer 2.8s ease-in-out infinite;
+  }
+
+  /* Close button (floats right of box) */
+  .dp-close {
+    position: absolute;
+    top: 10px; right: -40px;
+    width: 28px; height: 28px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fafafa;
+    border: 0; border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px rgba(11,15,20,0.09);
+    color: #171717;
+    z-index: 4;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .dp-close:hover { background: #f4f6fa; transform: scale(1.06); }
+  .dp-close i { font-size: 14px; }
+
+
+  /* v2: paid users (Pro weekly, monthly, yearly) see only Gold features and one Gold CTA, no offer */
+  body.paid .demo-bar, body.paid .dp-offer-chip, body.paid #dp-cta, body.paid .dp-cta .save { display: none; }
+  body.paid .dp-box-title { top: 30px; }
+  body.paid .dp-feat-list { top: 160px; }
+  body.paid .dp-feat-fade--top { top: 160px; }
+  body.paid .dp-feat-item:not([data-plan="gold"]) { display: none; }
+  body:not(.paid) .dp-feat-item[data-paid-only] { display: none; }
+
+  /* ---------- v2: overlay host for the ported Manage your plan screen (ds Dialog, from settings-billing-v2.html) ---------- */
+  .ov { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(16,12,60,0.45); backdrop-filter: blur(2px); animation: ov-fade .18s ease; }
+  .ov[hidden] { display: none; }
+  @keyframes ov-fade { from { opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+  .ov button { font-family: 'Inter', sans-serif; }
+  /* ---------- Manage your plan: ported from manage-plan.html, scoped to .mp ---------- */
+  .ov.mp-on { padding: 20px 72px 20px 20px; }
+.mp .modal-close {
+    position: absolute; top: 0; right: -54px; z-index: 5;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #fff; border: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #171717;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  }
+.mp .modal-close i { font-size: 18px; }
+.mp .modal-close:hover { background: #f2f6ff; }
+.mp .modal-card {
+    display: grid; grid-template-columns: 540px 1fr;
+    min-height: 600px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.4);
+  }
+.mp .left {
+    background: #f5f5f5;
+    border-right: 1px solid rgba(11,15,20,0.06);
+    border-radius: 12px 0 0 12px;
+    padding: 32px 28px 40px;
+    display: flex; flex-direction: column;
+  }
+.mp .meter-wrap { margin-bottom: 24px; }
+.mp .meter-row { display: flex; align-items: center; gap: 8px; }
+.mp .meter-row .spark-svg { color: #171717; width: 22px; height: 22px; flex: none; }
+.mp .meter-num { font-size: 24px; font-weight: 500; letter-spacing: -0.24px; color: #171717; }
+.mp .meter-label { font-size: 14px; color: #525252; }
+.mp .meter-of { margin-left: auto; font-size: 12px; color: #a3a3a3; }
+.mp .meter-bar { height: 6px; border-radius: 999px; background: rgba(11,15,20,0.06); overflow: hidden; margin-top: 10px; }
+.mp .meter-fill { height: 100%; border-radius: 999px; width: 0%; background: #005eff; transition: width .3s ease; }
+.mp .state-low .meter-fill { width: 8.6%; }
+.mp .plan-zone { display: none; }
+.mp #zone-silver-ind .big-cred, .mp #zone-gold-ind .big-cred { margin-top: 4px; }
+.mp .switch-team {
+    margin-top: 16px; padding: 0; border: 0; background: none;
+    width: fit-content; cursor: pointer;
+    font: 500 13px 'Inter', sans-serif; color: #1a6eff;
+  }
+.mp .switch-team:hover { text-decoration: underline; }
+.mp .team-seats { margin-top: 4px; font-size: 12px; font-weight: 600; width: fit-content; }
+.mp .unlimited-grad {
+    background: linear-gradient(90deg, #002464, #0059ff, #0095ff, #b6daff, #0095ff, #0059ff, #002464);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    background-position: 200% center;
+    animation: mp-unlimited-grad-move 3.5s linear infinite;
+  }
+@keyframes mp-unlimited-grad-move {
+    from { background-position: 200% center; }
+    to   { background-position: 0% center; }
+  }
+.mp .dd-label { margin: 18px 0 6px; font-size: 12px; font-weight: 500; color: #525252; }
+.mp .plan-zone .stack-math { margin-top: 12px; }
+.mp .credit-dd { position: relative; max-width: 300px; }
+.mp .credit-dd-trigger {
+    width: 100%; height: 40px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 0 12px; border: 0; border-radius: 4px;
+    background: #fff; color: #171717;
+    font: 600 14px 'Inter', sans-serif; cursor: pointer; text-align: left;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+  }
+.mp .credit-dd.is-open .credit-dd-trigger { box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px #0b0f14; }
+.mp .credit-dd-caret { color: #667085; font-size: 14px; transition: transform .15s ease; }
+.mp .credit-dd.is-open .credit-dd-caret { transform: rotate(180deg); }
+.mp .credit-dd-menu {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+    margin: 0; padding: 6px; list-style: none;
+    background: #fff; border: 1px solid #E4E7EC; border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(16,24,40,.14), 0 2px 6px rgba(16,24,40,.06);
+    display: none;
+  }
+.mp .credit-dd.is-open .credit-dd-menu { display: block; }
+.mp .credit-dd-opt {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 10px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: #171717; cursor: pointer;
+  }
+.mp .credit-dd-opt:hover, .mp .credit-dd-opt[aria-selected="true"] { background: #F2F4F7; }
+.mp .credit-dd-pill {
+    flex: none; padding: 3px 10px; border-radius: 999px;
+    background: #ECFDF3; color: #067647;
+    font-size: 11px; font-weight: 600; line-height: 1;
+  }
+.mp .credit-dd-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mp .credit-dd-left svg { color: #171717; flex: none; }
+.mp .left-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.mp .head-col { position: relative; }
+.mp .head-row { display: flex; align-items: center; gap: 6px; }
+.mp .info-tip { display: inline-flex; position: relative; color: #a3a3a3; cursor: pointer; }
+.mp .info-tip i { font-size: 17px; }
+.mp .info-tip:hover, .mp .info-tip:focus { color: #525252; }
+.mp .tip-bubble {
+    position: absolute; left: 50%; top: calc(100% + 8px); z-index: 20;
+    width: 320px; padding: 10px 12px; border-radius: 6px;
+    background: #171717; color: #fff;
+    font-size: 12px; line-height: 1.5; font-weight: 400; white-space: normal;
+    opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(-2px);
+    transition: opacity .15s ease, transform .15s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+.mp .info-tip:hover .tip-bubble, .mp .info-tip:focus .tip-bubble { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.mp .left-head h1 {
+    font-size: 24px; font-weight: 400; line-height: 1.3;
+    letter-spacing: -0.24px; color: #171717;
+  }
+.mp .left-head .sub { margin-top: 4px; font-size: 14px; line-height: 1.43; color: #171717; white-space: nowrap; }
+.mp .plan-card {
+    background: #fff; border-radius: 4px; padding: 20px 16px; margin-top: 24px;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+.mp .plan-card + .plan-card { margin-top: 16px; }
+.mp .plan-card--gold {
+    background-image: linear-gradient(180deg, #faf0d6 0%, #fdf9ec 40%, #ffffff 80%);
+    box-shadow: 0 0 0 1px #e6d19e, 0 1px 2px 0 rgba(11,15,20,0.09),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+.mp .plan-row { display: flex; gap: 20px; align-items: flex-start; cursor: pointer; }
+.mp .plan-row input { position: absolute; opacity: 0; pointer-events: none; }
+.mp .radio {
+    width: 16px; height: 16px; border-radius: 50%; flex: none; margin-top: 1px;
+    border: 1px solid #c2c7ce; background: #fff;
+    transition: border .12s ease;
+  }
+.mp .plan-row.is-selected .radio { border: 5px solid #0b0f14; }
+.mp .plan-body { flex: 1; min-width: 0; }
+.mp .plan-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mp .plan-name { font-size: 14px; font-weight: 500; color: #525252; white-space: nowrap; }
+.mp .plan-name .cred { font-size: 12px; font-weight: 400; color: #005eff; }
+.mp .plan-price { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.mp .strike { font-size: 14px; font-weight: 500; color: #a3a3a3; text-decoration: line-through; }
+.mp .price { font-size: 14px; font-weight: 500; color: #525252; }
+.mp .per { font-size: 12px; color: #525252; }
+.mp .save { font-size: 12px; color: #005eff; white-space: nowrap; }
+.mp .off-badge {
+    padding: 2px 4px; border-radius: 2px; margin-left: 6px;
+    background: rgba(0,85,237,0.12); color: #005eff;
+    font-size: 10px; font-weight: 500; vertical-align: 1px;
+  }
+.mp .current-badge {
+    padding: 2px 4px; border-radius: 2px; margin-left: 6px;
+    background: rgba(11,15,20,0.06); color: #525252;
+    font-size: 10px; font-weight: 500; vertical-align: 1px;
+  }
+.mp .big-cred { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.mp .big-cred .spark-svg { width: 22px; height: 22px; flex: none; color: #171717; }
+.mp .plan-split { height: 1px; background: rgba(11,15,20,0.09); margin: 12px 0 0; }
+.mp .plan-card--gold .big-cred .spark-svg { color: #c9932a; }
+.mp .plan-card--gold .big-cred { margin-top: 0; }
+.mp .big-cred .num { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: #171717; }
+.mp .big-cred .lbl { font-size: 14px; color: #525252; }
+.mp .save-line { display: flex; justify-content: flex-end; margin-top: 2px; }
+.mp .plan-card--gold .big-cred i { color: #c9932a; }
+.mp .plan-card--gold .big-cred .num {
+    background: linear-gradient(92deg, #8a5a10, #c9932a 40%, #f2d688 50%, #c9932a 60%, #8a5a10);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: mp-gold-shimmer 2.6s linear infinite;
+  }
+@keyframes mp-gold-shimmer {
+    0% { background-position: 120% 0; }
+    100% { background-position: -80% 0; }
+  }
+.mp .xbadge { background: #fdeeba; color: #8a5a10; border-radius: 999px; font-size: 10.5px; font-weight: 600; padding: 3px 8px; }
+.mp .stack-math {
+    margin-top: 8px; display: none;
+    align-items: center; gap: 5px;
+    font-size: 12px; color: #525252; font-weight: 500;
+  }
+.mp .state-low .stack-math { display: inline-flex; }
+.mp .info-tip--sm i { font-size: 14px; }
+.mp .info-tip--title { display: inline; margin-left: 6px; }
+.mp .info-tip--title > i { vertical-align: -1px; }
+.mp .gold-points {
+    list-style: none; margin: 12px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+.mp .gold-points li { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.4; color: #525252; }
+.mp .gold-points li i { font-size: 16px; flex: none; color: #525252; margin-top: 0px; }
+.mp .right { padding: 32px 24px 28px; display: flex; flex-direction: column; }
+.mp .right-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+.mp .right h2 {
+    font-size: 24px; font-weight: 400; line-height: 1.3;
+    letter-spacing: -0.24px; color: #171717; margin-bottom: 24px;
+  }
+.mp .pay-tabs { display: flex; border-bottom: 1px solid rgba(11,15,20,0.09); margin-bottom: 24px; }
+.mp .pay-tab {
+    display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 2px 8px;
+    border: 0; background: none; cursor: pointer;
+    font: 500 14px/1.43 'Inter', sans-serif; color: #171717;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+.mp .pay-tab.is-active { border-bottom-color: #0b0f14; }
+.mp .pay-tab i { font-size: 20px; }
+.mp .pay-tab .tab-logo { width: 20px; height: 20px; }
+.mp .upi-logos { display: flex; gap: 6px; align-items: center; }
+.mp .upi-logos img { width: 20px; height: 20px; display: block; }
+.mp .upi-logos .logo-circle {
+    width: 20px; height: 20px; border-radius: 50%; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+.mp .logo-circle--gray { background: #e5e5e5; }
+.mp .logo-circle--black { background: #000; }
+.mp .logo-circle--gray img { width: 13px; height: 11px; }
+.mp .logo-circle--black img { width: 9px; height: 10px; }
+.mp .field { margin-bottom: 20px; }
+.mp .field label { display: block; font-size: 14px; font-weight: 500; line-height: 1.43; color: #525252; margin-bottom: 5px; }
+.mp .input {
+    width: 100%; padding: 12px; border: 0; border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+    font: 400 14px/1.43 'Inter', sans-serif; color: #171717;
+    display: flex; align-items: center; gap: 8px;
+  }
+.mp .input.placeholder { color: #a3a3a3; }
+.mp .input .grow { flex: 1; min-width: 0; }
+.mp .brand-icons { display: flex; gap: 4px; align-items: center; }
+.mp .brand-icons img { width: 24px; height: 16px; display: block; }
+.mp .cvc-icon { width: 24px; height: 16px; display: block; margin-left: auto; }
+.mp .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.mp .select {
+    width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 4px;
+    background: #fff; cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(11,15,20,0.09), 0 1px 2px 1px rgba(11,15,20,0.06),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
+    font: 400 14px/1.43 'Inter', sans-serif; color: #525252;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+.mp .select i { font-size: 16px; color: #525252; }
+.mp .disclaimer { font-size: 12px; line-height: 1.33; color: #525252; margin-bottom: 20px; }
+.mp .pay-btn {
+    width: 100%; height: 44px; border: 0; border-radius: 4px; cursor: pointer;
+    background: #0b0f14; color: #fff;
+    font: 500 14px/1.43 'Inter', sans-serif;
+    box-shadow: 0 0 0 1px rgba(26,26,26,0.06), 0 1px 2px 0 rgba(26,26,26,0.09);
+    transition: background .15s ease, transform .16s ease;
+  }
+.mp .pay-btn:hover { background: #23272c; transform: translateY(-1px); }
+.mp .pay-btn:active { transform: translateY(0); }
+.mp .pay-foot {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    margin-top: 20px; font-size: 12px; color: #525252;
+  }
+.mp .pay-foot .powered { display: flex; align-items: center; gap: 8px; }
+.mp .pay-foot .powered img { height: 16px; display: block; }
+.mp .pay-foot .vsep { width: 1px; height: 18px; background: rgba(26,26,26,0.09); }
+.mp .pay-foot .links { display: flex; gap: 12px; }
+.mp .pay-foot a { color: #525252; text-decoration: none; }
+.mp .pay-foot a:hover { text-decoration: underline; }
+.mp .stripe-panel { display: flex; flex-direction: column; flex: 1; }
+.mp .stripe-panel .pay-foot { margin-top: auto; padding-top: 20px; }
+.mp .paddle-panel { display: none; }
+.mp .pp-box {
+    border-radius: 4px; padding: 16px; background: #fff;
+    box-shadow: 0 1px 4px -1px rgba(11,15,20,0.09), inset 0 0 0 1px rgba(11,15,20,0.09);
+  }
+.mp .pp-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.mp .pp-plan { font-size: 14px; font-weight: 500; }
+.mp .pp-off b { color: #16A34A; font-weight: 500; }
+.mp .pp-sub { margin-top: 6px; font-size: 13px; color: #525252; }
+.mp .pp-divider { border-bottom: 1px solid rgba(11,15,20,0.09); margin: 14px 0; }
+.mp .pp-due { font-size: 14px; font-weight: 500; }
+.mp .pp-card-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; font-size: 13px; color: #171717; font-weight: 500;
+  }
+.mp .pp-card-row i { font-size: 17px; color: #525252; }
+.mp .pp-change {
+    margin-left: auto; border: 0; background: none; cursor: pointer;
+    font: 500 12.5px 'Inter', sans-serif; color: #1a6eff;
+  }
+.mp .pp-change:hover { text-decoration: underline; }
+.mp .pp-agree {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin-top: 16px; font-size: 13px; color: #171717; line-height: 1.45; cursor: pointer;
+  }
+.mp .pp-agree input { accent-color: #0b0f14; width: 15px; height: 15px; margin-top: 2px; flex: none; }
+.mp .pp-actions { display: flex; margin-top: 22px; }
+.mp .pp-confirm {
+    width: 100%; height: 44px; padding: 0 20px; border-radius: 4px; border: 0; cursor: pointer;
+    background: #0b0f14; color: #fff;
+    font: 500 13.5px 'Inter', sans-serif;
+    transition: background .15s ease, transform .16s ease;
+  }
+.mp .pp-confirm:hover { background: #23272c; transform: translateY(-1px); }
+.mp .paddle-panel .pay-foot { margin-top: auto; padding-top: 20px; }
+@media (max-width: 980px) {
+  .mp .modal-card { grid-template-columns: 1fr; }
+  .mp .left { border-right: 0; border-bottom: 1px solid rgba(11,15,20,0.06); border-radius: 12px 12px 0 0; }
+}
+
+  .mp .modal-wrap { position: relative; width: 100%; max-width: 1068px; margin: 0 auto; animation: pop .2s cubic-bezier(.2,0,0,1); }
+  .mp .left { max-height: calc(100vh - 40px); overflow-y: auto; }
+  .mp .paddle-panel { display: flex; flex-direction: column; flex: 1; }
+  .mp .plan-row.is-cur { cursor: default; }
+  .mp .plan-row.is-cur .radio { visibility: hidden; }
+  .mp .cur-note { margin-top: 8px; font-size: 12px; line-height: 1.4; color: #525252; }
+  .mp .pp-sub.carry { color: #16A34A; }
+  .mp .pp-err { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 4px; background: #fef2f2; color: #b91c1c; font-size: 13px; line-height: 1.4; }
+  .mp .pp-err i { font-size: 16px; margin-top: 1px; }
+  .mp .pp-sub.warn { color: #b45309; }
+  .mp .stripe-panel .pay-btn[disabled] { background: #a3a3a3; cursor: not-allowed; transform: none; }
+  .mp .left-head .sub { white-space: normal; color: #525252; font-size: 13px; }
+  .callout.bad b { color: var(--bad); }
+  .note { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 18px; color: var(--ink2); }
+  .note svg { width: 16px; height: 16px; margin-top: 1px; color: var(--ink3); }
+  .refill { margin-top: 10px; font-size: 13px; color: var(--ink2); }
+  .more { margin-top: 8px; border: 0; background: none; color: var(--brand); font-weight: 500; cursor: pointer; }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
+  .mp .pp-confirm[disabled] { background: #a3a3a3; cursor: not-allowed; transform: none; }
+  .mp .plan-price { margin-top: 0; align-items: center; }
+  .mp .modal-wrap { animation: pop .2s cubic-bezier(.2,0,0,1); }
+
+  /* Payment Successful dialog (ported from settings-billing-v2.html) */
+  svg.hi { display: block; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .dlg { position: relative; width: 100%; max-height: calc(100vh - 24px); overflow-y: auto; border: 1px solid #e4e4ec; border-radius: 16px; background: #fff; color: #14141f; box-shadow: 0 2px 6px rgba(16,12,60,0.08), 0 24px 64px -12px rgba(16,12,60,0.28); animation: pop .2s cubic-bezier(.2,0,0,1); font-family: 'Inter', sans-serif; font-size: 14px; line-height: 20px; }
+  .dlg h3 { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.015em; margin: 0; }
+  .won { padding: 40px; text-align: center; }
+  .won .ok { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 999px; background: #dcfce7; color: #15803d; }
+  .won .ok svg { width: 32px; height: 32px; stroke-width: 2; }
+  .won h3 { margin-top: 16px; }
+  .won p { margin: 6px 0 0; color: #4e4e5e; }
+  .won .tab { font-variant-numeric: tabular-nums; }
+  .won .btn { display: inline-flex; align-items: center; justify-content: center; width: 260px; height: 44px; margin-top: 24px; padding: 0 20px; border: 1px solid transparent; border-radius: 6px; font: 500 14px 'Inter', sans-serif; cursor: pointer; background: #3427ff; color: #fff; box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 1px 2px rgba(16,12,60,0.2); }
+  .won .btn:hover { background: #2a1fd6; }
+  .won .foot { margin-top: 14px; font-size: 13px; color: #6b7280; }
+
+  /* proto controls (not product UI), style from settings-billing-v2.html */
+  .proto { position: fixed; right: 12px; bottom: 12px; z-index: 2500; width: 296px; border-radius: 12px; background: rgba(20,20,31,0.94); color: #fff; font: 11px 'Inter', sans-serif; box-shadow: 0 12px 32px -10px rgba(0,0,0,0.4); }
+  .proto .phd { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 12px; border: 0; background: none; color: #fff; font: 600 11px 'Inter', sans-serif; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .proto.shut .pb2 { display: none; }
+  .proto.shut .phd i { transform: rotate(180deg); }
+  .pb2 { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 12px; }
+  .pb2 b { width: 100%; margin-top: 4px; font-weight: 500; opacity: .6; }
+  .pb2 button { height: 22px; padding: 0 8px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.14); color: #fff; font: 500 11px 'Inter', sans-serif; cursor: pointer; }
+  .pb2 button.on { background: #fff; color: #14141f; }
+  .pb2 .pnote { width: 100%; margin: 6px 0 0; font-size: 11px; line-height: 15px; color: rgba(255,255,255,0.72); }
+  .pb2 .pnote em { font-style: normal; color: #fcd34d; }
+
+  /* toast (top centre), from settings-billing-v2.html */
+  .toast { position: fixed; left: 50%; top: 64px; z-index: 2400; display: flex; align-items: center; gap: 10px; width: min(460px, calc(100vw - 32px)); padding: 12px 14px; border: 1px solid #e4e4ec; border-radius: 12px; background: #fff; font-size: 14px; line-height: 20px; box-shadow: 0 1px 2px rgba(16,12,60,0.06), 0 8px 24px -6px rgba(16,12,60,0.16); transform: translateX(-50%); }
+  .toast[hidden] { display: none; }
+  .toast i { font-size: 20px; color: #15803d; }
+
+  @media (max-width: 980px) {
+    .dp-box { width: calc(100vw - 32px); height: auto; }
+    .dp-close { right: 8px; top: 8px; }
+  }
+  </style>
+</head>
+<body class="mode-offer">
+  <div class="demo-bar" role="tablist" aria-label="Modal variant">
+    <button type="button" class="demo-btn is-active" data-mode="offer" role="tab">Close nudge offer</button>
+    <button type="button" class="demo-btn" data-mode="plain" role="tab">No offer</button>
+  </div>
+  <button class="reopen-btn" id="reopen" type="button">Open feature modal</button>
+
+  <div class="dp-backdrop" id="dp-backdrop" role="dialog" aria-modal="true" aria-labelledby="dp-box-title" data-open="false">
+    <div class="dp-stack">
+      <div class="dp-box">
+        <span class="dp-offer-chip"><i class="ph-fill ph-clock"></i>Offer ends in <span id="dp-timer">59:56</span></span>
+        <h2 class="dp-box-title" id="dp-box-title">Access premium features of Pro or Gold at <span class="accent">20% off</span></h2>
+
+        <div class="dp-feat-list" id="dp-feat-list">
+          <button type="button" class="dp-feat-item is-active" data-feat="export" data-plan="pro" data-video="trigger_export" data-icon-active="ph-fill ph-export" data-icon-inactive="ph ph-export">
+            <i class="ph-fill ph-export"></i><span class="lbl">Export presentations</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="ultra" data-plan="gold" data-preview="assets/feature-modal/triggeraimodels.jpg" data-icon-active="ph-fill ph-sparkle" data-icon-inactive="ph ph-sparkle">
+            <i class="ph ph-sparkle"></i><span class="lbl">Ultra AI model</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="brandmoods" data-plan="gold" data-paid-only data-preview="assets/feature-modal/triggerbrandkit.jpg" data-icon-active="ph-fill ph-swatches" data-icon-inactive="ph ph-swatches">
+            <i class="ph ph-swatches"></i><span class="lbl">Custom brand kit and moods</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="brandkit" data-plan="pro" data-preview="assets/feature-modal/triggerbrandkit.jpg" data-icon-active="ph-fill ph-swatches" data-icon-inactive="ph ph-swatches">
+            <i class="ph ph-swatches"></i><span class="lbl">Brand kit</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="knowledge" data-plan="gold" data-preview="assets/feature-modal/triggerprojectknowledge.jpg" data-video="trigger_knowledge" data-icon-active="ph-fill ph-book-open" data-icon-inactive="ph ph-book-open">
+            <i class="ph ph-book-open"></i><span class="lbl">Shared knowledge base</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="team" data-plan="pro" data-video="trigger_invite_members" data-icon-active="ph-fill ph-users-three" data-icon-inactive="ph ph-users-three">
+            <i class="ph ph-users-three"></i><span class="lbl">Invite team members</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="refresh" data-plan="gold" data-preview="assets/feature-modal/triggerrefresh.jpg" data-icon-active="ph-fill ph-arrows-clockwise" data-icon-inactive="ph ph-arrows-clockwise">
+            <i class="ph ph-arrows-clockwise"></i><span class="lbl">Refresh data</span><span class="dp-badge dp-badge--gold">Gold</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="templates" data-plan="pro" data-preview="assets/feature-modal/triggertemplates.jpg" data-icon-active="ph-fill ph-layout" data-icon-inactive="ph ph-layout">
+            <i class="ph ph-layout"></i><span class="lbl">Templates</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="analytics" data-plan="pro" data-video="trigger_analytics" data-icon-active="ph-fill ph-chart-bar" data-icon-inactive="ph ph-chart-bar">
+            <i class="ph ph-chart-bar"></i><span class="lbl">Analytics</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="projects" data-plan="pro" data-preview="assets/feature-modal/triggerproject.jpg" data-icon-active="ph-fill ph-folder" data-icon-inactive="ph ph-folder">
+            <i class="ph ph-folder"></i><span class="lbl">Projects</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="fonts" data-plan="pro" data-preview="assets/feature-modal/triggerfonts.jpg" data-video="trigger_fontpair" data-icon-active="ph-fill ph-text-aa" data-icon-inactive="ph ph-text-aa">
+            <i class="ph ph-text-aa"></i><span class="lbl">Font pair</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="colors" data-plan="pro" data-preview="assets/feature-modal/triggercolors.jpg" data-icon-active="ph-fill ph-palette" data-icon-inactive="ph ph-palette">
+            <i class="ph ph-palette"></i><span class="lbl">Color palette</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="assign" data-plan="pro" data-preview="assets/feature-modal/triggerassignslide.jpg" data-icon-active="ph-fill ph-cursor" data-icon-inactive="ph ph-cursor">
+            <i class="ph ph-cursor"></i><span class="lbl">Assign slide</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="promodel" data-plan="pro" data-preview="assets/feature-modal/triggerpromodelupgrade.jpg" data-icon-active="ph-fill ph-star-four" data-icon-inactive="ph ph-star-four">
+            <i class="ph ph-star-four"></i><span class="lbl">Pro AI model</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="slidecount" data-plan="pro" data-preview="assets/feature-modal/triggerverylongslides.jpg" data-icon-active="ph-fill ph-cards" data-icon-inactive="ph ph-cards">
+            <i class="ph ph-cards"></i><span class="lbl">Slide count</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="comments" data-plan="pro" data-preview="assets/feature-modal/triggercomments.jpg" data-icon-active="ph-fill ph-chat-centered-dots" data-icon-inactive="ph ph-chat-centered-dots">
+            <i class="ph ph-chat-centered-dots"></i><span class="lbl">Comments</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="present" data-plan="pro" data-preview="assets/feature-modal/triggercolorsmeetandpresent.jpg" data-icon-active="ph-fill ph-projector-screen" data-icon-inactive="ph ph-projector-screen">
+            <i class="ph ph-projector-screen"></i><span class="lbl">Meet and present</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+          <button type="button" class="dp-feat-item" data-feat="meetedit" data-plan="pro" data-preview="assets/feature-modal/triggermeetandedit.jpg" data-icon-active="ph-fill ph-pencil-simple" data-icon-inactive="ph ph-pencil-simple">
+            <i class="ph ph-pencil-simple"></i><span class="lbl">Meet and edit</span><span class="dp-badge dp-badge--pro">Pro</span>
+          </button>
+        </div>
+        <div class="dp-feat-fade" aria-hidden="true"></div>
+        <div class="dp-feat-fade dp-feat-fade--top" id="dp-fade-top" aria-hidden="true"></div>
+
+        <div class="dp-right">
+          <div class="dp-preview" aria-hidden="true">
+            <div class="dp-slide" id="dp-slide-a" data-key="trigger_export">
+              <video autoplay muted loop playsinline>
+                <source src="assets/feature-modal/trigger_export.webm" type="video/webm" />
+                <source src="assets/feature-modal/trigger_export.mp4" type="video/mp4" />
+              </video>
+            </div>
+            <div class="dp-slide" id="dp-slide-b" hidden></div>
+          </div>
+          <div class="dp-body">
+            <h3 class="dp-feat-title" id="dp-feat-title">Export presentations</h3>
+            <p class="dp-desc" id="dp-desc">Download your presentations as PowerPoint, PDF, or image files for offline use and sharing.</p>
+            <div class="dp-ctas">
+              <button class="dp-cta" id="dp-cta" type="button">Buy Pro<span class="save">Save $48</span></button>
+              <button class="dp-cta dp-cta--gold" id="dp-cta-gold" type="button">Buy Gold<span class="save">Save $300</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Close (sibling of .dp-box so it's not clipped by overflow:hidden) -->
+      <button class="dp-close" id="dp-close" type="button" aria-label="Close">
+        <i class="ph ph-x"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- v2: Manage your plan / Choose your new plan, and Payment Successful -->
+  <div class="ov" id="ov" hidden></div>
+  <div class="toast" id="toast" role="status" hidden><i class="ph-fill ph-check-circle"></i><span id="toast-t"></span></div>
+  <div class="proto" id="proto">
+    <button type="button" class="phd" id="proto-t"><span>Proto: user plan</span><i class="ph-bold ph-caret-down"></i></button>
+    <div class="pb2" id="proto-b"></div>
+  </div>
+
+  <script>
+    (function() {
+      /* v2: who clicked the Gold feature. ?plan=free|pro-week|pro-month|pro-year */
+      const USERS = {
+        'free':      { label: 'Free' },
+        'pro-week':  { label: 'Pro weekly',  plan: 'pro', cadence: 'week',  price: 2.99, credits: 100,  end: new Date(2026, 10, 3),  bal: 60,   cta: 'Get Gold',        pick: 'gold-month' },
+        'pro-month': { label: 'Pro monthly', plan: 'pro', cadence: 'month', price: 25,   credits: 1000, end: new Date(2026, 10, 29), bal: 620,  cta: 'Upgrade to Gold', pick: 'gold-month' },
+        'pro-year':  { label: 'Pro yearly',  plan: 'pro', cadence: 'year',  price: 240,  credits: 5000, end: new Date(2027, 9, 5),   bal: 3200, cta: 'Upgrade to Gold', pick: 'gold-year' },
+      };
+      const Q = new URLSearchParams(location.search);
+      let PLAN = USERS[Q.get('plan')] ? Q.get('plan') : 'free';
+      let BAL = 0;
+      const backdrop = document.getElementById('dp-backdrop');
+      const closeBtn = document.getElementById('dp-close');
+      const proBtn   = document.getElementById('dp-cta');
+      const goldBtn  = document.getElementById('dp-cta-gold');
+      const timerEl  = document.getElementById('dp-timer');
+      const descEl   = document.getElementById('dp-desc');
+      const featList = document.getElementById('dp-feat-list');
+      const titleEl  = document.getElementById('dp-feat-title');
+      const slideA   = document.getElementById('dp-slide-a');
+      const slideB   = document.getElementById('dp-slide-b');
+      const reopen   = document.getElementById('reopen');
+      const boxTitle = document.getElementById('dp-box-title');
+
+      function updateTitle() {
+        const active = featList.querySelector('.dp-feat-item.is-active');
+        const name = active ? active.querySelector('.lbl').textContent : 'premium features';
+        if (PLAN !== 'free') {
+          /* v2: paid users are already on Pro, so the pitch is Gold only, at full price */
+          boxTitle.textContent = 'Access ';
+          const em = document.createElement('em');
+          em.textContent = name;
+          boxTitle.appendChild(em);
+          boxTitle.appendChild(document.createTextNode(' and lots more with Gold'));
+        } else {
+          const plain = document.body.classList.contains('mode-plain');
+          boxTitle.textContent = 'Access ';
+          const em = document.createElement('em');
+          em.textContent = name;
+          boxTitle.appendChild(em);
+          if (plain) {
+            boxTitle.appendChild(document.createTextNode(' and lots more with Pro or Gold'));
+          } else {
+            boxTitle.appendChild(document.createTextNode(' and lots more with Pro or Gold at '));
+            const accent = document.createElement('span');
+            accent.className = 'accent';
+            accent.textContent = '20% off';
+            boxTitle.appendChild(accent);
+          }
+        }
+      }
+
+      const DURATION_MS = 60 * 60 * 1000;
+      let startMs = null;
+      let interval = null;
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function tick() {
+        if (!startMs) { timerEl.textContent = '60:00'; return; }
+        const left = Math.max(0, DURATION_MS - (Date.now() - startMs));
+        const m = Math.floor(left / 60000);
+        const s = Math.floor((left % 60000) / 1000);
+        timerEl.textContent = pad(m) + ':' + pad(s);
+        if (left <= 0 && interval) { clearInterval(interval); interval = null; }
+      }
+
+      // Per-feature description shown under the preview
+      const DESCS = {
+        export:     'Download your presentations as PowerPoint, PDF, or image files for offline use and sharing.',
+        ultra:      'Our most powerful model, for the highest quality content and design output.',
+        brandmoods: 'We build a brand kit and moods around your company, so every presentation looks like yours.',
+        brandkit:   'Add your logo, fonts, and colors once, and every deck comes out on-brand.',
+        knowledge:  'Upload your files once. The AI references them on every slide, so your decks stay accurate and on-message.',
+        team:       'Bring your team into one workspace to co-edit decks in real time, with comments.',
+        refresh:    'Update every chart and number across the deck in one click, so nothing goes stale.',
+        templates:  'Start from professionally designed, on-brand templates.',
+        analytics:  'Track views, engagement, and viewer location. See exactly how your deck performs after you share it.',
+        projects:   'Group related decks into shared spaces, so everyone knows where the latest version lives.',
+        fonts:      'Set your brand fonts once, and they apply across every deck you create.',
+        colors:     'Lock in your brand colors, and every slide stays on palette automatically.',
+        assign:     'Hand specific slides to the right teammate, so everyone knows exactly what they own.',
+        promodel:   'Enhanced quality on every generation: smarter content, sharper design.',
+        slidecount: 'Generate longer decks, up to 21+ slides in one go, without splitting your story.',
+        comments:   'Leave feedback right on the slide, and resolve it without leaving the deck.',
+        present:    'Present live to remote audiences in real time, straight from the editor.',
+        meetedit:   'Work on the same deck together during a live call, with edits visible instantly.',
+      };
+
+      function syncForItem(item) {
+        if (!item) return;
+        const lbl = item.querySelector('.lbl');
+        if (titleEl && lbl) titleEl.textContent = lbl.textContent;
+        if (descEl && DESCS[item.dataset.feat]) descEl.textContent = DESCS[item.dataset.feat];
+        if (proBtn) proBtn.disabled = item.dataset.plan === 'gold';
+        updateTitle();
+      }
+
+      let activeSlot = slideA;
+      let settleTimer = null;
+      function fillSlot(slot, item) {
+        const key = item.dataset.video;
+        if (key) {
+          slot.innerHTML =
+            '<video autoplay muted loop playsinline>' +
+            '<source src="assets/feature-modal/' + key + '.webm" type="video/webm" />' +
+            '<source src="assets/feature-modal/' + key + '.mp4" type="video/mp4" />' +
+            '</video>';
+          const v = slot.querySelector('video');
+          if (v) v.play().catch(function () {});
+        } else {
+          slot.innerHTML = '<img src="' + item.dataset.preview + '" alt="" />';
+        }
+      }
+      function settleSlots(incoming, outgoing) {
+        outgoing.hidden = true;
+        outgoing.classList.remove('is-out');
+        const v = outgoing.querySelector('video');
+        if (v) v.pause();
+        outgoing.innerHTML = '';
+        incoming.classList.remove('is-in');
+      }
+      function swapMedia(item) {
+        if (!slideA || !slideB) return;
+        const key = item.dataset.video || item.dataset.preview;
+        if (activeSlot.dataset.key === key) return;
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+          settleTimer = null;
+          settleSlots(activeSlot, activeSlot === slideA ? slideB : slideA);
+        }
+        const outgoing = activeSlot;
+        const incoming = outgoing === slideA ? slideB : slideA;
+        incoming.dataset.key = key;
+        fillSlot(incoming, item);
+        incoming.hidden = false;
+        incoming.classList.add('is-entering');
+        void incoming.offsetWidth;
+        incoming.classList.remove('is-entering');
+        incoming.classList.add('is-in');
+        outgoing.classList.add('is-out');
+        activeSlot = incoming;
+        settleTimer = setTimeout(() => {
+          settleTimer = null;
+          settleSlots(incoming, outgoing);
+        }, 680);
+      }
+
+      function activateFeat(item) {
+        if (!item || !featList) return;
+        if (item.classList.contains('is-active')) return;
+        featList.querySelectorAll('.dp-feat-item').forEach((el) => {
+          el.classList.remove('is-active');
+          const icon = el.querySelector('i');
+          const inactiveCls = el.dataset.iconInactive;
+          if (icon && inactiveCls) icon.className = inactiveCls;
+        });
+        item.classList.add('is-active');
+        const activeIcon = item.querySelector('i');
+        const activeCls = item.dataset.iconActive;
+        if (activeIcon && activeCls) activeIcon.className = activeCls;
+        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        syncForItem(item);
+        swapMedia(item);
+      }
+
+      const fadeTop = document.getElementById('dp-fade-top');
+      featList.addEventListener('scroll', () => {
+        fadeTop.classList.toggle('is-visible', featList.scrollTop > 4);
+      });
+
+      featList.addEventListener('click', (e) => {
+        const item = e.target.closest('.dp-feat-item');
+        if (item) activateFeat(item);
+      });
+
+      function open() {
+        startMs = Date.now();
+        backdrop.dataset.open = 'true';
+        document.body.style.overflow = 'hidden';
+        tick();
+        if (interval) clearInterval(interval);
+        interval = setInterval(tick, 1000);
+        syncForItem(featList.querySelector('.dp-feat-item.is-active'));
+      }
+      function close() {
+        backdrop.dataset.open = 'false';
+        document.body.style.overflow = '';
+        if (interval) { clearInterval(interval); interval = null; }
+      }
+
+      document.querySelectorAll('.demo-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.demo-btn').forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          document.body.classList.remove('mode-offer', 'mode-plain');
+          document.body.classList.add('mode-' + btn.dataset.mode);
+          updateTitle();
+        });
+      });
+
+      closeBtn.addEventListener('click', close);
+      reopen.addEventListener('click', open);
+      proBtn.addEventListener('click', () => {});
+      goldBtn.addEventListener('click', () => {
+        if (PLAN === 'free') return;              /* free: unchanged */
+        close();
+        openChange(USERS[PLAN].pick, null, 'gold');
+      });
+
+    /* ---------- Manage your plan: ported from settings-billing-v2.html ----------
+       CAT, LADDER, PATHS, teamPrice, tgt, mpQuote, mpOptions, drawChange, openChange and the
+       mppick / mpview / mpdd / mppool / pay click handlers. State names adapted to ?plan=. */
+    const TODAY = new Date(2026, 10, 1);
+    const PERIOD = { week: 7, month: 30, year: 365 };
+    const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+    const fmtLong = (d) => d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }); // "Oct 05, 2027"
+    const money = (n) => '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2));
+    const num = (n) => n.toLocaleString('en-US');
+    const CAT = {
+      'pro-month':  { tier: 'pro',  cad: 'month', price: 25,   credits: 1000,  name: 'Pro monthly',  state: 'pro-month' },
+      'gold-month': { tier: 'gold', cad: 'month', price: 120,  credits: 5000,  name: 'Gold monthly', state: 'gold-month' },
+      'pro-year':   { tier: 'pro',  cad: 'year',  price: 240,  credits: 5000,  name: 'Pro yearly',   state: 'pro-year' },
+      'gold-year':  { tier: 'gold', cad: 'year',  price: 1200, credits: 50000, name: 'Gold yearly',  state: 'gold-year' },
+      'pro-team':   { tier: 'pro',  cad: 'year', team: true, unit: 5000,  list: 20,  pools: [15000, 25000, 50000, 75000, 100000], name: 'Pro Team', state: 'team' },
+      'gold-team':  { tier: 'gold', cad: 'year', team: true, unit: 50000, list: 100, pools: [150000, 250000, 500000, 750000, 1000000], name: 'Gold Team', state: 'team' },
+    };
+    const LADDER = [0.10, 0.20, 0.30, 0.40, 0.50];
+    // Up only. Weekly is its own plan: it never converts, the user buys a new plan (fresh: true).
+    const PATHS = {
+      'pro-year':   { ind: ['gold-year'], team: ['pro-team', 'gold-team'] },
+      'pro-month':  { ind: ['pro-year', 'gold-month', 'gold-year'], team: ['pro-team', 'gold-team'] },
+      'gold-month': { ind: ['gold-year'], team: ['gold-team'] },
+      'pro-week':   { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true },
+    };
+    const S = { pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, dialog: null, consent: true, busy: null, done: null, only: null };
+    const st = () => USERS[PLAN];
+    const planLabel = () => st().label;
+    const price = () => st().price;
+    const credits = () => st().credits;
+    const balance = () => BAL;
+    const noun = () => st().cadence;
+    const endDate = () => st().end;
+    const teamPrice = (k) => { const t = CAT[k], c = S.pool[k]; return Math.round((c / t.unit) * t.list * (1 - (LADDER[t.pools.indexOf(c)] || 0)) * 12); };
+    const tgt = (k) => { const t = CAT[k]; return t.team ? Object.assign({}, t, { price: teamPrice(k), credits: S.pool[k] }) : t; };
+    const usd = (n) => 'US' + money(n);
+    const GOLD_POINTS = [['ph-sparkle', 'Ultra AI model, our most powerful'], ['ph-swatches', 'Custom brand kit and moods, built for you'], ['ph-book-open', 'Projects with a shared knowledge base'], ['ph-headset', 'Priority support, with direct access to our Head of Product']];
+    const mpQuote = (k) => {
+      const o = tgt(k), fresh = !!PATHS[PLAN].fresh;
+      return { k, o, fresh, due: o.price, renew: fmtLong(addDays(TODAY, PERIOD[o.cad])), total: balance() + o.credits };
+    };
+    const indOpts = () => { const P = PATHS[PLAN]; return S.only ? P.ind.filter((k) => CAT[k].tier === S.only) : P.ind; };
+    const mpOptions = () => { const P = PATHS[PLAN], ind = indOpts(); return S.mpView === 'team' || !ind.length ? P.team : ind; };
+    const drawChange = () => {
+      const s = st(), P = PATHS[PLAN], fresh = !!P.fresh, opts = mpOptions();
+      if (!opts.includes(S.pick)) S.pick = opts[0];
+      const q = mpQuote(S.pick), o = q.o, per = (c) => (c === 'year' ? 'year' : 'month');
+      const cur = '<div class="plan-card' + (s.plan === 'gold' ? ' plan-card--gold' : '') + '"><div class="plan-row is-cur"><span class="radio"></span><div class="plan-body">' +
+        '<div class="plan-line"><span class="plan-name">' + planLabel() + '<span class="current-badge">Current plan</span></span><span class="plan-price"><span class="price">' + money(price()) + '</span><span class="per">/' + noun() + '</span></span></div>' +
+        '<div class="big-cred"><span class="num">' + num(credits()) + '</span><span class="lbl">Credits</span></div>' +
+        (fresh ? '<div class="cur-note">Weekly is a separate plan, so it isn’t upgraded. Pick a new plan below. Your weekly plan then runs to ' + fmtLong(endDate()) + ' and doesn’t renew.</div>' : '') +
+        '</div></div></div>';
+      const card = (k) => {
+        const x = tgt(k), on = k === S.pick, gold = x.tier === 'gold';
+        let title = fresh ? 'Get ' + x.name : x.tier === s.plan && !x.team ? 'Switch to ' + x.name : x.team ? x.name : 'Upgrade to ' + x.name;
+        let badge = '';
+        if (!x.team && x.tier === s.plan && x.cad === 'year' && s.cadence === 'month') badge = '<span class="xbadge">Save ' + money(price() * 12 - x.price) + ' a year</span>';
+        else if (!x.team && gold && s.plan === 'pro' && !fresh) badge = '<span class="xbadge">' + Math.round(x.credits / CAT[x.cad === 'year' ? 'pro-year' : 'pro-month'].credits) + 'x Pro</span>';
+        let body = '<div class="plan-line"><span class="plan-name">' + title + '</span><span class="plan-price"><span class="price">' + money(x.price) + '</span><span class="per">/' + per(x.cad) + '</span></span></div>';
+        if (x.team) {
+          body += '<div class="team-seats unlimited-grad">Unlimited seats</div><div class="dd-label">How many credits?</div><div class="credit-dd' + (S.dd === k ? ' is-open' : '') + '">' +
+            '<button type="button" class="credit-dd-trigger" data-a="mpdd" data-v="' + k + '" aria-haspopup="listbox" aria-expanded="' + (S.dd === k) + '" aria-label="Credit pool size"><span class="credit-dd-left"><span class="credit-dd-value">' + num(S.pool[k]) + ' credits</span></span><i class="ph ph-caret-down credit-dd-caret" aria-hidden="true"></i></button>' +
+            '<ul class="credit-dd-menu" role="listbox" aria-label="Credit pool size">' + x.pools.map((c, i) => '<li class="credit-dd-opt" role="option" data-a="mppool" data-v="' + k + ':' + c + '" aria-selected="' + (c === S.pool[k]) + '"><span>' + num(c) + ' credits</span><span class="credit-dd-pill">' + Math.round(LADDER[i] * 100) + '% off</span></li>').join('') + '</ul></div>';
+        } else {
+          body += '<div class="big-cred"><span class="num">' + num(x.credits) + '</span><span class="lbl">Credits</span>' + badge + '</div>';
+          if (gold && s.plan !== 'gold') body += '<div class="plan-split"></div><ul class="gold-points">' + GOLD_POINTS.map((g) => '<li><i class="ph ' + g[0] + '"></i>' + g[1] + '</li>').join('') + '</ul>';
+        }
+        return '<div class="plan-card' + (gold ? ' plan-card--gold' : '') + '"><div class="plan-row' + (on ? ' is-selected' : '') + '" data-a="mppick" data-v="' + k + '" role="radio" aria-checked="' + on + '" tabindex="0"><span class="radio"></span><div class="plan-body">' + body + '</div></div></div>';
+      };
+      const sw = indOpts().length && P.team.length ? '<button type="button" class="switch-team" data-a="mpview">' + (S.mpView === 'team' ? 'Switch back to individual plans' : 'Managing a team? Switch to a Team plan') + '</button>' : '';
+      const tip = fresh
+        ? 'Weekly is a separate plan, so it isn’t upgraded or prorated. Your new plan starts today, running ' + fmtLong(TODAY) + ' to ' + q.renew + '. Your weekly plan runs to ' + fmtLong(endDate()) + ' and doesn’t renew. Team plans share one credit pool across unlimited seats.'
+        : 'Plan changes take effect today and start a fresh plan ' + per(o.cad) + ', running ' + fmtLong(TODAY) + ' to ' + q.renew + '. New plan credits land instantly and any unused credits carry over. Team plans share one credit pool across unlimited seats.';
+      const ppTitle = (fresh ? 'Get ' : o.tier === s.plan && !o.team ? 'Switch to ' : o.team ? 'Get ' : 'Upgrade to ') + o.name;
+      return '<div class="mp"><div class="modal-wrap"><button type="button" class="modal-close" data-a="close" aria-label="Close"><i class="ph-bold ph-x"></i></button><div class="modal-card">' +
+        '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div></div></div>' +
+        cur + opts.map(card).join('') + sw + '</div>' +
+        '<div class="right"><div class="right-inner"><div class="paddle-panel"><h2>' + ppTitle + '</h2><div class="pp-box">' +
+          '<div class="pp-line"><span class="pp-plan">' + o.name + ' Plan</span><span class="pp-price"><span class="price">' + usd(o.price) + '</span></span></div>' +
+          '<div class="pp-sub">' + (o.team ? 'Full pool credits unlock (' : 'Full plan credits unlock (') + num(o.credits) + ')</div>' +
+          (fresh ? '<div class="pp-sub">Your weekly plan stops renewing. It runs to ' + fmtLong(endDate()) + '.</div>'
+                 : balance() > 0 ? '<div class="pp-sub carry">Your ' + num(balance()) + ' unused credits carry over</div>' : '') +
+          '<div class="pp-divider"></div><div class="pp-line"><span class="pp-due">Due today:</span><span class="price">' + usd(q.due) + '</span></div></div>' +
+          '<div class="pp-card-row"><i class="ph ph-credit-card"></i><span>Visa &bull;&bull;&bull;&bull; 4242</span><button type="button" class="pp-change" data-a="nav" data-v="Changing the card">Change</button></div>' +
+          '<label class="pp-agree"><input type="checkbox" id="consent"' + (S.consent ? ' checked' : '') + ' /><span>I agree to the Terms. Renews at <b>' + usd(o.price) + '/' + per(o.cad) + '</b> on ' + q.renew + '</span></label>' +
+          '<div class="pp-actions"><button type="button" class="pp-confirm" data-a="pay"' + (S.consent ? '' : ' disabled') + '>' + (S.busy === 'pay' ? 'Confirming…' : 'Confirm Payment') + '</button></div>' +
+          '<div class="pay-foot"><span class="powered">Powered by <b style="color:#7a8699;font-size:14px;letter-spacing:-0.02em;">paddle</b></span><span class="vsep"></span><span class="links"><a href="#" onclick="return false">Terms</a><a href="#" onclick="return false">Privacy</a></span></div>' +
+        '</div></div></div></div></div></div>';
+    };
+    const CHECK_SVG = '<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="m4.5 12.75 6 6 9-13.5"/></svg>';
+    const ov = document.getElementById('ov');
+    const drawDialog = () => {
+      ov.classList.remove('mp-on');
+      if (!S.dialog) { ov.hidden = true; ov.innerHTML = ''; return; }
+      ov.hidden = false;
+      if (S.dialog === 'change') { ov.innerHTML = drawChange(); ov.classList.add('mp-on'); }
+      else if (S.dialog === 'success') ov.innerHTML = '<div class="dlg" role="dialog" aria-modal="true" style="max-width:600px"><div class="won"><span class="ok">' + CHECK_SVG + '</span><h3>Payment Successful</h3><p>You will receive a confirmation email with the order details.</p><p class="tab">Your Order ID: 4F7K-29QX</p>' +
+        '<button type="button" class="btn pri lg" data-a="done">Continue</button><p class="foot">You can review all your invoices in the Settings > Billing section.</p></div></div>';
+    };
+    const closeDialog = () => { S.dialog = null; S.dd = null; drawDialog(); };
+    const openChange = (pick, view, only) => { if (!PATHS[PLAN]) return; S.dialog = 'change'; S.only = only || null; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); };
+    ov.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-a]');
+      if (!b) { if (S.dd) { S.dd = null; return drawDialog(); } if ((e.target === ov || e.target.classList.contains('mp')) && S.dialog && S.dialog !== 'success') closeDialog(); return; }
+      const a = b.dataset.a, v = b.dataset.v;
+      if (a === 'nav') return protoToast(v + ' is outside this proto.');
+      if (a === 'mppick') { S.pick = v; S.dd = null; return drawDialog(); }
+      if (a === 'mpview') { S.mpView = S.mpView === 'team' ? 'ind' : 'team'; S.pick = null; S.dd = null; return drawDialog(); }
+      if (a === 'mpdd') { S.dd = S.dd === v ? null : v; return drawDialog(); }
+      if (a === 'mppool') { const [k, c] = v.split(':'); S.pool[k] = Number(c); S.pick = k; S.dd = null; return drawDialog(); }
+      if (a === 'close') return closeDialog();
+      if (a === 'pay') { S.done = mpQuote(S.pick); S.busy = 'pay'; drawDialog(); setTimeout(() => { S.busy = null; S.dialog = 'success'; drawDialog(); }, 900); return; }
+      if (a === 'done') { const q = S.done; closeDialog(); if (q) onPlanBought(q); }
+    });
+    ov.addEventListener('change', (e) => { if (e.target.id === 'consent') { S.consent = e.target.checked; drawDialog(); } });
+
+      let tt;
+      const toastEl = document.getElementById('toast');
+      function protoToast(t) { document.getElementById('toast-t').textContent = t; toastEl.hidden = false; clearTimeout(tt); tt = setTimeout(() => { toastEl.hidden = true; }, 3600); }
+      function onPlanBought(q) {
+        const active = featList.querySelector('.dp-feat-item.is-active .lbl');
+        protoToast('You’re on ' + q.o.name + '. ' + (active ? active.textContent : 'Gold') + ' is ready to use.' + (q.fresh ? ' Your weekly plan won’t renew.' : ''));
+      }
+
+      /* v2: proto state switcher + deep links (?plan=…&feat=…&mode=offer|plain&open=plan&view=team) */
+      const GOLD_CTA = goldBtn.innerHTML;
+      const proto = document.getElementById('proto');
+      document.getElementById('proto-t').addEventListener('click', () => proto.classList.toggle('shut'));
+      function paintProto() {
+        document.getElementById('proto-b').innerHTML = '<b>User plan</b>' + Object.keys(USERS).map((k) =>
+          '<button type="button" class="' + (k === PLAN ? 'on' : '') + '" data-pl="' + k + '">' + USERS[k].label + '</button>').join('') +
+          '<b>Jump to</b><button type="button" data-go="modal">Feature modal</button>' +
+          (PLAN !== 'free' ? '<button type="button" data-go="plan">' + (PLAN === 'pro-week' ? 'Choose your new plan' : 'Manage your plan') + '</button>' : '') +
+          '<p class="pnote">' + (PLAN === 'free' ? 'Free keeps the existing modal (Buy Pro, Buy Gold, offer toggle top left).' : 'Paid users see Gold features only. The Gold CTA opens ' + (PLAN === 'pro-week' ? 'Choose your new plan' : 'Manage your plan') + ' with ' + CAT[USERS[PLAN].pick].name + ' preselected.') + '</p>';
+      }
+      function setPlan(k, feat) {
+        PLAN = k; BAL = USERS[k].bal || 0;
+        S.dialog = null; drawDialog();
+        document.body.classList.toggle('paid', k !== 'free');
+        goldBtn.innerHTML = k === 'free' ? GOLD_CTA : USERS[k].cta;
+        let item = feat && featList.querySelector('.dp-feat-item[data-feat="' + feat + '"]');
+        if (item && k !== 'free' && item.dataset.plan !== 'gold') item = null;
+        if (item && k === 'free' && item.hasAttribute('data-paid-only')) item = null;
+        const cur = featList.querySelector('.dp-feat-item.is-active');
+        if (!item && cur && getComputedStyle(cur).display === 'none') item = featList.querySelector(k === 'free' ? '[data-feat="export"]' : '[data-feat="ultra"]');
+        if (item) activateFeat(item);
+        syncForItem(featList.querySelector('.dp-feat-item.is-active'));
+        paintProto();
+        try { const u = new URL(location.href); u.searchParams.set('plan', k); u.searchParams.delete('open'); history.replaceState(null, '', u); } catch (e) {}
+      }
+      document.getElementById('proto-b').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pl]'); if (b) { setPlan(b.dataset.pl); open(); return; }
+        const g = e.target.closest('[data-go]'); if (!g) return;
+        S.dialog = null; drawDialog();
+        if (g.dataset.go === 'modal') open(); else { close(); openChange(USERS[PLAN].pick, null, 'gold'); }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && S.dialog) { if (S.dialog !== 'success') closeDialog(); return; }
+        if (e.key === 'Escape' && backdrop.dataset.open === 'true') close();
+      });
+
+      const MODE = Q.get('mode');
+      if (MODE === 'plain' || MODE === 'offer') {
+        const mb = document.querySelector('.demo-btn[data-mode="' + MODE + '"]'); if (mb) mb.click();
+      }
+      setPlan(PLAN, Q.get('feat'));
+      if (Q.get('open') === 'plan' && PLAN !== 'free') openChange(Q.get('pick') || USERS[PLAN].pick, Q.get('view'), 'gold');
+      else open();
+    })();
+  </script>
+  <div id="agentation-root"></div>
+  <script type="module">
+    import React from 'https://esm.sh/react@18';
+    import { createRoot } from 'https://esm.sh/react-dom@18/client';
+    import { Agentation } from 'https://esm.sh/agentation@3?deps=react@18,react-dom@18';
+    createRoot(document.getElementById('agentation-root'))
+      .render(React.createElement(Agentation));
+  </script>
+</body>
+</html>
