@@ -790,7 +790,7 @@
 <!-- ─── Stage (fills the full viewport) ──────────────────────────────────── -->
 <div class="bg-white" style="width:100%;">
 
-  <div class="flex w-full" style="min-height:100vh;">
+  <div class="flex w-full" id="stage-row" style="min-height:100vh;">
 
     <!-- ─── SIDEBAR ────────────────────────────────────────────────────── -->
     <aside class="ds-sidebar flex flex-col justify-between bg-[#fafafa] border-r border-border-secondary">
@@ -1235,6 +1235,10 @@
         (x ? '<button type="button" class="dismiss" data-a="dismiss" aria-label="Dismiss for this week"><i class="ph ph-x"></i></button>' : '') : '';
     };
 
+    // keep the dashboard one screen tall under the banner (the banner can wrap, so watch its size)
+    const fitStage = () => { document.getElementById('stage-row').style.minHeight = 'calc(100vh - ' + (banner.hidden ? 0 : banner.offsetHeight) + 'px)'; };
+    if (window.ResizeObserver) new ResizeObserver(fitStage).observe(banner);
+
     const render = () => {
       const s = st(), free = isFree();
       document.body.dataset.headerState = !s.plan && !lapsed() ? S.flash : 'plan';
@@ -1258,6 +1262,7 @@
       btn.hidden = !cta; if (cta) document.getElementById('plan-cta-t').textContent = cta;
       document.getElementById('plan-chip').classList.toggle('pr-2.5', !cta);
       drawBanner(); paintProto(); syncUrl();
+      fitStage();
     };
 
     /* ---------- Manage your plan (teamPrice, tgt, mpQuote, mpOptions, drawChange, openChange: ported) ---------- */
@@ -1379,7 +1384,7 @@
       let h = '<b>Plan</b>' + Object.keys(PLANS).filter((k) => !PLANS[k].hidden || k === S.plan).map((k) => pbtn('p', k, PLANS[k].label, k === S.plan)).join('');
       h += '<b>Status</b>' + Object.keys(STATUS).map((k) => pbtn('s', k, STATUS[k].label, k === S.status, S.plan === 'free' && k !== 'active')).join('');
       h += '<b>Flash sale (free users only)</b>' + Object.keys(FLASH).map((k) => pbtn('f', k, FLASH[k], k === S.flash && !paid && !lapsed(), !!s.plan)).join('');
-      h += '<b>Yearly nudge (monthly and weekly)</b>' + pbtn('n', '1', 'Show this week', S.nudge, !NUDGE_PICK[S.plan]) + pbtn('n', '0', 'Seen this week', !S.nudge, !NUDGE_PICK[S.plan]);
+      h += '<b>Yearly nudge (monthly and weekly)</b>' + pbtn('n', '1', 'Show this week', S.nudge, !NUDGE_PICK[S.plan] || S.status !== 'active') + pbtn('n', '0', 'Seen this week', !S.nudge, !NUDGE_PICK[S.plan] || S.status !== 'active');
       h += '<div class="note">' +
         (paid ? 'Flash sale chip: hidden. The flash sale is for free users only, paid plans never see it.' : lapsed() ? 'Flash sale chip: hidden. This workspace just dropped to Free from a paid plan.' : 'Flash sale chip: shown (free user).') +
         '<br>Yearly nudge: shows at most once a week. Dismissing it hides it for 7 days.' +
