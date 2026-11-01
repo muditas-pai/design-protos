@@ -1,4 +1,4 @@
-<!-- forked from zero-credits.html · v2 adds paid-user states (Pro weekly, Pro monthly, Gold monthly, Pro yearly): out of credits shows the refill date, credit packs, and a plan entry that opens the Manage your plan screen (ported from settings-billing-v2.html). Free keeps the existing flow. No 7-day trial. -->
+<!-- forked from zero-credits.html · v2 adds paid-user states (Pro weekly, Pro monthly, Gold monthly, Pro yearly, Gold yearly): out of credits shows the refill date, credit packs with one-click checkout on the saved card (Manage your plan's Paddle panel look), and a plan entry that opens the Manage your plan screen (ported from settings-billing-v2.html). Free keeps the existing flow. No 7-day trial. Today is Oct 30, 2026. -->
 <!DOCTYPE html>
 <!-- proto: zero credits flow — dashboard → pricing modal (v6.1 in-place, credits-first title) → Stripe checkout modal (v5.1 style)
      Flow: user has 0 credits. Prompt box / pills / "Get more credits" open the pricing modal over the dashboard.
@@ -699,6 +699,12 @@
   .mp .plan-price { margin-top: 0; align-items: center; }
   .mp .modal-wrap { animation: pop .2s cubic-bezier(.2,0,0,1); }
 
+  /* v2: one-click pack checkout for paid users, Manage your plan's Paddle panel in the checkout's right column */
+  .pk-pp { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .pk-pp[hidden], #stripePay[hidden] { display: none; }
+  .pk-pp .right { padding: 0; flex: 1; }
+  .pk-pp .pp-sub.once { color: #525252; }
+
   /* Payment Successful dialog (ported from settings-billing-v2.html) */
   svg.hi { display: block; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   .dlg { position: relative; width: 100%; max-height: calc(100vh - 24px); overflow-y: auto; border: 1px solid #e4e4ec; border-radius: 16px; background: #fff; color: #14141f; box-shadow: 0 2px 6px rgba(16,12,60,0.08), 0 24px 64px -12px rgba(16,12,60,0.28); animation: pop .2s cubic-bezier(.2,0,0,1); font-family: 'Inter', sans-serif; font-size: 14px; line-height: 20px; }
@@ -964,6 +970,23 @@
 
         <!-- RIGHT: Stripe-style payment method -->
         <div class="m-right">
+          <!-- v2: paid users buying a pack pay in one click on the saved card. Change opens the card form below. -->
+          <div class="mp pk-pp" id="pkPay" hidden>
+            <div class="right"><div class="right-inner"><div class="paddle-panel">
+              <h2 id="pkPayTitle">Buy 2,500 credits</h2>
+              <div class="pp-box">
+                <div class="pp-line"><span class="pp-plan" id="pkPayName">2,500 credit pack</span><span class="pp-price"><span class="price" id="pkPayPrice">US$50</span></span></div>
+                <div class="pp-sub once">One-time payment. Credit packs don’t renew.</div>
+                <div class="pp-divider"></div>
+                <div class="pp-line"><span class="pp-due">Due today:</span><span class="price" id="pkPayDue">US$50</span></div>
+              </div>
+              <div class="pp-card-row"><i class="ph ph-credit-card"></i><span>Visa &bull;&bull;&bull;&bull; 4242</span><button type="button" class="pp-change" id="pkPayChange">Change</button></div>
+              <div class="pp-actions"><button type="button" class="pp-confirm" id="pkPayConfirm">Confirm Payment</button></div>
+              <div class="pay-foot"><span class="powered">Powered by <b style="color:#7a8699;font-size:14px;letter-spacing:-0.02em;">paddle</b></span><span class="vsep"></span><span class="links"><a href="#" onclick="return false">Terms</a><a href="#" onclick="return false">Privacy</a></span></div>
+            </div></div></div>
+          </div>
+
+          <div id="stripePay">
           <div class="pm-title">Payment method</div>
           <div class="pm-tabs">
             <div class="pm-tab active" data-pm="card"><i class="ph ph-credit-card" style="font-size:17px;"></i>Credit/Debit card</div>
@@ -1000,6 +1023,7 @@
 
           <button class="sub-cta" id="subCta">Pay</button>
           <div class="stripe-foot">Powered by <b>stripe</b><span class="sep">|</span>Terms<span class="sep">·</span>Privacy</div>
+          </div><!-- /stripePay -->
         </div>
 
         <!-- BOTTOM: animated trust-logo marquee -->
@@ -1032,7 +1056,7 @@
       setTimeout(function () { t.classList.remove('show'); }, 3200);
     }
 
-    /* ── v2: who is out of credits. ?plan=free|pro-week|pro-month|gold-month|pro-year ── */
+    /* ── v2: who is out of credits. ?plan=free|pro-week|pro-month|gold-month|pro-year|gold-year ── */
     var USERS = {
       'free':       { label: 'Free', badge: 'Free' },
       'pro-week':   { label: 'Pro weekly', badge: 'Pro', plan: 'pro', cadence: 'week', price: 2.99, credits: 100, end: new Date(2026, 10, 3), refill: 'Nov 3',
@@ -1043,6 +1067,8 @@
                       sub: 'Your 5,000 monthly credits refill on Nov 29. Unused credits carry over.', link: 'Upgrade your plan', pick: 'gold-year' },
       'pro-year':   { label: 'Pro yearly', badge: 'Pro', plan: 'pro', cadence: 'year', price: 240, credits: 5000, end: new Date(2027, 9, 5), refill: 'Oct 5, 2027',
                       sub: 'Your 5,000 yearly credits refill on Oct 5, 2027.', link: 'Upgrade to Gold', pick: 'gold-year' },
+      'gold-year':  { label: 'Gold yearly', badge: 'Gold', plan: 'gold', cadence: 'year', price: 1200, credits: 50000, end: new Date(2027, 9, 5), refill: 'Oct 5, 2027',
+                      sub: 'Your 50,000 yearly credits refill on Oct 5, 2027.', link: 'Move to Gold Team', pick: 'gold-team', view: 'team' },
     };
     var Q = new URLSearchParams(location.search);
     var PLAN = USERS[Q.get('plan')] ? Q.get('plan') : 'free';
@@ -1274,6 +1300,7 @@
       state.direct = !!direct;
       state.mode = state.direct ? 'direct' : 'plan';
       $('#packPanel').style.display = 'none';
+      $('#pkPay').hidden = true; $('#stripePay').hidden = false;
       $('#legal').textContent = LEGAL;
       $('#planPanel').style.display = state.direct ? 'none' : 'flex';
       $('#directPanel').style.display = state.direct ? 'flex' : 'none';
@@ -1328,6 +1355,10 @@
       $('#pkAmt').textContent = fmt(pk.p);
       $('#pkTotal').textContent = fmt(pk.p);
       $('#subCta').textContent = 'Pay ' + fmt(pk.p);
+      $('#pkPayTitle').textContent = 'Buy ' + pk.c.toLocaleString('en-US') + ' credits';
+      $('#pkPayName').textContent = pk.c.toLocaleString('en-US') + ' credit pack';
+      $('#pkPayPrice').textContent = usd(pk.p);
+      $('#pkPayDue').textContent = usd(pk.p);
     }
     function openPacks() {
       state.mode = 'pack';
@@ -1337,14 +1368,29 @@
       $('#endsChip').style.display = 'none';
       document.querySelector('.m-foot').style.display = 'none';
       $('#legal').textContent = 'One-time payment. Credit packs don’t renew.';
+      // paid users have a card on file: one-click on the saved card, Change opens the card form
+      state.cardForm = false; showPackPay();
       renderPacks();
       scrim.classList.add('open');
+    }
+    function showPackPay() { $('#pkPay').hidden = state.cardForm; $('#stripePay').hidden = !state.cardForm; }
+    $('#pkPayChange').addEventListener('click', function () { state.cardForm = true; showPackPay(); });
+    $('#pkPayConfirm').addEventListener('click', function () {
+      var b = $('#pkPayConfirm'); if (b.disabled) return;
+      b.disabled = true; b.textContent = 'Confirming…';
+      setTimeout(function () { b.disabled = false; b.textContent = 'Confirm Payment'; packBought(); }, 900);
+    });
+    function packBought() {
+      closeCheckout();
+      BAL += state.pack; setPill(BAL);
+      var u = USERS[PLAN];
+      toast(state.pack.toLocaleString('en-US') + ' credits added. Your ' + u.credits.toLocaleString('en-US') + ' ' + ({ week: 'weekly', month: 'monthly', year: 'yearly' })[u.cadence] + ' credits still refill on ' + u.refill + '.');
     }
     $('#packList').addEventListener('click', function (e) {
       var b = e.target.closest('[data-pack]');
       if (b) { state.pack = Number(b.dataset.pack); renderPacks(); }
     });
-    $('#pkPlan').addEventListener('click', function () { closeCheckout(); openChange(USERS[PLAN].pick); });
+    $('#pkPlan').addEventListener('click', function () { closeCheckout(); openChange(USERS[PLAN].pick, USERS[PLAN].view); });
 
     function setPill(n) {
       $('#creditsNum').textContent = n.toLocaleString('en-US');
@@ -1354,13 +1400,7 @@
 
     /* Pay → success: refill credits, calm the pill */
     $('#subCta').addEventListener('click', function () {
-      if (state.mode === 'pack') {
-        closeCheckout();
-        BAL += state.pack; setPill(BAL);
-        var u = USERS[PLAN];
-        toast(state.pack.toLocaleString('en-US') + ' credits added. Your ' + u.credits.toLocaleString('en-US') + ' ' + ({ week: 'weekly', month: 'monthly', year: 'yearly' })[u.cadence] + ' credits still refill on ' + u.refill + '.');
-        return;
-      }
+      if (state.mode === 'pack') { packBought(); return; }
       var name, credits;
       if (state.direct) {
         var d = DC[state.plan] || DC.pro;
@@ -1386,7 +1426,7 @@
     /* ---------- Manage your plan: ported from settings-billing-v2.html ----------
        CAT, LADDER, PATHS, teamPrice, tgt, mpQuote, mpOptions, drawChange, openChange and the
        mppick / mpview / mpdd / mppool / pay click handlers. State names adapted to ?plan=. */
-    const TODAY = new Date(2026, 10, 1);
+    const TODAY = new Date(2026, 9, 30);   // Oct 30, 2026: monthly refills Nov 29, weekly Nov 3
     const PERIOD = { week: 7, month: 30, year: 365 };
     const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
     const fmtLong = (d) => d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }); // "Oct 05, 2027"
@@ -1407,6 +1447,7 @@
       'pro-month':  { ind: ['pro-year', 'gold-month', 'gold-year'], team: ['pro-team', 'gold-team'] },
       'gold-month': { ind: ['gold-year'], team: ['gold-team'] },
       'pro-week':   { ind: ['pro-month', 'gold-month', 'pro-year', 'gold-year'], team: ['pro-team', 'gold-team'], fresh: true },
+      'gold-year':  { ind: [], team: ['gold-team'] },   // Gold yearly's only move is Gold Team (Default, to confirm)
     };
     const S = { pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, dialog: null, consent: true, busy: null, done: null, only: null };
     const st = () => USERS[PLAN];
@@ -1516,6 +1557,7 @@
       }).join('') + '<b>Jump to</b><button type="button" data-go="credits">Out of credits</button>' +
         (PLAN !== 'free' ? '<button type="button" data-go="plan">' + (PLAN === 'pro-week' ? 'Choose your new plan' : 'Manage your plan') + '</button>' : '') +
         '<p class="pnote"><em>Open decision:</em> we sell credit packs to weekly users too.</p>' +
+        '<p class="pnote"><em>Default, to confirm:</em> paid users buy packs in one click on the saved card (Change opens the card form). Gold yearly\u2019s only plan move is Gold Team.</p>' +
         '<p class="pnote">Free keeps the existing flow (pricing modal, then checkout).</p>';
     }
     function setPlan(k) {
@@ -1530,12 +1572,12 @@
       var g = e.target.closest('[data-go]'); if (!g) return;
       closeCheckout(); closePricing(); S.dialog = null; drawDialog();
       if (g.dataset.go === 'credits') openPaywall('generic');
-      else openChange(USERS[PLAN].pick);
+      else openChange(USERS[PLAN].pick, USERS[PLAN].view);
     });
     document.querySelector('.ws .badge').textContent = USERS[PLAN].badge;
     paintProto();
-    if (Q.get('open') === 'credits') openPaywall('generic');
-    if (Q.get('open') === 'plan' && PLAN !== 'free') openChange(Q.get('pick') || USERS[PLAN].pick, Q.get('view'));
+    if (Q.get('open') === 'credits') { openPaywall('generic'); if (PLAN !== 'free' && Q.get('pay') === 'card') { state.cardForm = true; showPackPay(); } }
+    if (Q.get('open') === 'plan' && PLAN !== 'free') openChange(Q.get('pick') || USERS[PLAN].pick, Q.get('view') || USERS[PLAN].view);
 
     /* ESC closes the top layer */
     document.addEventListener('keydown', function (e) {

@@ -1,4 +1,4 @@
-<!-- forked from dashboard-flash-sale-expired.html · v2 adds monthly and weekly plans: plan labels, the yearly nudge, flash sale for free users only, weekly plan ending, renewal payment failed. No 7-day trial. -->
+<!-- forked from dashboard-flash-sale-expired.html · v2 adds monthly and weekly plans: plan labels, the yearly nudge, flash sale for free users only, weekly plan ending, renewal payment failed, and Invite new members on an individual plan opening Manage your plan in its Team view. No 7-day trial. -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -856,7 +856,7 @@
           <i class="ph ph-gear text-[18px] text-ink-secondary"></i>
           <span class="text-[14px] text-ink-secondary">Workspace settings</span>
         </a>
-        <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]" data-a="locked" data-v="Inviting members">
+        <a class="flex items-center gap-2 px-2 h-9 rounded hover:bg-black/[0.04]" data-a="invite" data-v="Inviting members">
           <i class="ph ph-users text-[18px] text-ink-secondary"></i>
           <span class="flex-1 text-[14px] text-ink-secondary">Invite new members</span>
           <span class="pro-lock inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3px]" style="background: rgba(255,85,0,0.15); color: #ff5500;">PRO</span>
@@ -1109,7 +1109,8 @@
      &status=active|ending|weekly-ended|past-due|past-due-ended
      &flash=active|expired|nudge   (free users: the v1 flash sale header states)
      &nudge=seen                   (monthly/weekly: yearly nudge already shown this week)
-     &open=manage&pick=<plan>&view=team -->
+     &open=manage&pick=<plan>&view=team
+     &open=invite                  (individual paid plans: Invite new members, Team view) -->
 <div class="proto" id="proto">
   <button type="button" class="phd" id="proto-t"><span>Proto: workspace state</span><i class="ph-bold ph-caret-down"></i></button>
   <div class="pb2" id="proto-b"></div>
@@ -1161,7 +1162,7 @@
     const PERIOD = { week: 7, month: 30, year: 365 };
 
     const S = { plan: 'free', status: 'active', flash: 'active', nudge: true, ov: null, bal: null, paid: false,
-                pick: null, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, dialog: null, consent: true, busy: null };
+                pick: null, invite: false, mpView: 'ind', pool: { 'pro-team': 15000, 'gold-team': 150000 }, dd: null, dialog: null, consent: true, busy: null };
     const money = (n) => '$' + (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2));
     const num = (n) => n.toLocaleString('en-US');
     const usd = (n) => 'US' + money(n);
@@ -1183,7 +1184,7 @@
       const s = st();
       if (S.paid) return addDays(TODAY, PERIOD[s.cadence]);
       if (s.cadence === 'week') return addDays(TODAY, 4);    // Nov 3
-      if (s.cadence === 'month') return addDays(TODAY, 18);
+      if (s.cadence === 'month') return addDays(TODAY, 30);   // Nov 29
       return new Date(2027, 9, 5);
     };
 
@@ -1306,9 +1307,11 @@
         ? 'Weekly is a separate plan, so it isn’t upgraded or prorated. Your new plan starts today, running ' + fmtLong(TODAY) + ' to ' + q.renew + '. Your weekly plan runs to ' + fmtLong(endDate()) + ' and doesn’t renew. Team plans share one credit pool across unlimited seats.'
         : 'Plan changes take effect today and start a fresh plan ' + per(o.cad) + ', running ' + fmtLong(TODAY) + ' to ' + q.renew + '. New plan credits land instantly and any unused credits carry over. Team plans share one credit pool across unlimited seats.';
       const ppTitle = (fresh ? 'Get ' : o.tier === s.plan && !o.team ? 'Switch to ' : o.team ? 'Get ' : 'Upgrade to ') + o.name;
+      // Invite new members on an individual plan: one line on why the Team view opened
+      const inviteLine = S.invite ? '<div class="sub">' + planLabel() + ' is for one person. ' + (fresh ? 'Get' : 'Move to') + ' a Team plan to invite people. Seats are unlimited.</div>' : '';
       const weeklyLine = S.status === 'ending' ? 'Your weekly plan already stops renewing. It runs to ' + fmtLong(endDate()) + '.' : 'Your weekly plan stops renewing. It runs to ' + fmtLong(endDate()) + '.';
       return '<div class="mp"><div class="modal-wrap"><button type="button" class="modal-close" data-a="close" aria-label="Close"><i class="ph-bold ph-x"></i></button><div class="modal-card">' +
-        '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div></div></div>' +
+        '<div class="left"><div class="left-head"><div class="head-col"><div class="head-row"><h1><span>' + (fresh ? 'Choose your new plan' : 'Manage your plan') + '</span><span class="info-tip info-tip--title" tabindex="0"><i class="ph ph-info"></i><span class="tip-bubble">' + tip + '</span></span></h1></div>' + inviteLine + '</div></div>' +
         cur + opts.map(card).join('') + sw + '</div>' +
         '<div class="right"><div class="right-inner"><div class="paddle-panel"><h2>' + ppTitle + '</h2><div class="pp-box">' +
           '<div class="pp-line"><span class="pp-plan">' + o.name + ' Plan</span><span class="pp-price"><span class="price">' + usd(o.price) + '</span></span></div>' +
@@ -1326,11 +1329,21 @@
       if (S.dialog !== 'change') { ov.hidden = true; ov.innerHTML = ''; ov.classList.remove('mp-on'); return; }
       ov.hidden = false; ov.classList.add('mp-on'); ov.innerHTML = drawChange();
     };
-    const openChange = (pick, view) => {
+    const openChange = (pick, view, invite) => {
       if (!PATHS[S.plan]) return;
-      S.dialog = 'change'; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); syncUrl();
+      S.dialog = 'change'; S.invite = !!invite; S.mpView = view === 'team' ? 'team' : 'ind'; S.pick = pick || null; S.dd = null; S.consent = true; drawDialog(); syncUrl();
     };
-    const closeChange = () => { S.dialog = null; S.busy = null; drawDialog(); syncUrl(); };
+    const closeChange = () => { S.dialog = null; S.busy = null; S.invite = false; drawDialog(); syncUrl(); };
+
+    // Invite new members. Individual plans are one seat (Default, to confirm), so on an individual
+    // paid plan the link opens Manage your plan in its Team view. Free keeps the base behaviour.
+    const invite = () => {
+      const s = st();
+      if (isFree()) return toast('Inviting members is a Pro feature. Get a plan to use it.');
+      if (s.team) return toast('Inviting members is outside this proto.');
+      if (S.status === 'past-due') return toast('Update your card first. Then you can move to a Team plan and invite people.');
+      openChange(null, 'team', true);
+    };
 
     /* ---------- wiring ---------- */
     document.addEventListener('click', (e) => {
@@ -1348,6 +1361,7 @@
       if (a === 'nav') return toast(v + ' is outside this proto.');
       if (a === 'dismiss') { S.nudge = false; render(); return toast('Got it. We’ll hold this for a week.'); }
       if (a === 'manage') return openChange(v);
+      if (a === 'invite') return invite();
       if (a === 'plan-cta') return isFree() ? toast('Opens the plans (pricing screen).') : openChange();
       if (a === 'reactivate') { S.flash = 'active'; render(); return toast('Reactivated discount for you, just this once'); }
       if (a === 'flash-active') { S.flash = 'active'; return render(); }
@@ -1359,7 +1373,7 @@
       if (a === 'pay') {
         const q = mpQuote(S.pick); S.busy = 'pay'; drawDialog();
         setTimeout(() => {
-          S.dialog = null; S.busy = null; drawDialog();
+          S.dialog = null; S.busy = null; S.invite = false; drawDialog();
           S.plan = q.o.state; S.status = 'active'; S.nudge = false; S.paid = true; S.bal = q.total;
           S.ov = q.o.team ? { price: q.o.price, credits: q.o.credits } : null;
           render();
@@ -1388,6 +1402,7 @@
       h += '<div class="note">' +
         (paid ? 'Flash sale chip: hidden. The flash sale is for free users only, paid plans never see it.' : lapsed() ? 'Flash sale chip: hidden. This workspace just dropped to Free from a paid plan.' : 'Flash sale chip: shown (free user).') +
         '<br>Yearly nudge: shows at most once a week. Dismissing it hides it for 7 days.' +
+        '<br>Invite new members: individual plans are one seat, so on a paid individual plan it opens Manage your plan in the Team view. Default, to confirm.' +
         (S.status === 'past-due' || S.status === 'past-due-ended' ? '<br>Past due: 7-day grace from the failed renewal (Oct 30 to Nov 6), Pro stays on until then.' : '') +
         '</div>';
       document.getElementById('proto-b').innerHTML = h;
@@ -1411,7 +1426,8 @@
         if (S.status !== 'active') p.set('status', S.status);
         if (!st().plan && S.flash !== 'active') p.set('flash', S.flash);
         if (NUDGE_PICK[S.plan] && !S.nudge) p.set('nudge', 'seen');
-        if (S.dialog === 'change') { p.set('open', 'manage'); if (S.pick) p.set('pick', S.pick); if (S.mpView === 'team') p.set('view', 'team'); }
+        if (S.dialog === 'change' && S.invite) { p.set('open', 'invite'); if (S.pick && S.pick !== PATHS[S.plan].team[0]) p.set('pick', S.pick); if (S.mpView !== 'team') p.set('view', 'ind'); }
+        else if (S.dialog === 'change') { p.set('open', 'manage'); if (S.pick) p.set('pick', S.pick); if (S.mpView === 'team') p.set('view', 'team'); }
         history.replaceState(null, '', location.pathname + '?' + p.toString());
       } catch (err) { /* file:// or sandboxed: deep links still work on load */ }
     }
@@ -1422,6 +1438,7 @@
     if (q.get('nudge') === 'seen' || q.get('nudge') === '0') S.nudge = false;
     render();
     if (q.get('open') === 'manage') openChange(q.get('pick'), q.get('view'));
+    if (q.get('open') === 'invite') { invite(); if (S.dialog) { if (q.get('pick')) S.pick = q.get('pick'); if (q.get('view') === 'ind') S.mpView = 'ind'; drawDialog(); syncUrl(); } }
   })();
 </script>
 
