@@ -431,6 +431,8 @@
   .os-row { display: grid; grid-template-columns: 200px 1fr; gap: 16px; padding: 14px 4px; }
   .os-row + .os-row { padding-top: 14px; }
   .os-row .os-h { flex-direction: column; align-items: flex-start; justify-content: flex-start; padding: 6px 0 0; gap: 2px; }
+  /* Label stays beside a tall section (Deck) while it scrolls, like Mintlify and Linear settings */
+  @media (min-width: 641px) { .os-row .os-h { position: sticky; top: calc(var(--review-h, 44px) + 80px); align-self: start; } .os-row .os-h small { max-width: 180px; } }
   .os-row .os-h b { font-size: 14px; font-weight: 600; color: rgb(var(--ink)); }
   .os-row .os-h small { font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); }
   .os-row .eff { padding: 0; }
@@ -1352,7 +1354,7 @@ function popHTML(id) {
   if (id === "role") return `<div class="menu" style="width:220px"><span class="eyebrow">Your role</span>${ROLES.map((x) => `<button class="mi ${S.role === x ? "sel" : ""}" data-role="${x}"><span>${x}</span>${ic("check", "ck")}</button>`).join("")}</div>`;
   if (id === "detail") return `<div class="menu" style="width:260px">${DETAIL.map((d) => `<button class="mi ${S.detail === d.id ? "sel" : ""}" data-detail="${d.id}"><span>${d.label}<small>${d.sub}</small></span>${ic("check", "ck")}</button>`).join("")}</div>`;
   if (id === "extras") return `<div class="menu" style="width:300px">${togs()}</div>`;
-  if (id === "story") return `<div class="menu" style="width:320px"><div class="pop-h"><b>Story and audience</b></div>${storyFieldsHTML()}</div>`;
+  if (id === "story") return `<div class="menu" style="width:320px"><div class="pop-h"><b>Audience and tone</b></div>${storyFieldsHTML()}</div>`;
   if (id === "budget") return `<div class="menu" style="width:320px"><div class="pop-h"><b>Budget tier</b></div>${budgetList()}</div>`;
   const storySet = () => [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "estimate" && "Placeholders"].filter(Boolean);
   const foot = () => (changedCount() ? `<div class="pop-f"><button class="link" data-reset style="height:32px">Reset</button></div>` : "");
@@ -1410,8 +1412,8 @@ const deckBody = () => mobile() ? `${slideField()}${durField()}${langField()}` :
       <div class="os-2">${langField()}${roleField()}</div>
       ${detailField()}
       <div class="deck-notes">${modeRow(NOTES)}</div>`;
-const secDeck = () => SEC("Deck", deckBody(), "", mobile() ? (S.lang !== "Auto") + (S.slides !== "auto") + !!S.dur : deckCount());
-const secStory = () => SEC("Story and audience", `<div class="os-b">${storyFieldsHTML()}</div>`, "os-story", storyCount());
+const secDeck = () => SEC("Length and language", deckBody(), "", mobile() ? (S.lang !== "Auto") + (S.slides !== "auto") + !!S.dur : deckCount());
+const secStory = () => SEC("Audience and tone", `<div class="os-b">${storyFieldsHTML()}</div>`, "os-story", storyCount());
 const fileChip = (f, i) => `<span class="file"><span class="ft">${esc(f.includes(".") ? f.split(".").pop().slice(0, 4).toUpperCase() : "DOC")}</span><span class="fn">${esc(f)}</span><button data-rm="${i}" aria-label="Remove ${esc(f)}">${ic("x")}</button></span>`;
 const secFiles = () => SEC("Add files", `<div class="ofiles">${ATTACH.map(([i, t]) => `<button class="ofile" data-attach="${t}">${ic(i)}<span>${t}</span></button>`).join("")}</div><div class="ofile-list">${S.files.map(fileChip).join("")}</div>`, "", S.files.length);
 const TABS = [["mode", "Mode", () => modeCount()], ["deck", "Deck", () => deckCount()], ["story", "Story", () => storyCount()]];
@@ -1422,14 +1424,14 @@ const durLabel = () => (DURS.find(([v]) => v === S.dur) || DURS[0])[1];
 const storyStoryHTML = () => `<div class="os-2">${storyFieldsHTML()}</div>`;
 const modesHTML = () => modesFor().map(modeRow).join("");
 const CSEC = [
-  ["deck", "Deck", "Length, time, language and depth", () => deckBody(), () => deckCount(), () => [slideObj().short, S.dur ? durLabel() + " talk" : "Any talk length", S.lang === "Auto" ? "Auto language" : S.lang, DETAIL.find((d) => d.id === S.detail).label + " detail", S.notes && "Speaker notes"].filter(Boolean).join(" · ")],
-  ["story", "Story and audience", "Auto reads these from your prompt", () => storyStoryHTML(), () => storyCount(), () => { const v = [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "estimate" && "Placeholders"].filter(Boolean); return v.length ? v.join(" · ") : "Auto from your prompt"; }],
-  ["effort", "Effort", "How hard we work on it", () => effBody(), () => +(S.budget !== "auto"), () => budgetObj().label],
-  ["mode", "Mode", "Switch on what you need", () => modesHTML(), () => S.fast + S.deep + S.cite, () => { const on = MODES.filter(([k]) => S[k]).map((m) => m[2]); return on.length ? on.join(" · ") : "Nothing on"; }],
+  ["deck", "Length and language", "Slide count, talk time, language and detail", () => deckBody(), () => deckCount(), () => [slideObj().short, S.dur ? durLabel() + " talk" : "Any talk length", S.lang === "Auto" ? "Auto language" : S.lang, DETAIL.find((d) => d.id === S.detail).label + " detail", S.notes && "Speaker notes"].filter(Boolean).join(" · ")],
+  ["story", "Audience and tone", "Who it's for and how it flows. We read it from your prompt.", () => storyStoryHTML(), () => storyCount(), () => { const v = [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "estimate" && "Placeholders"].filter(Boolean); return v.length ? v.join(" · ") : "Auto from your prompt"; }],
+  ["effort", "Effort", "More effort gives richer slides and uses more credits.", () => effBody(), () => +(S.budget !== "auto"), () => budgetObj().label],
+  ["mode", "Mode", "Skip questions, search the web or cite sources.", () => modesHTML(), () => S.fast + S.deep + S.cite, () => { const on = MODES.filter(([k]) => S[k]).map((m) => m[2]); return on.length ? on.join(" · ") : "Nothing on"; }],
 ];
 function belowHTML(head) {
   const top = `<div class="below-in card-${S.card}" id="opanel" tabindex="-1" role="region" aria-label="Options">${head(`<button class="link" data-panel-close>Hide options</button>`)}`;
-  if (mobile()) return `${top}${designRow()}${ROW("Deck", "Length, time, language and depth", deckBody())}${moreHTML()}${ROW("Effort", "How hard we work on it", effBody())}${ROW("Mode", "Switch on what you need", modesHTML())}</div>`;
+  if (mobile()) return `${top}${designRow()}${ROW("Length and language", "Slide count, talk time, language and detail", deckBody())}${moreHTML()}${ROW("Effort", "More effort gives richer slides and uses more credits.", effBody())}${ROW("Mode", "Skip questions, search the web or cite sources.", modesHTML())}</div>`;
   if (S.card === "b") {
     const sec = ([k, t, , body, n]) => SEC(t, body(), `os-${k}`, n());
     return `${top}<div class="c2"><div class="c2-col">${sec(CSEC[0])}${sec(CSEC[1])}${sec(CSEC[3])}</div><div class="c2-col">${sec(CSEC[2])}${sec(CSEC[4])}</div></div></div>`;
