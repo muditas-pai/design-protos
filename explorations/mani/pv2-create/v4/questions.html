@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PV2 Questions v5</title>
+<link rel="stylesheet" href="../tokens.css">
+<script type="importmap">
+{ "imports": {
+  "react": "https://esm.sh/react@18.3.1",
+  "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+  "agentation": "https://esm.sh/agentation@3.1.2?deps=react@18.3.1,react-dom@18.3.1"
+} }
+</script>
+<script type="module">
+  // Agentation: desktop only.
+  if (!(window.matchMedia && matchMedia("(max-width: 640px)").matches)) {
+    try {
+      const [React, { createRoot }, { Agentation }] = await Promise.all([import("react"), import("react-dom/client"), import("agentation")]);
+      const host = document.createElement("div"); host.id = "agentation-host"; document.body.appendChild(host);
+      createRoot(host).render(React.createElement(Agentation, { appName: "PV2 questions v5", useHashLocation: true }));
+    } catch (e) { console.warn("Agentation failed to load", e); }
+  }
+</script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { min-height: 100vh; background: rgb(var(--canvas)); color: rgb(var(--ink)); font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased; font-feature-settings: "ss01", "cv11"; }
+  button { font: inherit; color: inherit; }
+  .i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .i20 { width: 20px; height: 20px; }
+
+  /* Top bar, same as the PV2 chat screen */
+  .topbar { position: sticky; top: 0; z-index: 20; height: 56px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid rgb(var(--line)); background: rgb(var(--canvas) / .9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .topbar-in { width: 100%; max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: rgb(var(--ink-2)); cursor: pointer; }
+  .icon-btn:hover { background: rgb(var(--sunken)); color: rgb(var(--ink)); }
+  .tier { height: 26px; padding: 0 10px; display: inline-flex; align-items: center; border: 1px solid rgb(var(--line)); border-radius: 999px; background: rgb(var(--surface)); font-size: 12px; font-weight: 500; color: rgb(var(--ink-2)); }
+  .sp { flex: 1; }
+
+  /* Chat column */
+  main { width: min(720px, calc(100vw - 32px)); margin: 0 auto; padding: clamp(16px, 4vh, 32px) 0 0; min-height: calc(100vh - 56px); display: flex; flex-direction: column; }
+  .thread { flex: 1; display: flex; flex-direction: column; gap: clamp(14px, 3vh, 24px); padding-bottom: 16px; }
+  .me { align-self: flex-end; max-width: 80%; padding: 10px 16px; border-radius: 12px; background: rgb(var(--brand-50)); color: rgb(var(--ink)); animation: rise .2s var(--ease); }
+  .thought { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0; border: 0; background: none; color: rgb(var(--ink-3)); font-size: 14px; cursor: pointer; }
+  .thought:hover { color: rgb(var(--ink-2)); }
+  .thought .i { width: 14px; height: 14px; transform: rotate(-90deg); }
+  .ai { margin: 0; color: rgb(var(--ink)); animation: rise .2s var(--ease); }
+  .ai + .ai { margin-top: -10px; }
+  .working { display: inline-flex; align-items: center; gap: 8px; color: rgb(var(--ink-3)); }
+  .spinner { width: 14px; height: 14px; border: 2px solid rgb(var(--brand-600)); border-top-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+  /* Question card, Claude pattern: numbered rows, Something else with Skip, 1 of 3 and close */
+  .dock { position: sticky; bottom: 0; z-index: 10; padding: 8px 0 clamp(64px, 9vh, 76px); background: linear-gradient(rgb(var(--canvas) / 0), rgb(var(--canvas)) 24px); }
+  .qcard { border: 1px solid rgb(var(--line)); border-radius: 12px; background: rgb(var(--surface)); box-shadow: var(--sh-menu); padding: 4px 6px 6px; animation: rise .22s var(--ease); }
+  .qh { display: flex; align-items: center; gap: 8px; padding: 10px 6px 8px 10px; }
+  .qh h2 { flex: 1; min-width: 0; margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; }
+  .qnav { display: inline-flex; align-items: center; gap: 0; color: rgb(var(--ink-3)); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .qh .icon-btn { width: 28px; height: 28px; color: rgb(var(--ink-3)); }
+  .qh .icon-btn:hover { color: rgb(var(--ink)); }
+  .qnav .icon-btn:disabled { opacity: .35; cursor: default; background: none; }
+  .qnav .left { transform: rotate(90deg); }
+  .qnav .right { transform: rotate(-90deg); }
+  .qopts { display: flex; flex-direction: column; }
+  .opt { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 6px 12px 6px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; outline: none; transition: background .12s var(--ease), border-color .12s var(--ease); }
+  .opt:focus-visible, .skip:focus-visible, .send:focus-visible, .icon-btn:focus-visible, .other input:focus-visible { outline: none; }
+  .skip:focus-visible, .send:focus-visible, .qh .icon-btn:focus-visible { box-shadow: 0 0 0 2px rgb(var(--brand-600) / .35); }
+  /* Hairline between rows, inset; it hides next to the active row */
+  .opt + .opt::before, .other::before { content: ""; position: absolute; left: 10px; right: 10px; top: -1px; border-top: 1px solid rgb(var(--line)); }
+  .opt.act::before, .opt.act + .opt::before, .opt.act + .other::before, .other.act::before { border-color: transparent; }
+  .opt.act { background: rgb(var(--sunken)); border-color: rgb(var(--brand-600) / .55); }
+  .num { width: 26px; height: 26px; flex-shrink: 0; display: grid; place-items: center; border-radius: 6px; background: rgb(var(--sunken)); color: rgb(var(--ink-2)); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; transition: background .12s var(--ease); }
+  .num .i { width: 14px; height: 14px; color: rgb(var(--ink-3)); }
+  .opt.act .num { background: rgb(var(--line)); color: rgb(var(--ink)); }
+  .opt.done .num { background: rgb(var(--brand-600)); color: #fff; }
+  .lbl { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .lbl b { font-weight: 400; font-size: 14px; line-height: 20px; color: rgb(var(--ink)); }
+  .lbl small { font-size: 13px; line-height: 18px; color: rgb(var(--ink-3)); }
+  .go { color: rgb(var(--ink-2)); opacity: 0; transition: opacity .12s var(--ease); }
+  .opt.act .go { opacity: 1; }
+  .other { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 4px 6px 4px 10px; border: 1px solid transparent; border-radius: 8px; transition: background .12s var(--ease), border-color .12s var(--ease); }
+  .other.act { border-color: rgb(var(--brand-600) / .55); }
+  .other input { flex: 1; min-width: 0; height: 32px; border: 0; outline: 0; background: transparent; font: inherit; color: rgb(var(--ink)); }
+  .other input::placeholder { color: rgb(var(--ink-3)); }
+  .skip { height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: rgb(var(--sunken)); color: rgb(var(--ink)); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .skip:hover { background: rgb(var(--line)); }
+  .send { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: rgb(var(--brand-600)); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .hint { margin: 10px 0 0; text-align: center; font-size: 12px; color: rgb(var(--ink-3)); }
+  .hint kbd { font: inherit; }
+  .hint span + span::before { content: "·"; margin: 0 8px; }
+  .closed { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px dashed rgb(var(--line)); border-radius: 12px; color: rgb(var(--ink-3)); font-size: 13px; }
+  .linkb { border: 0; background: none; padding: 0; color: rgb(var(--brand-fg)); font-weight: 500; cursor: pointer; }
+
+  /* Screen tabs at the bottom */
+  .screens { position: fixed; z-index: 60; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgb(var(--ink)); box-shadow: var(--sh-dialog); }
+  .screens a { height: 30px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; border-radius: 7px; color: rgb(var(--canvas) / .7); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+  .screens a:hover { color: rgb(var(--canvas)); }
+  .screens a[aria-current] { background: rgb(var(--canvas)); color: rgb(var(--ink)); }
+  .screens a small { font-size: 11px; opacity: .6; font-variant-numeric: tabular-nums; }
+
+  /* Short Windows screens: tighter rows and gaps, card stays in reach */
+  @media (max-height: 720px) {
+    .opt, .other { min-height: 40px; }
+    .qh { padding: 6px 8px 6px 10px; }
+    .hint { display: none; }
+  }
+  @media (max-height: 620px) { .topbar { height: 48px; } .thread { gap: 12px; } }
+  @media (max-width: 640px) {
+    .topbar { padding: 0 12px; }
+    .screens { bottom: 10px; max-width: calc(100vw - 20px); overflow-x: auto; }
+    .screens a { padding: 0 10px; }
+    .hint { display: none; }
+    .qh h2 { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <a class="icon-btn" href="./" aria-label="Back to prompt"><svg class="i i20" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></a>
+  <span class="tier">Standard · 10 credits/slide</span>
+  <span class="sp"></span>
+  <button class="icon-btn" id="theme" aria-label="Toggle theme"><svg class="i i20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg></button>
+  <a class="icon-btn" href="./" aria-label="Close"><svg class="i i20" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
+</div></header>
+
+<main>
+  <div class="thread" id="thread" aria-live="polite"></div>
+  <div class="dock" id="dock"></div>
+</main>
+
+<nav class="screens" aria-label="Screens">
+  <a href="./">Prompt box</a>
+  <a href="questions.html?p=1" data-p="1">Q1 Company</a>
+  <a href="questions.html?p=2" data-p="2">Q2 Deck details <small>3</small></a>
+</nav>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ICON = {
+  caret: '<path d="m6 9 6 6 6-6"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', arrowR: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+};
+const ic = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+
+const PROMPT = "Sales pitch deck for my company targeting a mid-market SaaS prospect covering pain points, our solution differentiators, 3 customer case studies and a clear call to action";
+/* Screen 1: one question. Screen 2: three questions with 1 of 3 paging. */
+const SCREENS = {
+  1: { intro: [["thought", "Thought for 38s"]], lead: "A couple of quick questions so the deck fits your company.", qs: [
+    { q: "What company is this presentation for?", other: "Type a company or website", skipAs: "Skip, no specific company", opts: [
+      ["Northwind", "northwind.com · from your Brand Kit"], ["Acme Corp", "acme.com · used in your last deck"], ["Globex", "globex.com · mentioned in your files"] ] } ],
+    done: (a) => a.skipped ? "No problem. We'll keep it general and leave space for your logo." : `Got it. We'll pull ${a.text}'s name, colors and product details into the deck.` },
+  2: { intro: [["thought", "Thought for 38s"], ["ai", "What company is this presentation for?"], ["me", "Northwind"], ["thought", "Thought for 1m 41s"]], lead: "Three more so the story lands with this prospect.", qs: [
+    { q: "What's Northwind's core product category?", other: "Describe it in a few words", skipAs: "Skip, you pick", opts: [
+      ["Workflow automation platform", "Automates handoffs, approvals and busywork"], ["Revenue intelligence software", "Pipeline insight, forecasting and deal risk"], ["Customer success and retention platform", "Keeps customers longer and grows accounts"] ] },
+    { q: "Who will be in the room?", other: "Another role", skipAs: "Skip, mixed audience", opts: [
+      ["VP of Sales", "Cares about pipeline and win rates"], ["CFO or finance lead", "Cares about cost and payback"], ["Head of Operations", "Cares about rollout and time saved"], ["IT and security", "Cares about integrations and risk"] ] },
+    { q: "Which proof should lead the deck?", other: "Something else", skipAs: "Skip, balance them", opts: [
+      ["Customer case studies", "Three short stories from teams like theirs"], ["ROI and cost savings", "Payback period, cost and hours saved"], ["Live product demo", "Walk through the product step by step"] ] } ],
+    done: () => "Thanks. Building your outline now." },
+};
+const P = new URLSearchParams(location.search).get("p") === "2" ? 2 : 1;
+const SC = SCREENS[P];
+const st = { i: 0, act: -1, answers: [], closed: false, finished: false };
+$$(".screens a").forEach((a) => { if (a.dataset.p == P) a.setAttribute("aria-current", "page"); });
+
+function threadHTML() {
+  const bits = [`<div class="me">${esc(PROMPT)}</div>`];
+  SC.intro.forEach(([k, t]) => bits.push(k === "thought" ? `<button class="thought">${esc(t)}${ic("caret")}</button>` : k === "me" ? `<div class="me">${esc(t)}</div>` : `<p class="ai">${esc(t)}</p>`));
+  bits.push(`<p class="ai">${esc(SC.lead)}</p>`);
+  st.answers.forEach((a, k) => { if (!a) return; bits.push(`<p class="ai">${esc(SC.qs[k].q)}</p>`, `<div class="me">${esc(a.text)}</div>`); });
+  if (st.finished) bits.push(`<button class="thought">Thought for 4s${ic("caret")}</button>`, P === 2 ? `<p class="ai working"><span class="spinner"></span>${esc(SC.done(st.answers[0]))}</p>` : `<p class="ai">${esc(SC.done(st.answers[0]))}</p>`);
+  return bits.join("");
+}
+function cardHTML() {
+  if (st.finished) return P === 1 ? `<div class="closed"><span>Next, three questions about the deck.</span><a class="linkb" href="questions.html?p=2">Go to Q2</a></div>` : `<div class="closed"><span>All 3 answered.</span><button class="linkb" data-restart>Start over</button></div>`;
+  if (st.closed) return `<div class="closed"><span>Questions closed. We'll use sensible defaults.</span><button class="linkb" data-reopen>Answer them</button></div>`;
+  const q = SC.qs[st.i], n = SC.qs.length, a = st.answers[st.i], oi = q.opts.length;
+  return `<section class="qcard" tabindex="-1" style="outline:none" role="group" aria-labelledby="qT">
+    <div class="qh"><h2 id="qT">${esc(q.q)}</h2>
+      ${n > 1 ? `<span class="qnav"><button class="icon-btn" data-prev aria-label="Previous question" ${st.i ? "" : "disabled"}>${ic("caret", "left")}</button><span>${st.i + 1} of ${n}</span><button class="icon-btn" data-next aria-label="Next question" ${st.i < n - 1 ? "" : "disabled"}>${ic("caret", "right")}</button></span>` : ""}
+      <button class="icon-btn" data-close aria-label="Close questions" style="width:28px;height:28px">${ic("x")}</button></div>
+    <div class="qopts" role="listbox" aria-labelledby="qT">
+      ${q.opts.map(([t, sub], k) => `<button class="opt ${st.act === k ? "act" : ""} ${a && a.k === k ? "done" : ""}" role="option" aria-selected="${st.act === k}" data-pick="${k}"><span class="num">${k + 1}</span><span class="lbl"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span>${ic("arrowR", "go")}</button>`).join("")}
+      <div class="other ${st.act === oi ? "act" : ""}"><span class="num">${ic("pen")}</span><input id="other" type="text" placeholder="${esc(q.other)}" autocomplete="off" aria-label="${esc(q.other)}" value="${a && a.k === -1 ? esc(a.text) : ""}"><button class="skip" data-skip>Skip</button></div>
+    </div>
+  </section>`;
+}
+function render(focus = true) {
+  $("#thread").innerHTML = threadHTML(); $("#dock").innerHTML = cardHTML();
+  const inp = $("#other");
+  if (inp) inp.oninput = () => { const has = !!inp.value.trim(), b = $("[data-skip], [data-send]"); b.outerHTML = has ? `<button class="send" data-send>Send</button>` : `<button class="skip" data-skip>Skip</button>`; };
+  if (inp && inp.value.trim()) inp.oninput();
+  if (focus) $(".qcard")?.focus({ preventScroll: true });
+  scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
+function answer(a) {
+  st.answers[st.i] = a;
+  const next = SC.qs.findIndex((_, k) => !st.answers[k]);
+  if (next === -1) st.finished = true; else { st.i = next; st.act = -1; }
+  render();
+}
+const pick = (k) => { const o = SC.qs[st.i].opts[k]; answer({ k, text: o[0] }); };
+const skip = () => answer({ k: -2, text: SC.qs[st.i].skipAs, skipped: true });
+const sendOther = () => { const v = $("#other").value.trim(); if (v) answer({ k: -1, text: v }); };
+
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  const p = t.closest("[data-pick]"); if (p) return pick(+p.dataset.pick);
+  if (t.closest("[data-skip]")) return skip();
+  if (t.closest("[data-send]")) return sendOther();
+  if (t.closest("[data-prev]")) { st.i--; st.act = -1; return render(); }
+  if (t.closest("[data-next]")) { st.i++; st.act = -1; return render(); }
+  if (t.closest("[data-close]")) { st.closed = true; return render(false); }
+  if (t.closest("[data-reopen]")) { st.closed = false; return render(); }
+  if (t.closest("[data-restart]")) { Object.assign(st, { i: 0, act: -1, answers: [], finished: false }); return render(); }
+  if (t.closest("#theme")) { const r = document.documentElement; r.dataset.theme = r.dataset.theme === "dark" ? "light" : "dark"; }
+});
+/* Keys, like Claude: arrows move, Enter picks, 1 to 4 pick straight away, Esc closes. Typing goes to Something else. */
+document.addEventListener("keydown", (e) => {
+  if (st.closed || st.finished) return;
+  const q = SC.qs[st.i], last = q.opts.length, inInput = e.target.id === "other";
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); st.act = st.act < 0 ? (e.key === "ArrowDown" ? 0 : last) : (st.act + (e.key === "ArrowDown" ? 1 : -1) + last + 1) % (last + 1); $$(".opt, .other").forEach((el, k) => { el.classList.toggle("act", k === st.act); el.setAttribute?.("aria-selected", k === st.act); }); (st.act === last ? $("#other") : $$(".opt")[st.act]).focus({ preventScroll: true }); return; }
+  if (e.key === "Enter") { e.preventDefault(); if (inInput) return $("#other").value.trim() ? sendOther() : skip(); return st.act >= 0 && st.act < last ? pick(st.act) : st.act === last ? $("#other").focus() : null; }
+  if (e.key === "Escape") { st.closed = true; return render(false); }
+  if (!inInput && /^[1-9]$/.test(e.key) && +e.key <= last) { e.preventDefault(); return pick(+e.key - 1); }
+  if (!inInput && e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) { st.act = last; $$(".opt, .other").forEach((el, k) => el.classList.toggle("act", k === last)); $("#other").focus(); }
+});
+document.addEventListener("focusin", (e) => { if (e.target.id === "other" && !st.closed) { st.act = SC.qs[st.i].opts.length; $$(".opt, .other").forEach((el, k) => el.classList.toggle("act", k === st.act)); } });
+document.addEventListener("mouseover", (e) => { const o = e.target.closest(".opt"); if (o && !o.classList.contains("act")) { st.act = +o.dataset.pick; $$(".opt, .other").forEach((el, k) => el.classList.toggle("act", k === st.act)); } });
+document.addEventListener("mouseout", (e) => { const l = e.target.closest?.(".qopts"); if (l && !l.contains(e.relatedTarget) && !l.contains(document.activeElement)) { st.act = -1; $$(".opt, .other").forEach((el) => el.classList.remove("act")); } });
+render();
+</script>
+</body>
+</html>
