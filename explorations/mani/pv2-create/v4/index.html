@@ -611,6 +611,12 @@
   .pj-f .pj-new { flex: 1; padding: 0; }
   .pj-cap { font-size: 12px; color: rgb(var(--ink-3)); }
   .pj-wrap { position: relative; }
+  /* Plus menu: Project knowledge drills in, Back returns to the list */
+  .pj-row .chev-r { width: 16px; height: 16px; margin-left: auto; transform: rotate(-90deg); color: rgb(var(--ink-3)); }
+  .pj-menu { width: 340px; max-width: calc(100vw - 24px); padding: 0; display: flex; flex-direction: column; max-height: min(460px, calc(100vh - 96px)); overflow: hidden; }
+  .pj-menu .pj-back { display: inline-flex; flex-shrink: 0; margin: 6px 6px 0; align-self: flex-start; }
+  .pj-menu .pj-top, .pj-menu .pj-f, .pj-menu .pj-plan { flex-shrink: 0; }
+  .pj-menu .pj-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; overscroll-behavior: contain; padding: 6px; }
   .pj-plan { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex-shrink: 0; padding: 8px 12px; border-top: 1px solid rgb(var(--line)); font-size: 12px; line-height: 16px; color: rgb(var(--ink-3)); }
   .pj-plan .link { height: auto; padding: 0; border: 0; background: none; font: inherit; font-weight: 500; color: rgb(var(--brand-fg)); cursor: pointer; }
   .pj-plan .link:hover { text-decoration: underline; }
@@ -1328,14 +1334,18 @@ function projBody() {
 const projSummary = () => { const x = NODES[S.project]; return x ? pathText(S.project) : "None"; };
 const projPick = () => { const x = NODES[S.project], n = x?.n;
   return `<button class="pick pj-pick" data-proj-open aria-haspopup="menu" aria-expanded="${!!S.projOpen}"><span class="ico-g">${ic(n ? (x.depth === 1 ? "box" : "folder") : "ban")}</span><span class="pv ${n ? "" : "pj-off"}">${n ? pathOf(S.project).map((m, i, a) => i === a.length - 1 ? `<b>${esc(m.name)}</b>` : `${esc(m.name)} <span class="pj-sep">›</span> `).join("") : "None"}</span>${!planOK() ? goldBadge() : n && S.plan === "team" ? `<span class="pj-share">${shareIco(n)}${esc(n.share)}</span>` : ""}${ic("caret", "chev-d")}</button>`; };
+const projMenuRow = () => { const x = NODES[S.project];
+  return `<button class="mi pj-row" data-proj-open aria-haspopup="menu" aria-expanded="false"><span class="ico">${ic(x ? (x.depth === 1 ? "box" : "folder") : "box")}</span><span>Project knowledge<small>${x ? esc(pathText(S.project)) : "None. Uses only your prompt and files"}</small></span>${planOK() ? "" : goldBadge()}${ic("caret", "chev-r")}</button>`; };
 const projField = () => { const x = NODES[S.project];
   return `<div class="pj-wrap">${projPick()}${S.projOpen ? `<div class="pj-inline" role="dialog" aria-label="Choose project knowledge">${projBody()}</div>` : ""}</div><p class="os-note">${x ? `Uses ${esc(x.proj.name)} knowledge (${x.proj.kn} ${x.proj.kn === 1 ? "file" : "files"}). Saved in ${esc(x.n.name)}${S.plan === "team" ? `, shared with ${esc(x.n.share === "Only you" ? "only you" : x.n.share)}` : ""}.` : "We use only your prompt and the files you add. The deck is saved to My decks."}</p>`; };
 
 /* ---------- Popovers ---------- */
 function popHTML(id) {
   const l = S.look;
-  if (id === "attach") return `<div class="menu" style="width:260px">
+  if (id === "attach" && S.projOpen) return `<div class="menu pj-menu" role="dialog" aria-label="Project knowledge"><button class="fly-back pj-back" data-proj-close>${ic("back")}Project knowledge</button>${projBody()}</div>`;
+  if (id === "attach") return `<div class="menu" style="width:280px">
       ${ATTACH.map(([i, t, s]) => `<button class="mi" data-attach="${t}"><span class="ico">${ic(i)}</span><span>${t}${s ? `<small>${s}</small>` : ""}</span></button>`).join("")}
+      <div class="sep"></div>${projMenuRow()}
       <div class="sep"></div><div style="padding:4px 10px 6px;font-size:12px;color:rgb(var(--ink-3))">Have a .pptx? Use Import PowerPoint below.</div></div>`;
   if (id === "slides") return `<div class="menu" style="width:280px">${slidesList()}</div>`;
   if (id === "lang") return `<div class="menu" style="width:200px;max-height:300px;overflow:auto">${LANGS.map((x) => `<button class="mi ${S.lang === x ? "sel" : ""}" data-lang="${x}"><span>${x === "Auto" ? "Auto<small>Match my prompt</small>" : x}</span>${ic("check", "ck")}</button>`).join("")}</div>`;
@@ -1412,7 +1422,6 @@ const durLabel = () => (DURS.find(([v]) => v === S.dur) || DURS[0])[1];
 const storyStoryHTML = () => `<div class="os-2">${storyFieldsHTML()}</div>`;
 const modesHTML = () => modesFor().map(modeRow).join("");
 const CSEC = [
-  ["project", "Project knowledge", "Context we use and where it's saved", () => projField(), () => +!!S.project, () => projSummary()],
   ["deck", "Deck", "Length, time, language and depth", () => deckBody(), () => deckCount(), () => [slideObj().short, S.dur ? durLabel() + " talk" : "Any talk length", S.lang === "Auto" ? "Auto language" : S.lang, DETAIL.find((d) => d.id === S.detail).label + " detail", S.notes && "Speaker notes"].filter(Boolean).join(" · ")],
   ["story", "Story and audience", "Auto reads these from your prompt", () => storyStoryHTML(), () => storyCount(), () => { const v = [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "estimate" && "Placeholders"].filter(Boolean); return v.length ? v.join(" · ") : "Auto from your prompt"; }],
   ["effort", "Effort", "How hard we work on it", () => effBody(), () => +(S.budget !== "auto"), () => budgetObj().label],
@@ -1420,7 +1429,7 @@ const CSEC = [
 ];
 function belowHTML(head) {
   const top = `<div class="below-in card-${S.card}" id="opanel" tabindex="-1" role="region" aria-label="Options">${head(`<button class="link" data-panel-close>Hide options</button>`)}`;
-  if (mobile()) return `${top}${ROW("Project knowledge", "Context we use and where it's saved", projField())}${designRow()}${ROW("Deck", "Length, time, language and depth", deckBody())}${moreHTML()}${ROW("Effort", "How hard we work on it", effBody())}${ROW("Mode", "Switch on what you need", modesHTML())}</div>`;
+  if (mobile()) return `${top}${designRow()}${ROW("Deck", "Length, time, language and depth", deckBody())}${moreHTML()}${ROW("Effort", "How hard we work on it", effBody())}${ROW("Mode", "Switch on what you need", modesHTML())}</div>`;
   if (S.card === "b") {
     const sec = ([k, t, , body, n]) => SEC(t, body(), `os-${k}`, n());
     return `${top}<div class="c2"><div class="c2-col">${sec(CSEC[0])}${sec(CSEC[1])}${sec(CSEC[3])}</div><div class="c2-col">${sec(CSEC[2])}${sec(CSEC[4])}</div></div></div>`;
@@ -1457,7 +1466,7 @@ function panelHTML(kind) {
   return `<div class="lk-scrim" data-panel-close></div><div class="om-wrap"><div class="om" role="dialog" aria-modal="true" aria-labelledby="omT" tabindex="-1" id="opanel">
     <button class="lk-x lk-x-out" data-panel-close aria-label="Close">${ic("x", "i20")}</button>
     <div class="om-h"><div style="flex:1;min-width:0"><h2 id="omT">Options</h2><p>Leave anything on auto and we read it from your prompt.</p></div><button class="lk-x lk-x-in" data-panel-close aria-label="Close">${ic("x", "i20")}</button></div>
-    <div class="om-b">${mobile() ? `<div class="om-col">${SEC("Project knowledge", projField(), "os-proj", +!!S.project)}${designRow()}${secDeck()}${moreHTML()}${secEffort()}${secModes()}</div>` : `<div class="om-col">${secDeck()}${secStory()}</div><div class="om-col">${secEffort()}${secModes()}</div>`}</div>
+    <div class="om-b">${mobile() ? `<div class="om-col">${designRow()}${secDeck()}${moreHTML()}${secEffort()}${secModes()}</div>` : `<div class="om-col">${secDeck()}${secStory()}</div><div class="om-col">${secEffort()}${secModes()}</div>`}</div>
     ${mobile() ? `<div class="om-f om-f-m">${resetBtn()}<button class="btn btn-primary" data-panel-close>Done</button></div>` : changedCount() ? `<div class="om-f"><small>${changedCount()} changed</small><span class="sp"></span>${resetBtn()}</div>` : ""}</div></div>`;
 }
 const panelRoot = () => (!S.panel ? null : S.panel === "sheet" || S.panel === "modal" ? $("#oside") : $("#" + S.panel));
@@ -1559,7 +1568,7 @@ function closeProj(focus) { S.projOpen = false; S.newProj = false; S.projQ = "";
 addEventListener("resize", () => S.projOpen && placeProj());
 addEventListener("scroll", () => S.projOpen && placeProj(), { passive: true });
 /* Click outside closes it, like any menu. Runs before click so the outside click still does its own job. */
-document.addEventListener("pointerdown", (e) => { if (S.projOpen && !mobile() && !e.target.closest(".pj-wrap")) closeProj(false); }, true);
+document.addEventListener("pointerdown", (e) => { if (S.projOpen && !mobile() && openPop?.id !== "attach" && !e.target.closest(".pj-wrap")) closeProj(false); }, true);
 /* Sync, but keep an open popover alive when its anchor was redrawn (the C2 brief redraws on every change). */
 function syncKeep() {
   const was = openPop && openPop.id, fid = document.activeElement?.id, fmiss = document.activeElement?.dataset?.miss;
@@ -1591,7 +1600,7 @@ function togglePop(btn) {
   el.className = "pop";
   el.innerHTML = popHTML(id);
   btn.parentElement.appendChild(el);
-  place(el, { open: true }); requestAnimationFrame(() => place(el));
+  place(el, { open: true }); requestAnimationFrame(() => el.isConnected && place(el));
   btn.setAttribute("aria-expanded", "true");
   openPop = { btn, el, id, view: S.optView };
   bindPopInputs(el);
@@ -1806,7 +1815,7 @@ document.addEventListener("click", (e) => {
   if (t.closest("[data-adv]")) { S.adv = !S.adv; refreshPop(); $("[data-adv]", openPop.el)?.focus({ preventScroll: true }); return; }
   if (t.closest("[data-close]")) { closePop(); return; }
   const at = t.closest("[data-attach]");
-  const refreshProj = () => refreshPanel();
+  const refreshProj = () => refreshPop();
   if (t.closest("[data-proj-open]")) { S.projOpen = !S.projOpen; S.newProj = false; S.projQ = ""; if (S.projOpen) { projFresh = true; const x = NODES[S.project]; S.projExp = x ? [...x.path.map((n) => n.id), ...(x.n.folders.length ? [x.n.id] : [])] : []; } refreshProj(); (S.projOpen ? $('#projList .pj-sel[aria-selected="true"]') || $(".pj-lock .btn-primary") : $("[data-proj-open]"))?.focus({ preventScroll: true }); return; }
   if (t.closest("[data-proj-close]")) { S.projOpen = false; refreshProj(); $("[data-proj-open]")?.focus({ preventScroll: true }); return; }
   const tw = t.closest("[data-pj-tw]");
@@ -1819,8 +1828,8 @@ document.addEventListener("click", (e) => {
     const id = pj.dataset.proj || null, x = NODES[id], was = projObj(), same = S.project === id;
     S.project = id; S.projQ = ""; S.newProj = false;
     /* A folder with folders inside opens in place so the next pick is one click away. A leaf closes the list. */
-    if (x && x.n.folders.length && !(same && isExp(id))) { S.projExp = [...new Set([...S.projExp, ...x.path.map((n) => n.id), id])]; sync(); refreshPanel(); $(`[data-proj="${id}"]`)?.focus({ preventScroll: true}); }
-    else { S.projOpen = false; sync(); refreshPanel(); $("[data-proj-open]")?.focus({ preventScroll: true }); }
+    if (x && x.n.folders.length && !(same && isExp(id))) { S.projExp = [...new Set([...S.projExp, ...x.path.map((n) => n.id), id])]; sync(); refreshProj(); $(`[data-proj="${id}"]`)?.focus({ preventScroll: true}); }
+    else { S.projOpen = false; if (openPop?.id === "attach") { sync(); closePop(); } else { sync(); refreshPanel(); $("[data-proj-open]")?.focus({ preventScroll: true }); } }
     if (!same) x ? toast(`Using ${x.proj.name} knowledge`, `Saved in ${x.n.name}${S.plan === "team" ? `, shared with ${x.n.share === "Only you" ? "only you" : x.n.share}` : ""}.`, "folder") : was && toast("No project knowledge", "We use only your prompt and files. Saved to My decks.", "folder");
     return;
   }
@@ -1852,6 +1861,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.key === "Escape" && S.mic) { stopMic(false); return; }
+  if (e.key === "Escape" && S.projOpen && openPop?.id === "attach") { S.projOpen = false; S.newProj = false; S.projQ = ""; refreshPop(); $("[data-proj-open]", openPop.el)?.focus({ preventScroll: true }); return; }
   if (e.key === "Escape" && S.projOpen) { if (!mobile()) { closeProj(true); return; } S.projOpen = false; refreshPanel(); $("[data-proj-open]")?.focus({ preventScroll: true }); return; }
   if (e.key === "Enter" && S.mic && !e.shiftKey) { e.preventDefault(); stopMic(true); return; }
   if (e.key === "Escape") { if (S.slDD) { S.slDD = false; S.proHint = false; refreshPop(); $("[data-sl-dd]")?.focus({ preventScroll: true }); return; } if ($("#modal").innerHTML) closeLooks(); else if (openPop) closePop(); else closePanel(); return; }
@@ -1876,7 +1886,7 @@ document.addEventListener("submit", (e) => {
   else PROJECTS.unshift({ id, name: v, kn: 0, share: "Only you", ppl: 1, priv: true, folders: [] });
   indexProjects(); if (at) S.projExp = [...new Set([...S.projExp, ...at.path.map((n) => n.id), at.n.id])];
   S.project = id; S.newProj = false; S.projOpen = false;
-  sync(); refreshPanel(); $("[data-proj-open]")?.focus({ preventScroll: true });
+  if (openPop?.id === "attach") { sync(); closePop(); } else { sync(); refreshPanel(); $("[data-proj-open]")?.focus({ preventScroll: true }); }
   toast(`${v} created`, at ? (S.plan === "team" ? `Shared like ${at.n.name}: ${at.n.share}. Your deck is saved there.` : "Your deck is saved there.") : "Only you can see it for now. Add project knowledge any time.", "folder");
 });
 
