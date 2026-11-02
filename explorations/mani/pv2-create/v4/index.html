@@ -627,6 +627,17 @@
   .pj-none::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -5px; border-top: 1px solid rgb(var(--line)); }
   .pj-none .pj-ic { background: transparent; border: 1px dashed rgb(var(--line)); color: rgb(var(--ink-3)); }
   .pj-list { scrollbar-width: thin; }
+  /* Flat, always-open list: project rows are headers, folders are one compact line under them */
+  .pj-grp + .pj-grp { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgb(var(--line)); }
+  .pj-r .pj-sel { padding-left: 8px; }
+  .pj-fold { padding-left: calc(var(--d) * 20px); }
+  .pj-fold .pj-sel { min-height: 32px; gap: 8px; padding-top: 0; padding-bottom: 0; }
+  .pj-fi { width: 15px; height: 15px; flex-shrink: 0; color: rgb(var(--ink-3)); }
+  .pj-fn { min-width: 0; font-size: 13px; font-weight: 400; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pj-fs { margin-left: auto; padding-left: 8px; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; max-width: 45%; font-size: 12px; color: rgb(var(--ink-3)); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pj-fs + .ck { margin-left: 8px; }
+  .pj-r.sel .pj-fi { color: rgb(var(--brand-fg)); }
+  .pj-r.sel .pj-fn { font-weight: 500; }
   .pj-tw { width: 28px; height: 32px; }
   @media (min-width: 641px) {
     .os-row .pj-inline { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px); margin: 0; display: flex; flex-direction: column; border-radius: 10px; box-shadow: var(--sh-menu); animation: trayIn .16s var(--ease); }
@@ -1310,10 +1321,12 @@ const shareIco = (n) => ic(n.priv ? "lock" : "users");
 const kidsTxt = (n) => (n.folders.length ? `${n.folders.length} ${n.folders.length === 1 ? "folder" : "folders"}` : "");
 /* Tree, like Descript's "Move to". One click picks. A row with folders also opens them in place. */
 const isExp = (id) => S.projExp.includes(id);
+/* Every project shows its folders, always open. No arrows to find: one click on any row picks it and closes. */
 function pjRow(n) {
-  const x = NODES[n.id], top = x.depth === 1, sel = S.project === n.id, kids = n.folders.length, open = kids && isExp(n.id);
-  const solo = S.plan !== "team", meta = top ? `${n.kn} knowledge ${n.kn === 1 ? "file" : "files"}${solo ? "" : ` · ${n.share}`}` : solo ? kidsTxt(n) || "Folder" : n.share;
-  return `<div class="pj-r ${sel ? "sel" : ""}" style="--d:${x.depth - 1}">${kids ? `<button class="pj-tw" data-pj-tw="${n.id}" aria-expanded="${!!open}" aria-label="${open ? "Close" : "Open"} ${esc(n.name)}">${ic("caret")}</button>` : `<span class="pj-tw"></span>`}<button class="pj-sel" data-proj="${n.id}" role="treeitem" aria-selected="${sel}"${kids ? ` aria-expanded="${!!open}"` : ""}><span class="pj-ic ${top ? "top" : ""}">${ic(top ? "box" : "folder")}</span><span class="pj-nm"><b>${esc(n.name)}</b><small>${n.priv && !solo ? ic("lock", "pj-l") : ""}${esc(meta)}</small></span>${sel ? ic("check", "ck") : ""}</button></div>${open ? n.folders.map(pjRow).join("") : ""}`;
+  const x = NODES[n.id], top = x.depth === 1, sel = S.project === n.id, solo = S.plan !== "team";
+  const lock = n.priv && !solo ? ic("lock", "pj-l") : "";
+  if (top) return `<div class="pj-grp"><div class="pj-r pj-top-r ${sel ? "sel" : ""}" style="--d:0"><button class="pj-sel" data-proj="${n.id}" role="treeitem" aria-selected="${sel}"><span class="pj-ic top">${ic("box")}</span><span class="pj-nm"><b>${esc(n.name)}</b><small>${lock}${n.kn} knowledge ${n.kn === 1 ? "file" : "files"}${solo ? "" : ` · ${esc(n.share)}`}</small></span>${sel ? ic("check", "ck") : ""}</button></div>${n.folders.map(pjRow).join("")}</div>`;
+  return `<div class="pj-r pj-fold ${sel ? "sel" : ""}" style="--d:${x.depth - 1}"><button class="pj-sel" data-proj="${n.id}" role="treeitem" aria-selected="${sel}">${ic("folder", "pj-fi")}<b class="pj-fn">${esc(n.name)}</b>${solo ? "" : `<small class="pj-fs">${lock}${esc(n.share)}</small>`}${sel ? ic("check", "ck") : ""}</button></div>${(n.folders || []).map(pjRow).join("")}`;
 }
 function projList() {
   const q = S.projQ.trim().toLowerCase();
@@ -1322,15 +1335,13 @@ function projList() {
     return hits.length ? hits.map((x) => `<div class="pj-r ${S.project === x.n.id ? "sel" : ""}"><button class="pj-sel" data-proj="${x.n.id}" role="treeitem" aria-selected="${S.project === x.n.id}"><span class="pj-ic ${x.depth === 1 ? "top" : ""}">${ic(x.depth === 1 ? "box" : "folder")}</span><span class="pj-nm"><b>${esc(x.n.name)}</b><small>${esc(x.path.length ? x.path.map((n) => n.name).join(" › ") : "Project")} · ${esc(x.n.share)}</small></span></button></div>`).join("")
       : `<div class="pj-empty">No project or folder called "${esc(S.projQ.trim())}"</div>`;
   }
-  return `<div class="pj-r pj-none ${!S.project ? "sel" : ""}" style="--d:0"><span class="pj-tw"></span><button class="pj-sel" data-proj="" role="treeitem" aria-selected="${!S.project}"><span class="pj-ic">${ic("ban")}</span><span class="pj-nm"><b>No project knowledge</b><small>Just your prompt and the files you add</small></span>${!S.project ? ic("check", "ck") : ""}</button></div>` + PROJECTS.map(pjRow).join("");
+  return `<div class="pj-r pj-none ${!S.project ? "sel" : ""}" style="--d:0"><button class="pj-sel" data-proj="" role="treeitem" aria-selected="${!S.project}"><span class="pj-ic">${ic("ban")}</span><span class="pj-nm"><b>No project knowledge</b><small>Just your prompt and the files you add</small></span>${!S.project ? ic("check", "ck") : ""}</button></div>` + PROJECTS.map(pjRow).join("");
 }
 function projBody() {
   if (!planOK()) return `<div class="pj-lock"><span class="pj-crown">${ic("crown")}</span><b>Project knowledge is on Gold and Team</b><p>Give every deck your company's files as context, in folders you share with each team.</p><div class="pj-act"><button class="btn btn-primary btn-sm" data-method="upgrade">See plans</button><button class="btn btn-ghost btn-sm" data-proj-close>Not now</button></div></div>`;
   const x = NODES[S.project], inF = x && x.depth < MAX_DEPTH ? x.n : null;
   return `<div class="pj-top"><label class="pj-q">${ic("search")}<input id="projQ" type="text" placeholder="Find a project or folder" value="${esc(S.projQ)}" autocomplete="off" aria-label="Find a project or folder"></label></div>
     <div class="pj-list" id="projList" role="tree" aria-label="Projects and folders">${projList()}</div>
-    <div class="pj-f">${S.newProj ? `<form class="pj-new" data-proj-form><input class="input" id="projName" placeholder="${S.newProj === "folder" ? `Folder in ${esc(inF.name)}` : "Project name"}" maxlength="40" autocomplete="off" aria-label="${S.newProj === "folder" ? "New folder name" : "New project name"}"><button class="btn btn-primary btn-sm" type="submit">Create</button><button class="btn btn-ghost btn-sm" type="button" data-proj-new-x>Cancel</button></form>`
-      : `${inF ? `<button class="btn btn-ghost btn-sm" data-proj-new="folder">${ic("plus")}New folder in ${esc(inF.name)}</button>` : ""}<span class="sp"></span><button class="btn btn-ghost btn-sm" data-proj-new="project">${ic("plus")}New project</button>`}</div>
     <div class="pj-plan">${S.plan === "team" ? `<span>Team plan. Each folder has its own sharing.</span><button class="link" data-plan="gold">Switch to individual</button>` : `<span>Share folders with your team.</span><button class="link" data-plan="team">Switch to Team plan</button>`}</div>`;
 }
 const projSummary = () => { const x = NODES[S.project]; return x ? pathText(S.project) : "None"; };
@@ -1830,8 +1841,7 @@ document.addEventListener("click", (e) => {
     const id = pj.dataset.proj || null, x = NODES[id], was = projObj(), same = S.project === id;
     S.project = id; S.projQ = ""; S.newProj = false;
     /* A folder with folders inside opens in place so the next pick is one click away. A leaf closes the list. */
-    if (x && x.n.folders.length && !(same && isExp(id))) { S.projExp = [...new Set([...S.projExp, ...x.path.map((n) => n.id), id])]; sync(); refreshProj(); $(`[data-proj="${id}"]`)?.focus({ preventScroll: true}); }
-    else { S.projOpen = false; if (openPop?.id === "attach") { sync(); closePop(); } else { sync(); refreshPanel(); $("[data-proj-open]")?.focus({ preventScroll: true }); } }
+    { S.projOpen = false; if (openPop?.id === "attach") { sync(); closePop(); } else { sync(); refreshPanel(); $("[data-proj-open]")?.focus({ preventScroll: true }); } }
     if (!same) x ? toast(`Using ${x.proj.name} knowledge`, `Saved in ${x.n.name}${S.plan === "team" ? `, shared with ${x.n.share === "Only you" ? "only you" : x.n.share}` : ""}.`, "folder") : was && toast("No project knowledge", "We use only your prompt and files. Saved to My decks.", "folder");
     return;
   }
