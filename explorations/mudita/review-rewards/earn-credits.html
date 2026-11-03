@@ -472,9 +472,11 @@ const TASKS = {
   li: { name: 'LinkedIn', icon: '<i class="ph-fill ph-linkedin-logo"></i>', reward: 200, host: /(^|\.)linkedin\.com$/, example: 'linkedin.com/posts/…' },
   x:  { name: 'X', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>', reward: 200, host: /(^|\.)(x|twitter)\.com$/, example: 'x.com/you/status/…' },
   fb: { name: 'Facebook', icon: '<i class="ph-fill ph-facebook-logo"></i>', reward: 200, host: /(^|\.)facebook\.com$/, example: 'facebook.com/…/posts/…' },
-  g2: { name: 'G2', icon: G2_LOGO, reward: 400 },
+  g2: { name: 'G2', icon: G2_LOGO, reward: 400, host: /(^|\.)g2\.com$/, example: 'g2.com/products/presentations-ai/reviews/…' },
 };
 // per-task state: available · pending · waiting (G2) · credited · rejected
+// G2: available → waiting (G2 is deciding whether to publish, 2 to 3 days) → they paste the link to the
+// published review → pending (our CX team checks it in the admin panel) → credited
 const PRESETS = {
   fresh: { li: 'available', x: 'available', fb: 'available', g2: 'available' },
   progress: { li: 'credited', x: 'pending', fb: 'available', g2: 'waiting' },
@@ -490,7 +492,7 @@ function pbtn(k) {
   const icon = `<span class="ic">${t.icon}</span>`;
   if (st === 'credited') return `<button class="pbtn done" data-detail="${k}">${icon}${k === 'g2' ? 'Reviewed' : t.name}<i class="ph-bold ph-check ok"></i></button>`;
   if (st === 'pending') return `<button class="pbtn wait" data-detail="${k}">${icon}${t.name}<span class="inrev">In Review</span></button>`;
-  if (st === 'waiting') return `<button class="pbtn wait" data-detail="${k}">${icon}G2<span class="inrev">In Review</span></button>`;
+  if (st === 'waiting') return `<button class="pbtn wait" data-detail="${k}">${icon}G2<span class="inrev">Waiting for G2</span></button>`;
   // failed states retry straight from the button; the reason is on the card
   if (st === 'g2rejected') return `<button class="pbtn" data-toast="Opens your review on G2">${icon}Edit on G2<i class="ph ph-arrow-up-right"></i></button>`;
   if (st === 'rejected') return `<button class="pbtn" data-relink="${k}">${icon}Retry ${t.name}<i class="ph ph-arrow-clockwise"></i></button>`;
@@ -505,7 +507,7 @@ const HISTORY = {
   li: { link: 'linkedin.com/posts/mudita_presentationsai-activity-7254', sent: '20 Oct 2026', done: '21 Oct 2026' },
   x:  { link: 'x.com/mudita/status/1831140226', sent: '26 Oct 2026', due: '28 Oct 2026', done: '21 Oct 2026', rsent: '23 Oct 2026', checked: '24 Oct 2026' },
   fb: { link: 'facebook.com/mudita/posts/pfbid0Xk2', sent: '26 Oct 2026', due: '28 Oct 2026', done: '22 Oct 2026', rsent: '23 Oct 2026', checked: '24 Oct 2026' },
-  g2: { sent: '24 Oct 2026', due: '29 Oct 2026', done: '25 Oct 2026', checked: '26 Oct 2026' },
+  g2: { link: 'g2.com/products/presentations-ai/reviews/presentations-ai-review-10483921', sent: '24 Oct 2026', due: '27 Oct 2026', done: '25 Oct 2026', checked: '26 Oct 2026' },
 };
 function timeline(rows) {
   return `<ol class="tl">${rows.map(([state, title, sub]) => `<li class="${state}"><span class="tl-dot">${state === 'done' ? '<i class="ph-bold ph-check"></i>' : state === 'fail' ? '<i class="ph-bold ph-x"></i>' : ''}</span><div><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</div></li>`).join('')}</ol>`;
@@ -514,15 +516,20 @@ function detailDialog(k) {
   const t = TASKS[k], st = S[k], h = HISTORY[k], g2 = k === 'g2';
   const title = g2 ? 'Your G2 review' : `Your ${t.name} post`;
   let head = '', rows = [], foot = '';
-  const postLink = g2 ? '' : `<div class="linkline"><i class="ph ph-link"></i><span>${h.link}</span>${btn('<i class="ph ph-arrow-square-out"></i>View post', 'button-small button-ghost', 'data-toast="Opens your post"')}</div>`;
-  if (st === 'pending') {
+  const hasLink = !g2 || st === 'pending' || st === 'credited';
+  const postLink = !hasLink ? '' : `<div class="linkline"><i class="ph ph-link"></i><span>${h.link}</span>${btn(`<i class="ph ph-arrow-square-out"></i>View ${g2 ? 'review' : 'post'}`, 'button-small button-ghost', `data-toast="Opens your ${g2 ? 'review on G2' : 'post'}"`)}</div>`;
+  if (st === 'pending' && g2) {
+    head = `<div class="dstat wait"><i class="ph-fill ph-hourglass-medium"></i><div><b>We’re checking your review</b><span>Expect an answer by <b>${h.due}</b>. We’ll email you when your credits are added.</span></div></div>`;
+    rows = [['done', 'Published on G2', h.done], ['done', 'Link sent', h.checked], ['now', 'Our team is checking it', 'Your rating doesn’t affect it.'], ['', '+400 credits', 'Added as soon as it’s approved']];
+    foot = `${btn('Change the link', 'button-medium button-ghost', 'data-relink="g2"')}<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
+  } else if (st === 'pending') {
     head = `<div class="dstat wait"><i class="ph-fill ph-hourglass-medium"></i><div><b>We’re checking your post</b><span>Expect an answer by <b>${h.due}</b>. We’ll email you either way.</span></div></div>`;
     rows = [['done', 'Link sent', h.sent], ['now', 'Being checked', 'Public, about presentations.ai, has #ad. Your opinion doesn’t affect it.'], ['', `+${t.reward} credits`, 'Added as soon as it’s approved']];
     foot = `${btn('Change the link', 'button-medium button-ghost', `data-relink="${k}"`)}<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
   } else if (st === 'waiting') {
-    head = `<div class="dstat wait"><i class="ph-fill ph-hourglass-medium"></i><div><b>Waiting for G2 to publish it</b><span>G2 checks every review, usually within 3 business days. Expect it by <b>${h.due}</b>.</span></div></div>`;
-    rows = [['done', 'Review started on G2', h.sent], ['now', 'G2 is checking it', 'If G2 doesn’t publish it, they’ll email you why'], ['', '+400 credits', 'Added the day G2 publishes it']];
-    foot = `${btn('<i class="ph ph-arrow-square-out"></i>Open G2', 'button-medium button-ghost', 'data-toast="Opens your review on G2"')}<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
+    head = `<div class="dstat wait"><i class="ph-fill ph-hourglass-medium"></i><div><b>Waiting for G2 to publish it</b><span>G2 checks every review, usually in 2 to 3 days, and emails you once it’s live. Expect it by <b>${h.due}</b>.</span></div></div>`;
+    rows = [['done', 'Review written on G2', h.sent], ['now', 'G2 is checking it', 'G2 emails you when it’s published, or why it isn’t'], ['', 'Paste the link to your review', 'It’s in G2’s email. Come back here with it'], ['', '+400 credits', 'Added once we’ve checked the link']];
+    foot = `${btn('Done', 'button-medium button-ghost', 'data-close')}<span style="flex:1"></span>${btn('<i class="ph ph-link"></i>It’s published, add the link', 'button-medium button-primary', 'data-relink="g2"')}`;
   } else if (st === 'credited') {
     head = `<div class="dstat good"><i class="ph-fill ph-check-circle"></i><div><b>+${t.reward} credits added on ${h.done}</b><span>${g2 ? 'Thanks for the review.' : 'Thanks for sharing your experience.'} You’ll find them in your credits history.</span></div></div>`;
     foot = `<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
@@ -530,8 +537,8 @@ function detailDialog(k) {
     head = `<div class="dstat bad"><i class="ph-fill ph-x-circle"></i><div><b>This post wasn’t approved</b><span>${REASONS[k]} Fix it and send the link again. No time limit.</span></div></div>`;
     foot = `${btn('Write a new post', 'button-medium button-ghost', `data-open="${k}"`)}<span style="flex:1"></span>${btn('Send the link again', 'button-medium button-primary', `data-relink="${k}"`)}`;
   } else if (st === 'g2rejected') {
-    head = `<div class="dstat bad"><i class="ph-fill ph-x-circle"></i><div><b>G2 didn’t publish your review</b><span>G2 emailed you the reason. Edit it on G2 and resubmit; we keep checking, and the credits arrive once it’s published.</span></div></div>`;
-    foot = `<span style="flex:1"></span>${btn('Edit on G2 <i class="ph ph-arrow-up-right"></i>', 'button-medium button-primary', 'data-toast="Opens your review on G2"')}`;
+    head = `<div class="dstat bad"><i class="ph-fill ph-x-circle"></i><div><b>G2 didn’t publish your review</b><span>G2 emailed you the reason. Edit it on G2 and resubmit. Once it’s published, paste the link here for your credits.</span></div></div>`;
+    foot = `${btn('Add the link', 'button-medium button-ghost', 'data-relink="g2"')}<span style="flex:1"></span>${btn('Edit on G2 <i class="ph ph-arrow-up-right"></i>', 'button-medium button-primary', 'data-toast="Opens your review on G2"')}`;
   }
   return `<div class="dlg-h"><h2 id="dt">${title}</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>
     <div class="dlg-b">${postLink}${head}${rows.length ? timeline(rows) : ''}<div class="dlg-f">${foot}</div></div>`;
@@ -556,8 +563,9 @@ function postLine() {
   return '<p>A public post about your honest experience. One per platform.</p>';
 }
 function g2Line() {
-  return { waiting: '<p>Credits arrive once G2 publishes it, usually within 3 business days.</p>', credited: '<p>+400 credits added. Thanks for the review.</p>',
-    g2rejected: '<p class="bad">G2 didn’t publish your review and emailed you why. Edit it on G2; the credits arrive once it’s published.</p>' }[S.g2]
+  return { waiting: '<p>Waiting for G2 to publish it, usually 2 to 3 days. Then paste the link from G2’s email.</p>',
+    pending: '<p>Checking your review. Click it for details.</p>', credited: '<p>+400 credits added. Thanks for the review.</p>',
+    g2rejected: '<p class="bad">G2 didn’t publish your review and emailed you why. Edit it on G2, then paste the link once it’s live.</p>' }[S.g2]
     || '<p>An honest review on G2. Any rating counts.</p>';
 }
 
@@ -626,6 +634,7 @@ function render() {
    Coming back to this tab after opening the platform moves straight to the link step. */
 const HOWTO = {
   li: ['Open your post on LinkedIn', 'Click ··· at the top right of the post', 'Choose <b>Copy link to post</b>'],
+  g2: ['Open G2’s email saying your review is published', 'Click <b>View your review</b>', 'Copy the link from your browser’s address bar'],
   x:  ['Open your post on X', 'Click the share icon under the post', 'Choose <b>Copy link</b>'],
   fb: ['Make sure the post’s audience is <b>Public</b> (the globe icon)', 'Click ··· at the top right of the post', 'Choose <b>Copy link</b>'],
 };
@@ -677,7 +686,7 @@ function socialDialog() {
   } else if (D.step === 'link') {
     body = `<p class="lead">${D.opened ? `Posted on ${t.name}? ` : ''}Paste the link to your post and we’ll check it.</p>
       <div class="urlrow"><input class="url" id="url" placeholder="${t.example}" aria-label="Link to your post" autocomplete="off" />${btn('<i class="ph ph-clipboard-text"></i>Paste', 'button-medium button-secondary', 'data-paste')}</div>
-      <div class="hint" id="urlhint">The post has to be public.</div>
+      <div class="hint" id="urlhint">${LINK_HINT[k]}</div>
       <button class="sample" data-sample>Use a sample link (prototype only)</button>
       <div class="howto"><div class="howto-h">Where to find the link</div><ol>${HOWTO[k].map(h => `<li>${h}</li>`).join('')}</ol></div>`;
     foot = `${btn('<i class="ph ph-arrow-left"></i>Back', 'button-medium button-ghost', 'data-step="write"')}<span style="flex:1"></span>${btn('Submit for review', 'button-medium button-primary', 'data-submit')}`;
@@ -691,18 +700,29 @@ function socialDialog() {
     <div class="dlg-b">${D.step !== 'sent' ? dots : ''}${body}<div class="dlg-f">${foot}</div></div>`;
 }
 function g2Dialog() {
-  return `<div class="dlg-h"><h2 id="dt">Review us on G2</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>
+  const head = `<div class="dlg-h"><h2 id="dt">${D.step === 'link' ? 'Add your G2 review' : 'Review us on G2'}</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>`;
+  if (D.step === 'link') return `${head}
+    <div class="dlg-b">
+      <p class="lead">Paste the link to your published review. We’ll check it, then add <b>+400 credits</b>.</p>
+      <div class="urlrow"><input class="url" id="url" placeholder="${TASKS.g2.example}" aria-label="Link to your G2 review" autocomplete="off" />${btn('<i class="ph ph-clipboard-text"></i>Paste', 'button-medium button-secondary', 'data-paste')}</div>
+      <div class="hint" id="urlhint">${LINK_HINT.g2}</div>
+      <button class="sample" data-sample>Use a sample link (prototype only)</button>
+      <div class="howto"><div class="howto-h">Where to find the link</div><ol>${HOWTO.g2.map(h => `<li>${h}</li>`).join('')}</ol></div>
+      <div class="dlg-f"><span style="flex:1"></span>${btn('Not now', 'button-medium button-ghost', 'data-close')}${btn('Submit for review', 'button-medium button-primary', 'data-submit')}</div>
+    </div>`;
+  return `${head}
     <div class="dlg-b">
       <p class="lead">Tell other people what it’s really like to use presentations.ai.</p>
       <ul class="facts">
-        <li><i class="ph ph-pencil-simple-line"></i><span>You write the review on G2. It takes about 5 minutes.</span></li>
+        <li><i class="ph ph-sign-in"></i><span>Log in to G2 and write your review. It takes about 5 minutes. Post it with your name or anonymously.</span></li>
         <li><i class="ph ph-scales"></i><span>Any honest rating counts. Your reward doesn’t depend on what you say.</span></li>
-        <li><i class="ph ph-coins"></i><span><b>+400 credits</b> once G2 publishes it, usually within 3 business days. G2 marks it as a review with a small reward.</span></li>
-        <li><i class="ph ph-envelope-simple"></i><span>Start from this button: G2’s form opens with your presentations.ai email, so we can match your review. You don’t need a G2 account.</span></li>
+        <li><i class="ph ph-envelope-simple"></i><span>G2 checks it, usually in 2 to 3 days, and emails you once it’s published.</span></li>
+        <li><i class="ph ph-link"></i><span>Come back and paste the link to your review. <b>+400 credits</b> once we’ve checked it. G2 marks it as a review with a small reward.</span></li>
       </ul>
       <div class="dlg-f"><span style="flex:1"></span>${btn('Not now', 'button-medium button-ghost', 'data-close')}${btn('Write my review <i class="ph ph-arrow-up-right"></i>', 'button-medium button-primary', 'data-g2go')}</div>
     </div>`;
 }
+const LINK_HINT = { li: 'The post has to be public.', x: 'The post has to be public.', fb: 'The post has to be public.', g2: 'Anonymous reviews count too.' };
 function paint() {
   $('#dlg').innerHTML = D.k === 'g2' ? g2Dialog() : socialDialog();
   // the draft box grows to fit the draft, so the link and #ad are never hidden below the fold
@@ -727,7 +747,7 @@ function launch() {
   // here we simulate the round trip.
   setTimeout(() => D.k === k && goStep('link'), 1600);
 }
-const SAMPLES = { li: 'https://www.linkedin.com/posts/mudita_presentationsai-activity-7254', x: 'https://x.com/mudita/status/1831140226', fb: 'https://www.facebook.com/mudita/posts/pfbid0Xk2' };
+const SAMPLES = { g2: 'https://www.g2.com/products/presentations-ai/reviews/presentations-ai-review-10483921', li: 'https://www.linkedin.com/posts/mudita_presentationsai-activity-7254', x: 'https://x.com/mudita/status/1831140226', fb: 'https://www.facebook.com/mudita/posts/pfbid0Xk2' };
 // Paste reads the clipboard (the browser asks the first time); falls back to focusing the field for ⌘V
 async function pasteLink() {
   const i = $('#url');
@@ -737,10 +757,11 @@ async function pasteLink() {
 function submit() {
   const k = D.k, input = $('#url'), hint = $('#urlhint');
   let ok = false;
-  try { const v = input.value.trim(), u = new URL(/^https?:\/\//.test(v) ? v : 'https://' + v); ok = TASKS[k].host.test(u.hostname) && u.pathname.length > 1; } catch (e) {}
-  if (!ok) { input.classList.add('err'); hint.classList.add('err'); hint.textContent = `That doesn’t look like ${k === 'x' ? 'an' : 'a'} ${TASKS[k].name} post. Paste the link to the post itself.`; input.focus(); return; }
-  // after submitting, show the same "in review" detail the X / LinkedIn button opens
-  HISTORY[k] = { ...HISTORY[k], link: input.value.trim().replace(/^https?:\/\/(www\.)?/, ''), sent: '27 Oct 2026', due: '29 Oct 2026' };
+  try { const v = input.value.trim(), u = new URL(/^https?:\/\//.test(v) ? v : 'https://' + v); ok = TASKS[k].host.test(u.hostname) && (k === 'g2' ? /\/reviews?\//.test(u.pathname) : u.pathname.length > 1); } catch (e) {}
+  if (!ok) { input.classList.add('err'); hint.classList.add('err'); hint.textContent = k === 'g2' ? 'That doesn’t look like a G2 review. Paste the link to your review itself.' : `That doesn’t look like ${k === 'x' ? 'an' : 'a'} ${TASKS[k].name} post. Paste the link to the post itself.`; input.focus(); return; }
+  // after submitting, show the same "in review" detail the button opens
+  const link = input.value.trim().replace(/^https?:\/\/(www\.)?/, '');
+  HISTORY[k] = k === 'g2' ? { ...HISTORY[k], link, done: '27 Oct 2026', checked: '27 Oct 2026', due: '29 Oct 2026' } : { ...HISTORY[k], link, sent: '27 Oct 2026', due: '29 Oct 2026' };
   S[k] = 'pending'; render(); openDetail(k);
 }
 
@@ -750,14 +771,14 @@ document.addEventListener('click', e => {
   if (d.preset) { preset = d.preset; S = { ...PRESETS[preset] }; render(); }
   else if (d.open) openDialog(d.open);
   else if (d.detail) openDetail(d.detail);
-  else if (d.relink) { Object.assign(D, { k: d.relink, step: 'link', text: draftFor(d.relink), opened: false }); paint(); $('#scrim').classList.add('on'); setTimeout(() => $('#url')?.focus(), 50); }
+  else if (d.relink) { Object.assign(D, { k: d.relink, step: 'link', text: d.relink === 'g2' ? '' : draftFor(d.relink), opened: false }); paint(); $('#scrim').classList.add('on'); setTimeout(() => $('#url')?.focus(), 50); }
   else if ('close' in d) closeDialog();
   else if (d.step) goStep(d.step);
   else if ('launch' in d) launch();
   else if ('submit' in d) submit();
   else if ('paste' in d) pasteLink();
   else if ('sample' in d) { const i = $('#url'); i.value = SAMPLES[D.k]; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); }
-  else if ('g2go' in d) { S.g2 = 'waiting'; closeDialog(); render(); toast('Opens G2’s review form with your email'); }
+  else if ('g2go' in d) { S.g2 = 'waiting'; closeDialog(); render(); toast('Opens G2. Log in there to write your review.'); }
   else if (d.toast) { e.preventDefault(); toast(d.toast); }
 });
 $('#scrim').addEventListener('mousedown', e => { if (e.target.id === 'scrim') closeDialog(); });
@@ -767,7 +788,7 @@ document.addEventListener('input', e => {
     D.text = e.target.value;
     const c = $('#count'); if (c) { const n = xLength(D.text); c.textContent = `${n} / 280`; c.classList.toggle('over', n > 280); $('[data-launch]').disabled = n > 280; }
   }
-  if (e.target.id === 'url') { e.target.classList.remove('err'); const h = $('#urlhint'); h.classList.remove('err'); h.textContent = 'The post has to be public.'; }
+  if (e.target.id === 'url') { e.target.classList.remove('err'); const h = $('#urlhint'); h.classList.remove('err'); h.textContent = LINK_HINT[D.k]; }
 });
 render();
 </script>
