@@ -958,7 +958,7 @@ const OPTS = {
 };
 const PLUS_IN_BOX = { i: true, m: true, c: true, f: true, e: true, s: false, v: true };
 const PANEL_OF = { i: "below", m: "modal", c: "modal", f: "flip", e: "tray", s: "sheet", v: "split" };
-const MODES = [["fast", "bolt", "Express", "No questions: straight to slides"], ["deep", "telescope", "Deep search", "Web research on every slide: 20 credits a slide, not 10"], ["cite", "quote", "Cite sources", "A footnote on every claim, plus a sources slide"]];
+const MODES = [["fast", "bolt", "Express", "No questions: straight to slides"], ["deep", "telescope", "Deep search", "Web research on every slide: 2x credits"], ["cite", "quote", "Cite sources", "A footnote on every claim, plus a sources slide"]];
 const NOTES = ["notes", "text", "Speaker notes", "What to say, under every slide"];
 /* Presentation time: how long the talk runs. We fit the slides to it. */
 const DURS = [["", "Any"], ["5", "5 min"], ["10", "10 min"], ["15", "15 min"], ["20", "20 min"], ["30", "30 min"], ["45", "45+ min"]];
@@ -1117,7 +1117,7 @@ const ic = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidd
 /* Options card explore (?card=a|b|c|d): same settings, four layouts. Main link keeps A. */
 const CARDS = [["a", "A · Rows"], ["b", "B · Two columns"], ["c", "C · Tabs"], ["d", "D · Summary rows"]];
 const CARD_EXPLORE = CARDS.some(([k]) => k === new URLSearchParams(location.search).get("card"));
-const S = { opt: "i", card: CARD_EXPLORE ? new URLSearchParams(location.search).get("card") : "a", cTab: "deck", acc: "deck", cite: false, dur: "", focus: false, more: false, plan: ["basic", "pro"].includes(new URLSearchParams(location.search).get("plan")) ? new URLSearchParams(location.search).get("plan") : "gold", project: null, projOpen: false, projAt: null, projExp: [], newProj: false, projQ: "", panel: null, oTab: "mode", prompt: "", files: [], look: "auto", slides: "auto", proHint: false, budget: "auto", optView: "main", slDD: false, lang: "Auto", role: "Founder", detail: "auto", useCase: "", shown: "", narrative: "", missing: "placeholder", adv: false, notes: false, deep: false, fast: false, busy: false, bTab: "foryou" };
+const S = { opt: "i", card: CARD_EXPLORE ? new URLSearchParams(location.search).get("card") : "a", cTab: "deck", acc: "deck", cite: false, dur: "", focus: false, more: false, plan: ["basic", "pro"].includes(new URLSearchParams(location.search).get("plan")) ? new URLSearchParams(location.search).get("plan") : "gold", project: null, projOpen: false, projAt: null, projExp: [], newProj: false, projQ: "", panel: null, oTab: "mode", prompt: "", files: [], look: "auto", slides: "auto", proHint: false, budget: "auto", optView: "main", slDD: false, lang: "Auto", role: "Founder", detail: "auto", useCase: "", shown: "", narrative: "", missing: "estimate", adv: false, notes: false, deep: false, fast: false, busy: false, bTab: "foryou" };
 indexProjects();
 const q = new URLSearchParams(location.search);
 /* Explore link (?all=1) shows every Options version we built; the main link keeps E and A. */
@@ -1134,7 +1134,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const lookObj = () => (S.look === "kit" ? KIT : LOOKS.find((l) => l.id === S.look));
 const slideObj = () => SLIDES.find((s) => s.id === S.slides);
-const storyCount = () => !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "placeholder");
+const storyCount = () => !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "estimate");
 const deckCount = () => (S.lang !== "Auto") + (S.detail !== "auto") + (S.slides !== "auto") + !!S.dur + S.notes;
 const modeCount = () => (S.budget !== "auto") + S.fast + S.deep + S.cite;
 const changedCount = () => storyCount() + deckCount() + modeCount();
@@ -1313,10 +1313,10 @@ function sync() {
     const extras = [S.notes && "speaker notes", S.deep && "deep search"].filter(Boolean);
     const ucRaw = S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], uc = ucRaw ? lc1(ucRaw) : "";
     const nr = S.narrative ? lc1(NARRATIVES.find((x) => x[0] === S.narrative)[1]) : "";
-    const storyN = !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "placeholder");
+    const storyN = !!S.useCase + !!S.shown + !!S.narrative + (S.missing !== "estimate");
     br.innerHTML = `
       <span class="eyebrow">Your brief ${n || S.look !== LOOK_DEFAULT.c || S.slides !== "auto" || S.budget !== "auto" ? `<button data-reset>Reset</button>` : ""}</span>
-      <p>Make ${art(len)} ${tok("slides", len)} deck ${t ? `about <b>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</b> ` : S.files.length ? "" : `about <b class="empty">your topic</b> `}from ${tok("attach", S.files.length ? esc(S.files.length === 1 ? S.files[0] : S.files.length + " files") : ic("plus") + "your files", S.files.length ? "" : "add")} for ${tok("role", plural(S.role))}, in ${tok("lang", S.lang === "Auto" ? "the language I write in" : S.lang)}, at ${tok("detail", DETAIL.find((d) => d.id === S.detail).label.toLowerCase() + " detail")}, using <span class="pop-anchor"><button class="tok" data-looks aria-haspopup="dialog" aria-expanded="false">${l ? dotsHTML(l) + " " + esc(l.name) : "a look that fits"}</button></span>, with ${tok("budget", budgetObj().label.toLowerCase() + " effort")}${extras.length ? ` and ${extras.map((e) => tok("extras", e)).join(" and ")}` : ""}${uc ? `. Treat it as ${art(uc)} ${tok("story", esc(uc))}` : ""}${nr ? `${uc ? ", told as" : ". Tell it as"} ${art(nr)} ${tok("story", esc(nr))}` : ""}${S.shown ? `${uc || nr ? "," : ". It's"} ${tok("story", SHOWN_PHRASE[S.shown])}` : ""}${S.missing === "estimate" ? `${uc || nr || S.shown ? "," : ". Use"} ${uc || nr || S.shown ? "with " : ""}${tok("story", "estimates where data is missing")}` : ""}${S.fast ? `. <button class="tok" data-toggle="fast" role="switch" aria-checked="true" title="Turn off Fast">${ic("rocket")}No questions, straight to slides</button>` : ""}.</p>
+      <p>Make ${art(len)} ${tok("slides", len)} deck ${t ? `about <b>${esc(t.length > 90 ? t.slice(0, 90) + "…" : t)}</b> ` : S.files.length ? "" : `about <b class="empty">your topic</b> `}from ${tok("attach", S.files.length ? esc(S.files.length === 1 ? S.files[0] : S.files.length + " files") : ic("plus") + "your files", S.files.length ? "" : "add")} for ${tok("role", plural(S.role))}, in ${tok("lang", S.lang === "Auto" ? "the language I write in" : S.lang)}, at ${tok("detail", DETAIL.find((d) => d.id === S.detail).label.toLowerCase() + " detail")}, using <span class="pop-anchor"><button class="tok" data-looks aria-haspopup="dialog" aria-expanded="false">${l ? dotsHTML(l) + " " + esc(l.name) : "a look that fits"}</button></span>, with ${tok("budget", budgetObj().label.toLowerCase() + " effort")}${extras.length ? ` and ${extras.map((e) => tok("extras", e)).join(" and ")}` : ""}${uc ? `. Treat it as ${art(uc)} ${tok("story", esc(uc))}` : ""}${nr ? `${uc ? ", told as" : ". Tell it as"} ${art(nr)} ${tok("story", esc(nr))}` : ""}${S.shown ? `${uc || nr ? "," : ". It's"} ${tok("story", SHOWN_PHRASE[S.shown])}` : ""}${S.missing === "placeholder" ? `${uc || nr || S.shown ? "," : ". Use"} ${uc || nr || S.shown ? "with " : ""}${tok("story", "placeholders where data is missing")}` : ""}${S.fast ? `. <button class="tok" data-toggle="fast" role="switch" aria-checked="true" title="Turn off Fast">${ic("rocket")}No questions, straight to slides</button>` : ""}.</p>
       <div class="extras"><button class="tok tog-tok ${S.fast ? "on" : ""}" data-toggle="fast" role="switch" aria-checked="${S.fast}" title="No questions: a quick first draft">${ic("rocket")}Fast</button> · ${!S.notes || !S.deep ? tok("extras", ic("plus") + (extras.length ? "Add more" : "Add speaker notes or deep search"), "add") + " · " : ""}${tok("story", ic("plus") + (storyN ? "Edit story and audience" : "Add story and audience"), "add")}</div></div>`;
   }
 }
@@ -1379,7 +1379,7 @@ function popHTML(id) {
   if (id === "extras") return `<div class="menu" style="width:300px">${togs()}</div>`;
   if (id === "story") return `<div class="menu" style="width:320px"><div class="pop-h"><b>Audience and tone</b></div>${storyFieldsHTML()}</div>`;
   if (id === "budget") return `<div class="menu" style="width:320px"><div class="pop-h"><b>Budget tier</b></div>${budgetList()}</div>`;
-  const storySet = () => [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "placeholder" && "Estimates"].filter(Boolean);
+  const storySet = () => [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "estimate" && "Placeholders"].filter(Boolean);
   const foot = () => (changedCount() ? `<div class="pop-f"><button class="link" data-reset style="height:32px">Reset</button></div>` : "");
 }
 const storyFieldsHTML = () => `${roleField()}
@@ -1449,7 +1449,7 @@ const storyStoryHTML = () => `<div class="os-2">${storyFieldsHTML()}</div>`;
 const modesHTML = () => modesFor().map(modeRow).join("");
 const CSEC = [
   ["deck", "Length and language", "Slide count, talk time, language and detail", () => deckBody(), () => deckCount(), () => [slideObj().short, S.dur ? durLabel() + " talk" : "Any talk length", S.lang === "Auto" ? "Auto language" : S.lang, DETAIL.find((d) => d.id === S.detail).label + " detail", S.notes && "Speaker notes"].filter(Boolean).join(" · ")],
-  ["story", "Audience and tone", "Who it is for and how it flows. Anything left on auto is read from your prompt.", () => storyStoryHTML(), () => storyCount(), () => { const v = [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "placeholder" && "Estimates"].filter(Boolean); return v.length ? v.join(" · ") : "Auto, from your prompt"; }],
+  ["story", "Audience and tone", "Who it is for and how it flows. Anything left on auto is read from your prompt.", () => storyStoryHTML(), () => storyCount(), () => { const v = [S.useCase && USE_CASES.flatMap((g) => g[1]).find((x) => x[0] === S.useCase)?.[1], S.shown && SHOWN.find((x) => x[0] === S.shown)[1], S.narrative && NARRATIVES.find((x) => x[0] === S.narrative)[1], S.missing !== "estimate" && "Placeholders"].filter(Boolean); return v.length ? v.join(" · ") : "Auto, from your prompt"; }],
   ["effort", "Effort", "Premium costs twice the credits of Standard; Efficient costs half.", () => effBody(), () => +(S.budget !== "auto"), () => budgetObj().label],
   ["proj", "Project", "Every deck in a project reads its files. Pick a folder to save the deck there.", () => projField(), () => +!!S.project, () => projSummary()],
   ["mode", "Mode", "Skip questions, search the web or cite sources.", () => modesHTML(), () => S.fast + S.deep + S.cite, () => { const on = MODES.filter(([k]) => S[k]).map((m) => m[2]); return on.length ? on.join(" · ") : "All off"; }],
@@ -1542,7 +1542,7 @@ const slidesList = () => `${SLIDES.map((s) => `<button class="mi ${S.slides === 
 const budgetList = () => BUDGET.map((b) => `<button class="mi ${S.budget === b.id ? "sel" : ""}" data-budget="${b.id}"><span class="ico ${S.budget === b.id ? "on" : ""}">${ic(b.icon)}</span><span>${b.label}<small>${b.sub}</small></span>${ic("check", "ck")}</button>`).join("") + `<div class="sep"></div><div style="padding:4px 10px 6px;font-size:12px;color:rgb(var(--ink-3))">Premium costs twice the credits of Standard</div>`;
 const togs = (withDeep = S.opt === "c") => `
   <button class="tog" data-toggle="notes" role="switch" aria-checked="${S.notes}"><span class="tx"><b>Speaker notes</b><small>What to say, under every slide</small></span><span class="switch ${S.notes ? "on" : ""}"></span></button>
-  ${withDeep ? `<button class="tog" data-toggle="deep" role="switch" aria-checked="${S.deep}"><span class="tx"><b>Deep search</b><small>Web research on every slide: 20 credits a slide, not 10</small></span><span class="switch ${S.deep ? "on" : ""}"></span></button>` : ""}`;
+  ${withDeep ? `<button class="tog" data-toggle="deep" role="switch" aria-checked="${S.deep}"><span class="tx"><b>Deep search</b><small>Web research on every slide: 2x credits</small></span><span class="switch ${S.deep ? "on" : ""}"></span></button>` : ""}`;
 
 let openPop = null;
 // Keep the popover fully on screen: clamp its left edge between 16px gutters.
@@ -1836,7 +1836,7 @@ document.addEventListener("click", (e) => {
   if (dt) { S.detail = dt.dataset.detail; sync(); afterPick(["detail"]); $$(".detail-note").forEach((n) => (n.textContent = detailNote())); return; }
   const tg = t.closest("[data-toggle]");
   if (tg) { e.preventDefault(); S[tg.dataset.toggle] = !S[tg.dataset.toggle]; sync(); dropOrphanPop(); refreshPop(); return; }
-  if (t.closest("[data-reset]")) { Object.assign(S, { lang: "Auto", detail: "auto", useCase: "", shown: "", narrative: "", missing: "placeholder", notes: false, slides: "auto", budget: "auto", deep: false, fast: false, cite: false, dur: "", slDD: false, proHint: false }); sync(); dropOrphanPop(); refreshPop(); (S.panel === "modal" ? $("#opanel .lk-x-out") || $("#opanel") : S.panel && S.panel !== "tray" ? $("#opanel [data-panel-close].btn") : openPop ? $(".menu", openPop.el)?.querySelector("button") : $("[data-panel]"))?.focus({ preventScroll: true }); return; }
+  if (t.closest("[data-reset]")) { Object.assign(S, { lang: "Auto", detail: "auto", useCase: "", shown: "", narrative: "", missing: "estimate", notes: false, slides: "auto", budget: "auto", deep: false, fast: false, cite: false, dur: "", slDD: false, proHint: false }); sync(); dropOrphanPop(); refreshPop(); (S.panel === "modal" ? $("#opanel .lk-x-out") || $("#opanel") : S.panel && S.panel !== "tray" ? $("#opanel [data-panel-close].btn") : openPop ? $(".menu", openPop.el)?.querySelector("button") : $("[data-panel]"))?.focus({ preventScroll: true }); return; }
   const ct = t.closest("[data-ctab]");
   if (ct) { S.cTab = ct.dataset.ctab; S.slDD = false; refreshPanel(); $(`[data-ctab="${S.cTab}"]`)?.focus({ preventScroll: true }); return; }
   const ac = t.closest("[data-acc]");
