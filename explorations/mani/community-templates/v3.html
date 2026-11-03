@@ -1691,12 +1691,12 @@ function openModal(inner, { width, onClose = () => go('editor'), plain = false, 
 function closeModal() { $('#modal-root').innerHTML = ''; }
 
 function stepHead(title, backTo) {
-  const list = S._upd === 'details' ? ['details'] : S._upd ? ['mask', 'details'] : (S._firstTime ? ['profile-setup'] : []).concat(['mask', 'details'], S.publishAs === 'team' && (!S.company.on || ROUTE === 'team-claim') ? ['team-claim'] : []);
+  const list = S._upd ? ['details'] : (S._firstTime ? ['profile-setup'] : []).concat(['details'], S.publishAs === 'team' && (!S.company.on || ROUTE === 'team-claim') ? ['team-claim'] : []);
   const idx = list.indexOf(ROUTE);
   return `<div class="f-head">
     ${backTo ? `<button class="back" data-go="${backTo}" aria-label="Back"><i class="ph ph-arrow-left"></i></button>` : ''}
     <span>${title}</span>
-    ${idx >= 0 ? `<div class="steps">Step ${idx + 1} of ${list.length}<div class="dots">${list.map((_, i) => `<i class="${i <= idx ? 'on' : ''}"></i>`).join('')}</div></div>` : ''}
+    ${idx >= 0 && list.length > 1 ? `<div class="steps">Step ${idx + 1} of ${list.length}<div class="dots">${list.map((_, i) => `<i class="${i <= idx ? 'on' : ''}"></i>`).join('')}</div></div>` : ''}
   </div>`;
 }
 
@@ -1782,9 +1782,9 @@ function renderShare() {
   $$('[data-tog]').forEach(b => b.onclick = () => b.classList.toggle('on'));
   $('#adv-tog').onclick = () => { const b = $('#adv-body'); const h = b.style.display === 'none'; b.style.display = h ? 'flex' : 'none'; $('#adv-tog i').className = 'ph ' + (h ? 'ph-caret-up' : 'ph-caret-down'); };
   const pa = $('#publish-again');
-  if (pa) pa.onclick = () => { S._firstTime = false; go('mask'); };
+  if (pa) pa.onclick = () => { S._firstTime = false; go('details'); };
   const pn = $('#publish-now');
-  if (pn) pn.onclick = () => { S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); };
+  if (pn) pn.onclick = () => { S._firstTime = !S.profile; go(S.profile ? 'details' : 'profile-setup'); };
 }
 
 const shareNav = on => [['', 'ph-download-simple', 'Export to Powerpoint'], ['', 'ph-user-plus', 'Invite to collaborate'], ['share', 'ph-share-fat', 'Share externally'], ['share-community', 'ph-slideshow', 'Publish to Community']]
@@ -1849,7 +1849,7 @@ function renderShareCommunity() {
     </div>
     <div class="pad shc-how">
       <b>How it works</b>
-      ${[['ph-eye-slash', 'We hide private info', 'Names, emails and numbers are masked before it goes public.'], ['ph-globe-hemisphere-west', 'It goes live on Community', 'Anyone can start a deck from your template.'], ['ph-coins', 'You earn when they join', '200 credits per sign up. 1,000 more on paid plans when they upgrade.']].map(([i, h, d]) => `<div><i class="ph ${i}"></i><span><b>${h}</b>${d}</span></div>`).join('')}
+      ${[['ph-eye-slash', 'Check for private info', 'Remove client names and numbers you can’t share before you publish.'], ['ph-globe-hemisphere-west', 'It goes live on Community', 'Anyone can start a deck from your template.'], ['ph-coins', 'You earn when they join', '200 credits per sign up. 1,000 more on paid plans when they upgrade.']].map(([i, h, d]) => `<div><i class="ph ${i}"></i><span><b>${h}</b>${d}</span></div>`).join('')}
     </div>`;
   openModal(`
     <div class="f-head">Share “${esc(t.title)}” externally</div>
@@ -1862,11 +1862,11 @@ function renderShareCommunity() {
   const rr = () => { const sc = $('.share-main').scrollTop; renderShareCommunity(); $('.share-main').scrollTop = sc; };
   $('#shc-copy') && ($('#shc-copy').onclick = () => toast('Template link copied'));
   $('#shc-edit') && ($('#shc-edit').onclick = () => { S._upd = 'details'; save(); go('details'); });
-  $('#shc-update') && ($('#shc-update').onclick = () => { S._upd = 'slides'; S._firstTime = false; save(); go('mask'); });
+  $('#shc-update') && ($('#shc-update').onclick = () => { S._upd = 'slides'; S._firstTime = false; save(); go('details'); });
   $('#shc-unpub') && ($('#shc-unpub').onclick = () => { st.confirm = true; rr(); const m = $('.share-main'); m.scrollTop = m.scrollHeight; });
   $('#shc-no') && ($('#shc-no').onclick = () => { st.confirm = false; rr(); });
   $('#shc-yes') && ($('#shc-yes').onclick = () => { S.published = false; S._shc = null; save(); toast('Template unpublished', 'ph ph-eye-slash'); renderShareCommunity(); renderFlow(); });
-  $('#shc-publish') && ($('#shc-publish').onclick = () => { S._shc = null; S._upd = null; S._firstTime = !S.profile; go(S.profile ? 'mask' : 'profile-setup'); });
+  $('#shc-publish') && ($('#shc-publish').onclick = () => { S._shc = null; S._upd = null; S._firstTime = !S.profile; go(S.profile ? 'details' : 'profile-setup'); });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2317,7 +2317,7 @@ function renderCommunity() {
       <div class="sec-h" style="margin-top:48px"><h3>How it works</h3></div>
       <div class="how3">
         <div><span class="n">1</span><b>Create your page</b><span>Name, photo, a short bio and your links.</span></div>
-        <div><span class="n">2</span><b>Publish from any deck</b><span>Share, then Publish to Community. We help you hide private data first.</span></div>
+        <div><span class="n">2</span><b>Publish from any deck</b><span>Share, then Publish to Community. Add a title and category, and it’s live.</span></div>
         <div><span class="n">3</span><b>Earn rewards</b><span>You both get 200 credits after their first deck. On a paid plan, upgrades add 1,000 credits.</span></div>
       </div>
     </div>`);
@@ -2395,7 +2395,7 @@ function renderPageModal({ from = 'dashboard', edit = false } = {}) {
       if (!$('#pm-save')) return;
       S.profile = JSON.parse(JSON.stringify(d)); S.draft = JSON.parse(JSON.stringify(d)); save();
       if (edit) { toast('Page updated'); closeEdit(); }
-      else if (inShare) { toast(`Your page is live at presentations.ai/@${esc(d.handle)}`); go('mask'); }
+      else if (inShare) { toast(`Your page is live at presentations.ai/@${esc(d.handle)}`); go('details'); }
       else { toast(`Your page is live at presentations.ai/@${esc(d.handle)}`); go('community'); }
     }, 600);
   };
@@ -2500,7 +2500,7 @@ function renderMask() {
 function renderDetails() {
   const t = S.tpl;
   openModal(`
-    ${S._upd ? stepHead('Update template details', S._upd === 'details' ? 'share-community' : 'mask') : stepHead('Confirm Template details', 'mask')}
+    ${S._upd ? stepHead('Update template details', 'share-community') : stepHead('Confirm Template details', S._firstTime ? 'profile-setup' : 'share')}
     <div class="card" style="width:1112px">
       <div class="details">
         <div class="stack"><div class="stack-in"><div class="g g1"></div><div class="g g2"></div><div class="g g3"></div>${img(KPI[0].src)}</div></div>
@@ -3796,7 +3796,7 @@ function renderCreator() {
    ═══════════════════════════════════════════════════════════ */
 const ROUTES = [
   ['A · Page first', [['dashboard', 'Dashboard'], ['community', 'Community page'], ['create-page', 'Create page'], ['my-page', 'Your page']]],
-  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['share-community', 'Community tab'], ['share-updated', 'Update live'], ['profile-setup', 'Create page'], ['team-claim', 'Claim team page'], ['mask', 'Mask data'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile'], ['manage', 'Manage template']]],
+  ['Publish', [['editor', 'Editor'], ['share', 'Share'], ['share-community', 'Community tab'], ['share-updated', 'Update live'], ['profile-setup', 'Create page'], ['team-claim', 'Claim team page'], ['details', 'Details'], ['live', 'Live + share'], ['gallery', 'On Community'], ['profile', 'Profile'], ['manage', 'Manage template']]],
   ['Visitor signs up', [['template', 'Template link'], ['login', 'Sign up'], ['role', 'Role'], ['context', 'Your context'], ['generating', 'Generating'], ['present', 'Present'], ['visitor-editor', '200 credits']]],
   ['Rewards', [['notifs', 'Notifications'], ['rewards', 'Rewards'], ['redeem', 'Redeem cash']]],
   ['Creators', [['creator', 'Creator page']]],
@@ -3804,14 +3804,14 @@ const ROUTES = [
   ['Refer a friend', [['refer', 'Refer & earn'], ['ref-login', 'Friend signs up'], ['ref-setup', 'Select role'], ['ref-home', 'Friend gets 200'], ['ref-upgrade', 'Friend upgrades'], ['refer-joined', 'You see it'], ['refer-paid', 'You get the upgrade reward']]],
 ];
 const FLAT = ROUTES.flatMap(g => g[1].map(r => r[0]));
-const MODAL_ROUTES = ['share', 'share-community', 'share-updated', 'profile-setup', 'mask', 'details', 'live', 'create-page', 'team-claim', 'ws-claim', 'redeem', 'manage'];
+const MODAL_ROUTES = ['share', 'share-community', 'share-updated', 'profile-setup', 'details', 'live', 'create-page', 'team-claim', 'ws-claim', 'redeem', 'manage'];
 let ROUTE = 'editor';
 
 function ensurePrereqs(r) {
   const idx = FLAT.indexOf(r);
   if (r === 'profile-setup') { S._firstTime = true; S.profile = null; }
   const visitor = idx >= FLAT.indexOf('template') && idx <= FLAT.indexOf('visitor-editor');
-  const needsProfile = (idx >= FLAT.indexOf('mask') && idx <= FLAT.indexOf('profile') && r !== 'gallery') || visitor;
+  const needsProfile = (idx >= FLAT.indexOf('details') && idx <= FLAT.indexOf('profile') && r !== 'gallery') || visitor;
   const needsPublish = r === 'live' || visitor || (r === 'gallery' && S.journey === 'v');
   if (r === 'my-page' && !S.profile) S.profile = JSON.parse(JSON.stringify(S.draft));
   if (needsProfile && !S.profile) { S.profile = JSON.parse(JSON.stringify(S.draft)); S._firstTime = true; }
@@ -3820,8 +3820,8 @@ function ensurePrereqs(r) {
   if (r === 'redeem') S._pay = null;
   if (r === 'share-community' || r === 'share-updated') { S._shc = null; if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft)); if (!S.published) { S.published = true; S.publishedAt = Date.now() - 2 * 864e5; } }
   if (r === 'share-updated' && !S.updatedAt) publishUpdate();
-  if (S.journey === 'm' && S.published && (r === 'mask' || r === 'details') && !S._upd) S._upd = r === 'details' && !S.slidesChanged ? 'details' : 'slides';
-  if (['editor', 'share', 'live', 'gallery'].includes(r) || (S.journey !== 'm' && !['mask', 'details', 'team-claim'].includes(r))) S._upd = null;
+  if (S.journey === 'm' && S.published && r === 'details' && !S._upd) S._upd = r === 'details' && !S.slidesChanged ? 'details' : 'slides';
+  if (['editor', 'share', 'live', 'gallery'].includes(r) || (S.journey !== 'm' && !['details', 'team-claim'].includes(r))) S._upd = null;
   if (S.journey === 'c' && (r === 'gallery' || r === 'creator')) {
     if (!S.profile) S.profile = JSON.parse(JSON.stringify(S.draft));
     if (!S.published) { S.published = true; S.publishedAt = Date.now(); }
@@ -3879,14 +3879,14 @@ function go(r) {
 const JOURNEYS = [
   { id: 'e', group: 'me', label: 'Has a page', hint: 'Page already set up, publish a deck from Share', fresh: true,
     init: s => { s.profile = JSON.parse(JSON.stringify(s.draft)); },
-    steps: ['editor', 'share', 'mask', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
+    steps: ['editor', 'share', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
   { id: 'a', group: 'me', label: 'No page · from dashboard', hint: 'Create the page from the dashboard, publish later', fresh: true,
-    steps: ['dashboard', 'community', 'create-page', 'my-page', 'editor', 'share', 'mask', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
+    steps: ['dashboard', 'community', 'create-page', 'my-page', 'editor', 'share', 'details', 'live', 'gallery', 'template', 'profile', 'manage'] },
   { id: 'b', group: 'me', label: 'No page · from Share', hint: 'Publish from Share, create the page on the way', fresh: true,
-    steps: ['editor', 'share', 'profile-setup', 'mask', 'details', 'live', 'gallery', 'template', 'profile'] },
+    steps: ['editor', 'share', 'profile-setup', 'details', 'live', 'gallery', 'template', 'profile'] },
   { id: 'm', group: 'me', label: 'Edit or unpublish', hint: 'Template is live and you edited the deck. Update it, edit details or unpublish from the Publish to Community tab in Share', fresh: true,
     init: s => { s.slidesChanged = true; s.profile = JSON.parse(JSON.stringify(s.draft)); s.published = true; s.publishedAt = Date.now() - 2 * 864e5; s.uses = 38; s.signups = [{ who: 'Priya Raman', via: 'Google', role: 'Sales', at: Date.now() - 6e5 }, { who: 'Ken Ito', via: 'Email', role: 'Finance', at: Date.now() - 9e6 }]; },
-    steps: ['editor', 'share', 'share-community', 'mask', 'details', 'share-updated', 'template'] },
+    steps: ['editor', 'share', 'share-community', 'details', 'share-updated', 'template'] },
   { id: 'v', group: 'other', label: 'Visitor', hint: 'Someone opens the template link and signs up',
     steps: ['gallery', 'template', 'login', 'role', 'context', 'generating', 'present', 'visitor-editor'] },
   { id: 'r', group: 'other', label: 'Rewards', hint: 'Notifications, then Rewards in Settings', steps: ['notifs', 'rewards'] },
@@ -3895,7 +3895,7 @@ const JOURNEYS = [
     steps: ['dashboard', 'ws-settings', 'ws-claim', 'company'] },
   { id: 'tb', group: 'team', label: 'From Share', hint: 'Pick Foursquare in the last publish step, claim the page there', fresh: true,
     init: s => { s.profile = JSON.parse(JSON.stringify(s.draft)); s.publishAs = 'team'; },
-    steps: ['editor', 'share', 'mask', 'details', 'team-claim', 'live', 'gallery', 'template', 'company'] },
+    steps: ['editor', 'share', 'details', 'team-claim', 'live', 'gallery', 'template', 'company'] },
   { id: 'f', label: 'Free inviter', group: 'refer', hint: 'Both get 200 credits. 1,000 credits for upgrades are shown as an upsell', fresh: true, plan: 'free',
     steps: ['dashboard', 'refer', 'ref-login', 'ref-setup', 'ref-home', 'refer-joined', 'refer-paid'] },
   { id: 'p', label: 'Pro inviter', group: 'refer', hint: 'Both get 200 credits. If the friend upgrades in 7 days, you get 1,000 more credits, up to 10,000 a year', fresh: true, plan: 'pro',
