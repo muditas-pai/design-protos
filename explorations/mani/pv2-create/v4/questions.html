@@ -217,7 +217,7 @@ const logoURL = (d) => `https://www.google.com/s2/favicons?domain=${encodeURICom
 const SCREENS = {
   1: { intro: [["thought", "Thought for 38s"]], lead: "A couple of quick questions so the deck fits your company.", qs: [
     { q: "What company is this presentation for?", search: true, ph: "Search a company or type its website", skipAs: "Skip, no specific company" } ],
-    done: (a) => a.skipped ? "No problem. We'll keep it general and leave space for your logo." : `Got it. We'll pull ${a.text}'s name, colors and product details into the deck.` },
+    done: (a) => a.skipped ? "Kept general, with space for your logo." : `${a.text}’s name, colours and product details go into the deck.` },
   2: { intro: [["thought", "Thought for 38s"], ["ai", "What company is this presentation for?"], ["me", "Slack"], ["thought", "Thought for 1m 41s"]], lead: "Three more so the story lands with this prospect.", qs: [
     { q: "What's Slack's core product category?", ph: "Describe it in a few words", skipAs: "Skip, you pick", opts: [
       ["Workflow automation platform", "Automates handoffs, approvals and busywork"], ["Revenue intelligence software", "Pipeline insight, forecasting and deal risk"], ["Customer success and retention platform", "Keeps customers longer and grows accounts"] ] },
@@ -225,7 +225,7 @@ const SCREENS = {
       ["VP of Sales", "Cares about pipeline and win rates"], ["CFO or finance lead", "Cares about cost and payback"], ["Head of Operations", "Cares about rollout and time saved"], ["IT and security", "Cares about integrations and risk"] ] },
     { q: "Which proof should lead the deck?", ph: "Something else", skipAs: "Skip, balance them", opts: [
       ["Customer case studies", "Three short stories from teams like theirs"], ["ROI and cost savings", "Payback period, cost and hours saved"], ["Live product demo", "Walk through the product step by step"] ] } ],
-    done: () => "Thanks. Building your outline now." },
+    done: () => "Building your outline…" },
 };
 /* Suggested prompt: shown before the questions when the prompt is thin. Placeholders are marked so they are easy to fill. */
 SCREENS.s = { intro: [], lead: "Your prompt is a bit short. Here's a clearer version that will give you a better deck.", qs: [{ q: "Suggested prompt" }],
@@ -259,7 +259,7 @@ function threadHTML() {
   const bits = [`<div class="me">${esc(PROMPT)}</div>`];
   SC.intro.forEach(([k, t]) => bits.push(k === "thought" ? `<button class="thought">${esc(t)}${ic("caret")}</button>` : k === "me" ? `<div class="me">${esc(t)}</div>` : `<p class="ai">${esc(t)}</p>`));
   bits.push(`<p class="ai">${esc(SC.lead)}</p>`);
-  if (P === "s") { if (st.answers[0]) bits.push(`<div class="me">${esc(st.answers[0].text)}</div>`, `<p class="ai">${st.answers[0].skipped ? "Okay, we'll go with your prompt as written." : "Great. A quick question about your company next."}</p>`); return bits.join(""); }
+  if (P === "s") { if (st.answers[0]) bits.push(`<div class="me">${esc(st.answers[0].text)}</div>`, `<p class="ai">${st.answers[0].skipped ? "Your prompt is used as written." : "One question about your company next."}</p>`); return bits.join(""); }
   st.answers.forEach((a, k) => { if (a) bits.push(`<p class="ai">${esc(SC.qs[k].q)}</p>`, `<div class="me">${esc(a.text)}</div>`); });
   if (st.finished) bits.push(`<button class="thought">Thought for 4s${ic("caret")}</button>`, P === 2 ? `<p class="ai working"><span class="spinner"></span>${esc(SC.done(st.answers[0]))}</p>` : `<p class="ai">${esc(SC.done(st.answers[0]))}</p>`);
   return bits.join("");
@@ -274,11 +274,11 @@ function cardHTML() {
   if (P === "s") {
     if (st.answers[0]) return `<div class="closed"><span>Next, one question about your company.</span><a class="linkb" href="?p=1&v=${V}">Go to Q1</a></div>`;
     if (st.closed) return `<div class="closed"><span>Suggestion closed. We'll use your prompt as written.</span><button class="linkb" data-reopen>Show it again</button></div>`;
-    const marked = esc(SC.text).replace(/\[([^\]]+)\]/g, '<mark class="ph" title="Click to fill in">[$1]</mark>');
+    const marked = esc(SC.text).replace(/\[([^\]]+)\]/g, '<mark class="ph" title="Fill in">[$1]</mark>');
     return `<section class="qcard sp-card" tabindex="-1" role="group" aria-labelledby="qT">
       <div class="qh"><h2 id="qT">Suggested prompt</h2><button class="icon-btn" data-close aria-label="Close suggestion">${ic("x")}</button></div>
       <div class="gaps">${SC.gaps.map((g) => `<span>${esc(g)}</span>`).join("")}</div>
-      <div class="sp-edit" id="spEdit" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Suggested prompt, edit it if you like" spellcheck="false">${marked}</div>
+      <div class="sp-edit" id="spEdit" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Suggested prompt. Edit any word." spellcheck="false">${marked}</div>
       <details class="orig"><summary>Your original</summary><p>${esc(PROMPT)}</p></details>
       <div class="qfoot"><small>Click a highlighted part to fill it in</small><button class="b b-ghost" data-act="keep">Keep my original</button><button class="b b-go" data-act="usep">Use this prompt ${ic("arrowR")}</button></div>
     </section>`;
