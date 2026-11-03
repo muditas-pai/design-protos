@@ -371,6 +371,9 @@
     .g2steps b { display: block; font-size: 14px; line-height: 24px; font-weight: 600; color: var(--text-primary); }
     .g2steps span { display: block; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
     .g2steps .when { align-self: start; margin-top: 2px; padding: 2px 8px; border-radius: 999px; background: var(--bg-tertiary); font-size: 12px; line-height: 16px; color: var(--text-secondary); white-space: nowrap; }
+    .g2done { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px; border-radius: 8px; background: var(--bg-success-inverted); font-size: 13px; line-height: 18px; color: var(--text-success-primary); }
+    .g2done i { font-size: 16px; }
+    .g2done b { font-weight: 600; }
     .g2steps li.pay .n { background: var(--bg-brand); color: #fff; box-shadow: none; }
     .fine { margin-top: 16px; display: flex; gap: 8px; font-size: 12px; line-height: 16px; color: var(--text-tertiary); }
     .fine i { font-size: 14px; flex: none; margin-top: 1px; }
@@ -504,7 +507,7 @@ function pbtn(k) {
   const icon = `<span class="ic">${t.icon}</span>`;
   if (st === 'credited') return `<button class="pbtn done" data-detail="${k}">${icon}${k === 'g2' ? 'Reviewed' : t.name}<i class="ph-bold ph-check ok"></i></button>`;
   if (st === 'pending') return `<button class="pbtn wait" data-detail="${k}">${icon}${t.name}<span class="inrev">In Review</span></button>`;
-  if (st === 'waiting') return `<button class="pbtn wait" data-detail="${k}">${icon}G2<span class="inrev">Waiting for G2</span></button>`;
+  if (st === 'waiting') return `<button class="pbtn" data-relink="${k}">${icon}Add review link</button>`;
   // failed states retry straight from the button; the reason is on the card
   if (st === 'g2rejected') return `<button class="pbtn" data-toast="Opens your review on G2">${icon}Edit on G2<i class="ph ph-arrow-up-right"></i></button>`;
   if (st === 'rejected') return `<button class="pbtn" data-relink="${k}">${icon}Retry ${t.name}<i class="ph ph-arrow-clockwise"></i></button>`;
@@ -538,10 +541,6 @@ function detailDialog(k) {
     head = `<div class="dstat wait"><i class="ph-fill ph-hourglass-medium"></i><div><b>We’re checking your post</b><span>Expect an answer by <b>${h.due}</b>. We’ll email you either way.</span></div></div>`;
     rows = [['done', 'Link sent', h.sent], ['now', 'Being checked', 'Public, about presentations.ai, has #ad. Your opinion doesn’t affect it.'], ['', `+${t.reward} credits`, 'Added as soon as it’s approved']];
     foot = `${btn('Change the link', 'button-medium button-ghost', `data-relink="${k}"`)}<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
-  } else if (st === 'waiting') {
-    head = `<div class="dstat wait"><i class="ph-fill ph-hourglass-medium"></i><div><b>Waiting for G2 to publish it</b><span>G2 checks every review, usually in 2 to 3 days, and emails you once it’s live. Expect it by <b>${h.due}</b>.</span></div></div>`;
-    rows = [['done', 'Review written on G2', h.sent], ['now', 'G2 is checking it', 'G2 emails you when it’s published, or why it isn’t'], ['', 'Paste the link to your review', 'It’s in G2’s email. Come back here with it'], ['', '+400 credits', 'Added once we’ve checked the link']];
-    foot = `${btn('Done', 'button-medium button-ghost', 'data-close')}<span style="flex:1"></span>${btn('<i class="ph ph-link"></i>It’s published, add the link', 'button-medium button-primary', 'data-relink="g2"')}`;
   } else if (st === 'credited') {
     head = `<div class="dstat good"><i class="ph-fill ph-check-circle"></i><div><b>+${t.reward} credits added on ${h.done}</b><span>${g2 ? 'Thanks for the review.' : 'Thanks for sharing your experience.'} You’ll find them in your credits history.</span></div></div>`;
     foot = `<span style="flex:1"></span>${btn('Done', 'button-medium button-secondary', 'data-close')}`;
@@ -575,7 +574,7 @@ function postLine() {
   return '<p>A public post about your honest experience. One per platform.</p>';
 }
 function g2Line() {
-  return { waiting: '<p>Waiting for G2 to publish it, usually 2 to 3 days. Then paste the link from G2’s email.</p>',
+  return { waiting: '<p>Once G2 publishes your review, usually in 2 to 3 days, add the link here.</p>',
     pending: '<p>Checking your review. Click it for details.</p>', credited: '<p>+400 credits added. Thanks for the review.</p>',
     g2rejected: '<p class="bad">G2 didn’t publish your review and emailed you why. Edit it on G2, then paste the link once it’s live.</p>' }[S.g2]
     || '<p>An honest review on G2. Any rating counts.</p>';
@@ -715,7 +714,8 @@ function g2Dialog() {
   const head = `<div class="dlg-h"><h2 id="dt">${D.step === 'link' ? 'Add your G2 review' : 'Review us on G2'}</h2><button class="x" data-close aria-label="Close"><i class="ph ph-x"></i></button></div>`;
   if (D.step === 'link') return `${head}
     <div class="dlg-b">
-      <p class="lead">Paste the link to your published review. We’ll check it, then add <b>+400 credits</b>.</p>
+      ${S.g2 === 'waiting' ? `<div class="g2done"><i class="ph-fill ph-check-circle"></i><span><b>Review written on G2</b> on ${HISTORY.g2.sent}</span></div>` : ''}
+      <p class="lead">G2 checks every review before publishing it and emails you when yours is live, usually in 2 to 3 days. Paste the link from that email, and we’ll add <b>+400 credits</b> once we’ve checked it.</p>
       <div class="urlrow"><input class="url" id="url" placeholder="${TASKS.g2.example}" aria-label="Link to your G2 review" autocomplete="off" />${btn('<i class="ph ph-clipboard-text"></i>Paste', 'button-medium button-secondary', 'data-paste')}</div>
       <div class="hint" id="urlhint">${LINK_HINT.g2}</div>
       <button class="sample" data-sample>Use a sample link (prototype only)</button>
