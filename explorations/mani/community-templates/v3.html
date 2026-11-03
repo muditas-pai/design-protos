@@ -883,7 +883,9 @@
   .pm .ps-form { border-right: 1px solid var(--line); }
   .pm-prev { background: radial-gradient(120% 90% at 50% 0%, #fff 30%, #E6EBDF 100%); padding: 24px 28px; overflow: auto; }
   .pm-prev .cap { font-size: 10px; color: var(--t4); text-transform: uppercase; letter-spacing: .3px; font-weight: 600; margin-bottom: 12px; }
-  .covers { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .covers { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+  .cv-up { aspect-ratio: 16/9; border-radius: 4px; border: 1px dashed var(--t4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 500; color: var(--t2); cursor: pointer; background: var(--bg2, #fafafa); transition: border-color .15s, color .15s; }
+  .cv-up:hover { border-color: var(--ink); color: var(--ink); } .cv-up i { font-size: 16px; }
   .covers button { aspect-ratio: 16/9; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); transition: box-shadow .15s; }
   .covers button.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ink); }
   .browser { border-radius: 8px; overflow: hidden; background: #fff; box-shadow: var(--e3), 0 20px 50px rgba(0,0,0,.08); }
@@ -1554,7 +1556,7 @@ const DEFAULT_STATE = () => ({
     name: 'Joe Thomas', handle: 'joe-t', headline: 'Ops lead at Foursquare',
     bio: 'I build the decks my team runs on every month. Clean structure, no fluff.',
     linkedin: 'linkedin.com/in/joethomas', x: 'x.com/joethomas', website: 'joethomas.co', more: [{ k: 'instagram', v: 'instagram.com/joethomas' }],
-    topics: ['Business', 'Reports'], photo: null, cover: 'kpi',
+    topics: ['Business', 'Reports'], photo: null, cover: 'sage',
   },
   mask: {
     client:  { on: true,  rep: 'Client Name' },
@@ -1875,14 +1877,17 @@ function renderShareCommunity() {
 const TOPICS = ['Business', 'Reports', 'Marketing', 'Finance', 'Sales', 'Startups', 'Education', 'Design', 'Product'];
 const TAKEN = ['joe', 'joethomas', 'admin', 'team', 'presentations'];
 const COVERS = [
-  { id: 'kpi',      css: `url(${A}kpi-01-cover.jpg) center 35%/cover` },
-  { id: 'playbook', css: `url(${A}tpl-brand-playbook.jpg) center/cover` },
-  { id: 'digital',  css: `url(${A}tpl-digital.jpg) center/cover` },
-  { id: 'q2',       css: `url(${A}tpl-q2-product.jpg) center 20%/cover` },
-  { id: 'sage',     css: 'linear-gradient(120deg, #DDE4D3, #93A07A)' },
-  { id: 'ink',      css: 'linear-gradient(120deg, #23303B, #0B0F14)' },
+  // Abstract colour covers only. People can also upload their own image (cover: 'custom').
+  { id: 'sage',  css: 'radial-gradient(90% 140% at 10% 0%, #EEF2E6 0, transparent 60%), radial-gradient(80% 130% at 100% 100%, #8C9A72 0, transparent 65%), #C3CCB2' },
+  { id: 'mist',  css: 'radial-gradient(80% 130% at 0% 0%, #C9D6F5 0, transparent 60%), radial-gradient(70% 130% at 100% 100%, #F6D2C2 0, transparent 60%), #F3F1EC' },
+  { id: 'dusk',  css: 'radial-gradient(80% 140% at 0% 100%, #FF8A5B 0, transparent 60%), radial-gradient(80% 140% at 100% 0%, #7A5CFA 0, transparent 60%), #2A1F4A' },
+  { id: 'ocean', css: 'radial-gradient(90% 140% at 100% 0%, #5EC8D8 0, transparent 60%), radial-gradient(80% 140% at 0% 100%, #1E3A8A 0, transparent 65%), #0F2847' },
+  { id: 'ink',   css: 'radial-gradient(70% 120% at 85% 0%, #3A4B5C 0, transparent 60%), linear-gradient(120deg, #23303B, #0B0F14)' },
 ];
-const coverCSS = p => (COVERS.find(c => c.id === (p.cover || 'kpi')) || COVERS[0]).css;
+const coverCSS = p => p.cover === 'custom' && p.coverImg ? `url(${p.coverImg}) center/cover` : (COVERS.find(c => c.id === p.cover) || COVERS[0]).css;
+const coverTiles = d => `<label class="cv-up" title="Upload a cover"><i class="ph ph-upload-simple"></i><span>Upload</span><input type="file" accept="image/*" id="f-cover-up" hidden></label>`
+  + (d.coverImg ? `<button class="${d.cover === 'custom' ? 'on' : ''}" data-cover="custom" style="background:url(${d.coverImg}) center/cover" aria-label="Your cover"></button>` : '')
+  + COVERS.map(c => `<button class="${(d.cover === 'custom' && d.coverImg ? '' : (COVERS.find(x => x.id === d.cover) || COVERS[0]).id === c.id) ? 'on' : ''}" data-cover="${c.id}" style="background:${c.css}" aria-label="Cover ${c.id}"></button>`).join('');
 let handleTimer = null, handleOK = true;
 
 function handleStatusHTML(d, editMode) {
@@ -1902,8 +1907,8 @@ function profileFieldsHTML(d, editMode, { cover = false } = {}) {
         <span style="font-size:12px;color:var(--t3)">Square image, at least 200px. Initials show until you add one.</span>
       </div>
     </div>
-    ${cover ? `<div class="field"><label class="label">Cover <span class="hint">Top of your page</span></label>
-      <div class="covers" id="f-covers">${COVERS.map(c => `<button class="${(d.cover || 'kpi') === c.id ? 'on' : ''}" data-cover="${c.id}" style="background:${c.css}" aria-label="Cover ${c.id}"></button>`).join('')}</div></div>` : ''}
+    ${cover ? `<div class="field"><label class="label">Cover <span class="hint">Upload a wide image, or pick a colour</span></label>
+      <div class="covers" id="f-covers">${coverTiles(d)}</div></div>` : ''}
     <div class="two">
       <div class="field"><label class="label">Display name</label><input class="input" id="f-name" value="${esc(d.name)}" maxlength="40"></div>
       <div class="field"><label class="label">Page link ${handleStatusHTML(d, editMode)}</label>
@@ -1975,11 +1980,33 @@ function bindProfileFields(d, editMode, upd) {
     $$('#f-topics .chip').forEach(x => x.classList.toggle('on', d.topics.includes(x.dataset.topic)));
     upd(); save();
   });
-  $$('#f-covers [data-cover]').forEach(b => b.onclick = () => {
-    d.cover = b.dataset.cover;
-    $$('#f-covers [data-cover]').forEach(x => x.classList.toggle('on', x === b));
-    upd(); save();
-  });
+  const bindCovers = () => {
+    $$('#f-covers [data-cover]').forEach(b => b.onclick = () => {
+      d.cover = b.dataset.cover;
+      $$('#f-covers [data-cover]').forEach(x => x.classList.toggle('on', x === b));
+      upd(); save();
+    });
+    const up = $('#f-cover-up');
+    up && (up.onchange = e => {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        const im = new Image();
+        im.onload = () => {
+          // Crop to the 3:1 page banner
+          const c = document.createElement('canvas'); c.width = 1200; c.height = 400;
+          const k = Math.max(c.width / im.width, c.height / im.height), w = c.width / k, h = c.height / k;
+          c.getContext('2d').drawImage(im, (im.width - w) / 2, (im.height - h) / 2, w, h, 0, 0, c.width, c.height);
+          if (!$('#f-covers')) return;
+          d.coverImg = c.toDataURL('image/jpeg', 0.8); d.cover = 'custom';
+          $('#f-covers').innerHTML = coverTiles(d); bindCovers(); upd(); save();
+        };
+        im.src = r.result;
+      };
+      r.readAsDataURL(f);
+    });
+  };
+  bindCovers();
   $('#ps-photo').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader();
@@ -2277,7 +2304,7 @@ document.addEventListener('click', e => {
 });
 
 /* A2 · Community page tab: intro (no page yet) or manage (page exists) */
-const SAMPLE_PAGE = { name: 'Dana Ortiz', handle: 'dana', headline: 'Brand lead at Stagecraft', bio: 'Decks for launches, brand reviews and board updates.', topics: ['Design', 'Marketing'], cover: 'playbook', photo: null, linkedin: 'x', x: '', website: 'x' };
+const SAMPLE_PAGE = { name: 'Dana Ortiz', handle: 'dana', headline: 'Brand lead at Stagecraft', bio: 'Decks for launches, brand reviews and board updates.', topics: ['Design', 'Marketing'], cover: 'dusk', photo: null, linkedin: 'x', x: '', website: 'x' };
 function pagePreviewHTML(p, templates = []) {
   const tiles = templates.length
     ? templates.slice(0, 3).map(t => `<div class="pt" style="background-image:url(${t.img})"></div>`).join('')
