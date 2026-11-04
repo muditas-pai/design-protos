@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slideshow remote</title>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "agentation": "https://esm.sh/agentation@3?deps=react@18.3.1,react-dom@18.3.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="deck.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  i.ph, i.ph-fill { font-size: 16px; line-height: 1; }
+
+  /* ---------- Deck page ---------- */
+  .topbar { justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; }
+  .deck-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved { color: rgb(var(--ink-3)); font-size: 13px; white-space: nowrap; }
+  .actions { display: flex; align-items: center; gap: 8px; }
+  .remote-pill { display: none; }
+  .remote-pill.on { display: inline-flex; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--good)); flex-shrink: 0; }
+  main { max-width: 1024px; margin: 0 auto; padding: clamp(16px, 4vh, 32px) 24px 48px; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-head p { margin: 4px 0 0; color: rgb(var(--ink-3)); }
+  .grid { margin-top: clamp(16px, 3vh, 24px); display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .thumb { display: block; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+  .thumb .slide-fit { border-radius: 8px; border: 1px solid rgb(var(--line)); transition: box-shadow .2s var(--ease), border-color .15s var(--ease); }
+  .thumb:hover .slide-fit { box-shadow: var(--sh-menu); border-color: rgb(var(--ink-3) / .4); }
+  .thumb-meta { display: flex; gap: 8px; margin-top: 8px; font-size: 13px; line-height: 18px; color: rgb(var(--ink-2)); }
+  .thumb-meta b { color: rgb(var(--ink-3)); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .tip { margin-top: 24px; display: flex; gap: 12px; align-items: center; }
+  .chip { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgb(var(--brand-50)); color: rgb(var(--brand-fg)); flex-shrink: 0; }
+  .chip i { font-size: 20px; }
+  .tip p { margin: 2px 0 0; color: rgb(var(--ink-3)); font-size: 13px; line-height: 18px; }
+  .tip .btn { margin-left: auto; }
+  @media (max-width: 640px) { .saved, .hide-sm { display: none; } main { padding: 16px; } .tip { flex-wrap: wrap; } .tip .btn { margin-left: 0; } }
+
+  /* ---------- Slideshow ---------- */
+  .show { position: fixed; inset: 0; z-index: 100; background: #000; display: none; align-items: center; justify-content: center; cursor: default; }
+  .show.on { display: flex; animation: fade .28s var(--ease); }
+  .show.idle { cursor: none; }
+  .stage { position: relative; width: min(100vw, calc(100vh * 16 / 9)); }
+  .stage .slide-fit { border-radius: 0; }
+  .stage .slide-fit.in-next { animation: inNext .32s var(--ease); }
+  .stage .slide-fit.in-prev { animation: inPrev .32s var(--ease); }
+  .blackout { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .25s var(--ease); z-index: 2; }
+  .show.black .blackout { opacity: 1; }
+  .laser { position: absolute; z-index: 3; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #ff2d2d; box-shadow: 0 0 0 6px rgb(255 45 45 / .25), 0 0 24px 6px rgb(255 45 45 / .55); opacity: 0; transition: opacity .15s var(--ease); pointer-events: none; }
+  .laser.on { opacity: 1; }
+
+  .controls { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 9999px; background: rgb(255 255 255 / .1); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; transition: opacity .2s var(--ease), transform .2s var(--ease); }
+  .show.idle .controls:not(.pinned) { opacity: 0; transform: translate(-50%, 8px); pointer-events: none; }
+  .cbtn { height: 36px; min-width: 36px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 9999px; background: transparent; color: #fff; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .cbtn:hover { background: rgb(255 255 255 / .15); }
+  .cbtn[aria-expanded="true"] { background: rgb(255 255 255 / .2); }
+  .cbtn i { font-size: 18px; }
+  .count { padding: 0 8px; font-size: 13px; font-variant-numeric: tabular-nums; color: rgb(255 255 255 / .85); }
+  .vr { width: 1px; height: 20px; background: rgb(255 255 255 / .25); margin: 0 4px; }
+  .cbtn .dot { box-shadow: 0 0 0 2px rgb(0 0 0 / .4); }
+  .cbtn .live { display: none; }
+  .cbtn.connected .live { display: inline-flex; }
+  .exit-key { color: rgb(255 255 255 / .6); }
+
+  /* Settings menu: opens above the control bar, height capped to the space left */
+  .smenu { position: absolute; z-index: 6; width: 300px; max-width: calc(100vw - 24px); overflow-y: auto; display: none; }
+  .smenu.on { display: block; }
+  .smenu .menu-item { height: auto; min-height: 36px; padding: 8px 10px; align-items: flex-start; }
+  .smenu .menu-item i { margin-top: 2px; font-size: 16px; }
+  .smenu .mi-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .smenu .mi-text span { color: rgb(var(--ink)); font-weight: 500; }
+  .smenu .mi-text small { color: rgb(var(--ink-3)); font-size: 12px; line-height: 16px; }
+  .smenu .kbd { margin-left: auto; align-self: center; }
+  .smenu .badge { align-self: center; }
+  .smenu hr { margin: 6px 0; }
+  .smenu .eyebrow { padding: 6px 10px 4px; }
+
+  /* ---------- Connect dialog ---------- */
+  .scrim { z-index: 200; display: none; animation: fade .18s var(--ease); backdrop-filter: blur(2px); }
+  .scrim.on { display: block; }
+  .dwrap { position: fixed; inset: 0; z-index: 201; display: none; align-items: center; justify-content: center; padding: 24px; }
+  .dwrap.on { display: flex; }
+  .dlg { position: relative; width: min(600px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: var(--r-dialog); box-shadow: var(--sh-dialog); animation: dlgIn .2s var(--ease); }
+  .dlg-scroll { overflow-y: auto; padding: 20px 24px 24px; }
+  .dlg h2 { margin: 0; }
+  .dlg .desc { margin: 6px 0 0; color: rgb(var(--ink-2)); }
+  .x-out { position: absolute; top: 0; right: -48px; width: 36px; height: 36px; border-radius: 50%; border: 0; display: flex; align-items: center; justify-content: center; background: rgb(255 255 255 / .92); color: rgb(var(--ink)); cursor: pointer; box-shadow: var(--sh-menu); }
+  .x-out i { font-size: 18px; }
+  .pair { margin-top: 20px; display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+  .qr { width: 196px; height: 196px; padding: 10px; border-radius: var(--r-card); border: 1px solid rgb(var(--line)); background: #fff; display: flex; align-items: center; justify-content: center; position: relative; }
+  .qr img, .qr canvas { width: 176px !important; height: 176px !important; display: block; }
+  .qr .shimmer { width: 176px; height: 176px; }
+  .steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .steps li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; }
+  .steps .n { width: 24px; height: 24px; border-radius: 50%; background: rgb(var(--sunken)); color: rgb(var(--ink-2)); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .steps b { display: block; font-weight: 500; }
+  .steps span { display: block; color: rgb(var(--ink-3)); font-size: 13px; line-height: 18px; }
+  .code { margin-top: 6px; display: flex; gap: 6px; }
+  .code span { width: 36px; height: 44px; border-radius: var(--r-control); border: 1px solid rgb(var(--line)); background: rgb(var(--canvas)); display: flex; align-items: center; justify-content: center; font-family: "Geist Mono", monospace; font-size: 22px; font-weight: 500; color: rgb(var(--ink)); }
+  .url { font-family: "Geist Mono", monospace; font-size: 13px; color: rgb(var(--ink-2)); word-break: break-all; }
+  .status { margin-top: 20px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-card); background: rgb(var(--sunken)); }
+  .status .txt { flex: 1; min-width: 0; }
+  .status .txt b { display: block; font-weight: 500; }
+  .status .txt span { display: block; color: rgb(var(--ink-3)); font-size: 13px; line-height: 18px; }
+  .status.ok { background: rgb(var(--good-bg)); }
+  .status.ok .ok-ic { width: 28px; height: 28px; border-radius: 50%; background: rgb(var(--good)); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .status .ok-ic { display: none; } .status.ok .ok-ic { display: flex; } .status.ok .spinner { display: none; }
+  .status .btn { display: none; } .status.ok .btn { display: inline-flex; }
+  .fine { margin: 14px 0 0; color: rgb(var(--ink-3)); font-size: 13px; line-height: 18px; display: flex; gap: 8px; }
+  .fine i { margin-top: 1px; }
+  .devices { margin-top: 12px; display: grid; gap: 8px; }
+  .device { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; border: 1px solid rgb(var(--line)); border-radius: var(--r-control); }
+  .device i { font-size: 18px; color: rgb(var(--ink-2)); }
+  .device span { flex: 1; } .device small { color: rgb(var(--ink-3)); font-size: 12px; }
+  @media (max-width: 1023px) { .x-out { right: 10px; top: 10px; background: transparent; box-shadow: none; } .dlg-scroll { padding-top: 22px; } .dlg h2 { padding-right: 36px; } }
+  @media (max-width: 560px) { .pair { grid-template-columns: 1fr; justify-items: center; } .steps { width: 100%; } .dwrap { padding: 12px; } .dlg { max-height: calc(100vh - 24px); } }
+  @media (max-height: 640px) {
+    .dlg-scroll { padding: 16px 20px 18px; }
+    .pair { margin-top: 14px; gap: 18px; }
+    .qr { width: 160px; height: 160px; } .qr img, .qr canvas, .qr .shimmer { width: 140px !important; height: 140px !important; }
+    .status { margin-top: 14px; padding: 10px 12px; }
+    .code span { height: 38px; width: 32px; font-size: 20px; }
+    .steps { gap: 10px; }
+  }
+
+  /* ---------- Toasts ---------- */
+  .toasts { position: fixed; top: calc(env(safe-area-inset-top) + 24px); left: 50%; transform: translateX(-50%); z-index: 300; width: min(420px, calc(100vw - 32px)); display: grid; gap: 8px; pointer-events: none; }
+  .toast { animation: toastIn .22s var(--ease); align-items: center; }
+  .toast i { font-size: 20px; color: rgb(var(--good)); }
+  .toast.warn i { color: rgb(var(--ink-3)); }
+  .toast.out { opacity: 0; transform: translateY(-8px); transition: all .2s var(--ease); }
+
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes dlgIn { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
+  @keyframes inNext { from { opacity: .4; transform: translateX(40px); } }
+  @keyframes inPrev { from { opacity: .4; transform: translateX(-40px); } }
+</style>
+</head>
+<body>
+
+<!-- ========== Deck page ========== -->
+<header class="topbar">
+  <div class="brand">
+    <span class="logo brand-gradient"></span>
+    <span class="deck-name" id="deckName"></span>
+    <span class="saved">· Autosaved just now</span>
+  </div>
+  <div class="actions">
+    <button class="btn btn-ghost btn-sm remote-pill" id="topRemote" title="Phone remote connected"><span class="dot"></span><span class="hide-sm" id="topRemoteName">Phone connected</span></button>
+    <button class="btn btn-secondary" data-open-connect><i class="ph ph-device-mobile"></i><span class="hide-sm">Phone remote</span></button>
+    <button class="btn btn-primary" id="presentBtn"><i class="ph-fill ph-play"></i>Present</button>
+  </div>
+</header>
+
+<main>
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Present</div>
+      <h1 class="t-title" style="margin:4px 0 0">Pick a slide to start from</h1>
+      <p>7 slides · about 20 minutes with notes</p>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+
+  <div class="card tip">
+    <span class="chip"><i class="ph ph-device-mobile"></i></span>
+    <div>
+      <b>Use your phone as a remote</b>
+      <p>Move slides, read your notes and point at the screen from your phone. No app to install.</p>
+    </div>
+    <button class="btn btn-secondary" data-open-connect>Connect phone</button>
+  </div>
+</main>
+
+<!-- ========== Slideshow ========== -->
+<div class="show" id="show" aria-hidden="true">
+  <div class="stage" id="stage">
+    <div id="slideHost"></div>
+    <div class="blackout"></div>
+    <div class="laser" id="laser"></div>
+  </div>
+
+  <div class="controls" id="controls">
+    <button class="cbtn" id="prev" aria-label="Previous slide"><i class="ph ph-caret-left"></i></button>
+    <span class="count" id="count">1 / 7</span>
+    <button class="cbtn" id="next" aria-label="Next slide"><i class="ph ph-caret-right"></i></button>
+    <span class="vr"></span>
+    <button class="cbtn" id="remoteBtn" aria-label="Phone remote" title="Phone remote"><i class="ph ph-device-mobile"></i><span class="live"><span class="dot"></span></span></button>
+    <button class="cbtn" id="settingsBtn" aria-label="Slideshow settings" aria-expanded="false" title="Settings"><i class="ph ph-gear-six"></i></button>
+    <span class="vr"></span>
+    <button class="cbtn" id="exitBtn">Exit <span class="exit-key">· Esc</span></button>
+  </div>
+
+  <div class="menu smenu" id="smenu" role="menu">
+    <div class="eyebrow">Phone remote</div>
+    <div id="menuRemote"></div>
+    <hr class="divider">
+    <div class="eyebrow">Slideshow</div>
+    <div class="menu-item" role="menuitem" data-act="black"><i class="ph ph-moon"></i><div class="mi-text"><span id="blackLabel">Black screen</span><small>Hide the slide while you talk</small></div><span class="kbd">B</span></div>
+    <div class="menu-item" role="menuitem" data-act="full"><i class="ph ph-corners-out"></i><div class="mi-text"><span>Full screen</span><small>Fill the whole display</small></div><span class="kbd">F</span></div>
+  </div>
+</div>
+
+<!-- ========== Connect dialog ========== -->
+<div class="scrim" id="scrim"></div>
+<div class="dwrap" id="dwrap" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+  <div class="dlg">
+    <button class="x-out" id="dlgClose" aria-label="Close"><i class="ph ph-x"></i></button>
+    <div class="dlg-scroll">
+      <h2 class="t-title" id="dlgTitle">Control this slideshow from your phone</h2>
+      <p class="desc">Scan the code with your phone camera. Your phone and this computer need to be on the same Wi-Fi.</p>
+
+      <div class="pair">
+        <div class="qr" id="qr"><div class="shimmer"></div></div>
+        <ol class="steps">
+          <li><span class="n">1</span><div><b>Open the camera and scan</b><span>Tap the link that appears. The remote opens in your browser.</span></div></li>
+          <li><span class="n">2</span><div><b>No camera? Open this link</b><span class="url" id="pairUrl">Getting the address…</span></div></li>
+          <li><span class="n">3</span><div><b>Then enter this code</b><div class="code" id="code"></div></div></li>
+        </ol>
+      </div>
+
+      <div class="status" id="status">
+        <span class="spinner"></span>
+        <span class="ok-ic"><i class="ph ph-check" style="font-size:16px"></i></span>
+        <div class="txt"><b id="statusTitle">Waiting for your phone…</b><span id="statusSub">This updates as soon as your phone connects.</span></div>
+        <button class="btn btn-primary btn-sm" id="statusBtn">Start presenting</button>
+      </div>
+      <div class="devices" id="devices"></div>
+
+      <p class="fine"><i class="ph ph-lock-simple"></i><span>No app or Bluetooth pairing needed. Anyone on this Wi-Fi with the code can move your slides, so share it only with your phone. Disconnect from Settings to get a new code.</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div id="agentation-root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { Agentation } from 'agentation';
+  createRoot(document.getElementById('agentation-root')).render(React.createElement(Agentation));
+</script>
+
+<script src="deck.js"></script>
+<script src="relay.js"></script>
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const D = window.DECK, N = D.slides.length;
+const S = { index: 0, presenting: false, black: false, startedAt: null };
+const remotes = new Map(); // id -> name
+let code = null, pairUrl = null, seq = 0, pairing = null, lastPtr = 0;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clampIdx = v => Number.isInteger(v) ? Math.max(0, Math.min(N - 1, v)) : null;
+
+/* ---------- deck page ---------- */
+$('#deckName').textContent = D.title;
+D.slides.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.className = 'thumb';
+  b.innerHTML = `<div></div><div class="thumb-meta"><b>${i + 1}</b><span>${s.title}</span></div>`;
+  b.onclick = () => startShow(i);
+  $('#grid').appendChild(b);
+  mountSlide(b.firstChild, i);
+});
+$('#presentBtn').onclick = () => startShow(0);
+$$('[data-open-connect]').forEach(b => b.onclick = openConnect);
+$('#topRemote').onclick = openConnect;
+
+/* ---------- slideshow ---------- */
+function render(dir) {
+  const host = $('#slideHost');
+  mountSlide(host, S.index);
+  host.classList.remove('in-next', 'in-prev'); void host.offsetWidth;
+  if (dir) host.classList.add(dir > 0 ? 'in-next' : 'in-prev');
+  $('#count').textContent = `${S.index + 1} / ${N}`;
+  $('#show').classList.toggle('black', S.black);
+  $('#blackLabel').textContent = S.black ? 'Show the slide' : 'Black screen';
+  broadcast();
+}
+function go(i) {
+  if (!S.presenting) return;
+  i = Math.max(0, Math.min(N - 1, i));
+  if (i === S.index) return;
+  const dir = i > S.index ? 1 : -1;
+  S.index = i; S.black = false; hideLaser();
+  render(dir);
+}
+function startShow(i = 0, fromRemote = false) {
+  S.index = i; S.presenting = true; S.black = false;
+  if (!S.startedAt) S.startedAt = Date.now();
+  $('#show').classList.add('on'); $('#show').setAttribute('aria-hidden', 'false');
+  closeConnect(); closeMenu();
+  if (!fromRemote && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  render(0); wake();
+}
+function endShow() {
+  S.presenting = false; S.black = false; hideLaser(); closeMenu();
+  $('#show').classList.remove('on', 'black'); $('#show').setAttribute('aria-hidden', 'true');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  broadcast();
+}
+function setBlack(on) { if (!S.presenting) return; S.black = on; hideLaser(); render(0); }
+function toggleFull() { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); }
+
+$('#prev').onclick = () => go(S.index - 1);
+$('#next').onclick = () => go(S.index + 1);
+$('#exitBtn').onclick = endShow;
+$('#remoteBtn').onclick = () => { closeMenu(); openConnect(); };
+
+document.addEventListener('keydown', e => {
+  if ($('#dwrap').classList.contains('on')) { if (e.key === 'Escape') closeConnect(); return; }
+  if (!S.presenting) return;
+  const k = e.key;
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter', 'n'].includes(k)) { e.preventDefault(); go(S.index + 1); }
+  else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p'].includes(k)) { e.preventDefault(); go(S.index - 1); }
+  else if (k === 'Home') go(0);
+  else if (k === 'End') go(N - 1);
+  else if (k === 'b' || k === 'B' || k === '.') setBlack(!S.black);
+  else if (k === 'f' || k === 'F') toggleFull();
+  else if (k === 'Escape') { if ($('#smenu').classList.contains('on')) closeMenu(); else endShow(); }
+  wake();
+});
+
+/* auto-hide controls after 2200ms idle */
+let idleT;
+function wake() {
+  $('#show').classList.remove('idle');
+  clearTimeout(idleT);
+  idleT = setTimeout(() => { if (!$('#smenu').classList.contains('on')) $('#show').classList.add('idle'); }, 2200);
+}
+$('#show').addEventListener('mousemove', wake);
+$('#show').addEventListener('click', e => { if (e.target.closest('#controls, #smenu')) return; closeMenu(); });
+
+/* ---------- settings menu (opens above when the bar is at the bottom; flips, caps and scrolls) ---------- */
+function placeMenu() {
+  const m = $('#smenu'), b = $('#settingsBtn').getBoundingClientRect();
+  const gap = 8, pad = 12;
+  const above = b.top - gap - pad, below = window.innerHeight - b.bottom - gap - pad;
+  if (!m.dataset.dir) m.dataset.dir = below >= Math.min(m.scrollHeight, 320) || below > above ? 'down' : 'up';
+  const space = m.dataset.dir === 'up' ? above : below;
+  m.style.maxHeight = Math.max(160, space) + 'px';
+  const w = m.offsetWidth;
+  m.style.left = Math.max(pad, Math.min(window.innerWidth - w - pad, b.left + b.width / 2 - w / 2)) + 'px';
+  if (m.dataset.dir === 'up') { m.style.top = ''; m.style.bottom = (window.innerHeight - b.top + gap) + 'px'; }
+  else { m.style.bottom = ''; m.style.top = (b.bottom + gap) + 'px'; }
+}
+function openMenu() { renderMenuRemote(); const m = $('#smenu'); delete m.dataset.dir; m.classList.add('on'); $('#settingsBtn').setAttribute('aria-expanded', 'true'); $('#controls').classList.add('pinned'); placeMenu(); }
+function closeMenu() { $('#smenu').classList.remove('on'); $('#settingsBtn').setAttribute('aria-expanded', 'false'); $('#controls').classList.remove('pinned'); wake(); }
+$('#settingsBtn').onclick = e => { e.stopPropagation(); $('#smenu').classList.contains('on') ? closeMenu() : openMenu(); };
+window.addEventListener('resize', () => { if ($('#smenu').classList.contains('on')) placeMenu(); });
+$('#smenu').addEventListener('click', e => {
+  const it = e.target.closest('[data-act]'); if (!it) return;
+  const a = it.dataset.act;
+  if (a === 'connect') { closeMenu(); openConnect(); }
+  else if (a === 'black') { setBlack(!S.black); closeMenu(); }
+  else if (a === 'full') { toggleFull(); closeMenu(); }
+  else if (a === 'disconnect') { disconnectAll(); closeMenu(); }
+});
+function renderMenuRemote() {
+  const n = remotes.size, names = [...remotes.values()];
+  $('#menuRemote').innerHTML = n
+    ? `<div class="menu-item" role="menuitem" data-act="connect"><i class="ph ph-device-mobile"></i><div class="mi-text"><span>${esc(names[0])}${n > 1 ? ` and ${n - 1} more` : ''}</span><small>Connected · code ${code}</small></div><span class="badge badge-good">Live</span></div>
+       <div class="menu-item" role="menuitem" data-act="disconnect"><i class="ph ph-plugs"></i><div class="mi-text"><span>Disconnect phone</span><small>Gives you a new code. Keyboard still works.</small></div></div>`
+    : `<div class="menu-item" role="menuitem" data-act="connect"><i class="ph ph-device-mobile"></i><div class="mi-text"><span>Connect phone remote</span><small>Move slides and read notes from your phone</small></div></div>`;
+}
+
+/* ---------- laser pointer ---------- */
+let laserT;
+function showLaser(x, y) {
+  const l = $('#laser');
+  l.style.left = (x * 100) + '%'; l.style.top = (y * 100) + '%';
+  l.classList.add('on');
+  clearTimeout(laserT); laserT = setTimeout(hideLaser, 1500);
+}
+function hideLaser() { $('#laser').classList.remove('on'); }
+
+/* ---------- connect dialog ---------- */
+function openConnect() {
+  $('#scrim').classList.add('on'); $('#dwrap').classList.add('on');
+  renderStatus();
+  if (code && pairUrl) drawQr(); else ensurePaired();
+  setTimeout(() => $('#dlgClose').focus(), 50);
+}
+function closeConnect() { $('#scrim').classList.remove('on'); $('#dwrap').classList.remove('on'); }
+$('#dlgClose').onclick = closeConnect;
+$('#dwrap').addEventListener('click', e => { if (e.target === $('#dwrap')) closeConnect(); });
+$('#statusBtn').onclick = () => { closeConnect(); if (!S.presenting) startShow(S.index); };
+
+function renderStatus() {
+  const n = remotes.size, st = $('#status');
+  st.classList.toggle('ok', n > 0);
+  const names = [...remotes.values()];
+  if (n) {
+    $('#statusTitle').textContent = n === 1 ? `${names[0]} connected` : `${n} phones connected`;
+    $('#statusSub').textContent = S.presenting ? 'Your slides now follow its taps.' : 'Start presenting when you are ready. You can also start from the phone.';
+    $('#statusBtn').textContent = S.presenting ? 'Back to slides' : 'Start presenting';
+  } else {
+    $('#statusTitle').textContent = 'Waiting for your phone…';
+    $('#statusSub').textContent = 'This updates as soon as your phone connects.';
+  }
+  $('#devices').innerHTML = n > 1 ? [...remotes].map(([id, nm]) => `<div class="device"><i class="ph ph-device-mobile"></i><span>${esc(nm)}</span><small>Connected</small></div>`).join('') : '';
+  const on = n > 0;
+  $('#remoteBtn').classList.toggle('connected', on);
+  $('#topRemote').classList.toggle('on', on);
+  $('#topRemoteName').textContent = on ? (n === 1 ? `${names[0]} connected` : `${n} phones connected`) : '';
+  if ($('#smenu').classList.contains('on')) renderMenuRemote();
+}
+
+function drawQr() {
+  const q = $('#qr'); q.innerHTML = '';
+  new QRCode(q, { text: pairUrl + '?c=' + code, width: 176, height: 176, colorDark: '#14141f', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  q.title = '';
+  $('#pairUrl').textContent = pairUrl.replace(/^https?:\/\//, '');
+  $('#code').innerHTML = code.split('').map(d => `<span>${d}</span>`).join('');
+}
+
+/* ---------- relay (relay.js: server.py on Wi-Fi or a tunnel, a public relay on static hosting) ---------- */
+const screenId = (() => { try { let v = sessionStorage.getItem('screen-cid'); if (!v) { v = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('screen-cid', v); } return v; } catch (e) { return Math.random().toString(36).slice(2, 10); } })();
+function ensurePaired() {
+  if (code) return Promise.resolve();
+  if (pairing) return pairing;
+  pairing = (async () => {
+    await Relay.init();
+    let saved = null; try { saved = sessionStorage.getItem('remote-code'); } catch (e) {}
+    if (saved && saved.length !== Relay.codeLength) saved = null;
+    const [c, url] = await Promise.all([Relay.pair(saved), Relay.remoteUrl()]);
+    code = c; try { sessionStorage.setItem('remote-code', c); } catch (e) {}
+    pairUrl = url;
+    const local = Relay.mode === 'server' && /^(localhost|127\.|\[::1\])/.test(location.hostname);
+    if (!local) { // public link: no Wi-Fi rule
+      $('.dlg .desc').textContent = 'Scan the code with your phone camera. Works on any network, Wi-Fi or mobile data.';
+      $('.fine span').textContent = 'No app or Bluetooth pairing needed. Anyone with this link and code can move your slides, so share the code only with your phone. Disconnect from Settings to get a new code.';
+    }
+    listen();
+    if ($('#dwrap').classList.contains('on')) drawQr();
+  })().catch(() => {
+    $('#qr').innerHTML = '<i class="ph ph-wifi-slash" style="font-size:32px;color:rgb(var(--ink-3))"></i>';
+    $('#pairUrl').textContent = 'Cannot reach the remote service. Check your internet connection, then reopen this window.';
+  }).finally(() => { pairing = null; });
+  return pairing;
+}
+function listen() { Relay.listen({ code, role: 'screen', cid: screenId, onMsg: handle }); }
+function stopListening() { Relay.leave(true); }
+function handle(m) {
+  if (m.type === 'hello') { remotes.clear(); (m.remotes || []).forEach(r => remotes.set(r.id, r.name)); renderStatus(); broadcast(); return; }
+  if (m.type === 'remote-joined') {
+    const known = remotes.has(m.id);
+    remotes.set(m.id, m.name); renderStatus(); broadcast();
+    if (known || m.quiet) return; // same phone reconnecting, or already there when this page opened
+    toast(`${m.name} connected. ${S.presenting ? 'Your slides now follow its taps.' : 'Start the slideshow from either screen.'}`);
+    if ($('#dwrap').classList.contains('on') && S.presenting) setTimeout(closeConnect, 1600);
+    return;
+  }
+  if (m.type === 'remote-left') {
+    if (!remotes.has(m.id)) return;
+    remotes.delete(m.id); renderStatus();
+    toast(`${m.name} disconnected. Your keyboard still works.`, 'warn');
+    return;
+  }
+  if (m.type === 'cmd') {
+    if (m.action === 'next') go(S.index + 1);
+    else if (m.action === 'prev') go(S.index - 1);
+    else if (m.action === 'goto') { const i = clampIdx(m.index); if (i !== null) S.presenting ? go(i) : startShow(i, true); }
+    else if (m.action === 'start') startShow(clampIdx(m.index) ?? S.index, true);
+    else if (m.action === 'end') endShow();
+    else if (m.action === 'black') setBlack(!!m.on);
+    else if (m.action === 'resetTimer') { S.startedAt = Date.now(); broadcast(); }
+    else if (m.action === 'sync') broadcast();
+    return;
+  }
+  if (m.type === 'pointer') {
+    if (typeof m.seq === 'number') { if (m.seq < lastPtr) return; lastPtr = m.seq; } // drop moves that arrive late
+    if (S.presenting && !S.black) m.on ? showLaser(+m.x || 0, +m.y || 0) : hideLaser();
+  }
+}
+function broadcast() {
+  if (!code) return;
+  Relay.send({ type: 'state', seq: ++seq, title: D.title, index: S.index, total: N, presenting: S.presenting, black: S.black, startedAt: S.startedAt, now: Date.now() });
+}
+async function disconnectAll() {
+  const old = code; const names = [...remotes.values()];
+  remotes.clear(); renderStatus();
+  await Relay.end(old);
+  stopListening(); code = null;
+  try { sessionStorage.removeItem('remote-code'); } catch (e) {}
+  await ensurePaired();
+  toast(`${names[0] || 'Phone'} disconnected. Connect again with the new code ${code}.`, 'warn');
+}
+window.addEventListener('pagehide', () => { if (code) Relay.closing({ type: 'state', seq: ++seq, title: D.title, index: S.index, total: N, presenting: false, black: false, closed: true }); });
+
+/* ---------- toasts ---------- */
+function toast(text, tone) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (tone ? ' ' + tone : '');
+  t.innerHTML = `<i class="ph ${tone === 'warn' ? 'ph-plugs' : 'ph-fill ph-check-circle'}"></i><span></span>`;
+  t.lastChild.textContent = text;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 220); }, 3600);
+}
+
+/* pair right away so a phone can connect before the show starts */
+ensurePaired();
+</script>
+</body>
+</html>
