@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vector detail slider</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../design-system/pai.tailwind.js"></script>
+  <link rel="stylesheet" href="../../../design-system/pai.css" />
+  <!-- shared-border data, one file per illustration, built by build/precompute.py -->
+  <script src="data/mountain.js"></script>
+  <script src="data/golden-gate.js"></script>
+  <style>
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg-secondary, #F5F5F7); display: flex; flex-direction: column; overflow: hidden; }
+    .bar { display: flex; align-items: center; gap: 16px; padding: 12px 20px; background: var(--bg-primary, #fff); border-bottom: 1px solid var(--border-secondary, #E8E8EC); }
+    .bar h1 { font-size: 14px; line-height: 20px; font-weight: 600; margin: 0 8px 0 0; white-space: nowrap; }
+    .grow { flex: 1; }
+    .label { font-size: 12px; line-height: 16px; color: var(--text-secondary, #6B6F76); white-space: nowrap; }
+
+    /* ---- stage */
+    .stage { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; }
+    .stage.single { grid-template-columns: 1fr; }
+    .pane { position: relative; min-height: 0; background: var(--bg-primary, #fff); border-radius: 10px; box-shadow: 0 0 0 1px rgba(10,25,37,0.06); overflow: hidden; display: flex; flex-direction: column; }
+    .pane-head { position: absolute; top: 10px; left: 12px; z-index: 3; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--text-secondary, #6B6F76);
+      background: rgba(255,255,255,0.88); padding: 2px 8px; border-radius: 6px; backdrop-filter: blur(6px); pointer-events: none; }
+    .scroller { flex: 1; overflow: auto; overscroll-behavior: contain; line-height: 0; white-space: nowrap; touch-action: none; }
+    .scroller.can-pan { cursor: grab; }
+    .scroller.panning { cursor: grabbing; }
+    .canvas { position: relative; display: inline-block; vertical-align: top; }
+    .canvas.pixels img { image-rendering: pixelated; }   /* close up: see the reference's real pixels */
+    .zoom { display: inline-flex; align-items: center; gap: 2px; padding: 2px; background: var(--bg-quaternary, #EEEEF1); border-radius: 6px; height: 28px; box-sizing: border-box; }
+    .zbtn { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; border: 0; border-radius: 4px;
+      background: transparent; color: var(--text-secondary, #6B6F76); font: 500 12px/16px Inter, sans-serif; cursor: pointer; transition: background-color 120ms, color 120ms; }
+    .zbtn:hover { color: var(--text-primary, #0A1925); background: rgba(255,255,255,0.7); }
+    .zbtn:active { transform: scale(0.96); }
+    .zbtn:disabled { opacity: 0.4; cursor: default; background: transparent; }
+    .zval { min-width: 44px; text-align: center; font: 500 12px/16px Inter, sans-serif; font-variant-numeric: tabular-nums; color: var(--text-primary, #0A1925); }
+    .canvas img, .canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .canvas img { user-select: none; -webkit-user-drag: none; }
+    .checker { background-color: #fff; background-image: linear-gradient(45deg, #F1F1F4 25%, transparent 25%), linear-gradient(-45deg, #F1F1F4 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #F1F1F4 75%), linear-gradient(-45deg, transparent 75%, #F1F1F4 75%);
+      background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; }
+
+    /* split view: the vectors are clipped to the right of the handle */
+    .split-handle { position: absolute; top: 0; bottom: 0; width: 2px; background: #0A1925; z-index: 2; cursor: ew-resize; transform: translateX(-1px); }
+    .split-handle::after { content: ""; position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+      background: #0A1925; box-shadow: 0 0 0 3px #fff, 0 4px 12px rgba(10,25,37,0.25); }
+    .split-handle::before { content: ""; position: absolute; inset: 0 -10px; }   /* a wider grab area than the 2px line */
+
+    /* ---- controls */
+    .controls { display: flex; flex-direction: column; gap: 12px; padding: 14px 20px 16px; background: var(--bg-primary, #fff); border-top: 1px solid var(--border-secondary, #E8E8EC); }
+    .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .detail { flex: 1; min-width: 280px; display: flex; align-items: center; gap: 12px; }
+    .detail .end { font-size: 12px; line-height: 16px; color: var(--text-secondary, #6B6F76); white-space: nowrap; }
+
+    input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; width: 100%; height: 24px; margin: 0; cursor: pointer; }
+    input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, #0A1925 var(--p, 50%), #E2E3E8 var(--p, 50%)); }
+    input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, #0A1925 var(--p, 50%), #E2E3E8 var(--p, 50%)); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 50%; background: #fff;
+      box-shadow: 0 0 0 1.5px #0A1925, 0 2px 6px rgba(10,25,37,0.2); transition: transform 120ms ease; }
+    input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px #0A1925, 0 2px 6px rgba(10,25,37,0.2); }
+    input[type=range]:active::-webkit-slider-thumb { transform: scale(1.12); }
+    input[type=range]:focus-visible { outline: none; }
+    input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1.5px #0A1925, 0 0 0 5px rgba(10,25,37,0.15); }
+    .detail input[type=range] { height: 28px; }
+
+    .stats { display: flex; align-items: center; gap: 20px; }
+    .stat { display: flex; flex-direction: column; gap: 2px; min-width: 64px; }
+    .stat b { font-size: 14px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .match { display: flex; align-items: center; gap: 8px; }
+    .meter { width: 72px; height: 6px; border-radius: 3px; background: #E2E3E8; overflow: hidden; }
+    .meter i { display: block; height: 100%; background: #0A1925; border-radius: 3px; transition: width 160ms ease; }
+
+    .advanced { display: none; grid-template-columns: repeat(4, minmax(150px, 1fr)) auto; gap: 12px 24px; align-items: end; padding-top: 12px; border-top: 1px solid var(--border-secondary, #E8E8EC); }
+    .advanced.open { display: grid; }
+    .knob { display: flex; flex-direction: column; gap: 4px; }
+    .knob .top { display: flex; justify-content: space-between; }
+    .knob .top span:last-child { font-variant-numeric: tabular-nums; color: var(--text-primary, #0A1925); }
+    .toggles { display: flex; gap: 16px; padding-bottom: 2px; }
+    .pai-field label { font-size: 13px; white-space: nowrap; }
+    .adv-btn i { transition: transform 160ms ease; }
+    .adv-btn[aria-expanded=true] i { transform: rotate(180deg); }
+    .busy { opacity: 0.6; transition: opacity 120ms; }
+  </style>
+</head>
+<body class="pai pai-next">
+
+  <div class="bar">
+    <h1>Vector detail</h1>
+    <div class="pai-switcher pai-switcher-small" role="radiogroup" aria-label="Illustration">
+      <label class="pai-switcher-option"><input type="radio" name="img" value="mountain" checked>Mountain</label>
+      <label class="pai-switcher-option"><input type="radio" name="img" value="golden-gate">Golden Gate</label>
+    </div>
+    <span class="label" style="margin-left:8px">Colours</span>
+    <div class="pai-switcher pai-switcher-small" role="radiogroup" aria-label="Colour level">
+      <label class="pai-switcher-option"><input type="radio" name="level" value="coarse">Fewer</label>
+      <label class="pai-switcher-option"><input type="radio" name="level" value="roles" checked>Roles</label>
+      <label class="pai-switcher-option"><input type="radio" name="level" value="fine">More</label>
+    </div>
+    <div class="grow"></div>
+    <div class="pai-switcher pai-switcher-small" role="radiogroup" aria-label="View">
+      <label class="pai-switcher-option"><input type="radio" name="view" value="side" checked>Side by side</label>
+      <label class="pai-switcher-option"><input type="radio" name="view" value="split">Split</label>
+      <label class="pai-switcher-option"><input type="radio" name="view" value="edges">Edges</label>
+    </div>
+    <div class="zoom" role="group" aria-label="Zoom">
+      <button class="zbtn" id="zOut" aria-label="Zoom out" title="Zoom out (−)"><i class="ph ph-minus"></i></button>
+      <span class="zval" id="zVal">Fit</span>
+      <button class="zbtn" id="zIn" aria-label="Zoom in" title="Zoom in (+)"><i class="ph ph-plus"></i></button>
+      <button class="zbtn zfit" id="zFit" title="Fit to screen (0)">Fit</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="pane" id="paneRef">
+      <div class="pane-head">Reference</div>
+      <div class="scroller"><div class="canvas checker" id="canvasRef"><img id="refImg" alt="Reference illustration"></div></div>
+    </div>
+    <div class="pane" id="paneVec">
+      <div class="pane-head" id="vecHead">Vectors</div>
+      <div class="scroller"><div class="canvas checker" id="canvasVec">
+        <img id="splitImg" alt="" hidden>
+        <svg id="out" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="split-handle" id="handle" hidden></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <div class="detail">
+        <span class="end">Simpler</span>
+        <input type="range" id="detail" min="0" max="100" value="55" aria-label="Detail">
+        <span class="end">More detail</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="label">Shapes</span><b id="sShapes">0</b></div>
+        <div class="stat"><span class="label">Points</span><b id="sPoints">0</b></div>
+        <div class="stat"><span class="label">Match</span><div class="match"><div class="meter" title=""><i id="sMatch" style="width:0"></i></div><b id="sMatchPct">0%</b></div></div>
+      </div>
+      <button class="button-style button-small button-tertiary adv-btn" id="advBtn" aria-expanded="false">Advanced <i class="ph ph-caret-down"></i></button>
+      <button class="button-style button-small button-primary" id="exportBtn"><i class="ph ph-download-simple"></i> Export SVG</button>
+    </div>
+    <div class="advanced" id="advanced">
+      <div class="knob"><div class="top"><span class="label">Curve fit</span><span class="label" id="vTol"></span></div><input type="range" id="tol" min="0" max="100"></div>
+      <div class="knob"><div class="top"><span class="label">Smoothing</span><span class="label" id="vSmooth"></span></div><input type="range" id="smooth" min="0" max="30" step="0.5"></div>
+      <div class="knob"><div class="top"><span class="label">Corner angle</span><span class="label" id="vCorner"></span></div><input type="range" id="corner" min="20" max="120" value="60"></div>
+      <div class="knob"><div class="top"><span class="label">Remove specks under</span><span class="label" id="vArea"></span></div><input type="range" id="area" min="0" max="100"></div>
+      <div class="toggles">
+        <div class="pai-field"><label class="pai-toggle"><input type="checkbox" id="curves" checked><span class="track"></span><span class="knob"></span></label><label for="curves">Curves</label></div>
+        <div class="pai-field"><label class="pai-toggle"><input type="checkbox" id="seam" checked><span class="track"></span><span class="knob"></span></label><label for="seam">Cover seams</label></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const D = window.VDS_DATA || {};
+const $ = (id) => document.getElementById(id);
+const radios = (name) => [...document.querySelectorAll(`input[name=${name}]`)];
+const pick = (name) => radios(name).find((r) => r.checked).value;
+const S = { img: "mountain", level: "roles", view: "side", zoom: 1, tol: 2, smooth: 6, area: 100, corner: 60, curves: true, seam: true };
+
+// ---------------------------------------------------------------- the master dial: simpler the way an artist means it
+// Simpler = calmer outlines with fewer anchor points. It never deletes a shape and never trades curves for
+// straight chords: every shape stays, corners stay where they are, curves get broader and smoother.
+// The dial drives two things: how loosely each curve fits the outline, and how much wobble is smoothed first.
+const tolOf = (t) => 9 * Math.pow(0.5 / 9, t / 100);                    // 9 px .. 0.5 px
+const tOfTol = (v) => 100 * Math.log(v / 9) / Math.log(0.5 / 9);
+const smoothOf = (t) => Math.round(16 * Math.pow(1 - t / 100, 1.4) * 2) / 2;   // 16 px .. none
+const areaOf = (t) => (t <= 0 ? 0 : 2000 * Math.pow(2000, (t - 100) / 100));   // specks: 0 .. 2000 px, own knob
+const tOfArea = (v) => (v <= 1 ? 0 : 100 + (100 * Math.log(v / 2000)) / Math.log(2000));
+
+// ---------------------------------------------------------------- data, prepared once per image and level
+const cache = {};
+function prepared(img, level) {
+  const key = img + "/" + level;
+  if (cache[key]) return cache[key];
+  const lv = D[img].levels[level];
+  const arcs = lv.arcs.map(([l, r, closed, flat]) => {
+    const P = []; for (let i = 0; i < flat.length; i += 2) P.push([flat[i] / 10, flat[i + 1] / 10]);
+    let len = 0; for (let i = 1; i < P.length; i++) len += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
+    return { l, r, closed: !!closed, P, len, a: P[0].join(","), b: P[P.length - 1].join(",") };
+  });
+  const faces = lv.faces.map(([label, area]) => ({ label, area }));
+  const adj = faces.map(() => new Map());
+  for (const a of arcs) if (a.l !== a.r) {
+    adj[a.l].set(a.r, (adj[a.l].get(a.r) || 0) + a.len);
+    adj[a.r].set(a.l, (adj[a.r].get(a.l) || 0) + a.len);
+  }
+  const order = faces.map((_, i) => i).filter((i) => i > 0).sort((i, j) => faces[i].area - faces[j].area);
+  const raw = atob(lv.ref.b64), ref = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) ref[i] = raw.charCodeAt(i);
+  // score only pixels whose 4 neighbours agree: anti-aliased edges are not disagreement
+  const { w, h } = lv.ref, inner = new Uint8Array(w * h);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x, v = ref[i];
+    inner[i] = v === ref[i - 1] && v === ref[i + 1] && v === ref[i - w] && v === ref[i + w] ? 1 : 0;
+  }
+  return (cache[key] = { lv, arcs, faces, adj, order, ref, inner });
+}
+
+// ---------------------------------------------------------------- 1. small shapes merge into their longest neighbour
+function merge(G, minArea) {
+  const n = G.faces.length, parent = new Int32Array(n).map((_, i) => i), area = G.faces.map((f) => f.area);
+  const adj = G.adj.map((m) => new Map(m));
+  const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  for (const f of G.order) {
+    const r = find(f);
+    if (r !== f || area[r] >= minArea) continue;
+    let best = -1, bestLen = -1;
+    for (const [nb, len] of adj[r]) { const s = find(nb); if (s !== r && s !== 0 && len > bestLen) { best = s; bestLen = len; } }
+    if (best < 0) continue;                        // only touches the outside: keep it
+    parent[r] = best; area[best] += area[r];
+    for (const [nb, len] of adj[r]) {
+      const s = find(nb); if (s === best) { adj[best].delete(r); continue; }
+      adj[best].set(s, (adj[best].get(s) || 0) + len);
+      adj[s].delete(r); adj[s].set(best, (adj[s].get(best) || 0) + len);
+    }
+    adj[r].clear();
+  }
+  return find;
+}
+
+// ---------------------------------------------------------------- 2. each shared border: resample, find corners, smooth, fit curves
+// Everything here uses the border's own points only, so both faces that share it draw exactly the same edge.
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1]], add = (a, b) => [a[0] + b[0], a[1] + b[1]], mul = (a, k) => [a[0] * k, a[1] * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1], len = (a) => Math.hypot(a[0], a[1]);
+const unit = (a) => { const l = len(a) || 1; return [a[0] / l, a[1] / l]; };
+
+function resample(P, step = 1) {            // even spacing: smoothing and corner finding behave the same everywhere
+  const out = [P[0]];
+  let carry = 0;
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    let t = step - carry;
+    while (t < L) { out.push([a[0] + ((b[0] - a[0]) * t) / L, a[1] + ((b[1] - a[1]) * t) / L]); t += step; }
+    carry = L - (t - step);
+  }
+  const last = P[P.length - 1], prev = out[out.length - 1];
+  if (Math.hypot(last[0] - prev[0], last[1] - prev[1]) < step * 0.5 && out.length > 1) out[out.length - 1] = last; else out.push(last);
+  return out;
+}
+
+// A corner is where the outline turns sharply over a few pixels, measured on the original border, so corners
+// stay put at every detail level. Junction points (arc ends) are always corners.
+function findCorners(R, closed, deg, reach = 5) {
+  const n = closed ? R.length - 1 : R.length, at = (i) => R[((i % n) + n) % n];
+  if (n < 2 * reach + 2) return [];
+  const turn = new Float32Array(n), thr = (deg * Math.PI) / 180;
+  for (let i = closed ? 0 : reach; i < (closed ? n : n - reach); i++) {
+    const v1 = sub(at(i), at(i - reach)), v2 = sub(at(i + reach), at(i));
+    const c = dot(v1, v2) / ((len(v1) * len(v2)) || 1);
+    turn[i] = Math.acos(Math.max(-1, Math.min(1, c)));
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    if (turn[i] <= thr) continue;
+    let peak = true;
+    for (let k = -reach; k <= reach && peak; k++) if (k && turn[((i + k) % n + n) % n] > turn[i]) peak = false;
+    if (peak && (!out.length || i - out[out.length - 1] > reach)) out.push(i);
+  }
+  return out;
+}
+
+// Smoothing at a size you can see: a Gaussian along the outline, `sigma` px wide. Waves shorter than about
+// 2 x sigma flatten out; longer ones (the drawing's real shape) stay. Plain blurring pulls curves inward, so
+// the result is corrected with one "twicing" step, 2G(P) - G(G(P)), which keeps each shape at its size.
+// Run ends (corners, junctions) are pinned by mirroring the outline through them.
+function gauss(P, sigma, closed) {
+  const n = P.length, r = Math.max(1, Math.ceil(sigma * 2.5)), w = [];
+  let ws = 0; for (let k = -r; k <= r; k++) { const v = Math.exp(-(k * k) / (2 * sigma * sigma)); w.push(v); ws += v; }
+  const m = closed ? n - 1 : n;
+  const at = closed
+    ? (i) => P[((i % m) + m) % m]
+    : (i) => (i < 0 ? [2 * P[0][0] - P[-i][0], 2 * P[0][1] - P[-i][1]]
+            : i >= n ? [2 * P[n - 1][0] - P[2 * n - 2 - i][0], 2 * P[n - 1][1] - P[2 * n - 2 - i][1]] : P[i]);
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    if (!closed && (i === 0 || i === n - 1)) { out[i] = P[i]; continue; }
+    let x = 0, y = 0;
+    for (let k = -r; k <= r; k++) {
+      let j = i + k;
+      if (!closed) j = Math.max(-(n - 1), Math.min(2 * n - 2, j));
+      const q = at(j); x += q[0] * w[k + r]; y += q[1] * w[k + r];
+    }
+    out[i] = [x / ws, y / ws];
+  }
+  if (closed) out[n - 1] = out[0];
+  return out;
+}
+function smoothRun(R, sigmaPx, closed) {
+  // a small shape can only take a little smoothing before it changes what it is (a pin head stops being round):
+  // cap the smoothing at a tenth of this run's length
+  sigmaPx = Math.min(sigmaPx, (R.length - 1) / 10);
+  if (sigmaPx < 0.5 || R.length < 4) return R;
+  const step = Math.max(1, sigmaPx / 3);           // fewer samples for big smoothing: same result, much faster
+  const P = step > 1 ? resample(R, step) : R;
+  if (P.length < 4) return R;
+  const sig = sigmaPx / step, G = gauss(P, sig, closed), GG = gauss(G, sig, closed);
+  return P.map((p, i) => [2 * G[i][0] - GG[i][0], 2 * G[i][1] - GG[i][1]]);
+}
+
+// Curve fitting (Schneider, Graphics Gems 1990): as few cubic Beziers as fit within `err` px, tangents
+// continuous between them. A piece that is near straight is drawn as a straight line.
+function bez(b, t) { const u = 1 - t; return [u*u*u*b[0][0] + 3*u*u*t*b[1][0] + 3*u*t*t*b[2][0] + t*t*t*b[3][0], u*u*u*b[0][1] + 3*u*u*t*b[1][1] + 3*u*t*t*b[2][1] + t*t*t*b[3][1]]; }
+function bezD(b, t) { const u = 1 - t; return [3*u*u*(b[1][0]-b[0][0]) + 6*u*t*(b[2][0]-b[1][0]) + 3*t*t*(b[3][0]-b[2][0]), 3*u*u*(b[1][1]-b[0][1]) + 6*u*t*(b[2][1]-b[1][1]) + 3*t*t*(b[3][1]-b[2][1])]; }
+function bezDD(b, t) { const u = 1 - t; return [6*u*(b[2][0]-2*b[1][0]+b[0][0]) + 6*t*(b[3][0]-2*b[2][0]+b[1][0]), 6*u*(b[2][1]-2*b[1][1]+b[0][1]) + 6*t*(b[3][1]-2*b[2][1]+b[1][1])]; }
+function generateBezier(P, u, t1, t2) {
+  const p0 = P[0], p3 = P[P.length - 1];
+  let c00 = 0, c01 = 0, c11 = 0, x0 = 0, x1 = 0;
+  for (let i = 0; i < P.length; i++) {
+    const t = u[i], v = 1 - t, b1 = 3 * t * v * v, b2 = 3 * t * t * v;
+    const a1 = mul(t1, b1), a2 = mul(t2, b2);
+    c00 += dot(a1, a1); c01 += dot(a1, a2); c11 += dot(a2, a2);
+    const tmp = sub(P[i], add(mul(p0, v * v * v + b1), mul(p3, b2 + t * t * t)));
+    x0 += dot(a1, tmp); x1 += dot(a2, tmp);
+  }
+  const det = c00 * c11 - c01 * c01, seg = len(sub(p3, p0));
+  let al = det ? (x0 * c11 - x1 * c01) / det : 0, ar = det ? (c00 * x1 - c01 * x0) / det : 0;
+  if (al < 1e-6 * seg || ar < 1e-6 * seg || al > seg * 2 || ar > seg * 2) al = ar = seg / 3;
+  return [p0, add(p0, mul(t1, al)), add(p3, mul(t2, ar)), p3];
+}
+function maxError(P, b, u) {
+  let m = 0, at = (P.length / 2) | 0;
+  for (let i = 1; i < P.length - 1; i++) { const d = len(sub(bez(b, u[i]), P[i])); if (d > m) { m = d; at = i; } }
+  return [m, at];
+}
+function fitCubic(P, t1, t2, err, out, depth = 0) {
+  const n = P.length, p0 = P[0], p3 = P[n - 1], chord = sub(p3, p0), cl = len(chord);
+  // near straight: one line
+  let straight = 0; for (let i = 1; i < n - 1; i++) straight = Math.max(straight, cl ? Math.abs(chord[0] * (P[i][1] - p0[1]) - chord[1] * (P[i][0] - p0[0])) / cl : len(sub(P[i], p0)));
+  if (straight <= err * 0.6 && cl > 0) { out.push([p3]); return; }
+  if (n <= 2) { out.push([add(p0, mul(t1, cl / 3)), add(p3, mul(t2, cl / 3)), p3]); return; }
+  const u = [0]; for (let i = 1; i < n; i++) u.push(u[i - 1] + len(sub(P[i], P[i - 1])));
+  for (let i = 1; i < n; i++) u[i] /= u[n - 1] || 1;
+  let b = generateBezier(P, u, t1, t2), [e, split] = maxError(P, b, u);
+  if (e < err) { out.push([b[1], b[2], b[3]]); return; }
+  if (e < err * 4) {
+    for (let k = 0; k < 8; k++) {
+      for (let i = 0; i < n; i++) {            // Newton step: move each parameter to the curve's nearest point
+        const q = sub(bez(b, u[i]), P[i]), d1 = bezD(b, u[i]), d2 = bezDD(b, u[i]);
+        const den = dot(d1, d1) + dot(q, d2); if (den) u[i] = Math.max(0, Math.min(1, u[i] - dot(q, d1) / den));
+      }
+      b = generateBezier(P, u, t1, t2); [e, split] = maxError(P, b, u);
+      if (e < err) { out.push([b[1], b[2], b[3]]); return; }
+    }
+  }
+  if (depth > 12 || n < 4) { out.push([b[1], b[2], b[3]]); return; }
+  split = Math.max(1, Math.min(n - 2, split));
+  const tc = unit(sub(P[split - 1], P[split + 1]));
+  fitCubic(P.slice(0, split + 1), t1, tc, err, out, depth + 1);
+  fitCubic(P.slice(split), mul(tc, -1), t2, err, out, depth + 1);
+}
+const endTangent = (P, fromEnd) => {
+  const k = Math.min(4, P.length - 1);
+  return fromEnd ? unit(sub(P[P.length - 1 - k], P[P.length - 1])) : unit(sub(P[k], P[0]));
+};
+function dpLines(P, err) {                   // curves off: straight lines only
+  const out = []; (function rec(a, b) {
+    let m = 0, j = -1; const ch = sub(P[b], P[a]), cl = len(ch);
+    for (let i = a + 1; i < b; i++) { const d = cl ? Math.abs(ch[0] * (P[i][1] - P[a][1]) - ch[1] * (P[i][0] - P[a][0])) / cl : len(sub(P[i], P[a])); if (d > m) { m = d; j = i; } }
+    if (j > 0 && m > err) { rec(a, j); rec(j, b); } else out.push([P[b]]);
+  })(0, P.length - 1);
+  return out;
+}
+
+// One border -> its segments. Corners split it into runs; each run is smoothed and fitted on its own.
+function borderSegs(a, err, iters, cornerDeg, curves) {
+  if (!a.R) a.R = resample(a.P, 1);
+  const key = cornerDeg + "/" + a.R.length;
+  if (a.ckey !== key) { a.corners = findCorners(a.R, a.closed, cornerDeg); a.ckey = key; }
+  let R = a.R, cs = a.corners;
+  if (R.length < 3) return [[R[R.length - 1]]];
+  const segs = [];
+  const fitRun = (run, closedRun) => {
+    const sm = smoothRun(run, iters, closedRun);
+    if (!curves) { segs.push(...dpLines(sm, err)); return; }
+    let t1, t2;
+    if (closedRun) { t1 = unit(sub(sm[1], sm[sm.length - 2])); t2 = mul(t1, -1); }
+    else { t1 = endTangent(sm, false); t2 = endTangent(sm, true); }
+    fitCubic(sm, t1, t2, err, segs);
+  };
+  if (a.closed && !cs.length) { fitRun(R, true); return segs; }
+  if (a.closed) {                            // start the loop at its first corner so every run ends on a corner
+    const n = R.length - 1, k = cs[0];
+    R = R.slice(k, n).concat(R.slice(0, k + 1)); cs = cs.map((c) => (c - k + n) % n).slice(1);
+    a._rot = R[0];
+  }
+  const breaks = [0, ...cs, R.length - 1];
+  for (let i = 0; i < breaks.length - 1; i++) if (breaks[i + 1] > breaks[i]) fitRun(R.slice(breaks[i], breaks[i + 1] + 1), false);
+  return segs;
+}
+const f1 = (v) => Math.round(v * 10) / 10;
+const segText = (s) => (s.length === 1 ? `L${f1(s[0][0])} ${f1(s[0][1])}` : `C${s.map((p) => f1(p[0]) + " " + f1(p[1])).join(" ")}`);
+function reverseSegs(Q, segs) {          // the same curve walked backwards
+  const out = [];
+  for (let i = segs.length - 1; i >= 0; i--) {
+    const start = i === 0 ? Q[0] : segs[i - 1][segs[i - 1].length - 1], s = segs[i];
+    out.push(s.length === 1 ? [start] : [s[1], s[0], start]);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- 4. faces from their borders
+function build() {
+  const G = prepared(S.img, S.level), find = merge(G, S.area);
+  const byFace = new Map(); let points = 0;
+  for (const a of G.arcs) {
+    const l = find(a.l), r = find(a.r);
+    if (l === r) continue;
+    a._rot = null;
+    const segs = borderSegs(a, S.tol, S.smooth, S.corner, S.curves);
+    const first = a._rot || a.P[0], lastPt = segs[segs.length - 1][segs[segs.length - 1].length - 1];
+    const Q = [first, lastPt];       // reverseSegs only needs the start point
+    points += segs.length;
+    const fwd = { a: a.a, b: a.b, start: Q[0], text: segs.map(segText).join(""), closed: a.closed };
+    if (l) (byFace.get(l) || byFace.set(l, []).get(l)).push(fwd);
+    if (r) (byFace.get(r) || byFace.set(r, []).get(r)).push({ a: a.b, b: a.a, start: Q[Q.length - 1], text: reverseSegs(Q, segs).map(segText).join(""), closed: a.closed });
+  }
+  const shapes = [];
+  for (const [f, list] of byFace) {
+    const from = new Map(); for (const e of list) (from.get(e.a) || from.set(e.a, []).get(e.a)).push(e);
+    const used = new Set(); let d = "";
+    for (const e0 of list) {
+      if (used.has(e0)) continue;
+      used.add(e0); d += `M${f1(e0.start[0])} ${f1(e0.start[1])}` + e0.text;
+      let end = e0.b, guard = 0;
+      while (!e0.closed && end !== e0.a && guard++ < 100000) {
+        const nx = (from.get(end) || []).find((e) => !used.has(e));
+        if (!nx) break;
+        used.add(nx); d += nx.text; end = nx.b;
+      }
+      d += "Z";
+    }
+    const label = G.faces[f].label;
+    shapes.push({ f, d, label, colour: G.lv.colours[label], role: G.lv.roles[label], area: G.faces[f].area });
+  }
+  shapes.sort((a, b) => b.area - a.area);
+  return { G, shapes, points };
+}
+
+// ---------------------------------------------------------------- 5. draw, score
+let last = null, scoreTimer = 0;
+function draw() {
+  const { G, shapes, points } = (last = build());
+  const W = D[S.img].w, H = D[S.img].h, svg = $("out");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const edges = S.view === "edges";
+  const seam = S.seam && !edges ? 0.9 : 0;
+  let html = shapes.map((s) => `<path d="${s.d}" fill="${s.colour}" fill-rule="evenodd"${seam ? ` stroke="${s.colour}" stroke-width="${seam}" stroke-linejoin="round"` : ""}${edges ? ` fill-opacity="0.35"` : ""}/>`).join("");
+  if (edges) html += `<g fill="none" stroke="#0A1925" stroke-width="1" vector-effect="non-scaling-stroke" stroke-linejoin="round">${shapes.map((s) => `<path d="${s.d}" vector-effect="non-scaling-stroke"/>`).join("")}</g>`;
+  svg.innerHTML = html;
+  $("sShapes").textContent = shapes.length.toLocaleString();
+  $("sPoints").textContent = points.toLocaleString();
+  clearTimeout(scoreTimer); scoreTimer = setTimeout(() => score(G, shapes), 140);
+}
+function score(G, shapes) {
+  const { w, h } = G.lv.ref, W = D[S.img].w;
+  const c = score.c || (score.c = document.createElement("canvas")); c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.clearRect(0, 0, w, h); ctx.setTransform(w / W, 0, 0, w / W, 0, 0);
+  for (const s of shapes) { ctx.fillStyle = `rgb(${s.label + 1},0,0)`; ctx.fill(new Path2D(s.d), "evenodd"); }
+  const px = ctx.getImageData(0, 0, w, h).data; let ok = 0, all = 0;
+  for (let i = 0; i < w * h; i++) {
+    if (!G.inner[i]) continue;
+    const got = px[i * 4 + 3] > 127 ? px[i * 4] : 0, want = G.ref[i];
+    if (!want && !got) continue;
+    all++; if (got === want) ok++;
+  }
+  const pct = all ? (100 * ok) / all : 0;
+  $("sMatch").style.width = pct + "%"; $("sMatchPct").textContent = Math.round(pct) + "%";
+  $("sMatch").parentElement.title = `${Math.round(pct)}% of the picture matches the reference`;
+}
+
+// ---------------------------------------------------------------- layout: zoom, panes, split
+function layout() {
+  const W = D[S.img].w, H = D[S.img].h;
+  const split = S.view === "split";
+  $("stage").classList.toggle("single", split);
+  $("paneRef").hidden = split;
+  $("splitImg").hidden = !split; $("handle").hidden = !split;
+  $("vecHead").textContent = split ? "Reference  |  Vectors" : S.view === "edges" ? "Vectors, with edges" : "Vectors";
+  for (const id of ["canvasRef", "canvasVec"]) {
+    const el = $(id), sc = el.parentElement, bw = sc.clientWidth, bh = sc.clientHeight;
+    const fit = Math.min((bw - 32) / W, (bh - 32) / H), k = fit * S.zoom;
+    el.style.width = W * k + "px"; el.style.height = H * k + "px";
+    el.style.margin = `${Math.max(16, (bh - H * k) / 2)}px ${Math.max(16, (bw - W * k) / 2)}px`;
+    el.classList.toggle("pixels", k >= 2);
+    sc.classList.toggle("can-pan", S.zoom > 1);
+    if (id === "canvasVec") S.scale = k;
+  }
+  $("zVal").textContent = S.zoom === 1 ? "Fit" : Math.round(S.scale * 100) + "%";
+  $("zOut").disabled = S.zoom <= 1; $("zIn").disabled = S.zoom >= ZMAX;
+  setSplit(splitAt);
+}
+
+// ---------------------------------------------------------------- zoom: pinch, ctrl/cmd + scroll, + and -, double-click; drag to pan
+const ZMAX = 40;     // times the fitted size
+function zoomTo(z, sc, clientX, clientY) {
+  sc = sc || document.querySelector(".pane:not([hidden]) .scroller:last-of-type") || scrollers[scrollers.length - 1];
+  const el = sc.firstElementChild, r0 = el.getBoundingClientRect(), box = sc.getBoundingClientRect();
+  if (clientX == null) { clientX = box.left + box.width / 2; clientY = box.top + box.height / 2; }
+  const ux = (clientX - r0.left) / r0.width, uy = (clientY - r0.top) / r0.height;   // the point under the cursor, 0..1
+  S.zoom = Math.max(1, Math.min(ZMAX, z)); layout();
+  const r1 = el.getBoundingClientRect();
+  syncing = true;
+  sc.scrollLeft += r1.left + ux * r1.width - clientX; sc.scrollTop += r1.top + uy * r1.height - clientY;
+  scrollers.forEach((o) => { if (o !== sc) { o.scrollLeft = sc.scrollLeft; o.scrollTop = sc.scrollTop; } });
+  requestAnimationFrame(() => (syncing = false));
+}
+$("zIn").addEventListener("click", () => zoomTo(S.zoom * 1.6));
+$("zOut").addEventListener("click", () => zoomTo(S.zoom / 1.6));
+$("zFit").addEventListener("click", () => zoomTo(1));
+addEventListener("keydown", (e) => {
+  if (e.target.matches("input[type=range]") && (e.key === "-" || e.key === "+")) return;
+  if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomTo(S.zoom * 1.6); }
+  else if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomTo(S.zoom / 1.6); }
+  else if (e.key === "0") { e.preventDefault(); zoomTo(1); }
+});
+let splitAt = 0.5;
+function setSplit(t) {
+  splitAt = Math.max(0, Math.min(1, t));
+  $("handle").style.left = splitAt * 100 + "%";
+  $("out").style.clipPath = S.view === "split" ? `inset(0 0 0 ${splitAt * 100}%)` : "";
+}
+$("handle").addEventListener("pointerdown", (e) => {
+  const el = $("handle"); el.setPointerCapture(e.pointerId);
+  const move = (ev) => { const r = $("canvasVec").getBoundingClientRect(); setSplit((ev.clientX - r.left) / r.width); };
+  const up = () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up); };
+  el.addEventListener("pointermove", move); el.addEventListener("pointerup", up);
+});
+// side by side: the two panes scroll together when zoomed
+const scrollers = [...document.querySelectorAll(".scroller")]; let syncing = false;
+scrollers.forEach((sc) => {
+  // a trackpad pinch arrives as a wheel event with ctrlKey set; so does ctrl/cmd + mouse wheel
+  sc.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    zoomTo(S.zoom * Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.01)), sc, e.clientX, e.clientY);
+  }, { passive: false });
+  sc.addEventListener("dblclick", (e) => { if (!e.target.closest(".split-handle")) zoomTo(S.zoom > 1 ? 1 : 4, sc, e.clientX, e.clientY); });
+  sc.addEventListener("pointerdown", (e) => {
+    if (S.zoom <= 1 || e.button !== 0 || e.target.closest(".split-handle")) return;
+    const x0 = e.clientX, y0 = e.clientY, l0 = sc.scrollLeft, t0 = sc.scrollTop;
+    sc.setPointerCapture(e.pointerId); sc.classList.add("panning");
+    const move = (ev) => { sc.scrollLeft = l0 - (ev.clientX - x0); sc.scrollTop = t0 - (ev.clientY - y0); };
+    const up = () => { sc.classList.remove("panning"); sc.removeEventListener("pointermove", move); sc.removeEventListener("pointerup", up); sc.removeEventListener("pointercancel", up); };
+    sc.addEventListener("pointermove", move); sc.addEventListener("pointerup", up); sc.addEventListener("pointercancel", up);
+  });
+});
+scrollers.forEach((s) => s.addEventListener("scroll", () => {
+  if (syncing) return; syncing = true;
+  scrollers.forEach((o) => { if (o !== s) { o.scrollLeft = s.scrollLeft; o.scrollTop = s.scrollTop; } });
+  requestAnimationFrame(() => (syncing = false));
+}));
+
+// ---------------------------------------------------------------- controls
+function paint(r) { r.style.setProperty("--p", ((r.value - r.min) / (r.max - r.min)) * 100 + "%"); }
+function showKnobs() {
+  $("tol").value = Math.round(tOfTol(S.tol)); $("area").value = Math.round(tOfArea(S.area)); $("smooth").value = S.smooth;
+  $("vTol").textContent = S.tol.toFixed(1) + " px";
+  $("vSmooth").textContent = S.smooth ? S.smooth + " px" : "Off";
+  $("vArea").textContent = S.area ? Math.round(S.area).toLocaleString() + " px²" : "Off";
+  $("vCorner").textContent = S.corner + "°";
+  document.querySelectorAll("input[type=range]").forEach(paint);
+}
+let raf = 0; const redraw = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); };
+$("detail").addEventListener("input", (e) => { const t = +e.target.value; S.tol = tolOf(t); S.smooth = smoothOf(t); showKnobs(); redraw(); });
+$("smooth").addEventListener("input", (e) => { S.smooth = +e.target.value; showKnobs(); redraw(); });
+$("tol").addEventListener("input", (e) => { S.tol = tolOf(+e.target.value); showKnobs(); redraw(); });
+$("area").addEventListener("input", (e) => { S.area = areaOf(+e.target.value); showKnobs(); redraw(); });
+$("corner").addEventListener("input", (e) => { S.corner = +e.target.value; showKnobs(); redraw(); });
+$("curves").addEventListener("change", (e) => { S.curves = e.target.checked; redraw(); });
+$("seam").addEventListener("change", (e) => { S.seam = e.target.checked; redraw(); });
+$("advBtn").addEventListener("click", (e) => {
+  const open = $("advanced").classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", open); layout();
+});
+radios("img").forEach((r) => r.addEventListener("change", () => { S.img = pick("img"); loadImage(); }));
+radios("level").forEach((r) => r.addEventListener("change", () => { S.level = pick("level"); redraw(); }));
+radios("view").forEach((r) => r.addEventListener("change", () => { S.view = pick("view"); layout(); redraw(); }));
+addEventListener("resize", layout);
+
+const SRC = { mountain: "assets/mountain.jpg", "golden-gate": "assets/golden-gate.webp" };
+function loadImage() { $("refImg").src = $("splitImg").src = SRC[S.img]; layout(); redraw(); }
+
+// ---------------------------------------------------------------- export: role-named layers, ready for the Figma binding step
+$("exportBtn").addEventListener("click", () => {
+  const { shapes } = last || build(), W = D[S.img].w, H = D[S.img].h;
+  const byRole = new Map(); shapes.forEach((s) => (byRole.get(s.role) || byRole.set(s.role, []).get(s.role)).push(s));
+  const seam = S.seam ? 0.9 : 0; let n = 0;
+  const groups = [...byRole].map(([role, list]) => `  <g id="${role}">\n` + list.map((s) =>
+    `    <path id="shape ${++n} · ${role}" d="${s.d}" fill="${s.colour}" fill-rule="evenodd"${seam ? ` stroke="${s.colour}" stroke-width="${seam}" stroke-linejoin="round"` : ""}/>`).join("\n") + "\n  </g>").join("\n");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">\n${groups}\n</svg>\n`;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  a.download = `${S.img}-${S.level}-detail-${$("detail").value}.svg`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+if (!D.mountain) document.body.innerHTML = '<p style="padding:24px">The data files did not load. Run build/precompute.py first.</p>';
+else { const t = +$("detail").value; S.tol = tolOf(t); S.smooth = smoothOf(t); showKnobs(); loadImage(); }
+</script>
+</body>
+</html>
