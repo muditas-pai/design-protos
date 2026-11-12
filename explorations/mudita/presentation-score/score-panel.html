@@ -172,13 +172,25 @@
     .headline .setup { color: var(--v2-text-3); }
     .headline .payoff { color: var(--v2-text); font-weight: 600; }
 
-    .meter { display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: #EFEFF4; gap: 0; margin-top: 14px; }
-    .meter span { height: 100%; transition: width 650ms var(--ease); min-width: 0; }
+    .meter-hit { margin-top: 6px; padding: 8px 0; cursor: default; }
+    .meter { display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: #EFEFF4; gap: 2px; transition: height 160ms var(--ease); }
+    .meter-hit:hover .meter { height: 8px; }
+    .meter span { height: 100%; min-width: 0; transition: width 650ms var(--ease), opacity 160ms var(--ease); }
     .meter span:first-child { border-radius: 99px 0 0 99px; }
+    .meter span[style*="width: 0"], .meter span[style*="width:0"] { margin-left: -2px; }
+    .meter.is-hovering span:not(.is-hot) { opacity: .35; }
+    .meter span.is-link { cursor: pointer; }
     .seg-now { background: var(--v2-text); }
-    .seg-auto { background: #C9C6FF; }
-    .seg-manual { background: repeating-linear-gradient(135deg, var(--v2-warn) 0 2px, #F6D9B8 2px 5px); }
-    .seg-locked { background: repeating-linear-gradient(135deg, #9C95FF 0 2px, var(--v2-accent-tint) 2px 5px); }
+    .seg-auto { background: #B9B3FF; }
+    .seg-manual { background: #F2C89A; }
+    .seg-locked { background: repeating-linear-gradient(135deg, #B9B3FF 0 2px, #E6E3FF 2px 5px); }
+    .bar-tip { position: fixed; z-index: 60; padding: 7px 10px; border-radius: 6px; background: var(--v2-ink); color: #fff; font-size: 12px; line-height: 1.35;
+      white-space: nowrap; pointer-events: none; opacity: 0; transform: translateY(-2px); transition: opacity 120ms var(--ease), transform 140ms var(--ease);
+      box-shadow: 0 8px 24px -8px rgba(9,15,21,.4); }
+    .bar-tip.is-on { opacity: 1; transform: none; }
+    .bar-tip b { font-weight: 600; }
+    .bar-tip .pts { color: rgba(255,255,255,.7); margin-left: 6px; }
+    .bar-tip .arrow { position: absolute; top: -4px; width: 8px; height: 8px; background: var(--v2-ink); transform: rotate(45deg); }
     .legend:empty { display: none; }
     .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-top: 12px; font-size: 12px; color: var(--v2-text-2); }
     .legend span { display: inline-flex; align-items: center; gap: 6px; transition: opacity 200ms var(--ease); }
@@ -487,11 +499,13 @@
               <span class="band tone-mid" id="band">Good draft</span>
             </div>
             <p class="headline" id="headline"></p>
+            <div class="meter-hit" id="meterHit">
             <div class="meter" id="meter" role="img">
               <span class="seg-now" id="segNow" style="width:0"></span>
               <span class="seg-auto" id="segAuto" style="width:0"></span>
               <span class="seg-manual" id="segManual" style="width:0"></span>
               <span class="seg-locked" id="segLocked" style="width:0"></span>
+            </div>
             </div>
             <div class="legend" id="legend"></div>
           </div>
@@ -530,6 +544,7 @@
   </div>
 </div>
 <!-- Small hint after the panel is closed the first time -->
+<div class="bar-tip" id="barTip" role="tooltip"><span class="arrow" id="barTipArrow"></span><span id="barTipText"></span></div>
 <div class="hint" id="hint"><span class="arrow" id="hintArrow"></span><span id="hintText">Your score and fixes stay here.</span></div>
 
 <div class="toast" id="toast"><i class="ph-fill ph-check-circle lead"></i><span id="toastText"></span><button class="coach-btn ghost" id="toastUndo" style="height:28px;">Undo</button></div>
@@ -823,9 +838,9 @@ function updateHero() {
   const { s, a, m, l } = potentials();
   const goal = a > 0 ? s + a : m > 0 ? s + m : l > 0 ? s + l : s;
   $("segNow").style.width = s + "%";
-  $("segAuto").style.width = (goal - s) + "%";
-  $("segManual").style.width = "0%";
-  $("segLocked").style.width = "0%";
+  $("segAuto").style.width = a + "%";
+  $("segManual").style.width = m + "%";
+  $("segLocked").style.width = l + "%";
   const lockedPlans = [...new Set(list("locked").map(it => it.plan))];
   const planLabel = lockedPlans.includes("pro") ? "Pro" : "Gold";
   $("meter").setAttribute("aria-label", `Score ${s} of 100. It can reach ${goal}.`);
@@ -1379,6 +1394,45 @@ $("groups").addEventListener("click", (e) => {
   if (t.id === "fixedToggle") { S.fixedOpen = !S.fixedOpen; t.setAttribute("aria-expanded", S.fixedOpen); t.nextElementSibling.classList.toggle("is-open", S.fixedOpen); return; }
   if (t.id === "scoreToggle") { S.scoreOpen = !S.scoreOpen; t.setAttribute("aria-expanded", S.scoreOpen); t.nextElementSibling.classList.toggle("is-open", S.scoreOpen); return; }
 });
+/* score bar: hover a segment to see which section it comes from */
+const SEGS = [
+  ["segNow",    null,     () => `<b>Your score now</b><span class="pts">${score()} pts</span>`],
+  ["segAuto",   "auto",   () => `<b>We can fix these</b><span class="pts">+${sum(list("auto"))} pts</span>`],
+  ["segManual", "manual", () => `<b>These need you</b><span class="pts">+${sum(list("manual"))} pts</span>`],
+  ["segLocked", "locked", () => { const p = new Set(list("locked").map(it => it.plan)); return `<b>${p.size > 1 ? "Available on paid plans" : `Available on ${PLAN_NAME[[...p][0]]}`}</b><span class="pts">+${sum(list("locked"))} pts</span>`; }],
+];
+function segAt(x) {
+  for (const [id, sec, tip] of SEGS) {
+    const r = $(id).getBoundingClientRect();
+    if (r.width > 0 && x >= r.left - 1 && x <= r.right + 1) return { el: $(id), sec, tip, r };
+  }
+  return null;
+}
+function hideBarTip() {
+  $("barTip").classList.remove("is-on");
+  $("meter").classList.remove("is-hovering");
+  document.querySelectorAll("#meter span").forEach(s => s.classList.remove("is-hot", "is-link"));
+}
+$("meterHit").addEventListener("mousemove", (e) => {
+  const hit = segAt(e.clientX);
+  if (!hit) return hideBarTip();
+  document.querySelectorAll("#meter span").forEach(s => s.classList.toggle("is-hot", s === hit.el));
+  hit.el.classList.toggle("is-link", !!hit.sec);
+  $("meter").classList.add("is-hovering");
+  $("meterHit").style.cursor = hit.sec ? "pointer" : "default";
+  const tip = $("barTip");
+  $("barTipText").innerHTML = hit.tip();
+  tip.classList.add("is-on");
+  const w = tip.offsetWidth, mid = hit.r.left + hit.r.width / 2;
+  const left = Math.max(8, Math.min(mid - w / 2, window.innerWidth - w - 8));
+  tip.style.left = left + "px";
+  tip.style.top = (hit.r.bottom + 10) + "px";
+  $("barTipArrow").style.left = (mid - left - 4) + "px";
+});
+$("meterHit").addEventListener("mouseleave", hideBarTip);
+$("meterHit").addEventListener("click", (e) => { const hit = segAt(e.clientX); if (hit && hit.sec) { hideBarTip(); jumpTo(hit.sec); } });
+document.querySelector("#panel-score .panel-body").addEventListener("scroll", hideBarTip, { passive: true });
+
 $("jump").addEventListener("click", (e) => { const t = e.target.closest("[data-jump]"); if (t) jumpTo(t.dataset.jump); });
 $("groups").addEventListener("mouseover", (e) => {
   const r = e.target.closest("[data-row]");

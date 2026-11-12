@@ -41,6 +41,7 @@ v1 is the keeper (v2's tabs hid two of the three kinds). Polished in place:
 - Decluttered: hero key and 4-part bar replaced by one bar (now → one-click goal); nav and section bands lost their icons and counts (nav keeps counts); rows are full-width with hairline dividers; slide refs are text links, not grey chips; manual rows use plain icons.
 - Fix button moved from the sticky panel footer into the end of its own section (the checkboxes only apply there).
 - Needs-you rows: no Skip, no separate button; the title is the action (link style with an upload or arrow icon).
+- Score bar shows all four segments again (now · we fix · needs you · plan) with no key; hovering a segment shows a tooltip with its section and pts and dims the rest; clicking jumps to that section.
 - Fixed: Tailwind's `.collapse` hid the Done and How we score contents; renamed to `.reveal`.
 
 ## v2 panel (12 Nov 2026)
