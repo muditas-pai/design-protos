@@ -294,14 +294,6 @@
     .goal-input { flex: 1; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--v2-accent); border-radius: 6px; font: inherit; font-size: 13px; color: var(--v2-text);
       outline: none; box-shadow: 0 0 0 3px rgba(52,39,255,.12); }
     .goal-btn { height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: var(--v2-accent); color: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
-    /* gate callout */
-    .gate { width: 100%; display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 9px 10px; border: 1px solid #F3D9B5; border-radius: 8px; background: var(--v2-warn-tint);
-      color: var(--v2-text); font: inherit; font-size: 12.5px; line-height: 1.4; text-align: left; cursor: pointer; transition: border-color 120ms var(--ease); }
-    .gate:hover { border-color: var(--v2-warn); }
-    .gate > i:first-child { color: var(--v2-warn); font-size: 14px; flex-shrink: 0; }
-    .gate b { font-weight: 600; }
-    .gate-go { margin-left: auto; font-size: 12px; color: var(--v2-warn); flex-shrink: 0; transition: transform 160ms var(--ease); }
-    .gate:hover .gate-go { transform: translateX(2px); }
     .row-flash { animation: rowFlash 1.4s var(--ease) both; }
     @keyframes rowFlash { 0%, 40% { background: var(--v2-accent-tint); } 100% { background: transparent; } }
     /* dimension tag on rows */
@@ -335,8 +327,6 @@
     .dim-pts { width: 74px; text-align: right; font-size: 12px; color: var(--v2-text-3); white-space: nowrap; }
     .dim-pts b { color: var(--v2-text); font-weight: 600; }
     .dim-anchor { font-size: 12px; line-height: 1.45; color: var(--v2-text-2); margin-top: 3px; padding-right: 84px; }
-    .dim-gate { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--v2-text-3); padding: 6px 0 0; }
-    .dim-gate i { font-size: 13px; }
     .skip-btn { color: var(--v2-text-3); }
     .skip-btn:hover { color: var(--v2-text); }
 
@@ -559,7 +549,6 @@
             </div>
             </div>
             <div class="legend" id="legend"></div>
-            <div id="gate"></div>
           </div>
           <nav class="jump" id="jump" aria-label="Jump to section"></nav>
           <div id="groups"></div>
@@ -657,11 +646,6 @@ const DIMS = [
     anchors: { 1: "Crowded slides, mixed styles, off brand.", 3: "Mostly clean, a few dense or inconsistent slides.", 5: "One idea per slide, consistent, on brand throughout." } },
 ];
 const DIM = Object.fromEntries(DIMS.map(d => [d.id, d]));
-/* Gates cap the total however strong the rest is. */
-const GATES = [
-  { id: "noask", cap: 50, item: "ask",   label: "No clear ask",            fix: "Add a clear ask" },
-  { id: "facts", cap: 60, item: "facts", label: "Numbers that disagree",   fix: "Fix the numbers that disagree" },
-];
 const GOAL_DEFAULT = "Investors back your Series A";
 const BANDS = [
   { min: 90, label: "Ready to present", tone: "good" },
@@ -728,11 +712,10 @@ const kind = (it) => it.type === "plan" ? (allows(it.plan) ? "auto" : "locked") 
 const isOpen = (it) => !S.done.has(it.id) && !S.skipped.has(it.id);
 const list = (k) => ITEMS.filter(it => isOpen(it) && kind(it) === k);
 const sum = (arr) => arr.reduce((a, it) => a + it.pts, 0);
-/* raw = sum of dimension points; score = raw capped by any open gate */
+/* score = sum of the five dimensions' points */
 const dimPts = (id, done = S.done) => DIM[id].base + sum(ITEMS.filter(it => it.dim === id && done.has(it.id)));
 const rawWith = (done) => DIMS.reduce((a, d) => a + dimPts(d.id, done), 0);
-const gatesWith = (done) => GATES.filter(g => !done.has(g.item));
-const scoreWith = (done) => Math.min(rawWith(done), ...gatesWith(done).map(g => g.cap), 100);
+const scoreWith = (done) => Math.min(rawWith(done), 100);
 const score = () => scoreWith(S.done);
 const levelOf = (id) => 1 + Math.round(4 * dimPts(id) / DIM[id].weight);
 const anchorFor = (d, lv) => d.anchors[lv >= 5 ? 5 : lv >= 3 ? 3 : 1];   /* 2 and 4 show the level below until they reach the next anchor */
@@ -924,13 +907,6 @@ function renderGoal() {
     ? `<span class="goal-lbl">Goal</span><input class="goal-input" id="goalInput" value="${S.goal.replace(/"/g, "&quot;")}" aria-label="Goal"><button class="goal-btn" data-goal-save>Save</button>`
     : `<span class="goal-lbl">Goal</span><span class="goal-txt">${S.goal}</span><button class="goal-edit" data-goal-edit title="Edit goal" aria-label="Edit goal"><i class="ph ph-pencil-simple"></i></button>`;
 }
-function renderGate() {
-  const raw = rawWith(S.done), open = gatesWith(S.done);
-  const g = open.length ? open.reduce((a, b) => (a.cap <= b.cap ? a : b)) : null;
-  $("gate").innerHTML = g && raw > g.cap
-    ? `<button class="gate" data-gate="${g.item}"><i class="ph-fill ph-lock-simple"></i><span><b>Capped at ${g.cap}.</b> ${g.fix} to score higher.</span><i class="ph-bold ph-arrow-right gate-go"></i></button>`
-    : "";
-}
 function updateHero() {
   const { s, a, m, l } = potentials();
   const goal = a > 0 ? s + a : m > 0 ? s + m : l > 0 ? s + l : s;
@@ -952,7 +928,7 @@ function updateHero() {
   else if (l > 0) payoff = `${planLabel} takes it to ${s + l}.`;
   else payoff = "Your presentation is ready.";
   const setup = a > 0 || m > 0 || l > 0 ? (s >= 80 ? "Looking strong." : "A solid start.") : "Nice work.";
-  renderGoal(); renderGate();
+  renderGoal();
 
   const leg = [
     ["seg-now", "Now", s, true],
@@ -1203,7 +1179,6 @@ function renderGroups() {
           <span class="dots" role="img" aria-label="Level ${lv} of 5">${[1,2,3,4,5].map(k => `<i class="${k <= lv ? "on" : ""}"></i>`).join("")}</span>
           <span class="dim-pts tabular"><b>${p}</b> / ${d.weight}${open ? ` <span style="color:var(--v2-accent);">+${open}</span>` : ""}</span></div>
         <div class="dim-anchor">${anchorFor(d, lv)}</div></div>`; }).join("")}
-      ${GATES.map(g => `<div class="dim-gate"><i class="ph ph-lock-simple"></i>${g.label} caps the score at ${g.cap}${gatesWith(S.done).includes(g) ? "" : ` <span style="color:var(--v2-good);">· cleared</span>`}</div>`).join("")}
     </div></div></div>
   </section>`;
 
@@ -1592,12 +1567,6 @@ $("goal").addEventListener("keydown", (e) => {
   if (e.key === "Enter") saveGoal();
   if (e.key === "Escape") { S.editingGoal = false; renderGoal(); }
 });
-$("gate").addEventListener("click", (e) => {
-  const g = e.target.closest("[data-gate]"); if (!g) return;
-  jumpTo("auto");
-  setTimeout(() => { const r = document.querySelector(`[data-row="${g.dataset.gate}"]`); if (r) { r.classList.remove("row-flash"); void r.offsetWidth; r.classList.add("row-flash"); } }, 450);
-});
-
 $("jump").addEventListener("click", (e) => { const t = e.target.closest("[data-jump]"); if (t) jumpTo(t.dataset.jump); });
 $("groups").addEventListener("mouseover", (e) => {
   const r = e.target.closest("[data-row]");

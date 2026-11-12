@@ -4,7 +4,7 @@ Draft, 12 Nov 2026. How we score a presentation, and which kind of fix each find
 
 ## The premise
 
-A presentation is good to the extent that it gets a specific audience to **understand, believe and act on** something. Every check below connects back to that. If it doesn't, we'd be scoring how slides look instead of whether they work.
+A presentation is good to the extent that it gets a specific audience to **understand, believe and act on** something. Every check below connects back to that. Objective, storyline and evidence carry 70 of the 100 points, so a deck without a clear ask or the data behind it scores low however good it looks. If it doesn't, we'd be scoring how slides look instead of whether they work.
 
 ## Outcomes and drivers
 
@@ -84,17 +84,6 @@ What *nothing missing* means depends on the presentation type:
 | 1 | 3 | 5 |
 |---|---|---|
 | Crowded slides, unreadable charts, mixed fonts and colours, off brand. | Mostly clean, but a few dense slides or inconsistent styles. Brand partly applied. | One idea per slide, readable charts, a consistent hierarchy, and the brand kit (logo, colours, fonts) applied throughout. |
-
-## Gates
-
-Some failures cap the total, however strong the rest is. Otherwise good design can hide a broken argument.
-
-| If | The score can't go above |
-|---|---|
-| No identifiable ask or takeaway | 50 |
-| A material factual error (numbers that contradict each other across slides, a wrong figure we can check) | 60 |
-
-The panel names the gate and the way past it, for example *Add a clear ask to score above 50*.
 
 ## Quick tests
 

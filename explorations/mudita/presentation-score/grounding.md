@@ -33,12 +33,11 @@ Volatile reference for `explorations/mudita/presentation-score/`. Ages with the 
 `score-panel.html` now scores with `rubric-spec.md`:
 
 - Five dimensions with weights 20 / 25 / 25 / 15 / 15. Each keeps its points (0 to its weight); the 1 to 5 level and anchor text shown in How we score are derived from them. Levels 2 and 4 show the anchor below them.
-- Gates: no ask caps at 50, numbers that disagree cap at 60. The hero shows a callout for the active gate that jumps to its fix.
-- Sample deck: worth 53, shown as 50 (no ask). One-click fixes take it to 81 (Strong), the user's input to 90, the plans to 93. Fix everything except the ask and it stays at 50.
+- No caps (gates were tried and dropped as too complex, 12 Nov 2026). The ask's weight does the work.
+- Sample deck: 53 (Needs work). One-click fixes take it to 81 (Strong), the user's input to 90, the plans to 93.
 - Goal line in the hero, editable (no real re-score in the proto).
 - Quick checks section: the elevator sentence (confirm, or edit the goal) and the titles read alone, with labels flagged.
 - Each fix names its dimension. Speaker notes are gone with delivery.
-- Bar segments and tooltips use simulated scores, so they include the points a gate was holding back.
 
 ## v1 polish (12 Nov 2026)
 
