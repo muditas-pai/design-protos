@@ -28,6 +28,16 @@ Volatile reference for `explorations/mudita/presentation-score/`. Ages with the 
 | Outside click | Closes the panel | Panel stays open: it's a to-do list you work through while editing slides |
 | Entry | Button in top bar | "Score 68" button before Share, permanent once scored, with a dot while one-click fixes are waiting |
 
+## v1 polish (12 Nov 2026)
+
+v1 is the keeper (v2's tabs hid two of the three kinds). Polished in place:
+- Score, "/ 100" and band label share one baseline.
+- Points read "+4 pts" everywhere, with more room before them.
+- Group sublines and the breakdown note removed; the breakdown labels its light part as "+4 pts" instead.
+- Manual rows: Skip sits next to the action button.
+- Upgrade card: indigo card with the reachable score, a before/after preview of slide 1 with the brand kit, explanations shown, white CTA.
+- Fixed: Tailwind's `.collapse` hid the Done and How we score contents; renamed to `.reveal`.
+
 ## v2 panel (12 Nov 2026)
 
 `score-panel-v2.html` forks v1, which read as too busy. The editor chrome, data and flows are the same; only the panel changed.
