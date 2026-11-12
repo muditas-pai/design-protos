@@ -38,6 +38,7 @@ v1 is the keeper (v2's tabs hid two of the three kinds). Polished in place:
 - Upgrade card: indigo card with the reachable score, a before/after preview of slide 1 with the brand kit, explanations shown, white CTA.
 - Section headers are full-width bands (grey, uppercase label, count, pts) so they don't read as rows.
 - Sticky jump nav under the score (We fix · Needs you · Upgrade). It scrolls to a section, never filters; the active tab follows scroll.
+- Decluttered: hero key and 4-part bar replaced by one bar (now → one-click goal); nav and section bands lost their icons and counts (nav keeps counts); rows are full-width with hairline dividers; slide refs are text links, not grey chips; manual rows use plain icons.
 - Fixed: Tailwind's `.collapse` hid the Done and How we score contents; renamed to `.reveal`.
 
 ## v2 panel (12 Nov 2026)
