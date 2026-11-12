@@ -36,7 +36,7 @@ Volatile reference for `explorations/mudita/presentation-score/`. Ages with the 
 - No caps (gates were tried and dropped as too complex, 12 Nov 2026). The ask's weight does the work.
 - Sample deck: 53 (Needs work). One-click fixes take it to 81 (Strong), the user's input to 90, the plans to 93.
 - Goal line in the hero, editable (no real re-score in the proto).
-- Quick checks section: the elevator sentence (confirm, or edit the goal) and the titles read alone, with labels flagged.
+- Quick checks (elevator sentence, titles read alone) were tried and dropped: they repeated the ask and titles fixes. The tests stay in the spec as how levels are set.
 - Each fix names its dimension. Speaker notes are gone with delivery.
 
 ## v1 polish (12 Nov 2026)

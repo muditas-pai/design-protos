@@ -299,23 +299,6 @@
     /* dimension tag on rows */
     .dim-tag { font-size: 12px; color: var(--v2-text-3); }
     .meta-dot { font-size: 12px; color: #C4C4D0; margin: 0 -2px; }
-    /* quick checks */
-    .check-row { margin: 0 -16px; padding: 14px 16px; }
-    .check-row + .check-row { box-shadow: inset 0 1px 0 #EFEFF4; }
-    .check-head { display: flex; align-items: center; gap: 8px; }
-    .check-title { font-size: 13.5px; font-weight: 500; color: var(--v2-text); }
-    .ok-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--v2-good); }
-    .elevator { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--v2-text-2); padding-left: 10px; box-shadow: inset 2px 0 0 var(--v2-line); text-wrap: pretty; }
-    .elev-miss { color: var(--v2-warn); }
-    #titlesToggle { gap: 10px; }
-    #titlesToggle .chev { margin-left: 0; }
-    #titlesToggle .tabular { margin-left: auto; }
-    .titles { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; }
-    .titles button { width: 100%; display: flex; align-items: baseline; gap: 10px; padding: 5px 6px; margin: 0 -6px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 12.5px;
-      line-height: 1.4; color: var(--v2-text); text-align: left; cursor: pointer; }
-    .titles button:hover { background: #F7F7FA; }
-    .titles .tn { width: 14px; flex-shrink: 0; text-align: right; color: var(--v2-text-3); font-size: 11.5px; }
-    .label-tag { margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--v2-warn); }
     /* how we score */
     .dim { padding: 10px 0; }
     .dim + .dim { box-shadow: inset 0 1px 0 #EFEFF4; }
@@ -701,7 +684,7 @@ const S = {
   credits: 120, shown: 0, fixing: false, lastBatch: null,
   screenshot: null, team: [], traction: { retention: "", hospitals: "", growth: "" },
   hintShown: false, coachOpen: false, upPlan: "pro",
-  fixedOpen: false, scoreOpen: false, timers: [], goal: GOAL_DEFAULT, editingGoal: false, msgOk: false, titlesOpen: false,
+  fixedOpen: false, scoreOpen: false, timers: [], goal: GOAL_DEFAULT, editingGoal: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1044,26 +1027,6 @@ function spy() {
 }
 document.querySelector("#panel-score .panel-body").addEventListener("scroll", spy, { passive: true });
 
-function slideTitle(n) {
-  const t = {
-    1: "Closing the clinical research gap",
-    2: "Clinical trials lose 1 in 3 patients before they finish",
-    3: "One app keeps patients in the study",
-    4: S.done.has("titles") ? "Three steps, no new hardware" : "How it works",
-    5: "A $14B market by 2030",
-    6: "Since our pilot launch in March",
-    7: S.done.has("titles") ? "We charge per active trial" : "How we make money",
-    8: "Built by people who ran trials",
-    9: S.done.has("ask") ? "We're raising $12M to reach 200 hospitals by 2028" : "Thank you",
-  }[n];
-  return { text: t, label: ["How it works", "How we make money", "Thank you"].includes(t) };
-}
-function elevator() {
-  return S.done.has("ask")
-    ? "Tessera keeps patients in clinical trials so studies finish on time, and we're raising $12M to reach 200 hospitals by 2028."
-    : "Tessera keeps patients in clinical trials so studies finish on time. <span class=\"elev-miss\">We couldn't find what you want investors to do.</span>";
-}
-
 function renderGroups() {
   const auto = list("auto"), manual = list("manual"), locked = list("locked");
   const doneItems = ITEMS.filter(it => S.done.has(it.id) || S.skipped.has(it.id));
@@ -1144,27 +1107,6 @@ function renderGroups() {
       </div></div></div>
     </section>`;
   }
-
-  // Quick checks (elevator test + headline test)
-  const titles = [1,2,3,4,5,6,7,8,9].map(n => slideTitle(n));
-  html += `<section class="grp has-band" id="sec-checks">
-    <div class="sec-band"><span class="sec-title">Quick checks</span></div>
-    <div class="check-row">
-      <div class="check-head"><span class="check-title">Your message in one sentence</span>${S.msgOk ? `<span class="ok-tag"><i class="ph-bold ph-check"></i>Confirmed</span>` : ""}</div>
-      <p class="elevator">${elevator()}</p>
-      ${S.msgOk ? "" : `<div class="row-meta"><button class="v2-btn v2-btn-secondary v2-btn-sm" data-msg-ok><i class="ph ph-check"></i>That's right</button><button class="v2-btn v2-btn-ghost v2-btn-sm skip-btn" data-goal-edit>Edit the goal</button></div>`}
-    </div>
-    <div class="check-row">
-      <button class="disclosure" id="titlesToggle" aria-expanded="${S.titlesOpen}">
-        <span class="check-title" style="color:var(--v2-text);">Your titles, read alone</span>
-        <span class="tabular" style="font-size:12px;color:var(--v2-text-3);">${titles.filter(t => t.label).length ? `${plural(titles.filter(t => t.label).length, "label")}` : "Reads as a story"}</span>
-        <i class="ph ph-caret-down chev"></i>
-      </button>
-      <div class="reveal ${S.titlesOpen ? "is-open" : ""}"><div><ol class="titles">
-        ${titles.map((t, i) => `<li><button data-go="${i + 1}"><span class="tn tabular">${i + 1}</span><span>${t.text}</span>${t.label ? `<span class="label-tag">Label</span>` : ""}</button></li>`).join("")}
-      </ol></div></div>
-    </div>
-  </section>`;
 
   // How we score: the five rubric dimensions
   html += `<section class="grp" style="padding-bottom:24px;">
@@ -1428,7 +1370,7 @@ async function generate() {
   hideCoach(); $("hint").classList.remove("is-on"); $("toast").classList.remove("is-on"); closeUpgrade();
   Object.assign(S, { phase: "generating", revealed: 0, current: 0, done: new Set(), skipped: new Set(), freshPlan: new Set(),
     credits: 120, shown: 0, fixing: false, lastBatch: null, screenshot: null, team: [], traction: { retention: "", hospitals: "", growth: "" },
-    hintShown: false, fixedOpen: false, scoreOpen: false, editingGoal: false, msgOk: false, titlesOpen: false });
+    hintShown: false, fixedOpen: false, scoreOpen: false, editingGoal: false });
   S.checked = new Set(ITEMS.filter(it => kind(it) === "auto").map(it => it.id));
   $("upgradeTop").style.display = S.plan === "free" ? "" : "none";
   openDock(null);
@@ -1504,8 +1446,6 @@ $("groups").addEventListener("click", (e) => {
   if (t.dataset.undoOne) return undoOne(t.dataset.undoOne);
   if (t.dataset.upgrade) return openUpgrade(t.dataset.upgrade);
   if (t.id === "fixedToggle") { S.fixedOpen = !S.fixedOpen; t.setAttribute("aria-expanded", S.fixedOpen); t.nextElementSibling.classList.toggle("is-open", S.fixedOpen); return; }
-  if (t.id === "titlesToggle") { S.titlesOpen = !S.titlesOpen; t.setAttribute("aria-expanded", S.titlesOpen); t.nextElementSibling.classList.toggle("is-open", S.titlesOpen); return; }
-  if (t.dataset.msgOk !== undefined) { S.msgOk = true; return renderGroups(); }
   if (t.dataset.goalEdit !== undefined) { S.editingGoal = true; renderGoal(); document.querySelector(".hero").scrollIntoView({ block: "nearest" }); document.querySelector("#panel-score .panel-body").scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => $("goalInput")?.focus(), 250); return; }
   if (t.id === "scoreToggle") { S.scoreOpen = !S.scoreOpen; t.setAttribute("aria-expanded", S.scoreOpen); t.nextElementSibling.classList.toggle("is-open", S.scoreOpen); return; }
 });
@@ -1552,7 +1492,7 @@ document.querySelector("#panel-score .panel-body").addEventListener("scroll", hi
 function saveGoal() {
   const v = $("goalInput").value.trim();
   if (v) S.goal = v;
-  S.editingGoal = false; S.msgOk = false;
+  S.editingGoal = false;
   renderGoal(); renderGroups();
   toast("Goal saved. We'll score against it from now on.");
 }
