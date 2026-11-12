@@ -123,12 +123,19 @@
     .thumb-row.is-active .thumb { border-color: var(--v2-accent); box-shadow: 0 0 0 1px var(--v2-accent); }
     .thumb.is-hl { box-shadow: 0 0 0 2px rgba(52,39,255,.35); border-color: var(--v2-accent); }
     .thumb .inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: none; }
-    .thumb .flag { position: absolute; top: 4px; right: 4px; height: 16px; min-width: 16px; padding: 0 4px; border-radius: 99px;
-      display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 10px; font-weight: 600; color: #fff;
-      background: var(--v2-text); box-shadow: 0 0 0 1.5px #fff; transform: scale(0); transition: transform 200ms var(--ease); }
+    /* per-slide marker: which kinds of fix sit on this slide */
+    .thumb .flag { position: absolute; top: 5px; right: 5px; height: 20px; padding: 0 5px; border-radius: 99px; border: 0;
+      display: flex; align-items: center; gap: 4px; background: #fff; cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(20,20,31,.08), 0 2px 6px -2px rgba(20,20,31,.25);
+      transform: scale(0); transition: transform 200ms var(--ease), box-shadow 140ms var(--ease); }
     .thumb .flag.is-on { transform: scale(1); }
-    .thumb .flag.manual { background: var(--v2-warn); }
-    .thumb .flag i { font-size: 10px; }
+    .thumb .flag:hover { box-shadow: 0 0 0 1px var(--v2-accent), 0 2px 6px -2px rgba(20,20,31,.25); }
+    .thumb .flag i { font-size: 12px; line-height: 1; }
+    .thumb .flag .f-auto { color: var(--v2-accent); }
+    .thumb .flag .f-manual { color: var(--v2-text); }
+    .bar-tip .tip-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; white-space: normal; max-width: 240px; }
+    .bar-tip .tip-list span { display: flex; gap: 6px; align-items: baseline; color: rgba(255,255,255,.85); }
+    .bar-tip .tip-list i { font-size: 11px; flex-shrink: 0; transform: translateY(1px); }
     .skeleton { background: linear-gradient(100deg, #F0F0F4 30%, #F8F8FB 50%, #F0F0F4 70%); background-size: 300% 100%; animation: shimmer 1.3s linear infinite; }
     @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
     .thumb .refresh { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
@@ -846,13 +853,14 @@ function renderFilm() {
     const ready = S.phase !== "generating" || n <= S.revealed;
     const its = S.phase === "ready" ? itemsOnSlide(n) : [];
     const hasManual = its.some(it => kind(it) === "manual");
+    const hasAuto = its.some(it => kind(it) === "auto");
     const showFlag = its.length && S.dock === "score";
     html += `<div class="thumb-row ${n - 1 === S.current ? "is-active" : ""}" data-n="${n}">
       <span class="n">${n}</span>
       <div class="thumb" data-thumb="${n}">
         ${ready ? `<div class="inner" style="transform:scale(${sc})">${slideHTML(n, false)}</div>` : `<div class="skeleton" style="position:absolute;inset:0"></div>`}
         <div class="refresh skeleton" data-refresh="${n}"></div>
-        <span class="flag ${hasManual ? "manual" : ""} ${showFlag ? "is-on" : ""}" title="${plural(its.length, "suggestion")}">${its.length || ""}</span>
+        ${its.length ? `<button class="flag ${showFlag ? "is-on" : ""}" data-flag="${n}" aria-label="${its.map(it => it.title).join(", ")}">${hasAuto ? `<i class="ph-fill ph-magic-wand f-auto"></i>` : ""}${hasManual ? `<i class="ph-fill ph-pencil-simple f-manual"></i>` : ""}</button>` : ""}
       </div></div>`;
   }
   film.innerHTML = html;
@@ -1457,7 +1465,33 @@ $("upGo").addEventListener("click", () => {
   toast(`You're on ${PLAN_NAME[p]}. We added ${plural(n, "fix")} to your list.`);
 });
 
-$("film").addEventListener("click", (e) => { const r = e.target.closest(".thumb-row"); if (r) goSlide(+r.dataset.n); });
+$("film").addEventListener("click", (e) => {
+  const f = e.target.closest("[data-flag]");
+  if (f) {
+    hideBarTip();
+    const n = +f.dataset.flag, it = itemsOnSlide(n)[0];
+    goSlide(n);
+    if (S.dock !== "score") openDock("score");
+    if (it) { jumpTo(kind(it)); setTimeout(() => { const r = document.querySelector(`[data-row="${it.id}"]`); if (r) { r.classList.remove("row-flash"); void r.offsetWidth; r.classList.add("row-flash"); } }, 450); }
+    return;
+  }
+  const r = e.target.closest(".thumb-row"); if (r) goSlide(+r.dataset.n);
+});
+/* hover a slide marker: list the fixes on that slide */
+$("film").addEventListener("mouseover", (e) => {
+  const f = e.target.closest("[data-flag]");
+  if (!f) return;
+  const its = itemsOnSlide(+f.dataset.flag);
+  $("barTipText").innerHTML = `<b>On this slide</b><div class="tip-list">${its.map(it => `<span><i class="${kind(it) === "auto" ? "ph-fill ph-magic-wand" : "ph-fill ph-pencil-simple"}"></i>${it.title}</span>`).join("")}</div>`;
+  const tip = $("barTip"), r = f.getBoundingClientRect();
+  tip.classList.add("is-on");
+  const w = tip.offsetWidth, mid = r.left + r.width / 2;
+  const left = Math.max(8, Math.min(mid - w / 2, window.innerWidth - w - 8));
+  tip.style.left = left + "px"; tip.style.top = (r.bottom + 8) + "px";
+  $("barTipArrow").style.left = (mid - left - 4) + "px";
+});
+$("film").addEventListener("scroll", () => hideBarTip(), { passive: true });
+$("film").addEventListener("mouseout", (e) => { if (e.target.closest("[data-flag]") && !e.relatedTarget?.closest?.("[data-flag]")) hideBarTip(); });
 
 $("groups").addEventListener("click", (e) => {
   const t = e.target.closest("button, input"); if (!t) return;
