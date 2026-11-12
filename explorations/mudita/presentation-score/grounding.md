@@ -28,6 +28,18 @@ Volatile reference for `explorations/mudita/presentation-score/`. Ages with the 
 | Outside click | Closes the panel | Panel stays open: it's a to-do list you work through while editing slides |
 | Entry | Button in top bar | "Score 68" button before Share, permanent once scored, with a dot while one-click fixes are waiting |
 
+## Built on the rubric (12 Nov 2026)
+
+`score-panel.html` now scores with `rubric-spec.md`:
+
+- Five dimensions with weights 20 / 25 / 25 / 15 / 15. Each keeps its points (0 to its weight); the 1 to 5 level and anchor text shown in How we score are derived from them. Levels 2 and 4 show the anchor below them.
+- Gates: no ask caps at 50, numbers that disagree cap at 60. The hero shows a callout for the active gate that jumps to its fix.
+- Sample deck: worth 53, shown as 50 (no ask). One-click fixes take it to 81 (Strong), the user's input to 90, the plans to 93. Fix everything except the ask and it stays at 50.
+- Goal line in the hero, editable (no real re-score in the proto).
+- Quick checks section: the elevator sentence (confirm, or edit the goal) and the titles read alone, with labels flagged.
+- Each fix names its dimension. Speaker notes are gone with delivery.
+- Bar segments and tooltips use simulated scores, so they include the points a gate was holding back.
+
 ## v1 polish (12 Nov 2026)
 
 v1 is the keeper (v2's tabs hid two of the three kinds). Polished in place:
@@ -68,8 +80,7 @@ generation done ─┬─ Open the panel ─► user closes it, or opens Style �
 
 ## Prototype decisions (not product decisions)
 
-- Base score 68. One-click fixes add 14, manual add 8, Pro adds 5, Gold adds 2, for a maximum of 97.
-- 4 categories of 25 (Story, Design, Content, Delivery) instead of the live 6. Open question.
+- Superseded by the rubric section above: the 68 base and the four placeholder categories are gone.
 - Credits: 120 to start, one-click fixes cost 2 to 8 each. Fixes unlocked by a plan are included.
 - Plan colours: live V2 uses indigo `#3427FF` for both the primary action and Pro/upgrade, so the proto does too.
   This conflicts with `pai-visual-language`, which says navy for actions and Brand Blue for growth. The editor has moved on; the skill hasn't.
