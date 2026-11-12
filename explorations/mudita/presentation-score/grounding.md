@@ -28,6 +28,21 @@ Volatile reference for `explorations/mudita/presentation-score/`. Ages with the 
 | Outside click | Closes the panel | Panel stays open: it's a to-do list you work through while editing slides |
 | Entry | Button in top bar | "Score 68" button before Share, permanent once scored, with a dot while one-click fixes are waiting |
 
+## v2 panel (12 Nov 2026)
+
+`score-panel-v2.html` forks v1, which read as too busy. The editor chrome, data and flows are the same; only the panel changed.
+
+| | v1 | v2 |
+|---|---|---|
+| Score | Number, band, 4-part hatched meter, 2×2 legend | Number, band, one bar (now → reachable), one headline |
+| Three kinds | Stacked groups in one long scroll | Tabs with counts: We fix · Needs you · Upgrade |
+| Rows | Title + 2–3 line reason + slide chips | One line: title · slide · points. Reason opens on click |
+| Action | Sticky Fix button only | One action per tab in a fixed footer (Fix, or Upgrade) |
+| Done | Separate disclosure | Inside each tab, under its list |
+| How we score | Disclosure at the bottom | Info button next to the score |
+
+After a fix batch empties "We fix", the panel switches to "Needs you". Note: Tailwind's `.collapse` (`visibility: collapse`) hides v1's Done and How we score sections when opened; v2 uses `.reveal` instead.
+
 ## Entry after generation (the two options asked for)
 
 ```
