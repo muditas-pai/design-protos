@@ -185,13 +185,36 @@
     .legend .sw { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
     .legend span.is-dim { opacity: .35; }
 
+    .panel-body { position: relative; }
     .grp { border-top: 1px solid var(--v2-line); padding: 14px 16px 16px; }
-    .grp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    /* section header: a full-width band, so it reads as structure, not as another row */
+    .grp.has-band { padding-top: 0; }
+    .sec-band { display: flex; align-items: center; gap: 8px; height: 40px; margin: 0 -16px 8px; padding: 0 16px;
+      background: #F6F6F9; border-bottom: 1px solid var(--v2-line); }
+    .sec-band .sec-ico { font-size: 15px; display: flex; }
+    .sec-band .sec-title { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--v2-text); }
+    .sec-band .sec-count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #fff; box-shadow: inset 0 0 0 1px var(--v2-line);
+      font-size: 11px; font-weight: 600; color: var(--v2-text-2); display: inline-flex; align-items: center; justify-content: center; }
     .grp-ico { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .grp-ico i { font-size: 14px; }
-    .grp-title { font-size: 13px; font-weight: 600; }
-    .grp-count { font-size: 12px; color: var(--v2-text-3); font-weight: 500; }
     .grp-pts { margin-left: auto; padding-left: 16px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+    /* jump nav: sticky, scrolls to a section (does not filter) */
+    .jump { position: sticky; top: 0; z-index: 4; display: flex; gap: 4px; padding: 0 12px; background: rgba(255,255,255,.96); backdrop-filter: blur(6px);
+      border-top: 1px solid var(--v2-line); border-bottom: 1px solid var(--v2-line); }
+    .jump:empty { display: none; }
+    .jump-tab { position: relative; height: 42px; padding: 0 6px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 500; color: var(--v2-text-3);
+      display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; transition: color 120ms var(--ease); }
+    .jump-tab:hover { color: var(--v2-text); }
+    .jump-tab:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: -4px; border-radius: 6px; }
+    .jump-tab::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: -1px; height: 2px; border-radius: 2px 2px 0 0; background: var(--v2-text);
+      transform: scaleX(0); transition: transform 200ms var(--ease); }
+    .jump-tab.is-active { color: var(--v2-text); font-weight: 600; }
+    .jump-tab.is-active::after { transform: scaleX(1); }
+    .jump-tab i { font-size: 14px; }
+    .jump-tab .n { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center;
+      background: var(--v2-hover); color: var(--v2-text-2); }
+    .jump + #groups > .grp:first-child { border-top: 0; }
     .grp-sub { font-size: 12px; color: var(--v2-text-3); margin: 0 0 6px 30px; line-height: 1.45; }
 
     .row { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; padding: 9px 8px; margin: 0 -8px; border-radius: 8px;
@@ -454,6 +477,7 @@
             </div>
             <div class="legend" id="legend"></div>
           </div>
+          <nav class="jump" id="jump" aria-label="Jump to section"></nav>
           <div id="groups"></div>
         </div>
       </section>
@@ -877,6 +901,46 @@ function rowUp(it) {
   </div>`;
 }
 
+const JUMP = [
+  ["auto",   "We fix",    "ph-magic-wand",    "var(--v2-accent)"],
+  ["manual", "Needs you", "ph-hand-pointing", "var(--v2-warn)"],
+  ["locked", "Upgrade",   "ph-crown",         "var(--v2-accent)"],
+];
+let spyLock = 0;
+function renderJump(auto, manual, locked) {
+  const n = { auto: auto.length, manual: manual.length, locked: locked.length };
+  const tabs = JUMP.filter(([id]) => n[id]);
+  $("jump").innerHTML = tabs.length > 1 ? tabs.map(([id, label, ico, col]) =>
+    `<button class="jump-tab" data-jump="${id}"><i class="ph-fill ${ico}" style="color:${col}"></i>${label}<span class="n tabular">${n[id]}</span></button>`).join("") : "";
+  spy();
+}
+function secTop(id) {
+  const sec = $("sec-" + id);
+  return sec ? sec.offsetTop - $("jump").offsetHeight : null;
+}
+function jumpTo(id) {
+  const body = document.querySelector("#panel-score .panel-body");
+  const top = secTop(id); if (top == null) return;
+  setActiveJump(id);
+  spyLock = Date.now() + 600;
+  body.scrollTo({ top: top + 1, behavior: "smooth" });
+}
+function setActiveJump(id) {
+  document.querySelectorAll(".jump-tab").forEach(t => t.classList.toggle("is-active", t.dataset.jump === id));
+}
+function spy() {
+  if (Date.now() < spyLock) return;
+  const body = document.querySelector("#panel-score .panel-body");
+  const tabs = [...document.querySelectorAll(".jump-tab")].map(t => t.dataset.jump);
+  if (!tabs.length) return;
+  let active = tabs[0];
+  const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
+  tabs.forEach(id => { const t = secTop(id); if (t != null && body.scrollTop >= t - 24) active = id; });
+  if (atEnd) { const last = tabs[tabs.length - 1]; if (body.scrollTop >= secTop(last) - body.clientHeight / 2) active = last; }
+  setActiveJump(active);
+}
+document.querySelector("#panel-score .panel-body").addEventListener("scroll", spy, { passive: true });
+
 function renderGroups() {
   const auto = list("auto"), manual = list("manual"), locked = list("locked");
   const doneItems = ITEMS.filter(it => S.done.has(it.id) || S.skipped.has(it.id));
@@ -885,10 +949,10 @@ function renderGroups() {
   if (auto.length) {
     const sel = auto.filter(it => S.checked.has(it.id));
     const cr = sel.reduce((a, it) => a + it.credits, 0);
-    html += `<section class="grp">
-      <div class="grp-head">
-        <span class="grp-ico" style="background:var(--v2-accent-tint);color:var(--v2-accent);"><i class="ph-fill ph-magic-wand"></i></span>
-        <span class="grp-title">We can fix these</span><span class="grp-count">${auto.length}</span>
+    html += `<section class="grp has-band" id="sec-auto">
+      <div class="sec-band">
+        <span class="sec-ico" style="color:var(--v2-accent);"><i class="ph-fill ph-magic-wand"></i></span>
+        <span class="sec-title">We can fix these</span><span class="sec-count tabular">${auto.length}</span>
         <span class="grp-pts tabular" style="color:var(--v2-accent);">+${sum(auto)} pts</span>
       </div>
       ${auto.map(rowAuto).join("")}
@@ -903,10 +967,10 @@ function renderGroups() {
   }
 
   if (manual.length) {
-    html += `<section class="grp">
-      <div class="grp-head">
-        <span class="grp-ico" style="background:var(--v2-warn-tint);color:var(--v2-warn);"><i class="ph-fill ph-hand-pointing"></i></span>
-        <span class="grp-title">These need you</span><span class="grp-count">${manual.length}</span>
+    html += `<section class="grp has-band" id="sec-manual">
+      <div class="sec-band">
+        <span class="sec-ico" style="color:var(--v2-warn);"><i class="ph-fill ph-hand-pointing"></i></span>
+        <span class="sec-title">These need you</span><span class="sec-count tabular">${manual.length}</span>
         <span class="grp-pts tabular" style="color:var(--v2-warn);">+${sum(manual)} pts</span>
       </div>
       ${manual.map(rowManual).join("")}
@@ -922,8 +986,13 @@ function renderGroups() {
         <i class="ph-bold ph-arrow-right up-arrow"></i>
         <figure><div class="up-thumb is-after">${previewSlide(1, true)}</div><figcaption>With your brand kit</figcaption></figure>
       </div>` : "";
-    html += `<section class="grp">
-      <div class="up-card">
+    html += `<section class="grp has-band" id="sec-locked">
+      <div class="sec-band">
+        <span class="sec-ico" style="color:var(--v2-accent);"><i class="ph-fill ph-crown"></i></span>
+        <span class="sec-title">${new Set(locked.map(it => it.plan)).size > 1 ? "Available on paid plans" : `Available on ${name}`}</span><span class="sec-count tabular">${locked.length}</span>
+        <span class="grp-pts tabular" style="color:var(--v2-accent);">+${sum(locked)} pts</span>
+      </div>
+      <div class="up-card" style="margin-top:8px;">
         <div class="up-eyebrow"><i class="ph-fill ph-crown"></i>${name}</div>
         <h3 class="up-title"><span class="setup">Your presentation could reach</span> <span class="payoff">${reach} with ${name}</span></h3>
         ${preview}
@@ -973,6 +1042,7 @@ function renderGroups() {
   </section>`;
 
   $("groups").innerHTML = html + footer;
+  renderJump(auto, manual, locked);
   document.querySelectorAll(".up-thumb").forEach(t => { t.firstElementChild.style.transform = `scale(${t.clientWidth / 960})`; });
   S.freshPlan.clear();
 }
@@ -1297,6 +1367,7 @@ $("groups").addEventListener("click", (e) => {
   if (t.id === "fixedToggle") { S.fixedOpen = !S.fixedOpen; t.setAttribute("aria-expanded", S.fixedOpen); t.nextElementSibling.classList.toggle("is-open", S.fixedOpen); return; }
   if (t.id === "scoreToggle") { S.scoreOpen = !S.scoreOpen; t.setAttribute("aria-expanded", S.scoreOpen); t.nextElementSibling.classList.toggle("is-open", S.scoreOpen); return; }
 });
+$("jump").addEventListener("click", (e) => { const t = e.target.closest("[data-jump]"); if (t) jumpTo(t.dataset.jump); });
 $("groups").addEventListener("mouseover", (e) => {
   const r = e.target.closest("[data-row]");
   document.querySelectorAll(".thumb.is-hl").forEach(t => t.classList.remove("is-hl"));

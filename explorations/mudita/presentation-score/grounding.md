@@ -36,6 +36,8 @@ v1 is the keeper (v2's tabs hid two of the three kinds). Polished in place:
 - Group sublines and the breakdown note removed; the breakdown labels its light part as "+4 pts" instead.
 - Manual rows: Skip sits next to the action button.
 - Upgrade card: indigo card with the reachable score, a before/after preview of slide 1 with the brand kit, explanations shown, white CTA.
+- Section headers are full-width bands (grey, uppercase label, count, pts) so they don't read as rows.
+- Sticky jump nav under the score (We fix · Needs you · Upgrade). It scrolls to a section, never filters; the active tab follows scroll.
 - Fixed: Tailwind's `.collapse` hid the Done and How we score contents; renamed to `.reveal`.
 
 ## v2 panel (12 Nov 2026)
