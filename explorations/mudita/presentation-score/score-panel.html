@@ -1004,6 +1004,19 @@ function secTop(id) {
   const sec = $("sec-" + id);
   return sec ? sec.offsetTop - $("jump").offsetHeight : null;
 }
+/* After an accordion opens, scroll just enough to show all of it,
+   without pushing its header under the sticky nav. Runs alongside the expand. */
+function revealSection(btn) {
+  const body = document.querySelector("#panel-score .panel-body");
+  const sec = btn.closest("section");
+  setTimeout(() => {
+    const nav = $("jump").offsetHeight || 0;
+    const top = sec.offsetTop - nav;
+    const bottom = sec.offsetTop + sec.offsetHeight - body.clientHeight;
+    const target = Math.min(top, Math.max(body.scrollTop, bottom));
+    if (Math.abs(target - body.scrollTop) > 2) { spyLock = Date.now() + 600; body.scrollTo({ top: target, behavior: "smooth" }); }
+  }, 250);
+}
 function jumpTo(id) {
   const body = document.querySelector("#panel-score .panel-body");
   const top = secTop(id); if (top == null) return;
@@ -1445,9 +1458,9 @@ $("groups").addEventListener("click", (e) => {
   if (t.dataset.restore) { S.skipped.delete(t.dataset.restore); return renderAll(); }
   if (t.dataset.undoOne) return undoOne(t.dataset.undoOne);
   if (t.dataset.upgrade) return openUpgrade(t.dataset.upgrade);
-  if (t.id === "fixedToggle") { S.fixedOpen = !S.fixedOpen; t.setAttribute("aria-expanded", S.fixedOpen); t.nextElementSibling.classList.toggle("is-open", S.fixedOpen); return; }
+  if (t.id === "fixedToggle") { S.fixedOpen = !S.fixedOpen; t.setAttribute("aria-expanded", S.fixedOpen); t.nextElementSibling.classList.toggle("is-open", S.fixedOpen); if (S.fixedOpen) revealSection(t); return; }
   if (t.dataset.goalEdit !== undefined) { S.editingGoal = true; renderGoal(); document.querySelector(".hero").scrollIntoView({ block: "nearest" }); document.querySelector("#panel-score .panel-body").scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => $("goalInput")?.focus(), 250); return; }
-  if (t.id === "scoreToggle") { S.scoreOpen = !S.scoreOpen; t.setAttribute("aria-expanded", S.scoreOpen); t.nextElementSibling.classList.toggle("is-open", S.scoreOpen); return; }
+  if (t.id === "scoreToggle") { S.scoreOpen = !S.scoreOpen; t.setAttribute("aria-expanded", S.scoreOpen); t.nextElementSibling.classList.toggle("is-open", S.scoreOpen); if (S.scoreOpen) revealSection(t); return; }
 });
 /* score bar: hover a segment to see which section it comes from */
 const SEGS = [
