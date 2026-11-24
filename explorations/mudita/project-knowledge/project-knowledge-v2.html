@@ -542,10 +542,9 @@ function renderCard() {
         ? `<div class="mt-auto pt-3 text-caption"><span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>${name}: getting the last 30 days</span></div>`
         : s.phase === 'done'
         ? `<div class="mt-auto pt-3 text-caption text-text-success-primary"><span class="inline-flex items-center gap-1"><i class="ph-fill ph-check-circle"></i>${name} fully synced</span></div>`
-        : `<div class="mt-auto pt-3" data-sync="${sy.id}" data-compact="1">
-            <div class="flex items-center justify-between gap-2 text-caption"><span class="truncate">${name}: syncing older data</span><span class="tabular shrink-0 text-micro text-text-secondary" data-sync-eta>${etaText(s)}</span></div>
-            <div class="relative mt-1.5 h-1 overflow-hidden rounded-full bg-bg-quaternary"><div data-sync-bar class="absolute inset-y-0 right-0 rounded-full bg-bg-brand transition-[width] duration-300 ease-std" style="width:${Math.max(4, s.p * 100)}%"></div></div>
-            <div class="mt-1 text-micro text-text-secondary" data-sync-label>Synced back to ${monthYear(coveredDate(s))}</div>
+        : `<div class="mt-auto pt-3">
+            <div class="flex items-center justify-between gap-2 text-caption"><span class="truncate">${name}: syncing older data</span><span class="tabular shrink-0 text-micro text-text-secondary" data-sync-eta-for="${sy.id}">${etaText(s)}</span></div>
+            ${syncBar(sy, true).replace('max-w-[320px] ', '')}
           </div>`;
     } else {
       connInner += `<p class="mt-auto pt-3 text-caption text-text-secondary">${more > 0 ? `+${more} more · ` : ''}${proj.length ? 'Workspace apps on by default' : 'From your workspace, on by default'}</p>`;
@@ -769,10 +768,9 @@ function connRow(c, flashId) {
   return `<li class="-mx-2 rounded-control px-2 py-2.5 ${c.id === flashId ? 'flash-ok-soft' : ''}">
     <div class="flex items-center gap-3">
       ${appLogo(app, 'md', !c.on || expired ? 'logo-off' : '')}
-      <div class="min-w-0 flex-1"><div class="truncate text-body font-medium ${!c.on || expired ? 'text-text-secondary' : ''}">${app.name}</div><div class="truncate text-caption text-text-secondary">${cap}</div></div>
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-medium ${!c.on || expired ? 'text-text-secondary' : ''}">${app.name}</div><div class="truncate text-caption text-text-secondary" data-sync-cap="${c.id}">${cap}</div>${c.sync && c.on && !expired ? syncBar(c) : ''}</div>
       ${right}
-    </div>
-    ${c.sync && c.on && !expired ? syncBlock(c) : ''}</li>`;
+    </div></li>`;
 }
 function renderConns(flashId) {
   const ws = S.conns.filter((c) => c.scope === 'workspace'), pj = S.conns.filter((c) => c.scope === 'project');
@@ -880,27 +878,20 @@ const etaText = (s) => {
 };
 const syncing = (c) => c.sync && (c.sync.phase === 'recent' || c.sync.phase === 'history');
 
-// Row block in the modal: status line, timeline bar, end labels. Updated in place by the ticker.
-function syncBlock(c) {
+// One caption line and, while the history syncs, a thin bar that fills left to right. Updated in place by the ticker.
+function syncBar(c, thin) {
   const s = c.sync;
   if (s.phase === 'recent') return '';
   const done = s.phase === 'done';
-  return `<div class="pl-12 pr-1 pt-2 ${done ? 'fade-up' : ''}" data-sync="${c.id}">
-    <div class="flex items-center justify-between gap-3 text-micro">
-      <span class="${done ? 'text-text-success-primary' : 'text-text-secondary'}" data-sync-label>${done ? `All data synced, back to ${monthYear(s.since)}` : `Synced back to ${monthYear(coveredDate(s))}`}</span>
-      <span class="tabular text-text-secondary" data-sync-eta>${done ? '' : etaText(s)}</span>
-    </div>
-    <div class="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-bg-quaternary">
-      <div data-sync-bar class="absolute inset-y-0 right-0 rounded-full transition-[width] duration-300 ease-std ${done ? 'bg-[#14AE5C]' : 'bg-bg-brand'}" style="width:${Math.max(4, s.p * 100)}%"></div>
-    </div>
-    <div class="mt-1 flex justify-between text-[11px] leading-4 text-text-quaternary"><span>${monthYear(s.since)}</span><span>Today</span></div>
+  return `<div class="relative ${thin ? 'mt-1.5 h-1' : 'mt-2 h-1'} max-w-[320px] overflow-hidden rounded-full bg-bg-quaternary" data-sync="${c.id}">
+    <div data-sync-bar class="absolute inset-y-0 left-0 rounded-full transition-[width,background-color] duration-300 ease-std ${done ? 'bg-[#14AE5C]' : 'bg-bg-brand'}" style="width:${Math.max(3, s.p * 100)}%"></div>
   </div>`;
 }
 function syncCaption(c) {
   const s = c.sync;
   if (s.phase === 'recent') return `<span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>Getting the last 30 days</span>`;
-  if (s.phase === 'history') return `<span class="inline-flex items-center gap-1"><i class="ph-fill ph-check-circle text-[13px] text-[#14AE5C]"></i>Ready with the last 30 days · older data syncing</span>`;
-  return null;
+  if (s.phase === 'history') return `Ready · syncing older data, <span data-sync-eta>${etaText(s)}</span>`;
+  return `<span class="text-text-success-primary">All data synced</span>`;
 }
 
 function startSync(c, since) {
@@ -925,16 +916,13 @@ setInterval(() => {
     if (s.p >= 1) {
       s.phase = 'done';
       rerenderConnSurfaces();
-      toast(`${appById(c.id).name} is fully synced, back to ${monthYear(s.since)}`);
+      toast(`${appById(c.id).name} is fully synced`);
       setTimeout(() => { if (c.sync?.phase === 'done') { delete c.sync; rerenderConnSurfaces(); } }, 5000);
       return;
     }
     // In-place updates: no re-render, so switches and hovers aren't interrupted.
-    document.querySelectorAll(`[data-sync="${c.id}"]`).forEach((el) => {
-      const bar = el.querySelector('[data-sync-bar]'); if (bar) bar.style.width = Math.max(4, s.p * 100) + '%';
-      const lab = el.querySelector('[data-sync-label]'); if (lab && !lab.dataset.static) lab.textContent = `Synced back to ${monthYear(coveredDate(s))}`;
-      const eta = el.querySelector('[data-sync-eta]'); if (eta) eta.textContent = etaText(s);
-    });
+    document.querySelectorAll(`[data-sync="${c.id}"] [data-sync-bar]`).forEach((bar) => { bar.style.width = Math.max(3, s.p * 100) + '%'; });
+    document.querySelectorAll(`[data-sync-cap="${c.id}"] [data-sync-eta], #kcard [data-sync-eta-for="${c.id}"]`).forEach((el) => { el.textContent = etaText(s); });
   });
 }, 250);
 

@@ -50,9 +50,9 @@ initials when a logo is missing (as `AppLogo.jsx` does).
 
 - Live behaviour (from Mudita): a new connection fetches the last 30 days in seconds, then backfills the full
   history (often 3 to 4 years) over 2 to 3 hours.
-- v2 shows three phases: "Getting the last 30 days" (spinner) → "Ready with the last 30 days · older data syncing"
-  (a timeline bar, oldest date on the left and Today on the right, filling leftward, with "Synced back to <month year>"
-  and a rough time left) → "All data synced, back to <month year>" (green, settles after a few seconds).
+- v2 shows three phases, each as one caption line under the app name: "Getting the last 30 days" (spinner) →
+  "Ready · syncing older data, about 2 hours left" with a thin bar filling left to right → "All data synced"
+  (green, settles after a few seconds). An earlier version used a dated timeline filling backwards; dropped as confusing.
 - The card's Connectors tile shows a spinner next to a syncing app and swaps its footnote for the sync bar.
 - Demo compresses the history sync to ~45 s; time left is computed against ~2.5 hours.
 - Needs backend: per-connection sync phase, oldest date available, oldest date synced so far, and an estimate.
