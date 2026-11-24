@@ -473,39 +473,71 @@ function groupHtml(g) {
     </div>
   </div>`;
 }
-function renderCard() {
-  const usable = found.filter((g) => g.state === 'found');
-  const picked = usable.filter((g) => g.picked);
-  const busy = found.some((g) => g.state === 'syncing' || g.state === 'searching');
-  const body = cardEl.querySelector('[data-askbody]');
-  const keep = body ? body.scrollTop : 0;
-  cardEl.innerHTML = `<div class="fade-up flex h-[min(56vh,520px)] flex-col overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary px-2.5 pb-2.5 pt-2 shadow-menu">
+// The card is built once; later updates touch only the row that changed and the footer, so it never redraws or blinks.
+function cardShell() {
+  cardEl.innerHTML = `<div data-askcard class="fade-up flex h-[min(56vh,520px)] flex-col overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary px-2.5 pb-2.5 pt-2 shadow-menu">
       <div class="flex min-h-[48px] shrink-0 items-center gap-1 pb-3 pl-3 pr-1 pt-2">
         <p class="mr-2 min-w-0 flex-1 text-[16px] font-medium leading-6">What should we use from your apps?</p>
         <button type="button" id="dismissBtn" class="icon-btn !h-7 !w-7 text-text-secondary" aria-label="Don't use this information"><i class="ph ph-x text-[15px]"></i></button>
       </div>
       <div data-askbody class="min-h-0 flex-1 overflow-y-auto">
-        <div class="flex flex-col gap-2">${found.map(groupHtml).join('')}</div>
+        <div data-groups class="flex flex-col gap-2"></div>
       </div>
       <div class="flex shrink-0 flex-wrap items-center gap-2 pl-1 pt-2.5">
-        <button type="button" id="addConnBtn" class="btn btn-ghost btn-sm" ${busy ? 'disabled' : ''}><i class="ph ph-plus"></i>Add a new connector</button>
+        <button type="button" id="addConnBtn" class="btn btn-ghost btn-sm"><i class="ph ph-plus"></i>Add a new connector</button>
         <span class="flex-1"></span>
         <button type="button" id="skipBtn" class="btn btn-secondary btn-sm">Don't use this information</button>
-        <button type="button" id="contBtn" class="btn btn-primary btn-sm" ${!picked.length || busy ? 'disabled' : ''}>Continue${picked.length && picked.length < usable.length ? ` with ${picked.length} of ${usable.length}` : ''}</button>
+        <button type="button" id="contBtn" class="btn btn-primary btn-sm">Continue</button>
       </div>
     </div>`;
-  cardEl.querySelector('[data-askbody]').scrollTop = keep;
-  cardEl.querySelectorAll('[data-pick]').forEach((b) => b.onclick = () => { const g = found.find((x) => x.id === b.dataset.pick); g.picked = !g.picked; g.fresh = false; renderCard(); });
-  cardEl.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => {
-    const g = found.find((x) => x.id === b.dataset.acc); g.open = !g.open;
-    const wrap = b.parentElement; wrap.classList.toggle('open-row', g.open); wrap.querySelector('.acc').classList.toggle('open', g.open); b.setAttribute('aria-expanded', g.open);
+  const body = cardEl.querySelector('[data-askbody]');
+  body.addEventListener('scroll', () => edgeFade(body));
+  new ResizeObserver(() => edgeFade(body)).observe(body);
+  // One delegated listener for ticks and summaries: rows can be swapped without rebinding.
+  cardEl.querySelector('[data-groups]').addEventListener('click', (e) => {
+    const pick = e.target.closest('[data-pick]'), acc = e.target.closest('[data-acc]');
+    if (pick) { const g = found.find((x) => x.id === pick.dataset.pick); g.picked = !g.picked; renderCard(); }
+    if (acc) {
+      const g = found.find((x) => x.id === acc.dataset.acc); g.open = !g.open;
+      const wrap = acc.parentElement; wrap.classList.toggle('open-row', g.open); wrap.querySelector('.acc').classList.toggle('open', g.open); acc.setAttribute('aria-expanded', g.open);
+      const row = acc.closest('[data-card-g]'); row.dataset.sig = sigOf(g);
+      setTimeout(() => edgeFade(cardEl.querySelector('[data-askbody]')), 280);
+    }
   });
   $('#addConnBtn').onclick = openAdd;
   $('#skipBtn').onclick = () => finish(null);
   $('#dismissBtn').onclick = () => finish(null);
-  $('#contBtn').onclick = () => finish(picked.map((g) => g.id));
-  found.forEach((g) => { g.fresh = false; });
+  $('#contBtn').onclick = () => finish(found.filter((g) => g.state === 'found' && g.picked).map((g) => g.id));
 }
+// Fade the list out at whichever edge has more to scroll, instead of a hard cut.
+function edgeFade(el) {
+  const top = el.scrollTop > 1, bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+  const m = `linear-gradient(to bottom, ${top ? 'transparent 0, black 28px' : 'black 0'}, ${bottom ? 'black calc(100% - 28px), transparent 100%' : 'black 100%'})`;
+  el.style.maskImage = m; el.style.webkitMaskImage = m;
+}
+const sigOf = (g) => [g.state, g.picked, g.open].join('|');
+function renderCard() {
+  if (!cardEl.querySelector('[data-askcard]')) cardShell();
+  const list = cardEl.querySelector('[data-groups]');
+  found.forEach((g, i) => {
+    const sig = sigOf(g);
+    let el = list.querySelector(`[data-card-g="${g.id}"]`);
+    if (el && el.dataset.sig === sig) return;                     // unchanged: leave it alone
+    const tmp = document.createElement('div'); tmp.innerHTML = groupHtml(g).trim();
+    const next = tmp.firstElementChild; next.dataset.sig = sig;
+    if (!el) { next.classList.add('fade-up'); list.insertBefore(next, list.children[i] || null); }
+    else el.replaceWith(next);
+  });
+  g_fresh_reset();
+  const usable = found.filter((g) => g.state === 'found');
+  const picked = usable.filter((g) => g.picked);
+  const busy = found.some((g) => g.state === 'syncing' || g.state === 'searching');
+  const cont = $('#contBtn');
+  cont.disabled = !picked.length || busy;
+  cont.textContent = 'Continue' + (picked.length && picked.length < usable.length ? ` with ${picked.length} of ${usable.length}` : '');
+  edgeFade(cardEl.querySelector('[data-askbody]'));
+}
+function g_fresh_reset() { found.forEach((g) => { g.fresh = false; }); }
 
 // ---------------- add a new connector ----------------
 function openAdd() {
