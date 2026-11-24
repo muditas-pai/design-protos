@@ -211,10 +211,15 @@ const ConnectorDialog = (() => {
             <div data-section class="mb-2 mt-6 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
           </div>
           <div data-list class="scrollbar-hide h-[52vh] overflow-y-auto px-6 pb-6"></div>
+          <div data-foot class="hidden items-center gap-3 border-t border-border-secondary px-6 py-3">
+            <span data-foot-note class="flex-1 text-caption text-text-secondary"></span>
+            <button type="button" data-done class="btn btn-primary btn-md">Done</button>
+          </div>
         </div>
       </div>`;
     document.body.appendChild(root);
     root.querySelectorAll('[data-x]').forEach((el) => el.onclick = close);
+    root.querySelector('[data-done]').onclick = close;
     root.querySelector('[data-q]').oninput = (e) => { state.q = e.target.value; render(); };
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.classList.contains('hidden')) close(); });
   }
@@ -245,9 +250,16 @@ const ConnectorDialog = (() => {
     if (pop.length) html += grid(pop);
     if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
     const list = root.querySelector('[data-list]'); list.innerHTML = html;
+    if (state.opts.done) {
+      const added = state.added || [];
+      root.querySelector('[data-foot-note]').innerHTML = added.length
+        ? `<span class="inline-flex items-center gap-1.5 text-text-success-primary"><i class="ph-fill ph-check-circle"></i>${added.length === 1 ? appById(added[0]).name + ' connected' : added.length + ' apps connected'}</span><span class="text-text-secondary"> · add more, or press Done</span>`
+        : 'Connect as many apps as you like, then press Done.';
+    }
     list.querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
       state.busy = b.dataset.connect; render();
-      Promise.resolve(state.opts.onConnect(state.busy)).finally(() => { state.busy = null; render(); });
+      const id = state.busy;
+      Promise.resolve(state.opts.onConnect(id)).then(() => { (state.added = state.added || []).push(id); }).finally(() => { state.busy = null; render(); });
     });
   }
   function open(opts) {
@@ -255,6 +267,10 @@ const ConnectorDialog = (() => {
     state = { q: '', chip: '', busy: null, opts };
     if (opts.title) root.querySelector('[data-title]').textContent = opts.title;
     if (opts.description) root.querySelector('[data-desc]').textContent = opts.description;
+    const foot = root.querySelector('[data-foot]');
+    foot.classList.toggle('hidden', !opts.done); foot.classList.toggle('flex', !!opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[52vh]', !opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[46vh]', !!opts.done);
     root.querySelector('[data-q]').value = '';
     render();
     root.classList.remove('hidden');
@@ -493,9 +509,10 @@ function renderCard() {
 function openAdd() {
   ConnectorDialog.open({
     title: 'Add a new connector',
-    description: "Connect an app and we'll check it for anything useful for this deck. Access is read-only.",
+    description: "Connect apps and we'll check each one for anything useful for this deck.",
     isConnected: (id) => apps.some((a) => a.id === id),
-    onConnect: (id) => wait(1400).then(() => { ConnectorDialog.close(); addedApp(id); }),
+    done: true,   // stays open: connect several, then Done
+    onConnect: (id) => wait(1400).then(() => { addedApp(id); }),
   });
 }
 async function addedApp(id) {
