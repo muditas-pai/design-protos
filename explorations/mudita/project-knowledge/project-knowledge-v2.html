@@ -534,9 +534,23 @@ function renderCard() {
   const shown = [...on.filter((c) => c.scope === 'project'), ...on.filter((c) => c.scope === 'workspace')];
   let connInner = tileHead('plugs-connected', 'Connectors', on.length ? `${on.length} on` : '');
   if (on.length) {
-    connInner += `<ul class="mt-3 flex flex-col gap-2">${shown.slice(0, 3).map((c) => { const app = appById(c.id); return `<li class="flex items-center gap-2">${appLogo(app, 'xs', '!h-6 !w-6 bg-bg-default-primary [&_img]:!h-3.5 [&_img]:!w-3.5')}<span class="truncate text-caption">${app.name}</span>${c.scope === 'project' ? '<span class="ml-auto shrink-0 rounded-full bg-bg-brand-inverted px-1.5 text-[11px] font-medium leading-[18px] text-text-brand">This project</span>' : ''}</li>`; }).join('')}</ul>`;
+    connInner += `<ul class="mt-3 flex flex-col gap-2">${shown.slice(0, 3).map((c) => { const app = appById(c.id); return `<li class="flex items-center gap-2">${appLogo(app, 'xs', '!h-6 !w-6 bg-bg-default-primary [&_img]:!h-3.5 [&_img]:!w-3.5')}<span class="truncate text-caption">${app.name}</span>${syncing(c) ? '<span class="spinner !h-3 !w-3 shrink-0" title="Syncing"></span>' : ''}${c.scope === 'project' ? '<span class="ml-auto shrink-0 rounded-full bg-bg-brand-inverted px-1.5 text-[11px] font-medium leading-[18px] text-text-brand">This project</span>' : ''}</li>`; }).join('')}</ul>`;
     const more = shown.length - 3;
-    connInner += `<p class="mt-auto pt-3 text-caption text-text-secondary">${more > 0 ? `+${more} more · ` : ''}${proj.length ? 'Workspace apps on by default' : 'From your workspace, on by default'}</p>`;
+    const sy = on.find(syncing) || on.find((c) => c.sync?.phase === 'done');
+    if (sy) {
+      const s = sy.sync, name = appById(sy.id).name;
+      connInner += s.phase === 'recent'
+        ? `<div class="mt-auto pt-3 text-caption"><span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>${name}: getting the last 30 days</span></div>`
+        : s.phase === 'done'
+        ? `<div class="mt-auto pt-3 text-caption text-text-success-primary"><span class="inline-flex items-center gap-1"><i class="ph-fill ph-check-circle"></i>${name} fully synced</span></div>`
+        : `<div class="mt-auto pt-3" data-sync="${sy.id}" data-compact="1">
+            <div class="flex items-center justify-between gap-2 text-caption"><span class="truncate">${name}: syncing older data</span><span class="tabular shrink-0 text-micro text-text-secondary" data-sync-eta>${etaText(s)}</span></div>
+            <div class="relative mt-1.5 h-1 overflow-hidden rounded-full bg-bg-quaternary"><div data-sync-bar class="absolute inset-y-0 right-0 rounded-full bg-bg-brand transition-[width] duration-300 ease-std" style="width:${Math.max(4, s.p * 100)}%"></div></div>
+            <div class="mt-1 text-micro text-text-secondary" data-sync-label>Synced back to ${monthYear(coveredDate(s))}</div>
+          </div>`;
+    } else {
+      connInner += `<p class="mt-auto pt-3 text-caption text-text-secondary">${more > 0 ? `+${more} more · ` : ''}${proj.length ? 'Workspace apps on by default' : 'From your workspace, on by default'}</p>`;
+    }
   } else {
     connInner += addPrompt('Connect an app', 'Pull live data from HubSpot, Google Drive and 120+ more apps.');
   }
@@ -744,18 +758,22 @@ function finishBatchCheck() {
 function connRow(c, flashId) {
   const app = appById(c.id), expired = c.status === 'EXPIRED';
   const cat = CHIPS.find((x) => x[0] === app.chip)?.[1] || catLabel(app.cat);
+  const sc = c.sync && c.on && !expired ? syncCaption(c) : null;
   const cap = expired ? `<span class="text-text-warning-primary">Expired. Reconnect to use it here.</span>`
-    : c.fresh ? `<span class="text-text-success-primary">Just connected · only this project</span>`
+    : sc ? sc
     : c.on ? cat : 'Off for this project';
   const right = expired
     ? `<button type="button" data-reconnect="${c.id}" class="btn btn-secondary btn-sm !h-7 !px-2.5">Reconnect</button>`
     : c.scope === 'project'
       ? `<button type="button" data-remove="${c.id}" class="btn btn-ghost btn-sm !h-7 !px-2.5">Remove</button>`
       : `<button type="button" role="switch" aria-checked="${c.on}" aria-label="Use ${app.name} in this project" data-toggle="${c.id}" class="switch"><span class="knob"></span></button>`;
-  return `<li class="-mx-2 flex items-center gap-3 rounded-control px-2 py-2.5 ${c.id === flashId ? 'flash-ok-soft' : ''}">
-    ${appLogo(app, 'md', !c.on || expired ? 'logo-off' : '')}
-    <div class="min-w-0 flex-1"><div class="truncate text-body font-medium ${!c.on || expired ? 'text-text-secondary' : ''}">${app.name}</div><div class="truncate text-caption text-text-secondary">${cap}</div></div>
-    ${right}</li>`;
+  return `<li class="-mx-2 rounded-control px-2 py-2.5 ${c.id === flashId ? 'flash-ok-soft' : ''}">
+    <div class="flex items-center gap-3">
+      ${appLogo(app, 'md', !c.on || expired ? 'logo-off' : '')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-medium ${!c.on || expired ? 'text-text-secondary' : ''}">${app.name}</div><div class="truncate text-caption text-text-secondary">${cap}</div></div>
+      ${right}
+    </div>
+    ${c.sync && c.on && !expired ? syncBlock(c) : ''}</li>`;
 }
 function renderConns(flashId) {
   const ws = S.conns.filter((c) => c.scope === 'workspace'), pj = S.conns.filter((c) => c.scope === 'project');
@@ -838,6 +856,7 @@ function renderCatalog() {
       const existing = S.conns.find((c) => c.id === id);
       if (existing) { existing.status = 'ACTIVE'; existing.on = true; }
       else S.conns.unshift({ id, on: true, status: 'ACTIVE', scope: 'project', fresh: true });
+      startSync(S.conns.find((c) => c.id === id), new Date(2021 + Math.floor(Math.random() * 3), Math.floor(Math.random() * 12), 1));
       CAT.busy = null; CAT.flash = id; renderCatalog(); CAT.flash = null;
       flash('conns'); renderTabs();
       toast(`${appById(id).name} connected for this project`);
@@ -845,6 +864,80 @@ function renderCatalog() {
     }, 1400);
   });
 }
+
+
+// ================= connector sync =================
+// Live: the last 30 days arrive in seconds; the full history (often years) then takes 2 to 3 hours.
+// Demo: the history sync is compressed to ~45 s. Progress is shown as a timeline, oldest on the left, today on the right.
+const TODAY = new Date(2026, 10, 24);
+const HISTORY_REAL_MIN = 150;     // what we'd tell the user: about 2.5 hours for a full history
+const HISTORY_DEMO_MS = 45000;
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const monthYear = (d) => `${MON[d.getMonth()]} ${d.getFullYear()}`;
+const coveredDate = (s) => new Date(TODAY - s.p * (TODAY - s.since));
+const etaText = (s) => {
+  const min = Math.max(1, Math.round((1 - s.p) * HISTORY_REAL_MIN));
+  return min >= 90 ? `about ${Math.round(min / 60)} hours left` : min >= 50 ? 'about an hour left' : min > 5 ? `about ${Math.round(min / 5) * 5} minutes left` : 'a few minutes left';
+};
+const syncing = (c) => c.sync && (c.sync.phase === 'recent' || c.sync.phase === 'history');
+
+// Row block in the modal: status line, timeline bar, end labels. Updated in place by the ticker.
+function syncBlock(c) {
+  const s = c.sync;
+  if (s.phase === 'recent') return '';
+  const done = s.phase === 'done';
+  return `<div class="pl-12 pr-1 pt-2 ${done ? 'fade-up' : ''}" data-sync="${c.id}">
+    <div class="flex items-center justify-between gap-3 text-micro">
+      <span class="${done ? 'text-text-success-primary' : 'text-text-secondary'}" data-sync-label>${done ? `All data synced, back to ${monthYear(s.since)}` : `Synced back to ${monthYear(coveredDate(s))}`}</span>
+      <span class="tabular text-text-secondary" data-sync-eta>${done ? '' : etaText(s)}</span>
+    </div>
+    <div class="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-bg-quaternary">
+      <div data-sync-bar class="absolute inset-y-0 right-0 rounded-full transition-[width] duration-300 ease-std ${done ? 'bg-[#14AE5C]' : 'bg-bg-brand'}" style="width:${Math.max(4, s.p * 100)}%"></div>
+    </div>
+    <div class="mt-1 flex justify-between text-[11px] leading-4 text-text-quaternary"><span>${monthYear(s.since)}</span><span>Today</span></div>
+  </div>`;
+}
+function syncCaption(c) {
+  const s = c.sync;
+  if (s.phase === 'recent') return `<span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>Getting the last 30 days</span>`;
+  if (s.phase === 'history') return `<span class="inline-flex items-center gap-1"><i class="ph-fill ph-check-circle text-[13px] text-[#14AE5C]"></i>Ready with the last 30 days · older data syncing</span>`;
+  return null;
+}
+
+function startSync(c, since) {
+  c.sync = { phase: 'recent', since, p: 0 };
+  setTimeout(() => {
+    if (!S.conns.includes(c)) return;
+    c.sync.phase = 'history';
+    rerenderConnSurfaces();
+  }, 2600);
+}
+function rerenderConnSurfaces() {
+  if (!$('#modal').classList.contains('hidden') && S.tab === 'conns' && S.view !== 'cat') renderConns();
+  renderCard();
+}
+let lastTick = performance.now();
+setInterval(() => {
+  const now = performance.now(), dt = now - lastTick; lastTick = now;
+  S.conns.forEach((c) => {
+    if (!c.sync || c.sync.phase !== 'history') return;
+    const s = c.sync;
+    s.p = Math.min(1, s.p + dt / HISTORY_DEMO_MS);
+    if (s.p >= 1) {
+      s.phase = 'done';
+      rerenderConnSurfaces();
+      toast(`${appById(c.id).name} is fully synced, back to ${monthYear(s.since)}`);
+      setTimeout(() => { if (c.sync?.phase === 'done') { delete c.sync; rerenderConnSurfaces(); } }, 5000);
+      return;
+    }
+    // In-place updates: no re-render, so switches and hovers aren't interrupted.
+    document.querySelectorAll(`[data-sync="${c.id}"]`).forEach((el) => {
+      const bar = el.querySelector('[data-sync-bar]'); if (bar) bar.style.width = Math.max(4, s.p * 100) + '%';
+      const lab = el.querySelector('[data-sync-label]'); if (lab && !lab.dataset.static) lab.textContent = `Synced back to ${monthYear(coveredDate(s))}`;
+      const eta = el.querySelector('[data-sync-eta]'); if (eta) eta.textContent = etaText(s);
+    });
+  });
+}, 250);
 
 // ================= glue =================
 function flash(which) { S.flash = which; renderAll(); setTimeout(() => { if (S.flash === which) { S.flash = null; renderCard(); } }, 2200); }
@@ -869,7 +962,7 @@ function seed(kind) {
       { id: ++uid, name: 'Win stories Q4.pptx', size: 18350000, status: 'ready', added: '2 days ago' },
       { id: ++uid, name: 'Objection handling guide.docx', size: 480000, status: 'ready', added: '2 days ago' },
     ];
-    S.conns.unshift({ id: 'salesforce', on: true, status: 'ACTIVE', scope: 'project' });
+    S.conns.unshift({ id: 'salesforce', on: true, status: 'ACTIVE', scope: 'project', sync: { phase: 'history', since: new Date(2022, 0, 1), p: 0.28 } });
     S.conns.find((c) => c.id === 'notion').on = false;
   }
   if (kind === 'decks' || kind === 'upload') S.decks = 4;
