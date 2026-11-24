@@ -127,7 +127,8 @@ tailwind.config = {
     <div id="chatScroll" class="min-h-0 flex-1 overflow-y-auto">
       <div id="thread" class="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-4 pb-10 pt-8"></div>
     </div>
-    <div class="shrink-0 px-4 pb-5"><div class="mx-auto w-full max-w-[760px]" id="composerDock"></div></div>
+    <!-- Ask cards dock here, in place of a text field: fixed height, scroll inside, buttons always in view. -->
+    <div class="shrink-0 px-4 pb-5"><div class="mx-auto w-full max-w-[760px]" id="askDock"></div></div>
   </section>
 </div>
 
@@ -347,8 +348,8 @@ function composer(docked) {
   </div>`;
 }
 function mountComposer(docked) {
-  const slot = docked ? $('#composerDock') : $('#composerSlot');
-  ($('#composerSlot').innerHTML = ''), ($('#composerDock').innerHTML = '');
+  if (docked) return;   // the chat has no text field; asks dock at the bottom instead
+  const slot = $('#composerSlot');
   slot.innerHTML = composer(docked);
   if (docked) return;
   $('#appsChip').onclick = (e) => { e.stopPropagation(); $('#appsMenu').classList.toggle('hidden'); };
@@ -449,16 +450,21 @@ function renderCard() {
   const usable = found.filter((g) => g.state === 'found');
   const picked = usable.filter((g) => g.picked);
   const busy = found.some((g) => g.state === 'syncing' || g.state === 'searching');
-  cardEl.innerHTML = `<p class="text-body-lg">Here's what we found in your apps. Pick what we should use for your deck.</p>
-    <div class="mt-4 overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
-      <div class="divide-y divide-border-secondary">${found.map(groupHtml).join('')}</div>
-      <div class="flex flex-wrap items-center gap-2 border-t border-border-secondary px-4 py-3">
-        <button type="button" id="addConnBtn" class="btn btn-ghost btn-sm -ml-1.5" ${busy ? 'disabled' : ''}><i class="ph ph-plus"></i>Add a new connector</button>
+  const body = cardEl.querySelector('[data-askbody]');
+  const keep = body ? body.scrollTop : 0;
+  cardEl.innerHTML = `<div class="fade-up flex h-[min(58vh,560px)] flex-col overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary shadow-menu">
+      <p class="shrink-0 px-6 pb-3 pt-5 text-heading font-semibold">Here's what we found in your apps. Pick what we should use for your deck.</p>
+      <div data-askbody class="min-h-0 flex-1 overflow-y-auto border-t border-border-secondary">
+        <div class="divide-y divide-border-secondary">${found.map(groupHtml).join('')}</div>
+      </div>
+      <div class="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-secondary px-4 py-3">
+        <button type="button" id="addConnBtn" class="btn btn-ghost btn-sm" ${busy ? 'disabled' : ''}><i class="ph ph-plus"></i>Add a new connector</button>
         <span class="flex-1"></span>
         <button type="button" id="skipBtn" class="btn btn-secondary btn-md">Don't use this information</button>
         <button type="button" id="contBtn" class="btn btn-primary btn-md" ${!picked.length || busy ? 'disabled' : ''}>Continue${picked.length && picked.length < usable.length ? ` with ${picked.length} of ${usable.length}` : ''}</button>
       </div>
     </div>`;
+  cardEl.querySelector('[data-askbody]').scrollTop = keep;
   cardEl.querySelectorAll('[data-pick]').forEach((b) => b.onclick = () => { const g = found.find((x) => x.id === b.dataset.pick); g.picked = !g.picked; g.fresh = false; renderCard(); });
   cardEl.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => {
     const g = found.find((x) => x.id === b.dataset.acc); g.open = !g.open;
@@ -482,7 +488,7 @@ function openAdd() {
 async function addedApp(id) {
   apps.push({ id, on: true }); mountComposer(true);
   const g = { id, state: 'syncing', picked: false, open: false };
-  found.push(g); renderCard(); scrollEnd();
+  found.push(g); renderCard(); scrollAskEnd();
   toast(`${appById(id).name} connected`);
   await wait(2600);                       // live: the last 30 days arrive in seconds
   g.state = 'searching'; renderCard();
@@ -490,13 +496,14 @@ async function addedApp(id) {
   const r = RESULTS[id];
   if (r && r.files.length) { g.state = 'found'; g.picked = true; g.fresh = true; g.open = true; }
   else { RESULTS[id] = RESULTS[id] || { unit: ['item', 'items'], files: [], summary: [] }; g.state = 'empty'; }
-  renderCard(); scrollEnd();
+  renderCard(); scrollAskEnd();
 }
+function scrollAskEnd() { const b = cardEl.querySelector('[data-askbody]'); b?.scrollTo({ top: b.scrollHeight, behavior: 'smooth' }); }
 
 // ---------------- flow ----------------
 async function start(text) {
   $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
-  mountComposer(true); thread().innerHTML = ''; found = [];
+  $('#askDock').innerHTML = ''; thread().innerHTML = ''; found = [];
   addUser(text);
   await wait(500);
   const on = apps.filter((a) => a.on).map((a) => a.id);
@@ -505,7 +512,7 @@ async function start(text) {
   for (const id of on) found.push(await searchApp(trail, id));
   await wait(500);
   collapseTrail(trail, on.length, found.reduce((n, g) => n + RESULTS[g.id].files.length, 0));
-  cardEl = addAssistant('').lastElementChild; renderCard(); scrollEnd();
+  cardEl = $('#askDock'); renderCard(); scrollEnd();
 }
 // Once the search is done the step list folds into one line; the card below carries the details.
 function collapseTrail(trail, appsN, filesN) {
@@ -519,20 +526,20 @@ function collapseTrail(trail, appsN, filesN) {
   btn.onclick = () => { btn.parentElement.classList.toggle('open-row'); body.querySelector('.acc').classList.toggle('open'); };
 }
 function finish(ids, noApps) {
-  cardEl?.querySelectorAll('button').forEach((b) => b.disabled = true);
-  cardEl?.querySelector('.rounded-card')?.classList.add('opacity-60');
+  $('#askDock').innerHTML = '';
   const names = (ids || []).map((id) => appById(id).name);
   addUser(noApps ? '' : ids ? `Use ${names.join(' and ')}` : "Don't use this information");
   if (noApps) thread().lastElementChild.remove();
   addAssistant(`<p class="text-body-lg">${ids ? `Got it. We'll build your outline from your prompt and what we found in ${names.join(' and ')}.` : "Got it. We'll build your outline from your prompt only."}</p>
     <div class="mt-3 flex items-center gap-2 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>Drafting your outline</div>`);
 }
-$('#pRestart').onclick = () => { apps = [{ id: 'googledrive', on: true }, { id: 'notion', on: true }, { id: 'hubspot', on: true }]; $('#chatStage').classList.add('hidden'); $('#chatStage').classList.remove('flex'); $('#promptStage').classList.remove('hidden'); mountComposer(false); };
+$('#pRestart').onclick = () => { apps = [{ id: 'googledrive', on: true }, { id: 'notion', on: true }, { id: 'hubspot', on: true }]; $('#chatStage').classList.add('hidden'); $('#chatStage').classList.remove('flex'); $('#promptStage').classList.remove('hidden'); $('#askDock').innerHTML = ''; mountComposer(false); };
 $('#pSkip').onclick = () => {
   $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
-  mountComposer(true); thread().innerHTML = ''; addUser(PROMPT);
+  $('#askDock').innerHTML = ''; thread().innerHTML = ''; addUser(PROMPT);
+  addAssistant(`<p class="text-caption text-text-secondary"><i class="ph-fill ph-check-circle text-[14px] text-[#14AE5C]"></i> Searched 3 apps · read 5 files</p>`);
   found = [{ id: 'googledrive', state: 'found', picked: true, open: true }, { id: 'notion', state: 'found', picked: true, open: false }, { id: 'hubspot', state: 'empty', picked: false, open: false }];
-  cardEl = addAssistant('').lastElementChild; renderCard();
+  cardEl = $('#askDock'); renderCard();
 };
 mountComposer(false);
 </script>

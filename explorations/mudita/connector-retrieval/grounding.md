@@ -15,6 +15,12 @@ Volatile reference for this folder. Written 24 Nov 2026; it ages with the code.
 
 The chat shell in the proto is approximated from that source, not from a screenshot.
 
+## App rules the proto follows (from Mudita, 24 Nov 2026)
+
+- The chat never shows a free text field.
+- Ask cards are always fixed to the bottom of the screen, at a fixed height, scrolling inside, with their buttons
+  always in view. They never sit inline in the message list.
+
 ## What this proto changes
 
 | Today | Proto |
