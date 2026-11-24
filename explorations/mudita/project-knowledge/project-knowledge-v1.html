@@ -174,7 +174,7 @@ tailwind.config = {
         <div class="flex flex-wrap items-end justify-between gap-4">
           <input value="Q1 Sales Kickoff" class="mt-1 rounded-control border-0 bg-transparent p-0 text-display font-semibold outline-none hover:bg-bg-tertiary focus:bg-bg-tertiary" />
           <div class="flex items-center gap-2">
-            <span class="flex -space-x-2">
+            <span id="members" class="flex -space-x-2">
               <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#D6E9FF] text-caption font-semibold text-[#0B4A8B] ring-2 ring-bg-secondary">AK</span>
               <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#E3F5E1] text-caption font-semibold text-[#1F6B2A] ring-2 ring-bg-secondary">RP</span>
               <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F3E6FF] text-caption font-semibold text-[#6B2FA3] ring-2 ring-bg-secondary">JL</span>
@@ -185,7 +185,7 @@ tailwind.config = {
             <button type="button" class="icon-btn"><i class="ph ph-dots-three text-[20px]"></i></button>
           </div>
         </div>
-        <p class="mt-2 text-body text-text-secondary">6 decks · shared with 3 people · decks inherit the project's sharing</p>
+        <p id="summary" class="mt-2 text-body text-text-secondary">6 decks · shared with 3 people · decks inherit the project's sharing</p>
 
         <!-- Knowledge strip: the empty-state CTA, or a summary of what decks here use. -->
         <div id="strip" class="mt-5"></div>
@@ -301,7 +301,23 @@ function deckCard(d) {
     </div>
   </div>`;
 }
-document.getElementById('deckGrid').innerHTML = DECKS.map(deckCard).join('');
+// A brand-new project: no decks, no members. The empty state is the live ds <Empty> (FolderIcon, dashed frame).
+function setProjectEmpty(empty) {
+  const grid = document.getElementById('deckGrid');
+  grid.className = empty ? 'mt-6' : 'mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3';
+  grid.innerHTML = empty
+    ? `<div class="fade-up flex flex-col items-center gap-2 rounded-card border border-dashed border-border-secondary px-6 py-14 text-center">
+        <span class="flex h-11 w-11 items-center justify-center rounded-full bg-bg-tertiary text-text-secondary"><i class="ph ph-folder text-[20px]"></i></span>
+        <div class="mt-1 text-body font-semibold">This project is empty</div>
+        <p class="max-w-sm text-caption text-text-secondary">Move decks here from their menu, or start a new one.</p>
+      </div>`
+    : DECKS.map(deckCard).join('');
+  document.getElementById('members').classList.toggle('hidden', empty);
+  document.getElementById('summary').textContent = empty
+    ? "0 decks · decks inherit the project's sharing"
+    : "6 decks · shared with 3 people · decks inherit the project's sharing";
+}
+setProjectEmpty(false);
 
 // Connector catalog + "Add connector" dialog (replica of settings/datasources/AddConnectorDialog.jsx, PR #6872).
 const CATALOG = [
@@ -797,6 +813,7 @@ function seed(kind) {
     ];
     S.saved = [{ name: 'FY27 Sales Kickoff', when: 'yesterday' }];
   }
+  setProjectEmpty(kind === 'empty');
   lastBtnKey = ''; closePanel();
   renderInstr(); renderFiles(); renderConns(); renderSaved(); renderAll();
 }
