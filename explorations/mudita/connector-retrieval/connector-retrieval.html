@@ -104,31 +104,38 @@ tailwind.config = {
   .switch[aria-checked="true"] { background: #0D99FF; }
   .switch .knob { height: 16px; width: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .2); transform: translateX(2px); transition: transform .2s cubic-bezier(.34,1.3,.64,1); }
   .switch[aria-checked="true"] .knob { transform: translateX(16px); }
+  /* Measured from app.presentations.ai/#/create (24 Nov 2026): system font, #F5F5F5 surface, 752px chat column. */
+  body.app, body.app button, body.app input, body.app textarea { font-family: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+  body.app { background: #F5F5F5; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2,0,0,1); z-index: 95; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
 </style>
 </head>
-<body class="bg-bg-default-primary">
-<div class="flex h-screen flex-col bg-bg-default-primary">
-  <header class="flex h-14 shrink-0 items-center gap-2 border-b border-border-secondary px-4">
-    <button type="button" class="btn btn-ghost btn-sm"><i class="ph ph-arrow-left"></i>Home</button>
-    <span class="text-body font-medium">New deck</span>
+<body class="app">
+<div class="flex h-screen flex-col">
+  <header class="flex h-14 shrink-0 items-center border-b border-border-secondary px-4 sm:px-6">
+    <div class="mx-auto flex w-full max-w-[976px] items-center gap-1.5">
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Back"><i id="hdrIcon" class="ph ph-house text-[20px]"></i></button>
+      <span id="hdrPill" class="hidden h-[22px] items-center rounded-full border border-border-secondary bg-bg-tertiary px-2 text-[12px] font-medium text-text-secondary">Auto · 10 credits a slide</span>
+      <span class="flex-1"></span>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Theme"><i class="ph ph-sun text-[18px]"></i></button>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Close"><i class="ph ph-x text-[18px]"></i></button>
+    </div>
   </header>
 
   <!-- Stage 1: prompt screen -->
-  <section id="promptStage" class="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-24">
-    <h1 class="text-center text-[28px] font-semibold leading-9 tracking-[-0.02em]">What are we presenting today?</h1>
-    <p class="mt-2 text-center text-body text-text-secondary">Describe it in a sentence or two. We'll check your connected apps for anything useful.</p>
-    <div class="mt-8 w-full max-w-[720px]" id="composerSlot"></div>
+  <section id="promptStage" class="flex min-h-0 flex-1 flex-col items-center px-4 pt-14">
+    <h1 class="text-center text-[32px] font-bold leading-10 tracking-[-0.02em]">Describe your deck, or upload a file</h1>
+    <div class="mt-5 w-full max-w-[800px]" id="composerSlot"></div>
   </section>
 
   <!-- Stage 2: chat -->
   <section id="chatStage" class="hidden min-h-0 flex-1 flex-col">
     <div id="chatScroll" class="min-h-0 flex-1 overflow-y-auto">
-      <div id="thread" class="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-4 pb-10 pt-8"></div>
+      <div id="thread" class="mx-auto flex w-full max-w-[752px] flex-col gap-6 px-4 pb-10 pt-8"></div>
     </div>
     <!-- Ask cards dock here, in place of a text field: fixed height, scroll inside, buttons always in view. -->
-    <div class="shrink-0 px-4 pb-5"><div class="mx-auto w-full max-w-[760px]" id="askDock"></div></div>
+    <div class="shrink-0 px-4 pb-6"><div class="mx-auto w-full max-w-[744px]" id="askDock"></div></div>
   </section>
 </div>
 
@@ -324,33 +331,35 @@ let apps = [{ id: 'googledrive', on: true }, { id: 'notion', on: true }, { id: '
 let found = [];
 
 // ---------------- composer ----------------
-function composer(docked) {
+function composer() {
   const onApps = apps.filter((a) => a.on);
-  return `<div class="rounded-[18px] border border-border-secondary bg-bg-default-primary p-3 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_8px_24px_-12px_rgb(0_0_0/0.12)] ${docked ? '' : 'fade-up'}">
-    <textarea id="promptInput" rows="${docked ? 1 : 3}" class="w-full resize-none border-0 bg-transparent px-1 text-body-lg outline-none placeholder:text-text-quaternary" placeholder="${docked ? 'Reply to keep shaping your deck' : 'Describe your deck'}" ${docked ? 'disabled' : ''}>${docked ? '' : esc(PROMPT)}</textarea>
-    <div class="mt-2 flex items-center gap-1.5">
-      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Upload file or link"><i class="ph ph-plus text-[18px]"></i></button>
+  return `<div class="rounded-[12px] border border-[#0D99FF] bg-bg-default-primary shadow-[0_0_0_3px_rgba(13,153,255,0.12)]">
+    <textarea id="promptInput" rows="4" class="block w-full resize-none border-0 bg-transparent px-[18px] pt-4 text-[16px] leading-6 outline-none placeholder:text-text-tertiary" placeholder="Seed pitch for a scheduling app for dental clinics">${esc(PROMPT)}</textarea>
+    <div class="flex items-center gap-1.5 px-2.5 pb-2.5 pt-1">
+      <button type="button" class="flex h-8 w-8 items-center justify-center rounded-control border border-border-secondary bg-white hover:bg-bg-tertiary" aria-label="Upload file or link"><i class="ph ph-plus text-[16px]"></i></button>
       <div class="relative">
-        <button type="button" id="appsChip" class="inline-flex h-8 items-center gap-1.5 rounded-full bg-bg-tertiary pl-1.5 pr-2.5 text-caption hover:bg-bg-quaternary" aria-haspopup="menu">
-          <span class="flex -space-x-1.5">${onApps.map((a) => appLogo(appById(a.id), 'xs', 'ring-2 ring-bg-tertiary !rounded-full bg-white')).join('')}</span>
-          ${onApps.length ? `${onApps.length} ${onApps.length === 1 ? 'app' : 'apps'} on` : 'Apps off'}<i class="ph ph-caret-down text-[11px] text-text-secondary"></i>
+        <button type="button" id="appsChip" class="flex h-8 items-center gap-2 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary" aria-haspopup="menu">
+          <span class="flex -space-x-1">${onApps.map((a) => appLogo(appById(a.id), 'xs', '!bg-transparent')).join('')}</span>Connected apps
         </button>
-        <div id="appsMenu" class="absolute bottom-[calc(100%+6px)] left-0 z-30 hidden w-64 rounded-card border border-border-secondary bg-bg-default-primary p-1.5 shadow-menu">
-          <div class="px-2 pb-1 pt-1 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Use for this deck</div>
-          ${apps.map((a) => { const app = appById(a.id); return `<label class="flex cursor-pointer items-center gap-2.5 rounded-control px-2 py-1.5 hover:bg-bg-tertiary">${appLogo(app, 'sm')}<span class="flex-1 text-body">${app.name}</span><button type="button" role="switch" aria-checked="${a.on}" data-app="${a.id}" class="switch"><span class="knob"></span></button></label>`; }).join('')}
-          <div class="my-1 h-px bg-border-secondary"></div>
-          <button type="button" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-body hover:bg-bg-tertiary"><i class="ph ph-plus text-text-secondary"></i>Connect another app</button>
+        <div id="appsMenu" class="absolute left-0 top-[calc(100%+8px)] z-30 hidden w-[258px] rounded-card border border-border-secondary bg-bg-default-primary p-2 shadow-menu">
+          <div class="px-2 pb-1.5 pt-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-text-secondary">Use for this deck</div>
+          ${apps.map((a) => { const app = appById(a.id); return `<label class="flex cursor-pointer items-center gap-2.5 rounded-control px-2 py-1.5 hover:bg-bg-tertiary">${appLogo(app, 'xs', '!h-6 !w-6 !rounded-full border border-border-secondary !bg-white')}<span class="flex-1 text-[14px]">${app.name}</span><button type="button" role="switch" aria-checked="${a.on}" data-app="${a.id}" class="switch"><span class="knob"></span></button></label>`; }).join('')}
+          <div class="mx-2 my-1.5 h-px bg-border-secondary"></div>
+          <button type="button" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-[14px] text-text-brand hover:bg-bg-tertiary"><i class="ph ph-plus"></i>Connect another app</button>
         </div>
       </div>
+      <button type="button" class="flex h-8 items-center gap-1.5 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary"><i class="ph ph-palette text-[15px] text-text-secondary"></i>Design<i class="ph ph-caret-down text-[12px] text-text-secondary"></i></button>
+      <button type="button" class="flex h-8 items-center gap-1.5 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary"><i class="ph ph-sliders-horizontal text-[15px] text-text-secondary"></i>Options</button>
       <span class="flex-1"></span>
-      <button type="button" id="sendBtn" class="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-white transition-opacity hover:opacity-85 disabled:opacity-30" aria-label="Send" ${docked ? 'disabled' : ''}><i class="ph-bold ph-arrow-up"></i></button>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Dictate"><i class="ph ph-microphone text-[17px]"></i></button>
+      <button type="button" id="sendBtn" class="flex h-8 w-8 items-center justify-center rounded-control bg-[#0D99FF] text-white hover:bg-[#007BE5]" aria-label="Send"><i class="ph-bold ph-arrow-up"></i></button>
     </div>
   </div>`;
 }
 function mountComposer(docked) {
   if (docked) return;   // the chat has no text field; asks dock at the bottom instead
   const slot = $('#composerSlot');
-  slot.innerHTML = composer(docked);
+  slot.innerHTML = composer();
   if (docked) return;
   $('#appsChip').onclick = (e) => { e.stopPropagation(); $('#appsMenu').classList.toggle('hidden'); };
   document.addEventListener('click', (e) => { if (!e.target.closest('#appsMenu')) $('#appsMenu')?.classList.add('hidden'); });
@@ -366,46 +375,46 @@ function mountComposer(docked) {
 const thread = () => $('#thread');
 function scrollEnd() { const s = $('#chatScroll'); s.scrollTo({ top: s.scrollHeight, behavior: 'smooth' }); }
 function addUser(text) {
-  thread().insertAdjacentHTML('beforeend', `<div class="fade-up flex justify-end"><div class="max-w-[612px] rounded-[18px] bg-bg-tertiary px-4 py-2.5 text-body-lg">${esc(text)}</div></div>`);
+  thread().insertAdjacentHTML('beforeend', `<div class="fade-up flex justify-end"><div class="max-w-[612px] rounded-card bg-[#E5F4FF] px-4 py-3 text-[14px] leading-5">${esc(text)}</div></div>`);
 }
 function addAssistant(html) {
-  const follow = thread().lastElementChild?.dataset.role === 'ai';   // back-to-back replies share one avatar
-  const el = document.createElement('div'); el.className = 'fade-up flex gap-3' + (follow ? ' -mt-3' : ''); el.dataset.role = 'ai';
-  el.innerHTML = `<span class="${follow ? 'invisible ' : ''}mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-white"><i class="ph-fill ph-sparkle text-[14px]"></i></span><div class="min-w-0 flex-1">${html}</div>`;
-  thread().appendChild(el); scrollEnd(); return el;
+  const el = document.createElement('div'); el.className = 'fade-up text-[14px] leading-5';
+  el.innerHTML = html; thread().appendChild(el); scrollEnd(); return el;
 }
 
 // The search trail (like ResearchStepRow): one group per app, steps tick off.
-function trailBlock(title) {
-  const el = addAssistant(`<p class="text-body-lg">${title}</p><div class="mt-3 flex flex-col gap-3" data-trail></div>`);
+function trailBlock() {
+  const el = addAssistant(`<div class="flex flex-col gap-3" data-trail>
+    <div class="flex items-center gap-3 text-text-tertiary" data-status><span class="spinner !border-[#0D99FF]/25 !border-t-[#0D99FF]"></span><span>Picking up the patterns…</span></div></div>`);
   return el.querySelector('[data-trail]');
 }
 function trailGroup(trail, id) {
   const app = appById(id);
-  trail.insertAdjacentHTML('beforeend', `<div class="fade-up rounded-card border border-border-secondary p-3" data-g="${id}">
-    <div class="flex items-center gap-2.5">${appLogo(app, 'sm')}<span class="flex-1 text-body font-medium">${app.name}</span><span data-gs class="flex items-center gap-1.5 text-caption text-text-secondary"><span class="spinner"></span>Searching</span></div>
-    <ul data-gl class="mt-2 flex flex-col gap-1.5 pl-[42px]"></ul></div>`);
+  trail.insertAdjacentHTML('beforeend', `<div class="fade-up" data-g="${id}">
+    <div class="flex items-center gap-3"><span class="flex w-4 justify-center"><span class="h-1.5 w-1.5 rounded-full bg-text-tertiary"></span></span><span class="text-text-tertiary"><span data-gs>Searching</span> <span class="text-text-primary">${app.name}</span></span><i class="ph ph-caret-down text-[12px] text-text-tertiary"></i></div>
+    <ul data-gl class="mt-1.5 flex list-disc flex-col gap-1 pl-[44px] text-text-tertiary marker:text-text-quaternary"></ul></div>`);
   return trail.querySelector(`[data-g="${id}"]`);
 }
 async function step(g, text) {
-  const li = document.createElement('li'); li.className = 'fade-up flex items-center gap-2 text-caption text-text-secondary';
-  li.innerHTML = `<span class="spinner !h-3 !w-3"></span><span>${text}</span>`;
+  const li = document.createElement('li'); li.className = 'fade-up'; li.textContent = text;
   g.querySelector('[data-gl]').appendChild(li); scrollEnd();
-  await wait(520 + Math.random() * 380);
+  await wait(480 + Math.random() * 320);
   return li;
 }
-function done(li, text) { li.innerHTML = `<i class="ph-bold ph-check text-[12px] text-text-success-primary"></i><span>${text}</span>`; }
+function done(li, text) { li.textContent = text; }
 async function searchApp(trail, id) {
   const g = trailGroup(trail, id), r = RESULTS[id];
   await wait(400);
   if (!r.files.length) {
-    const li = await step(g, 'Looking for anything about Fresh Bites');
-    done(li, 'Searched contacts, deals and campaigns');
-    g.querySelector('[data-gs]').innerHTML = '<span class="text-text-secondary">Nothing relevant</span>';
+    const li = await step(g, 'Searching for anything about Pawly Fresh Bites.');
+    await step(g, 'Nothing matched');
+    g.querySelector('[data-gs]').textContent = 'Searched';
     return { id, state: 'empty', picked: false, open: false };
   }
-  for (const f of r.files) { const li = await step(g, `Opening “${esc(f.name)}”`); done(li, `Read “${esc(f.name)}”`); }
-  g.querySelector('[data-gs]').innerHTML = `<i class="ph-fill ph-check-circle pop-in text-[14px] text-[#14AE5C]"></i>${r.files.length} ${r.files.length === 1 ? r.unit[0] : r.unit[1]}`;
+  await step(g, 'Searching for documents related to Pawly Fresh Bites.');
+  await step(g, `Found ${r.files.length} records`);
+  for (const f of r.files) await step(g, `Read “${f.name}”`);
+  g.querySelector('[data-gs]').textContent = 'Searched';
   return { id, state: 'found', picked: true, open: false };
 }
 
@@ -421,27 +430,27 @@ function fileRow(f) {
 function groupHtml(g) {
   const app = appById(g.id), r = RESULTS[g.id];
   if (g.state === 'syncing' || g.state === 'searching') {
-    return `<div class="p-4" data-card-g="${g.id}">
+    return `<div class="rounded-[10px] border border-border-secondary p-3" data-card-g="${g.id}">
       <div class="flex items-center gap-3"><span class="check" aria-hidden="true" style="opacity:.35"></span>${appLogo(app, 'sm')}<div class="min-w-0 flex-1"><div class="text-body font-medium">${app.name}</div>
       <div class="mt-0.5 flex items-center gap-1.5 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>${g.state === 'syncing' ? 'Connected. Getting the last 30 days' : 'Looking for anything about Fresh Bites'}</div></div></div></div>`;
   }
   if (g.state === 'empty') {
-    return `<div class="p-4" data-card-g="${g.id}">
+    return `<div class="rounded-[10px] border border-dashed border-border-secondary p-3" data-card-g="${g.id}">
       <div class="flex items-center gap-3"><button type="button" class="check" role="checkbox" aria-checked="false" disabled aria-label="${app.name}: nothing to use"><i class="ph-bold ph-check"></i></button>${appLogo(app, 'sm', 'logo-off opacity-60 grayscale')}
       <div class="min-w-0 flex-1"><div class="text-body font-medium text-text-secondary">${app.name}</div><div class="mt-0.5 text-caption text-text-secondary">Nothing relevant to this deck</div></div></div></div>`;
   }
   const n = r.files.length;
-  return `<div class="p-4 transition-colors ${g.fresh ? 'flash-ok' : ''}" data-card-g="${g.id}">
+  return `<div class="rounded-[10px] border p-3 transition-colors ${g.picked ? 'border-[#BDE3FF] bg-[#F5FAFF]' : 'border-border-secondary'} ${g.fresh ? 'flash-ok' : ''}" data-card-g="${g.id}">
     <div class="flex items-center gap-3">
       <button type="button" class="check" role="checkbox" aria-checked="${g.picked}" data-pick="${g.id}" aria-label="Use ${app.name}"><i class="ph-bold ph-check"></i></button>
       ${appLogo(app, 'sm', g.picked ? '' : 'opacity-50 grayscale')}
-      <div class="min-w-0 flex-1"><div class="text-body font-medium ${g.picked ? '' : 'text-text-secondary'}">${app.name}</div><div class="mt-0.5 text-caption text-text-secondary">${n} ${n === 1 ? r.unit[0] : r.unit[1]}${r.partial ? ' · last 30 days only, older data still syncing' : ''}</div></div>
+      <div class="min-w-0 flex-1"><div class="text-body font-medium ${g.picked ? '' : 'text-text-secondary'}">${app.name}</div><div class="mt-0.5 text-[13px] text-text-secondary">${n} ${n === 1 ? r.unit[0] : r.unit[1]}${r.partial ? ' · last 30 days only, older data still syncing' : ''}</div></div>
     </div>
     <ul class="mt-3 flex flex-col gap-1.5 pl-[74px] ${g.picked ? '' : 'opacity-50'}">${r.files.map(fileRow).join('')}</ul>
     <div class="mt-3 pl-[74px] ${g.open ? 'open-row' : ''}">
-      <button type="button" data-acc="${g.id}" aria-expanded="${g.open}" class="-ml-1.5 inline-flex items-center gap-1 rounded-control px-1.5 py-1 text-caption font-medium text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"><i class="ph-bold ph-caret-right chev text-[11px]"></i>Summary of what we found</button>
+      <button type="button" data-acc="${g.id}" aria-expanded="${g.open}" class="-ml-1.5 inline-flex items-center gap-1 rounded-control px-1.5 py-1 text-[13px] font-medium text-text-brand hover:bg-[#E5F4FF]"><i class="ph-bold ph-caret-right chev text-[11px]"></i>Summary</button>
       <div class="acc ${g.open ? 'open' : ''}"><div>
-        <ul class="mt-2 flex list-disc flex-col gap-1.5 rounded-control bg-bg-secondary py-3 pl-8 pr-4 text-caption text-text-primary marker:text-text-quaternary ${g.picked ? '' : 'opacity-60'}">${r.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
+        <ul class="mt-1.5 flex list-disc flex-col gap-1.5 rounded-control bg-white py-3 pl-8 pr-4 ring-1 ring-border-secondary text-caption text-text-primary marker:text-text-quaternary ${g.picked ? '' : 'opacity-60'}">${r.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
       </div></div>
     </div>
   </div>`;
@@ -452,16 +461,19 @@ function renderCard() {
   const busy = found.some((g) => g.state === 'syncing' || g.state === 'searching');
   const body = cardEl.querySelector('[data-askbody]');
   const keep = body ? body.scrollTop : 0;
-  cardEl.innerHTML = `<div class="fade-up flex h-[min(58vh,560px)] flex-col overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary shadow-menu">
-      <p class="shrink-0 px-6 pb-3 pt-5 text-heading font-semibold">Here's what we found in your apps. Pick what we should use for your deck.</p>
-      <div data-askbody class="min-h-0 flex-1 overflow-y-auto border-t border-border-secondary">
-        <div class="divide-y divide-border-secondary">${found.map(groupHtml).join('')}</div>
+  cardEl.innerHTML = `<div class="fade-up flex h-[min(56vh,520px)] flex-col overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary px-2.5 pb-2.5 pt-2 shadow-menu">
+      <div class="flex min-h-[48px] shrink-0 items-center gap-1 pb-3 pl-3 pr-1 pt-2">
+        <p class="mr-2 min-w-0 flex-1 text-[16px] font-medium leading-6">What should we use from your apps?</p>
+        <button type="button" id="dismissBtn" class="icon-btn !h-7 !w-7 text-text-secondary" aria-label="Don't use this information"><i class="ph ph-x text-[15px]"></i></button>
       </div>
-      <div class="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-secondary px-4 py-3">
+      <div data-askbody class="min-h-0 flex-1 overflow-y-auto">
+        <div class="flex flex-col gap-2">${found.map(groupHtml).join('')}</div>
+      </div>
+      <div class="flex shrink-0 flex-wrap items-center gap-2 pl-1 pt-2.5">
         <button type="button" id="addConnBtn" class="btn btn-ghost btn-sm" ${busy ? 'disabled' : ''}><i class="ph ph-plus"></i>Add a new connector</button>
         <span class="flex-1"></span>
-        <button type="button" id="skipBtn" class="btn btn-secondary btn-md">Don't use this information</button>
-        <button type="button" id="contBtn" class="btn btn-primary btn-md" ${!picked.length || busy ? 'disabled' : ''}>Continue${picked.length && picked.length < usable.length ? ` with ${picked.length} of ${usable.length}` : ''}</button>
+        <button type="button" id="skipBtn" class="btn btn-secondary btn-sm">Don't use this information</button>
+        <button type="button" id="contBtn" class="btn btn-primary btn-sm" ${!picked.length || busy ? 'disabled' : ''}>Continue${picked.length && picked.length < usable.length ? ` with ${picked.length} of ${usable.length}` : ''}</button>
       </div>
     </div>`;
   cardEl.querySelector('[data-askbody]').scrollTop = keep;
@@ -472,6 +484,7 @@ function renderCard() {
   });
   $('#addConnBtn').onclick = openAdd;
   $('#skipBtn').onclick = () => finish(null);
+  $('#dismissBtn').onclick = () => finish(null);
   $('#contBtn').onclick = () => finish(picked.map((g) => g.id));
   found.forEach((g) => { g.fresh = false; });
 }
@@ -501,27 +514,31 @@ async function addedApp(id) {
 function scrollAskEnd() { const b = cardEl.querySelector('[data-askbody]'); b?.scrollTo({ top: b.scrollHeight, behavior: 'smooth' }); }
 
 // ---------------- flow ----------------
+function chatHeader(on = true) { $('#hdrIcon').className = on ? 'ph ph-arrow-left text-[20px]' : 'ph ph-house text-[20px]'; $('#hdrPill').classList.toggle('hidden', !on); $('#hdrPill').classList.toggle('inline-flex', on); }
 async function start(text) {
+  chatHeader();
   $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
   $('#askDock').innerHTML = ''; thread().innerHTML = ''; found = [];
   addUser(text);
   await wait(500);
   const on = apps.filter((a) => a.on).map((a) => a.id);
   if (!on.length) return finish(null, true);
-  const trail = trailBlock(`Before we start, we're checking ${on.map((id) => appById(id).name).join(', ').replace(/, ([^,]*)$/, ' and $1')} for anything about Fresh Bites.`);
+  const t0 = Date.now(); const trail = trailBlock();
   for (const id of on) found.push(await searchApp(trail, id));
   await wait(500);
-  collapseTrail(trail, on.length, found.reduce((n, g) => n + RESULTS[g.id].files.length, 0));
+  collapseTrail(trail, on.length, found.reduce((n, g) => n + RESULTS[g.id].files.length, 0), Math.max(1, Math.round((Date.now() - t0) / 1000)));
+  addAssistant(`<p>We found a few things in your apps that could help. Pick what we should use.</p>`);
   cardEl = $('#askDock'); renderCard(); scrollEnd();
 }
 // Once the search is done the step list folds into one line; the card below carries the details.
-function collapseTrail(trail, appsN, filesN) {
+// Done: the steps fold under "Thought for Ns ›", like the app's reasoning row.
+function collapseTrail(trail, appsN, filesN, secs) {
   const body = trail.parentElement;
-  body.querySelector('p').remove();
+  trail.querySelector('[data-status]')?.remove();
   const steps = trail.outerHTML;
   body.innerHTML = `<div class="fade-up">
-    <button type="button" data-trailtoggle class="-ml-1.5 inline-flex items-center gap-1.5 rounded-control px-1.5 py-1 text-caption text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"><i class="ph-fill ph-check-circle text-[14px] text-[#14AE5C]"></i>Searched ${appsN} ${appsN === 1 ? 'app' : 'apps'} · read ${filesN} ${filesN === 1 ? 'file' : 'files'}<i class="ph-bold ph-caret-right chev text-[10px]"></i></button>
-    <div class="acc"><div>${steps}</div></div></div>`;
+    <button type="button" data-trailtoggle class="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary">Thought for ${secs}s<i class="ph ph-caret-right chev text-[12px]"></i></button>
+    <div class="acc"><div class="pt-3">${steps}</div></div></div>`;
   const btn = body.querySelector('[data-trailtoggle]');
   btn.onclick = () => { btn.parentElement.classList.toggle('open-row'); body.querySelector('.acc').classList.toggle('open'); };
 }
@@ -530,14 +547,15 @@ function finish(ids, noApps) {
   const names = (ids || []).map((id) => appById(id).name);
   addUser(noApps ? '' : ids ? `Use ${names.join(' and ')}` : "Don't use this information");
   if (noApps) thread().lastElementChild.remove();
-  addAssistant(`<p class="text-body-lg">${ids ? `Got it. We'll build your outline from your prompt and what we found in ${names.join(' and ')}.` : "Got it. We'll build your outline from your prompt only."}</p>
+  addAssistant(`<p>${ids ? `Got it. We'll build your outline from your prompt and what we found in ${names.join(' and ')}.` : "Got it. We'll build your outline from your prompt only."}</p>
     <div class="mt-3 flex items-center gap-2 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>Drafting your outline</div>`);
 }
-$('#pRestart').onclick = () => { apps = [{ id: 'googledrive', on: true }, { id: 'notion', on: true }, { id: 'hubspot', on: true }]; $('#chatStage').classList.add('hidden'); $('#chatStage').classList.remove('flex'); $('#promptStage').classList.remove('hidden'); $('#askDock').innerHTML = ''; mountComposer(false); };
+$('#pRestart').onclick = () => { chatHeader(false); apps = [{ id: 'googledrive', on: true }, { id: 'notion', on: true }, { id: 'hubspot', on: true }]; $('#chatStage').classList.add('hidden'); $('#chatStage').classList.remove('flex'); $('#promptStage').classList.remove('hidden'); $('#askDock').innerHTML = ''; mountComposer(false); };
 $('#pSkip').onclick = () => {
+  chatHeader();
   $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
   $('#askDock').innerHTML = ''; thread().innerHTML = ''; addUser(PROMPT);
-  addAssistant(`<p class="text-caption text-text-secondary"><i class="ph-fill ph-check-circle text-[14px] text-[#14AE5C]"></i> Searched 3 apps · read 5 files</p>`);
+  addAssistant(`<p class="text-text-tertiary">Thought for 14s <i class="ph ph-caret-right text-[12px]"></i></p>`); addAssistant(`<p>We found a few things in your apps that could help. Pick what we should use.</p>`);
   found = [{ id: 'googledrive', state: 'found', picked: true, open: true }, { id: 'notion', state: 'found', picked: true, open: false }, { id: 'hubspot', state: 'empty', picked: false, open: false }];
   cardEl = $('#askDock'); renderCard();
 };

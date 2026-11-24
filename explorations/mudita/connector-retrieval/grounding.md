@@ -13,7 +13,17 @@ Volatile reference for this folder. Written 24 Nov 2026; it ages with the code.
   and the buttons "Use this data", "Continue with prompt only" and "Connect another app".
 - The search trail strings (`chat_conn_trail_*`): "Opening “{name}”", "Read “{name}”", "Found {n} records", "Nothing matched".
 
-The chat shell in the proto is approximated from that source, not from a screenshot.
+The shell was measured from the live app (https://app.presentations.ai/#/create, logged in, 24 Nov 2026):
+
+| Element | Live value |
+| --- | --- |
+| Font | system stack (`-apple-system, system-ui, "Segoe UI"…`), not Inter |
+| Page | grey surface, 56px header with border; back arrow, "Auto · 10 credits a slide" pill, theme and close icons |
+| Prompt screen | "Describe your deck, or upload a file"; composer 800px, 12px radius, toolbar: +, Connected apps, Design, Options, mic, blue send |
+| Connected apps menu | "USE FOR THIS DECK", logo + name + switch per app, divider, blue "+ Connect another app" |
+| Chat column | 752px; user bubble `rounded-card bg-app-50 px-4 py-3`, 14px text; no assistant avatar |
+| Reasoning | "Thought for Ns ›"; while running, a blue spinner status line and "• Searching Google Drive ⌄" with grey sub-bullets |
+| Ask card (docked) | 744px, `rounded-card border shadow-menu px-2.5 pb-2.5 pt-2`; title row `min-h-[48px] pl-3 pr-1 pt-2 pb-3`, 16px medium, 28px close X |
 
 ## App rules the proto follows (from Mudita, 24 Nov 2026)
 
