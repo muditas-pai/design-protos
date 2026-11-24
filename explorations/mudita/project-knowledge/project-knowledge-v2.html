@@ -231,7 +231,6 @@ tailwind.config = {
         </div>
         <!-- Files -->
         <div data-pane="files" class="hidden">
-          <div id="batch" class="hidden"></div>
           <ul id="fileList" class="flex flex-col gap-2"></ul>
           <div id="drop" role="button" tabindex="0"></div>
           <input id="fileInput" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.pptx" class="hidden" />
@@ -708,30 +707,17 @@ const dz = document.querySelector('[data-pane="files"]');
 ['dragleave','drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); $('#drop').classList.remove('!border-border-brand','!bg-bg-brand-selected'); }));
 dz.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
 
-function renderBatch() {
-  const el = $('#batch');
-  if (!S.batch) { el.className = 'hidden'; return; }
-  const fs = S.batch.ids.map((id) => S.files.find((f) => f.id === id)).filter(Boolean);
-  if (!fs.length) { S.batch = null; el.className = 'hidden'; return; }
-  const ready = fs.filter((f) => f.status === 'ready').length, failed = fs.filter((f) => f.status === 'error').length;
-  const segColor = (f) => f.status === 'ready' ? '#14AE5C' : f.status === 'error' ? '#DC3412' : f.status === 'reading' ? '#0D99FF' : '#9CD3FF';
-  const done = S.batch.done;
-  el.className = `mb-3 rounded-card px-3 py-2.5 ${done && !failed ? 'bg-bg-success-inverted' : 'bg-bg-secondary'}`;
-  const label = done
-    ? (failed ? `<i class="ph-fill ph-warning-circle text-[16px] text-[#DC3412]"></i>${ready} of ${fs.length} ready. ${failed} couldn't be read.` : `<i class="ph-fill ph-check-circle pop-in text-[16px] text-[#14AE5C]"></i>${fs.length === 1 ? 'File' : `All ${fs.length} files`} ready. New decks here will use ${fs.length === 1 ? 'it' : 'them'}.`)
-    : `<span class="ring"></span>Adding ${plural(fs.length, 'file', 'files')}<span class="ml-auto tabular text-text-secondary">${ready} of ${fs.length} ready</span>`;
-  el.innerHTML = `<div class="flex items-center gap-2 text-caption font-medium">${label}</div>
-    ${done ? '' : `<div class="mt-2 flex gap-1">${fs.map((f) => `<span class="seg h-1 flex-1 rounded-full" style="background:${segColor(f)}"></span>`).join('')}</div>`}`;
-}
+// No batch summary strip: each row carries its own state, and the toast + the card's Files tile mark the end.
+// S.batch only tracks which uploads belong together so the toast can name them.
+function renderBatch() {}
 function finishBatchCheck() {
   if (!S.batch) return;
   const fs = S.batch.ids.map((id) => S.files.find((f) => f.id === id)).filter(Boolean);
   if (fs.some((f) => f.status === 'uploading' || f.status === 'reading')) return renderBatch();
-  S.batch.done = true; renderBatch(); flash('files');
+  S.batch.done = true; flash('files');
   const ok = fs.filter((f) => f.status === 'ready').length;
   if (ok) toast(`${ok === 1 ? fs.find((f) => f.status === 'ready').name : ok + ' files'} ready. New decks in this project will use ${ok === 1 ? 'it' : 'them'}.`);
-  const b = S.batch;
-  setTimeout(() => { if (S.batch === b && !fs.some((f) => f.status === 'error')) { S.batch = null; renderBatch(); } }, 4200);
+  S.batch = null;
 }
 
 // ---- Connectors pane: workspace (on by default) and this project only ----
