@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<!-- Project knowledge v2: forked from project-knowledge-v1.html (24 Nov 2026).
+     Changes from v1: one entry point (the knowledge card; the header button is gone); the card has designed states for
+     an empty project, knowledge without decks, and knowledge with decks; manage/edit is a modal with tabs instead of the
+     side panel; connectors are split into workspace (on by default) and project-only. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Redesign tokens, copied from pitchdeckdoclist config/tailwind/pai.tailwind.config.js (new_dev_migration, 18 Nov 2026), light theme only. */
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        'bg-default-primary': '#FFFFFF', 'bg-secondary': '#F5F5F5', 'bg-tertiary': '#F5F5F5', 'bg-quaternary': '#E6E6E6',
+        'bg-brand': '#0D99FF', 'bg-brand-hover': '#007BE5', 'bg-brand-selected': 'rgba(13,153,255,0.12)', 'bg-brand-inverted': '#E5F4FF',
+        'bg-success': '#14AE5C', 'bg-success-inverted': '#E0F6E5', 'bg-warning-inverted': '#FFF1C2', 'bg-danger-inverted': '#FFE2E0',
+        'bg-ink': '#1A1A1A', 'bg-blackout': '#000000',
+        'text-primary': '#1A1A1A', 'text-secondary': '#7F7F7F', 'text-tertiary': '#7F7F7F', 'text-quaternary': '#B2B2B2',
+        'text-brand': '#007BE5', 'text-success-primary': '#009951', 'text-warning-primary': '#A15C00', 'text-danger-primary': '#DC3412', 'text-white': '#FFFFFF',
+        'border-secondary': '#E6E6E6', 'border-tertiary': 'rgba(230,230,230,0.6)', 'border-primary': 'rgba(26,26,26,0.3)', 'border-brand': '#007BE5', 'border-success-secondary': '#B9EBC6',
+        'gold': '#B8860B', 'app-50': '#E5F4FF',
+      },
+      fontSize: {
+        display: ['32px', { lineHeight: '40px', letterSpacing: '-0.02em' }],
+        title: ['20px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
+        heading: ['18px', { lineHeight: '26px', letterSpacing: '-0.005em' }],
+        body: ['14px', { lineHeight: '20px' }],
+        'body-lg': ['16px', { lineHeight: '24px' }],
+        caption: ['13px', { lineHeight: '18px' }],
+        micro: ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
+      },
+      borderRadius: { control: '6px', card: '12px', dialog: '16px' },
+      boxShadow: {
+        menu: '0 1px 2px 0 rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.16)',
+        dialog: '0 2px 6px 0 rgb(0 0 0 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.28)',
+        'button-primary': '0 1px 2px 0 rgb(0 0 0 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.12)',
+        knob: '0 1px 3px rgb(0 0 0 / 0.2)',
+      },
+      transitionTimingFunction: { std: 'cubic-bezier(0.2, 0, 0, 1)' },
+    },
+  },
+};
+</script>
+<style>
+  html, body { margin: 0; background: #F5F5F5; color: #1A1A1A; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 6px; font-weight: 500; transition: background-color .15s cubic-bezier(.2,0,0,1), border-color .15s cubic-bezier(.2,0,0,1), color .15s, transform .1s; user-select: none; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn-primary { background: #0D99FF; color: #fff; box-shadow: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12); }
+  .btn-primary:hover { background: #007BE5; }
+  .btn-secondary { background: #fff; color: #1A1A1A; border: 1px solid #E6E6E6; }
+  .btn-secondary:hover { border-color: rgba(26,26,26,.3); background: #F5F5F5; }
+  .btn-ghost { color: #7F7F7F; } .btn-ghost:hover { color: #1A1A1A; background: #F5F5F5; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-md { height: 36px; padding: 0 14px; font-size: 14px; gap: 8px; }
+  .btn:disabled { cursor: not-allowed; background: #F5F5F5; color: #7F7F7F; box-shadow: none; border-color: transparent; }
+  .icon-btn { display: inline-flex; height: 36px; width: 36px; align-items: center; justify-content: center; border-radius: 6px; color: #7F7F7F; transition: background-color .15s, color .15s; }
+  .icon-btn:hover { background: #F5F5F5; color: #1A1A1A; }
+  .badge-gold { display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#8A5A00; background:linear-gradient(180deg,#FFE7A3,#F7C94B); }
+  .nav-item { display:flex; align-items:center; gap:10px; height:32px; padding:0 8px; border-radius:6px; font-size:14px; color:#1A1A1A; }
+  .nav-item:hover { background: rgba(26,26,26,.05); }
+  .nav-item.is-active { background: rgba(26,26,26,.06); font-weight: 500; }
+  .nav-item i { font-size: 18px; color: #7F7F7F; }
+  .skeleton { background: linear-gradient(90deg, #EFEFEF 25%, #F7F7F7 37%, #EFEFEF 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 4px; }
+  @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; }
+  .thumb { aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid #E6E6E6; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+
+<title>Project knowledge v2</title>
+<style>
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px) scale(.98); opacity: 0; transition: opacity .2s cubic-bezier(.2,0,0,1), transform .25s cubic-bezier(.2,0,0,1); z-index: 95; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+  /* File row: progress bar → indeterminate while we read the file → green, then it folds away. */
+  .bar-wrap { height: 4px; margin-top: 10px; opacity: 1; transition: height .25s cubic-bezier(.2,0,0,1), margin .25s cubic-bezier(.2,0,0,1), opacity .2s; }
+  .bar-wrap.is-gone { height: 0; margin-top: 0; opacity: 0; }
+  .bar { transition: width .35s cubic-bezier(.2,0,0,1), background-color .25s; }
+  .bar.is-reading { width: 100% !important; background: linear-gradient(90deg, rgba(13,153,255,.18) 0%, #0D99FF 45%, rgba(13,153,255,.18) 90%); background-size: 220% 100%; animation: reading 1.6s linear infinite; }
+  @keyframes reading { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+  .bar.is-ok { width: 100% !important; background: #14AE5C; animation: none; }
+
+  .flash-ok { animation: flashOk 1.8s cubic-bezier(.2,0,0,1); }
+  @keyframes flashOk { 0% { background-color: #E0F6E5; border-color: #B9EBC6; } 100% { background-color: #fff; border-color: #E6E6E6; } }
+  .flash-ok-soft { animation: flashOkSoft 1.8s cubic-bezier(.2,0,0,1); }
+  @keyframes flashOkSoft { 0% { background-color: #E0F6E5; } 100% { background-color: transparent; } }
+
+  .pop-in { animation: popIn .32s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes popIn { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .fade-up { animation: fadeUp .24s cubic-bezier(.2,0,0,1) both; }
+  @keyframes fadeUp { from { transform: translateY(4px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .row-in { animation: rowIn .28s cubic-bezier(.2,0,0,1) both; }
+  @keyframes rowIn { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .ring { width: 16px; height: 16px; border-radius: 999px; border: 2px solid rgba(13,153,255,.2); border-top-color: #0D99FF; animation: spin .8s linear infinite; }
+
+  .switch { position: relative; display: inline-flex; height: 24px; width: 40px; flex-shrink: 0; align-items: center; border-radius: 999px; background: #E6E6E6; transition: background-color .2s cubic-bezier(.2,0,0,1); }
+  .switch[aria-checked="true"] { background: #0D99FF; }
+  .switch .knob { height: 20px; width: 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .2); transform: translateX(2px); transition: transform .22s cubic-bezier(.34,1.3,.64,1); }
+  .switch[aria-checked="true"] .knob { transform: translateX(18px); }
+  .switch:disabled { opacity: .4; cursor: not-allowed; }
+  .switch:focus-visible { outline: 2px solid rgba(13,153,255,.35); outline-offset: 2px; }
+
+  .logo-off { filter: grayscale(1); opacity: .45; transition: filter .2s, opacity .2s; }
+  .count-bump { animation: bump .36s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  .seg { transition: background-color .3s; }
+</style>
+<style>
+  .tile { transition: border-color .15s cubic-bezier(.2,0,0,1), background-color .15s cubic-bezier(.2,0,0,1), box-shadow .15s; }
+  .tile:hover { border-color: rgba(26,26,26,.18); background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .04); }
+  .tab { position: relative; height: 40px; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #7F7F7F; transition: color .15s; }
+  .tab:hover { color: #1A1A1A; }
+  .tab[aria-selected="true"] { color: #1A1A1A; font-weight: 500; }
+  .tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: #1A1A1A; }
+  .link-btn { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 4px 6px; margin: -4px -6px; font-size: 14px; font-weight: 500; color: #007BE5; transition: background-color .15s, color .15s; }
+  .link-btn:hover { color: #0768CF; background: rgba(13,153,255,.08); }
+  .modal-in { animation: modalIn .22s cubic-bezier(.2,0,0,1) both; }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+  .scrim-in { animation: scrimIn .18s ease both; } @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="flex h-screen flex-col">
+  
+<header class="flex h-14 shrink-0 items-center gap-3 border-b border-border-secondary bg-bg-default-primary px-4">
+  <span class="flex items-center gap-2 text-body font-semibold"><span class="flex h-6 w-6 items-center justify-center rounded-[6px] bg-[#FF5500] text-[11px] font-bold text-white">P</span>Presentations.AI</span>
+  <div class="mx-auto hidden w-full max-w-md items-center gap-2 rounded-control bg-bg-tertiary px-3 py-1.5 text-body text-text-quaternary sm:flex"><i class="ph ph-magnifying-glass"></i>Search decks and projects<span class="ml-auto rounded border border-border-secondary bg-white px-1.5 text-micro text-text-secondary">⌘K</span></div>
+  <button type="button" class="icon-btn"><i class="ph ph-bell text-[18px]"></i></button>
+  <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFD9C2] text-caption font-semibold text-[#8A3A00]">MS</span>
+</header>
+  <div class="flex min-h-0 flex-1">
+    
+<aside class="hidden md:flex w-[248px] shrink-0 flex-col border-r border-border-secondary bg-bg-default-primary">
+  <div class="px-3 pt-3">
+    <button type="button" class="flex w-full items-center gap-2.5 rounded-control px-2 py-1.5 hover:bg-bg-tertiary">
+      <span class="flex h-7 w-7 items-center justify-center rounded-[7px] bg-[#1A1A1A] text-[12px] font-semibold text-white">N</span>
+      <span class="min-w-0 flex-1 text-left"><span class="block truncate text-body font-semibold">Northwind Sales</span><span class="block text-micro text-text-secondary">Gold plan</span></span>
+      <i class="ph ph-caret-up-down text-text-secondary"></i>
+    </button>
+    <button type="button" class="btn btn-primary btn-md mt-3 w-full"><i class="ph ph-plus"></i>New deck</button>
+  </div>
+  <nav class="mt-3 flex flex-col gap-0.5 px-3">
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-house"></i><span class="flex-1 truncate">Home</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-stack"></i><span class="flex-1 truncate">Templates</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-database"></i><span class="flex-1 truncate">Data sources</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-swatches"></i><span class="flex-1 truncate">Brand kit</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-pen-nib"></i><span class="flex-1 truncate">Hire an expert</span></button>
+  </nav>
+  <div class="mt-5 px-3">
+    <div class="flex items-center justify-between px-2 pb-1"><span class="text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Projects</span><i class="ph ph-plus text-text-secondary"></i></div>
+    <div class="flex flex-col gap-0.5">
+      <button type="button" class="nav-item is-active w-full text-left"><i class="ph ph-cube" style="color:#0D99FF"></i><span class="flex-1 truncate">Q1 Sales Kickoff</span></button>
+      <button type="button" class="nav-item w-full text-left"><i class="ph ph-cube" style="color:#9747FF"></i><span class="flex-1 truncate">Partner Program 2027</span></button>
+      <button type="button" class="nav-item w-full text-left"><i class="ph ph-cube" style="color:#14AE5C"></i><span class="flex-1 truncate">Board Updates</span></button>
+    </div>
+    <div class="mt-4 flex items-center justify-between px-2 pb-1"><span class="text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Folders</span><i class="ph ph-plus text-text-secondary"></i></div>
+    <div class="flex flex-col gap-0.5"><button type="button" class="nav-item w-full text-left"><i class="ph ph-folder"></i><span class="flex-1 truncate">Customer stories</span></button><button type="button" class="nav-item w-full text-left"><i class="ph ph-folder"></i><span class="flex-1 truncate">Archive</span></button></div>
+  </div>
+  <div class="mt-auto p-3">
+    <div class="rounded-card border border-border-secondary p-3">
+      <div class="flex items-center justify-between text-caption"><span class="font-medium">Credits</span><span class="tabular text-text-secondary">8,420 of 10,000</span></div>
+      <div class="mt-2 h-1.5 rounded-full bg-bg-quaternary"><div class="h-1.5 w-[84%] rounded-full bg-bg-ink"></div></div>
+    </div>
+    <button type="button" class="nav-item mt-2 w-full"><i class="ph ph-user-plus"></i>Invite teammates</button>
+  </div>
+</aside>
+    <div class="min-w-0 flex-1 overflow-y-auto">
+      <main class="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6">
+        <nav class="mb-3 flex flex-wrap items-center gap-1.5 text-caption text-text-tertiary">
+  <button type="button" class="hover:text-text-primary">Northwind Sales</button><i class="ph ph-caret-right text-[11px]"></i><span class="text-text-secondary">Q1 Sales Kickoff</span>
+</nav>
+
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <input value="Q1 Sales Kickoff" class="mt-1 rounded-control border-0 bg-transparent p-0 text-display font-semibold outline-none hover:bg-bg-tertiary focus:bg-bg-tertiary" />
+          <div class="flex items-center gap-2">
+            <span id="members" class="flex -space-x-2">
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#D6E9FF] text-caption font-semibold text-[#0B4A8B] ring-2 ring-bg-secondary">AK</span>
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#E3F5E1] text-caption font-semibold text-[#1F6B2A] ring-2 ring-bg-secondary">RP</span>
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F3E6FF] text-caption font-semibold text-[#6B2FA3] ring-2 ring-bg-secondary">JL</span>
+            </span>
+            <button type="button" class="btn btn-secondary btn-md"><i class="ph ph-share-network"></i>Share project</button>
+            <button type="button" class="btn btn-primary btn-md"><i class="ph ph-plus"></i>New deck here</button>
+            <button type="button" class="icon-btn"><i class="ph ph-dots-three text-[20px]"></i></button>
+          </div>
+        </div>
+        <p id="summary" class="mt-2 text-body text-text-secondary"></p>
+
+        <!-- The one entry point to project knowledge -->
+        <section id="kcard" class="mt-6"></section>
+
+        <div class="mt-8 flex items-center justify-between"><h2 id="decksTitle" class="text-heading font-semibold">Decks</h2></div>
+        <div id="deckGrid" class="mt-3"></div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- Manage modal -->
+<div id="modal" class="fixed inset-0 z-[60] hidden">
+  <div class="scrim-in absolute inset-0 bg-black/45 backdrop-blur-[2px]" data-mclose></div>
+  <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+    <div role="dialog" aria-modal="true" aria-labelledby="mTitle" class="modal-in pointer-events-auto flex h-[min(680px,calc(100svh-24px))] w-full max-w-2xl flex-col overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary shadow-dialog">
+      <div class="flex items-start justify-between gap-4 px-6 pt-5">
+        <div class="min-w-0"><h2 id="mTitle" class="text-title font-semibold">Project knowledge</h2><p class="mt-1 text-body text-text-secondary">Every new deck in Q1 Sales Kickoff uses this.</p></div>
+        <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-mclose aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+      </div>
+      <div role="tablist" class="mt-3 flex gap-6 border-b border-border-secondary px-6" id="tabs"></div>
+      <div class="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <!-- Instructions -->
+        <div data-pane="instr" class="hidden">
+          <textarea id="instrText" rows="9" class="w-full resize-none rounded-control border border-border-secondary p-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" placeholder="Who are these decks for? What tone? Anything every deck must include?"></textarea>
+          <div class="mt-2 flex flex-wrap gap-1.5" id="instrStarters"></div>
+          <div class="mt-5 flex items-center justify-end gap-3">
+            <span id="instrStatus" class="text-caption text-text-secondary"></span>
+            <button type="button" id="instrSave" class="btn btn-primary btn-md min-w-[132px]" disabled>Save instructions</button>
+          </div>
+        </div>
+        <!-- Files -->
+        <div data-pane="files" class="hidden">
+          <div id="batch" class="hidden"></div>
+          <ul id="fileList" class="flex flex-col gap-2"></ul>
+          <div id="drop" role="button" tabindex="0"></div>
+          <input id="fileInput" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.pptx" class="hidden" />
+        </div>
+        <!-- Connectors -->
+        <div data-pane="conns" class="hidden">
+          <div id="connPane"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast flex items-center gap-2 rounded-card bg-[#1A1A1A] px-4 py-2.5 text-body text-white shadow-menu"></div>
+
+<!-- Proto-only control, not part of the screen -->
+<div class="fixed bottom-4 left-4 z-[100] flex items-center gap-1 rounded-full border border-border-secondary bg-white/95 p-1 text-micro shadow-menu backdrop-blur">
+  <span class="px-2 font-semibold text-text-secondary">v2</span>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-seed="empty">1 · Empty project</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-seed="knowledge">2 · Knowledge, no decks</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-seed="decks">3 · Knowledge and decks</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-seed="upload">Upload 3 files</button>
+</div>
+
+<script>
+// Deck cards for the project page (DocumentCardView shape: 16:9 thumb, title, edited line).
+const DECKS = [
+  { t: 'FY27 Sales Kickoff', s: 'Win the year together', bg: '#0B1E3F', fg: '#FFFFFF', accent: '#4FB3FF', edited: 'Edited 2 hours ago' },
+  { t: 'Territory Plan: EMEA', s: 'Coverage, quotas and focus accounts', bg: '#F4EFE6', fg: '#2A2118', accent: '#D9822B', edited: 'Edited yesterday' },
+  { t: 'Product Roadmap H1', s: 'What ships, and why it matters to buyers', bg: '#FFFFFF', fg: '#111111', accent: '#7B61FF', edited: 'Edited 3 days ago' },
+  { t: 'Competitive Battlecards', s: 'How we win against the top three', bg: '#102A23', fg: '#E9F5EF', accent: '#3DDC97', edited: 'Edited 5 days ago' },
+  { t: 'Pricing and Packaging 2027', s: 'New tiers and the upgrade path', bg: '#FFF4F0', fg: '#2B1B16', accent: '#FF5A36', edited: 'Edited 1 week ago' },
+  { t: 'Customer Wins: Q4', s: 'Six stories worth retelling', bg: '#1E1E1E', fg: '#F2F2F2', accent: '#FFC53D', edited: 'Edited 2 weeks ago' },
+];
+function deckCard(d) {
+  return `<div class="group min-w-0 cursor-pointer">
+    <div class="thumb relative transition-shadow duration-150 group-hover:shadow-menu" style="background:${d.bg}">
+      <div class="absolute inset-0 flex flex-col justify-center px-[9%]">
+        <div style="width:28px;height:3px;border-radius:2px;background:${d.accent}"></div>
+        <div class="mt-2 font-semibold leading-tight" style="color:${d.fg};font-size:clamp(13px,1.5vw,18px)">${d.t}</div>
+        <div class="mt-1 opacity-70" style="color:${d.fg};font-size:clamp(9px,0.9vw,11px)">${d.s}</div>
+      </div>
+      <div class="absolute bottom-[10%] right-[9%] flex gap-1">${[40,28,52].map(w=>`<span style="display:block;width:${w/3}px;height:${w/2}px;border-radius:2px;background:${d.accent};opacity:.5"></span>`).join('')}</div>
+    </div>
+    <div class="mt-2.5 flex items-start justify-between gap-2 px-0.5">
+      <div class="min-w-0"><div class="truncate text-body font-medium">${d.t}</div><div class="mt-0.5 text-caption text-text-secondary">${d.edited}</div></div>
+      <button type="button" class="icon-btn !h-7 !w-7 opacity-0 transition-opacity group-hover:opacity-100"><i class="ph ph-dots-three text-[18px]"></i></button>
+    </div>
+  </div>`;
+}
+// A brand-new project: no decks, no members. The empty state is the live ds <Empty> (FolderIcon, dashed frame).
+function setProjectEmpty(empty) {
+  const grid = document.getElementById('deckGrid');
+  grid.className = empty ? 'mt-6' : 'mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3';
+  grid.innerHTML = empty
+    ? `<div class="fade-up flex flex-col items-center gap-2 rounded-card border border-dashed border-border-secondary px-6 py-14 text-center">
+        <span class="flex h-11 w-11 items-center justify-center rounded-full bg-bg-tertiary text-text-secondary"><i class="ph ph-folder text-[20px]"></i></span>
+        <div class="mt-1 text-body font-semibold">This project is empty</div>
+        <p class="max-w-sm text-caption text-text-secondary">Move decks here from their menu, or start a new one.</p>
+      </div>`
+    : DECKS.map(deckCard).join('');
+  document.getElementById('members').classList.toggle('hidden', empty);
+  document.getElementById('summary').textContent = empty
+    ? "0 decks · decks inherit the project's sharing"
+    : "6 decks · shared with 3 people · decks inherit the project's sharing";
+}
+setProjectEmpty(false);
+
+// Connector catalog + "Add connector" dialog (replica of settings/datasources/AddConnectorDialog.jsx, PR #6872).
+const CATALOG = [
+  { id: 'googledrive', name: 'Google Drive', slug: 'googledrive', cat: 'file management & storage', chip: 'files', popular: true, desc: 'Read docs, sheets and slides from your Drive so decks can quote them.' },
+  { id: 'hubspot', name: 'HubSpot', slug: 'hubspot', cat: 'crm', chip: 'crm', popular: true, desc: 'Pull deals, pipeline and company records into sales and QBR decks.' },
+  { id: 'notion', name: 'Notion', slug: 'notion', cat: 'notes', chip: 'notes', popular: true, desc: 'Use pages and databases from your workspace as source material.' },
+  { id: 'salesforce', name: 'Salesforce', slug: null, color: '#00A1E0', cat: 'crm', chip: 'crm', popular: true, desc: 'Bring opportunities, accounts and forecasts into your decks.' },
+  { id: 'googlesheets', name: 'Google Sheets', slug: 'googlesheets', cat: 'spreadsheets', chip: 'spreadsheets', popular: true, desc: 'Turn rows and charts from a sheet into slides with real numbers.' },
+  { id: 'slack', name: 'Slack', slug: null, color: '#4A154B', cat: 'team chat', chip: 'chat', popular: true, desc: 'Reference channel threads and announcements your team already wrote.' },
+  { id: 'confluence', name: 'Confluence', slug: 'confluence', cat: 'documents', chip: 'documents', popular: false, desc: 'Draw on specs, wikis and team pages.' },
+  { id: 'dropbox', name: 'Dropbox', slug: 'dropbox', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read files stored in your Dropbox folders.' },
+  { id: 'airtable', name: 'Airtable', slug: 'airtable', cat: 'spreadsheets', chip: 'spreadsheets', popular: false, desc: 'Use bases and views as structured data for slides.' },
+  { id: 'jira', name: 'Jira', slug: 'jira', cat: 'project management', chip: 'projects', popular: false, desc: 'Summarise epics, sprints and roadmaps for status updates.' },
+  { id: 'asana', name: 'Asana', slug: 'asana', cat: 'project management', chip: 'projects', popular: false, desc: 'Pull project status and milestones into updates.' },
+  { id: 'linear', name: 'Linear', slug: 'linear', cat: 'project management', chip: 'projects', popular: false, desc: 'Turn cycles and projects into progress slides.' },
+  { id: 'gmail', name: 'Gmail', slug: 'gmail', cat: 'email', chip: 'email', popular: false, desc: 'Reference email threads with customers and partners.' },
+  { id: 'googleanalytics', name: 'Google Analytics', slug: 'googleanalytics', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Chart traffic and conversion trends from GA4.' },
+  { id: 'mixpanel', name: 'Mixpanel', slug: 'mixpanel', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Bring product usage metrics into reviews.' },
+  { id: 'quickbooks', name: 'QuickBooks', slug: 'quickbooks', cat: 'accounting', chip: 'accounting', popular: false, desc: 'Use revenue and expense figures in finance decks.' },
+  { id: 'onedrive', name: 'OneDrive', slug: null, color: '#0364B8', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read Word, Excel and PowerPoint files from OneDrive.' },
+  { id: 'pipedrive', name: 'Pipedrive', slug: null, color: '#1A1A1A', cat: 'crm', chip: 'crm', popular: false, desc: 'Pull deals and activity into pipeline reviews.' },
+  { id: 'zendesk', name: 'Zendesk', slug: 'zendesk', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket trends and CSAT for account reviews.' },
+  { id: 'intercom', name: 'Intercom', slug: 'intercom', cat: 'customer support', chip: 'more', popular: false, desc: 'Use conversation themes in customer decks.' },
+];
+const CHIPS = [['crm','CRM'],['documents','Documents'],['files','File storage'],['spreadsheets','Spreadsheets'],['notes','Notes'],['projects','Project management'],['analytics','Analytics'],['email','Email'],['chat','Team chat'],['accounting','Accounting'],['more','More']];
+const ACR = new Set(['crm','ai','hr','url','sms','seo']);
+const catLabel = (t) => (t || '').replace(/\b\w+/g, (w) => ACR.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
+const appById = (id) => CATALOG.find((a) => a.id === id);
+
+// AppLogo: logo on a soft sunken tile, initials when there's no logo or it fails to load.
+function appLogo(app, size = 'md', extraClass = '') {
+  const box = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-8 w-8' : size === 'xs' ? 'h-5 w-5' : 'h-9 w-9';
+  const img = size === 'lg' ? 'h-7 w-7' : size === 'sm' ? 'h-[18px] w-[18px]' : size === 'xs' ? 'h-3 w-3' : 'h-5 w-5';
+  const tiny = size === 'xs' ? 'text-[6px]' : 'text-[10px]';
+  const initials = app.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const fallback = `<span class='text-caption font-semibold text-text-secondary'>${initials}</span>`;
+  const inner = app.slug
+    ? `<img src="https://cdn.simpleicons.org/${app.slug}" alt="" class="${img} object-contain" loading="lazy" onerror="this.outerHTML=&quot;${fallback}&quot;" />`
+    : `<span class="flex ${img} items-center justify-center rounded-[3px] ${tiny} font-bold text-white" style="background:${app.color}">${initials}</span>`;
+  return `<span class="flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-control bg-bg-tertiary ${extraClass}">${inner}</span>`;
+}
+
+// The dialog. opts: { isConnected(id), onConnect(id) -> Promise, title, description }
+const ConnectorDialog = (() => {
+  let root, state = { q: '', chip: '', busy: null, opts: null };
+  function mount() {
+    root = document.createElement('div');
+    root.className = 'fixed inset-0 z-[70] hidden';
+    root.innerHTML = `
+      <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px] opacity-0 transition-opacity duration-200" data-x data-fade></div>
+      <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+        <div data-panel role="dialog" aria-modal="true" class="pointer-events-auto relative w-full max-w-3xl translate-y-2 scale-[0.98] overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary opacity-0 shadow-dialog transition-[opacity,transform] duration-200 ease-std">
+          <div class="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
+            <div class="min-w-0"><div data-title class="text-title font-semibold">Add connector</div><div data-desc class="mt-1 text-body text-text-secondary">Connect an app your decks can draw on. Access is read-only and only for you.</div></div>
+            <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-x aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+          </div>
+          <div class="px-6 pt-3">
+            <div class="relative"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+              <input data-q placeholder="Search 120+ apps" class="h-9 w-full rounded-control border border-border-secondary pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+            <div data-chips class="scrollbar-hide mt-3 flex h-7 gap-1.5 overflow-x-auto" style="-webkit-mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%)"></div>
+            <div data-section class="mb-2 mt-6 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
+          </div>
+          <div data-list class="scrollbar-hide h-[52vh] overflow-y-auto px-6 pb-6"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(root);
+    root.querySelectorAll('[data-x]').forEach((el) => el.onclick = close);
+    root.querySelector('[data-q]').oninput = (e) => { state.q = e.target.value; render(); };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.classList.contains('hidden')) close(); });
+  }
+  function card(app) {
+    const connected = state.opts.isConnected(app.id);
+    const working = state.busy === app.id;
+    const action = connected
+      ? `<span title="Connected" class="flex h-8 w-8 items-center justify-center rounded-control bg-bg-success-inverted text-text-success-primary"><i class="ph-bold ph-check"></i></span>`
+      : `<button type="button" data-connect="${app.id}" ${state.busy ? 'disabled' : ''} aria-label="Connect ${app.name}" class="icon-btn !h-8 !w-8 border border-border-secondary disabled:opacity-50">${working ? '<i class="ph ph-arrows-clockwise spin"></i>' : '<i class="ph ph-plus"></i>'}</button>`;
+    return `<div class="flex items-start gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-4">
+      ${appLogo(app, 'lg')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-semibold">${app.name}</div><p class="mt-0.5 line-clamp-2 text-caption text-text-secondary">${app.desc}</p></div>
+      <div class="shrink-0">${action}</div></div>`;
+  }
+  function render() {
+    const q = state.q.trim().toLowerCase();
+    const chips = root.querySelector('[data-chips]');
+    chips.innerHTML = [['', 'All'], ...CHIPS].map(([id, label]) => `<button type="button" data-chip="${id}" class="h-7 shrink-0 whitespace-nowrap rounded-full border px-3 text-caption ${state.chip === id ? 'border-border-brand bg-app-50 text-text-brand' : 'border-border-secondary text-text-secondary hover:bg-bg-tertiary'}">${label}</button>`).join('');
+    chips.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { state.chip = b.dataset.chip; render(); });
+    const filtered = CATALOG.filter((a) => (!state.chip || a.chip === state.chip) && (!q || a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q)));
+    const browsing = !q && !state.chip;
+    const pop = browsing ? filtered.filter((a) => a.popular) : [];
+    const rest = browsing ? filtered.filter((a) => !a.popular) : filtered;
+    root.querySelector('[data-section]').textContent = browsing ? 'Popular' : (CHIPS.find((c) => c[0] === state.chip)?.[1] || 'All apps');
+    const grid = (items) => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">${items.map(card).join('')}</div>`;
+    let html = '';
+    if (!filtered.length) html = '<p class="py-10 text-center text-body text-text-secondary">No apps match your search.</p>';
+    if (pop.length) html += grid(pop);
+    if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
+    const list = root.querySelector('[data-list]'); list.innerHTML = html;
+    list.querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
+      state.busy = b.dataset.connect; render();
+      Promise.resolve(state.opts.onConnect(state.busy)).finally(() => { state.busy = null; render(); });
+    });
+  }
+  function open(opts) {
+    if (!root) mount();
+    state = { q: '', chip: '', busy: null, opts };
+    if (opts.title) root.querySelector('[data-title]').textContent = opts.title;
+    if (opts.description) root.querySelector('[data-desc]').textContent = opts.description;
+    root.querySelector('[data-q]').value = '';
+    render();
+    root.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      root.querySelector('[data-fade]').classList.remove('opacity-0');
+      root.querySelector('[data-panel]').classList.remove('opacity-0','translate-y-2','scale-[0.98]');
+      root.querySelector('[data-q]').focus();
+    });
+  }
+  function close() {
+    root.querySelector('[data-fade]').classList.add('opacity-0');
+    root.querySelector('[data-panel]').classList.add('opacity-0','translate-y-2','scale-[0.98]');
+    setTimeout(() => root.classList.add('hidden'), 180);
+    state.opts?.onClose?.();
+  }
+  return { open, close, refresh: () => root && render() };
+})();
+
+const $ = (s) => document.querySelector(s);
+const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const TYPE = { pdf: ['#FA423E','file-pdf'], doc: ['#0285FF','file-doc'], docx: ['#0285FF','file-doc'], ppt: ['#D04423','file-ppt'], pptx: ['#D04423','file-ppt'] };
+const typeOf = (n) => TYPE[(n.split('.').pop() || '').toLowerCase()] || ['#0285FF','file-text'];
+const fmt = (b) => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + 'KB' : (b / 1048576).toFixed(b / 1048576 >= 10 ? 0 : 1) + 'MB';
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+let uid = 0;
+
+const S = { instructions: '', instrWhen: '', files: [], conns: [], decks: 0, batch: null, tab: 'instr', flash: null };
+const readyFiles = () => S.files.filter((f) => f.status === 'ready');
+const busyFiles = () => S.files.filter((f) => f.status === 'uploading' || f.status === 'reading');
+const activeConns = () => S.conns.filter((c) => c.status === 'ACTIVE');
+const onConns = () => S.conns.filter((c) => c.on && c.status === 'ACTIVE');
+const hasInstr = () => !!S.instructions.trim();
+const hasKnowledge = () => hasInstr() || S.files.length > 0 || S.conns.some((c) => c.scope === 'project');
+
+function toast(msg, icon = 'check-circle', tone = '#3DDC97') {
+  const t = $('#toast');
+  t.innerHTML = `<i class="ph-fill ph-${icon} text-[18px]" style="color:${tone}"></i><span>${msg}</span>`;
+  t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ================= page: summary line + decks =================
+const KNOWLEDGE_DECKS = 3; // of the decks shown, how many were built with this project's knowledge
+function renderPage() {
+  const n = S.decks;
+  $('#members').classList.toggle('hidden', !n);
+  $('#summary').textContent = n ? `${plural(n, 'deck', 'decks')} · shared with 3 people · decks inherit the project's sharing` : "0 decks · decks inherit the project's sharing";
+  const grid = $('#deckGrid');
+  if (!n) {
+    grid.className = 'mt-3';
+    const withK = hasKnowledge();
+    grid.innerHTML = `<div class="fade-up flex flex-col items-center gap-2 rounded-card border border-dashed border-border-secondary px-6 py-14 text-center">
+        <span class="flex h-11 w-11 items-center justify-center rounded-full bg-bg-default-primary text-text-secondary shadow-sm"><i class="ph ph-${withK ? 'presentation-chart' : 'folder'} text-[20px]"></i></span>
+        <div class="mt-1 text-body font-semibold">${withK ? 'No decks yet' : 'This project is empty'}</div>
+        <p class="max-w-sm text-caption text-text-secondary">${withK ? "Start a deck here and we'll build it with this project's knowledge." : 'Move decks here from their menu, or start a new one.'}</p>
+        ${withK ? '<button type="button" class="btn btn-secondary btn-sm mt-2"><i class="ph ph-plus"></i>New deck here</button>' : ''}
+      </div>`;
+  } else {
+    grid.className = 'mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3';
+    grid.innerHTML = DECKS.slice(0, n).map((d, i) => deckCard(d).replace(
+      `<div class="mt-0.5 text-caption text-text-secondary">${d.edited}</div>`,
+      `<div class="mt-0.5 flex items-center gap-1.5 text-caption text-text-secondary">${d.edited}${i < KNOWLEDGE_DECKS ? '<span class="text-text-quaternary">·</span><span class="inline-flex items-center gap-1" title="Built with this project\'s knowledge"><i class="ph ph-book-open-text text-[13px]"></i>Used knowledge</span>' : ''}</div>`)).join('');
+  }
+}
+
+// ================= the knowledge card =================
+function tile(tab, inner, extra = '') {
+  return `<div role="button" tabindex="0" data-tab="${tab}" class="tile flex min-h-[172px] cursor-pointer flex-col rounded-[10px] border border-transparent bg-bg-secondary p-4 ${extra}">${inner}</div>`;
+}
+function tileHead(icon, label, meta) {
+  return `<div class="flex items-center gap-2 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary"><i class="ph ph-${icon} text-[14px]"></i>${label}${meta ? `<span class="ml-auto normal-case tracking-normal font-medium tabular">${meta}</span>` : ''}</div>`;
+}
+function addPrompt(label, body) {
+  return `<p class="mt-3 text-caption text-text-secondary">${body}</p>
+    <span class="btn btn-secondary btn-sm mt-auto self-start"><i class="ph ph-plus"></i>${label}</span>`;
+}
+function renderCard() {
+  const el = $('#kcard');
+  const filled = hasKnowledge();
+  const rf = readyFiles(), busy = busyFiles(), on = onConns();
+
+  // Instructions tile
+  const instrTile = hasInstr()
+    ? tile('instr', `${tileHead('text-align-left', 'Instructions')}
+        <p class="mt-3 line-clamp-4 text-caption text-text-primary">${esc(S.instructions)}</p>
+        <p class="mt-auto pt-3 text-micro text-text-secondary">${S.flash === 'instr' ? '<span class="inline-flex items-center gap-1 text-text-success-primary"><i class="ph-fill ph-check-circle"></i>Saved just now</span>' : 'Edited ' + S.instrWhen}</p>`, S.flash === 'instr' ? 'flash-ok-soft' : '')
+    : tile('instr', `${tileHead('text-align-left', 'Instructions')}${addPrompt('Add instructions', "Tell us who these decks are for, how they should sound, and anything they must include.")}`);
+
+  // Files tile
+  let filesInner = tileHead('files', 'Files', rf.length ? `<span class="${S.flash === 'files' ? 'count-bump inline-block text-text-success-primary' : ''}">${rf.length}</span>` : '');
+  if (S.files.length) {
+    filesInner += `<ul class="mt-3 flex flex-col gap-2">${rf.slice(0, busy.length ? 2 : 3).map((f) => { const [bg, ic] = typeOf(f.name); return `<li class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-white" style="background:${bg}"><i class="ph ph-${ic} text-[14px]"></i></span><span class="truncate text-caption">${esc(f.name)}</span></li>`; }).join('')}</ul>`;
+    const more = rf.length - (busy.length ? 2 : 3);
+    if (busy.length) {
+      filesInner += `<div class="mt-auto pt-3"><div class="flex items-center gap-2 text-caption"><span class="ring !h-3.5 !w-3.5"></span>Reading ${plural(busy.length, 'file', 'files')}<span class="ml-auto text-micro text-text-secondary">about a minute</span></div>
+        <div class="mt-2 flex gap-1">${busy.map((f) => `<span class="h-1 flex-1 rounded-full ${f.status === 'reading' ? 'bar is-reading' : 'bg-[#9CD3FF]'}"></span>`).join('')}</div></div>`;
+    } else if (S.files.some((f) => f.status === 'error')) {
+      const bad = S.files.filter((f) => f.status === 'error').length;
+      filesInner += `<p class="mt-auto inline-flex items-center gap-1 pt-3 text-caption text-text-danger-primary"><i class="ph-fill ph-warning-circle"></i>${plural(bad, 'file', 'files')} couldn't be read${more > 0 ? `<span class="text-text-secondary"> · +${more} more</span>` : ''}</p>`;
+    } else if (more > 0) filesInner += `<p class="mt-auto pt-3 text-caption text-text-secondary">+${plural(more, 'more file', 'more files')}</p>`;
+  } else {
+    filesInner += addPrompt('Upload files', 'Brand guidelines, pricing, research. PDF, Word, PowerPoint or text, and we quote from them.');
+  }
+  const filesTile = tile('files', filesInner, S.flash === 'files' ? 'flash-ok-soft' : '');
+
+  // Connectors tile
+  const proj = activeConns().filter((c) => c.scope === 'project');
+  const shown = [...on.filter((c) => c.scope === 'project'), ...on.filter((c) => c.scope === 'workspace')];
+  let connInner = tileHead('plugs-connected', 'Connectors', on.length ? `${on.length} on` : '');
+  if (on.length) {
+    connInner += `<ul class="mt-3 flex flex-col gap-2">${shown.slice(0, 3).map((c) => { const app = appById(c.id); return `<li class="flex items-center gap-2">${appLogo(app, 'xs', '!h-6 !w-6 bg-bg-default-primary [&_img]:!h-3.5 [&_img]:!w-3.5')}<span class="truncate text-caption">${app.name}</span>${c.scope === 'project' ? '<span class="ml-auto shrink-0 rounded-full bg-bg-brand-inverted px-1.5 text-[11px] font-medium leading-[18px] text-text-brand">This project</span>' : ''}</li>`; }).join('')}</ul>`;
+    const more = shown.length - 3;
+    connInner += `<p class="mt-auto pt-3 text-caption text-text-secondary">${more > 0 ? `+${more} more · ` : ''}${proj.length ? 'Workspace apps on by default' : 'From your workspace, on by default'}</p>`;
+  } else {
+    connInner += addPrompt('Connect an app', 'Pull live data from HubSpot, Google Drive and 120+ more apps.');
+  }
+  const connTile = tile('conns', connInner, S.flash === 'conns' ? 'flash-ok-soft' : '');
+
+  const usage = S.decks ? ` · used in ${plural(KNOWLEDGE_DECKS, 'deck', 'decks')}` : '';
+  el.innerHTML = `<div class="rounded-card border border-border-secondary bg-bg-default-primary p-5">
+    <div class="flex items-start gap-3">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${filled ? 'bg-bg-tertiary text-text-primary' : 'bg-bg-brand-inverted text-text-brand'}"><i class="ph ph-book-open-text text-[22px]"></i></span>
+      <div class="min-w-0 flex-1">
+        <h2 class="text-body-lg font-semibold">${filled ? 'Project knowledge' : 'Give this project its own context'}</h2>
+        <p class="mt-0.5 text-caption text-text-secondary">${filled ? `Every new deck here uses this${usage}.` : "Add instructions, files and apps once. We'll use them in every new deck here."}</p>
+      </div>
+      ${filled ? '<button type="button" class="link-btn mt-1 shrink-0" data-tab="instr" data-manage>Manage<i class="ph ph-caret-right text-[12px]"></i></button>' : ''}
+    </div>
+    <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">${instrTile}${filesTile}${connTile}</div>
+  </div>`;
+  el.querySelectorAll('[data-tab]').forEach((t) => {
+    const go = () => openModal(t.dataset.manage ? firstTab() : t.dataset.tab);
+    t.onclick = go; t.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
+}
+const firstTab = () => !hasInstr() ? 'instr' : !S.files.length ? 'files' : 'instr';
+
+// ================= modal =================
+const TABS = [['instr', 'Instructions', 'text-align-left'], ['files', 'Files', 'files'], ['conns', 'Connectors', 'plugs-connected']];
+function openModal(tab) {
+  S.tab = tab; $('#modal').classList.remove('hidden');
+  renderModal();
+  if (tab === 'instr') setTimeout(() => $('#instrText').focus(), 60);
+}
+function closeModal() { $('#modal').classList.add('hidden'); }
+document.querySelectorAll('[data-mclose]').forEach((b) => b.onclick = closeModal);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#modal').classList.contains('hidden') && document.querySelector('[data-panel]')?.closest('.fixed')?.classList.contains('hidden') !== false) closeModal(); });
+
+function renderTabs() {
+  const counts = { instr: hasInstr() ? '' : '', files: readyFiles().length || '', conns: onConns().length || '' };
+  $('#tabs').innerHTML = TABS.map(([id, label]) => {
+    const busy = id === 'files' && busyFiles().length;
+    const done = id === 'instr' && hasInstr();
+    return `<button type="button" role="tab" class="tab" data-t="${id}" aria-selected="${S.tab === id}">${label}${busy ? '<span class="ring !h-3 !w-3"></span>' : counts[id] ? `<span class="tabular inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-bg-tertiary px-1.5 text-micro font-semibold text-text-secondary">${counts[id]}</span>` : done ? '<i class="ph-bold ph-check text-[12px] text-text-success-primary"></i>' : ''}</button>`;
+  }).join('');
+  $('#tabs').querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { S.tab = b.dataset.t; renderModal(); });
+}
+function renderModal() {
+  renderTabs();
+  document.querySelectorAll('[data-pane]').forEach((p) => p.classList.toggle('hidden', p.dataset.pane !== S.tab));
+  if (S.tab === 'instr') renderInstr();
+  if (S.tab === 'files') { renderFiles(); renderBatch(); }
+  if (S.tab === 'conns') renderConns();
+}
+
+// ---- Instructions pane (inline editing; no nested dialog) ----
+const STARTERS = ['Audience: account executives', 'Tone: confident, plain English', 'Always end with next steps'];
+function renderInstr() {
+  const t = $('#instrText');
+  if (document.activeElement !== t) t.value = S.instructions;
+  $('#instrStarters').innerHTML = STARTERS.map((s) => `<button type="button" class="h-7 rounded-full border border-border-secondary px-2.5 text-caption text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">+ ${s}</button>`).join('');
+  $('#instrStarters').querySelectorAll('button').forEach((b, i) => b.onclick = () => { t.value = (t.value.trim() ? t.value.trim() + '\n' : '') + STARTERS[i] + '.'; t.focus(); syncInstr(); });
+  syncInstr();
+}
+function syncInstr() {
+  const dirty = $('#instrText').value !== S.instructions;
+  $('#instrSave').disabled = !dirty;
+  if (dirty) $('#instrStatus').textContent = 'Unsaved changes';
+  else if (!$('#instrStatus').dataset.saved) $('#instrStatus').textContent = hasInstr() ? `Edited ${S.instrWhen}` : '';
+}
+$('#instrText').oninput = () => { delete $('#instrStatus').dataset.saved; syncInstr(); };
+$('#instrSave').onclick = () => {
+  const btn = $('#instrSave'), val = $('#instrText').value;
+  btn.disabled = true; btn.innerHTML = '<span class="ring !border-white/40 !border-t-white"></span>';
+  setTimeout(() => {
+    const was = hasInstr();
+    S.instructions = val; S.instrWhen = 'just now';
+    btn.textContent = 'Save instructions';
+    const st = $('#instrStatus'); st.dataset.saved = '1';
+    st.innerHTML = '<span class="pop-in inline-flex items-center gap-1 text-text-success-primary"><i class="ph-fill ph-check-circle"></i>Saved</span>';
+    flash('instr'); renderTabs(); syncInstr();
+    if (val.trim()) toast(was ? 'Instructions updated' : 'Instructions added. New decks here will follow them.');
+  }, 700);
+};
+
+// ---- Files pane ----
+const rows = new Map();
+function rowEl(f) {
+  const [bg, ic] = typeOf(f.name);
+  const li = document.createElement('li');
+  li.className = 'group row-in relative rounded-card border border-border-secondary bg-bg-default-primary p-3';
+  li.innerHTML = `<div class="flex items-center gap-3">
+      <span class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-white" style="background:${bg}">
+        <i class="ph ph-${ic} text-[20px]"></i><span data-badge></span>
+      </span>
+      <div class="min-w-0 flex-1"><p class="truncate text-body font-medium">${esc(f.name)}</p><p data-cap class="mt-0.5 text-caption text-text-secondary"></p></div>
+      <button type="button" data-retry class="btn btn-secondary btn-sm hidden !h-7 !px-2.5">Retry</button>
+      <button type="button" data-del class="icon-btn" aria-label="Remove ${esc(f.name)}"><i class="ph ph-x"></i></button>
+    </div>
+    <div data-wrap class="bar-wrap overflow-hidden rounded-full bg-bg-quaternary"><div data-bar class="bar h-full w-0 rounded-full bg-bg-brand"></div></div>`;
+  li.querySelector('[data-del]').onclick = () => removeFile(f);
+  li.querySelector('[data-retry]').onclick = () => { f.status = 'uploading'; f.progress = 0; f.fail = false; updateRow(f); runFile(f); renderAll(); };
+  return li;
+}
+const BADGE = 'absolute -bottom-1 -right-1 h-4 w-4 items-center justify-center rounded-full ring-2 ring-white';
+const DEL = 'icon-btn -mr-1 !h-7 !w-7 shrink-0 transition-opacity';
+function updateRow(f) {
+  const li = rows.get(f.id); if (!li) return;
+  const cap = li.querySelector('[data-cap]'), bar = li.querySelector('[data-bar]'), wrap = li.querySelector('[data-wrap]');
+  const badge = li.querySelector('[data-badge]'), del = li.querySelector('[data-del]'), retry = li.querySelector('[data-retry]');
+  bar.classList.remove('is-reading', 'is-ok'); wrap.classList.remove('is-gone');
+  badge.className = BADGE + ' hidden'; retry.classList.add('hidden'); del.className = DEL;
+  cap.classList.toggle('truncate', f.status !== 'error');
+  if (f.status === 'uploading') {
+    bar.style.width = Math.round(f.progress) + '%';
+    cap.innerHTML = `Uploading <span class="tabular">${Math.round(f.progress)}%</span>`;
+  } else if (f.status === 'reading') {
+    bar.classList.add('is-reading');
+    cap.innerHTML = `${f.step || 'Reading the file'} <span class="text-text-quaternary">· about a minute</span>`;
+    del.className = DEL + ' pointer-events-none opacity-0';
+  } else if (f.status === 'ready') {
+    if (f.fresh) {
+      bar.classList.add('is-ok');
+      badge.className = BADGE + ' flex pop-in bg-[#14AE5C]'; badge.innerHTML = '<i class="ph-bold ph-check text-[9px] text-white"></i>';
+      cap.innerHTML = '<span class="text-text-success-primary">Ready. New decks can use it.</span>';
+      setTimeout(() => wrap.classList.add('is-gone'), 650);
+    } else { wrap.classList.add('is-gone'); cap.textContent = `${fmt(f.size)} · Added ${f.added}`; }
+    del.className = DEL + ' opacity-60 group-hover:opacity-100';
+  } else if (f.status === 'error') {
+    wrap.classList.add('is-gone');
+    badge.className = BADGE + ' flex pop-in bg-[#DC3412]'; badge.innerHTML = '<i class="ph-bold ph-exclamation-mark text-[9px] text-white"></i>';
+    cap.innerHTML = `<span class="text-text-danger-primary">We couldn't read this file. It may be locked or scanned.</span>`;
+    retry.classList.remove('hidden');
+  }
+}
+function renderFiles() {
+  const list = $('#fileList');
+  S.files.forEach((f, i) => { if (!rows.has(f.id)) { const li = rowEl(f); rows.set(f.id, li); list.insertBefore(li, list.children[i] || null); updateRow(f); } });
+  [...rows.keys()].forEach((id) => { if (!S.files.find((f) => f.id === id)) { rows.get(id).remove(); rows.delete(id); } });
+  const drop = $('#drop'), big = !S.files.length;
+  drop.className = big
+    ? 'flex h-full min-h-[300px] cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-dashed border-border-secondary bg-bg-secondary px-6 text-center transition-colors duration-150 hover:border-border-primary hover:bg-bg-tertiary'
+    : 'mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-card border border-dashed border-border-secondary px-3 py-3 text-caption text-text-secondary transition-colors duration-150 hover:border-border-primary hover:bg-bg-tertiary hover:text-text-primary';
+  drop.innerHTML = big
+    ? `<span class="flex h-11 w-11 items-center justify-center rounded-full bg-bg-default-primary shadow-sm"><i class="ph ph-upload-simple text-[20px]"></i></span>
+       <p class="mt-1 text-body text-text-secondary"><span class="font-medium text-text-primary">Drop files here</span> or click to browse</p>
+       <p class="text-micro text-text-secondary">PDF, Word, PowerPoint, TXT or Markdown, up to 100MB each</p>`
+    : `<i class="ph ph-upload-simple"></i>Drop more files or click to browse`;
+}
+function removeFile(f) {
+  const li = rows.get(f.id);
+  li.style.transition = 'opacity .18s, transform .18s'; li.style.opacity = 0; li.style.transform = 'scale(.98)';
+  setTimeout(() => { S.files = S.files.filter((x) => x !== f); renderFiles(); renderAll(); }, 180);
+  if (f.status === 'ready') toast(`${f.name} removed`, 'trash', '#BFBFBF');
+}
+const STEPS = ['Reading the file', 'Picking out the key facts', 'Almost ready'];
+function runFile(f) {
+  const total = 1200 + Math.min(f.size / 1048576, 20) * 90, t0 = performance.now();
+  const tick = (now) => {
+    if (!S.files.includes(f)) return;
+    f.progress = Math.min(100, ((now - t0) / total) * 100);
+    updateRow(f); renderBatch();
+    if (f.progress < 100) return requestAnimationFrame(tick);
+    f.status = 'reading'; f.step = STEPS[0]; updateRow(f); renderAll();
+    const readMs = 3800 + Math.random() * 2200;
+    STEPS.slice(1).forEach((s, i) => setTimeout(() => { if (f.status === 'reading') { f.step = s; updateRow(f); } }, (readMs / 3) * (i + 1)));
+    setTimeout(() => {
+      if (!S.files.includes(f)) return;
+      if (f.fail) { f.status = 'error'; updateRow(f); renderAll(); return finishBatchCheck(); }
+      f.status = 'ready'; f.fresh = true; f.added = 'just now';
+      const li = rows.get(f.id); li.classList.remove('flash-ok'); void li.offsetWidth; li.classList.add('flash-ok');
+      updateRow(f); renderAll();
+      setTimeout(() => { f.fresh = false; if (S.files.includes(f)) updateRow(f); }, 3200);
+      finishBatchCheck();
+    }, readMs);
+  };
+  requestAnimationFrame(tick);
+}
+function addFiles(list, failName) {
+  const incoming = Array.from(list).map((x) => ({ id: ++uid, name: x.name, size: x.size || 300000, status: 'uploading', progress: 0, fail: x.name === failName }));
+  if (!incoming.length) return;
+  S.files.unshift(...incoming);
+  S.batch = { ids: incoming.map((f) => f.id), done: false };
+  openModal('files'); renderAll();
+  incoming.forEach((f, i) => setTimeout(() => runFile(f), i * 250));
+}
+$('#drop').onclick = () => $('#fileInput').click();
+$('#fileInput').onchange = (e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = ''; };
+const dz = document.querySelector('[data-pane="files"]');
+['dragenter','dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); $('#drop').classList.add('!border-border-brand','!bg-bg-brand-selected'); }));
+['dragleave','drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); $('#drop').classList.remove('!border-border-brand','!bg-bg-brand-selected'); }));
+dz.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
+
+function renderBatch() {
+  const el = $('#batch');
+  if (!S.batch) { el.className = 'hidden'; return; }
+  const fs = S.batch.ids.map((id) => S.files.find((f) => f.id === id)).filter(Boolean);
+  if (!fs.length) { S.batch = null; el.className = 'hidden'; return; }
+  const ready = fs.filter((f) => f.status === 'ready').length, failed = fs.filter((f) => f.status === 'error').length;
+  const segColor = (f) => f.status === 'ready' ? '#14AE5C' : f.status === 'error' ? '#DC3412' : f.status === 'reading' ? '#0D99FF' : '#9CD3FF';
+  const done = S.batch.done;
+  el.className = `mb-3 rounded-card px-3 py-2.5 ${done && !failed ? 'bg-bg-success-inverted' : 'bg-bg-secondary'}`;
+  const label = done
+    ? (failed ? `<i class="ph-fill ph-warning-circle text-[16px] text-[#DC3412]"></i>${ready} of ${fs.length} ready. ${failed} couldn't be read.` : `<i class="ph-fill ph-check-circle pop-in text-[16px] text-[#14AE5C]"></i>${fs.length === 1 ? 'File' : `All ${fs.length} files`} ready. New decks here will use ${fs.length === 1 ? 'it' : 'them'}.`)
+    : `<span class="ring"></span>Adding ${plural(fs.length, 'file', 'files')}<span class="ml-auto tabular text-text-secondary">${ready} of ${fs.length} ready</span>`;
+  el.innerHTML = `<div class="flex items-center gap-2 text-caption font-medium">${label}</div>
+    ${done ? '' : `<div class="mt-2 flex gap-1">${fs.map((f) => `<span class="seg h-1 flex-1 rounded-full" style="background:${segColor(f)}"></span>`).join('')}</div>`}`;
+}
+function finishBatchCheck() {
+  if (!S.batch) return;
+  const fs = S.batch.ids.map((id) => S.files.find((f) => f.id === id)).filter(Boolean);
+  if (fs.some((f) => f.status === 'uploading' || f.status === 'reading')) return renderBatch();
+  S.batch.done = true; renderBatch(); flash('files');
+  const ok = fs.filter((f) => f.status === 'ready').length;
+  if (ok) toast(`${ok === 1 ? fs.find((f) => f.status === 'ready').name : ok + ' files'} ready. New decks in this project will use ${ok === 1 ? 'it' : 'them'}.`);
+  const b = S.batch;
+  setTimeout(() => { if (S.batch === b && !fs.some((f) => f.status === 'error')) { S.batch = null; renderBatch(); } }, 4200);
+}
+
+// ---- Connectors pane: workspace (on by default) and this project only ----
+function connRow(c, flashId) {
+  const app = appById(c.id), expired = c.status === 'EXPIRED';
+  const cat = CHIPS.find((x) => x[0] === app.chip)?.[1] || catLabel(app.cat);
+  const cap = expired ? `<span class="text-text-warning-primary">Expired. Reconnect to use it here.</span>`
+    : c.fresh ? `<span class="text-text-success-primary">Just connected · only this project</span>`
+    : c.on ? cat : 'Off for this project';
+  const right = expired
+    ? `<button type="button" data-reconnect="${c.id}" class="btn btn-secondary btn-sm !h-7 !px-2.5">Reconnect</button>`
+    : c.scope === 'project'
+      ? `<button type="button" data-remove="${c.id}" class="btn btn-ghost btn-sm !h-7 !px-2.5">Remove</button>`
+      : `<button type="button" role="switch" aria-checked="${c.on}" aria-label="Use ${app.name} in this project" data-toggle="${c.id}" class="switch"><span class="knob"></span></button>`;
+  return `<li class="-mx-2 flex items-center gap-3 rounded-control px-2 py-2.5 ${c.id === flashId ? 'flash-ok-soft' : ''}">
+    ${appLogo(app, 'md', !c.on || expired ? 'logo-off' : '')}
+    <div class="min-w-0 flex-1"><div class="truncate text-body font-medium ${!c.on || expired ? 'text-text-secondary' : ''}">${app.name}</div><div class="truncate text-caption text-text-secondary">${cap}</div></div>
+    ${right}</li>`;
+}
+function renderConns(flashId) {
+  const ws = S.conns.filter((c) => c.scope === 'workspace'), pj = S.conns.filter((c) => c.scope === 'project');
+  const wsOn = ws.filter((c) => c.on && c.status === 'ACTIVE').length;
+  $('#connPane').innerHTML = `
+    <section>
+      <div class="flex items-center justify-between gap-3"><h3 class="text-body font-semibold">This project only</h3><button type="button" id="addConn" class="btn btn-secondary btn-sm"><i class="ph ph-plus"></i>Add connector</button></div>
+      <p class="mt-0.5 text-caption text-text-secondary">Apps only decks in this project can read.</p>
+      ${pj.length ? `<ul class="mt-2 flex flex-col">${pj.map((c) => connRow(c, flashId)).join('')}</ul>`
+        : `<button type="button" id="addConnEmpty" class="mt-3 flex w-full items-center gap-3 rounded-card border border-dashed border-border-secondary p-3 text-left transition-colors hover:border-border-primary hover:bg-bg-tertiary">
+            <span class="flex -space-x-2">${['salesforce', 'googlesheets', 'airtable'].map((id) => appLogo(appById(id), 'sm', 'ring-2 ring-white !rounded-full')).join('')}</span>
+            <span class="min-w-0"><span class="block text-body font-medium">Connect an app for this project</span><span class="block text-caption text-text-secondary">Salesforce, Google Sheets, Airtable and 120+ more</span></span></button>`}
+    </section>
+    <div class="my-5 h-px bg-border-secondary"></div>
+    <section>
+      <div class="flex items-center justify-between gap-3"><h3 class="text-body font-semibold">From your workspace</h3><span class="tabular text-caption text-text-secondary">${wsOn} of ${ws.length} on</span></div>
+      <p class="mt-0.5 text-caption text-text-secondary">Apps connected in Data sources are on here by default. Turn off any this project shouldn't read.</p>
+      ${ws.length ? `<ul class="mt-2 flex flex-col">${ws.map((c) => connRow(c, flashId)).join('')}</ul>` : '<p class="mt-3 text-caption text-text-secondary">No apps are connected in Data sources yet.</p>'}
+      <button type="button" class="mt-2 inline-flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary">Manage in Data sources<i class="ph ph-arrow-up-right text-[12px]"></i></button>
+    </section>`;
+  $('#addConn').onclick = openConnDialog; $('#addConnEmpty')?.addEventListener('click', openConnDialog);
+  document.querySelectorAll('[data-toggle]').forEach((b) => b.onclick = () => {
+    const c = S.conns.find((x) => x.id === b.dataset.toggle); c.on = !c.on;
+    b.setAttribute('aria-checked', c.on);
+    setTimeout(() => { renderConns(); renderTabs(); renderCard(); }, 200);
+    toast(c.on ? `${appById(c.id).name} is on for this project` : `${appById(c.id).name} is off. Decks here won't read from it.`, c.on ? 'check-circle' : 'prohibit', c.on ? '#3DDC97' : '#BFBFBF');
+  });
+  document.querySelectorAll('[data-remove]').forEach((b) => b.onclick = () => {
+    S.conns = S.conns.filter((x) => x.id !== b.dataset.remove); renderConns(); renderAll();
+    toast(`${appById(b.dataset.remove).name} removed from this project`, 'trash', '#BFBFBF');
+  });
+  document.querySelectorAll('[data-reconnect]').forEach((b) => b.onclick = () => {
+    b.disabled = true; b.innerHTML = '<span class="ring !h-3.5 !w-3.5"></span>';
+    setTimeout(() => { const c = S.conns.find((x) => x.id === b.dataset.reconnect); c.status = 'ACTIVE'; c.on = true; renderConns(c.id); renderAll(); toast(`${appById(c.id).name} reconnected`); }, 1300);
+  });
+}
+function openConnDialog() {
+  ConnectorDialog.open({
+    title: 'Add connector',
+    description: 'Connect an app for this project only. Access is read-only.',
+    isConnected: (id) => S.conns.some((c) => c.id === id && c.status === 'ACTIVE'),
+    onConnect: (id) => new Promise((r) => setTimeout(() => {
+      const existing = S.conns.find((c) => c.id === id);
+      if (existing) { existing.status = 'ACTIVE'; existing.on = true; }
+      else S.conns.unshift({ id, on: true, status: 'ACTIVE', scope: 'project', fresh: true });
+      renderConns(id); flash('conns');
+      toast(`${appById(id).name} connected for this project`);
+      setTimeout(() => { const c = S.conns.find((x) => x.id === id); if (c) { c.fresh = false; if (S.tab === 'conns') renderConns(); } }, 4000);
+      r();
+    }, 1400)),
+  });
+}
+
+// ================= glue =================
+function flash(which) { S.flash = which; renderAll(); setTimeout(() => { if (S.flash === which) { S.flash = null; renderCard(); } }, 2200); }
+function renderAll() { renderCard(); renderPage(); if (!$('#modal').classList.contains('hidden')) renderTabs(); renderBatch(); }
+
+const WORKSPACE = () => [
+  { id: 'hubspot', on: true, status: 'ACTIVE', scope: 'workspace' },
+  { id: 'googledrive', on: true, status: 'ACTIVE', scope: 'workspace' },
+  { id: 'notion', on: true, status: 'ACTIVE', scope: 'workspace' },
+  { id: 'slack', on: true, status: 'EXPIRED', scope: 'workspace' },
+];
+function seed(kind) {
+  closeModal();
+  S.files = []; S.batch = null; S.flash = null; rows.forEach((li) => li.remove()); rows.clear();
+  S.instructions = ''; S.instrWhen = ''; S.decks = 0; S.conns = WORKSPACE();
+  if (kind !== 'empty') {
+    S.instructions = 'Write for account executives. Lead with customer outcomes, keep each slide to three points, and quote FY27 pricing from the pricing sheet.';
+    S.instrWhen = '2 days ago';
+    S.files = [
+      { id: ++uid, name: 'Northwind brand guidelines 2027.pdf', size: 4404019, status: 'ready', added: '3 days ago' },
+      { id: ++uid, name: 'FY27 pricing sheet.docx', size: 214000, status: 'ready', added: '2 days ago' },
+      { id: ++uid, name: 'Win stories Q4.pptx', size: 18350000, status: 'ready', added: '2 days ago' },
+      { id: ++uid, name: 'Objection handling guide.docx', size: 480000, status: 'ready', added: '2 days ago' },
+    ];
+    S.conns.unshift({ id: 'salesforce', on: true, status: 'ACTIVE', scope: 'project' });
+    S.conns.find((c) => c.id === 'notion').on = false;
+  }
+  if (kind === 'decks' || kind === 'upload') S.decks = 4;
+  $('#instrStatus').textContent = ''; delete $('#instrStatus').dataset.saved;
+  renderAll();
+}
+document.querySelectorAll('[data-seed]').forEach((b) => b.onclick = () => {
+  seed(b.dataset.seed);
+  if (b.dataset.seed === 'upload') setTimeout(() => addFiles([
+    { name: 'Q1 territory targets.pdf', size: 2100000 },
+    { name: 'Discovery call script.docx', size: 380000 },
+    { name: 'Scanned contract (locked).pdf', size: 9200000 },
+  ], 'Scanned contract (locked).pdf'), 300);
+});
+seed('empty');
+</script>
+</body>
+</html>

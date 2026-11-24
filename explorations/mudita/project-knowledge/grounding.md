@@ -37,6 +37,15 @@ initials when a logo is missing (as `AppLogo.jsx` does).
 - **New connection from the panel** also lands in Data sources, turned on for this project only (other projects get it on by default anyway).
 - An Expired connector keeps its on/off choice but can't be used until reconnected.
 
+## v2 decisions (24 Nov 2026)
+
+- The header "Project knowledge" button is gone; the card is the only entry point. Each tile opens the modal on its tab; Manage opens the first tab that needs attention.
+- The card always shows, in three states: empty project (no knowledge, no decks), knowledge but no decks, knowledge and decks ("used in N decks", and a "Used knowledge" note on those deck cards).
+- Workspace connectors don't make a project "set up". Instructions, files, or a project-only connector do.
+- Connectors in the modal: "This project only" (added here, removable, not added to Data sources) and "From your workspace" (switch per app, on by default).
+- Instructions are edited inline in the modal, with an explicit Save. No nested dialog.
+- Needs backend: project-scoped connections (today Composio connections are per user), and "which decks used knowledge".
+
 ## TODO
 
 - [ ] Dark theme pass
