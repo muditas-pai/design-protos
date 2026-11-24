@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<!-- Connector retrieval in the create chat. Redesigns the "sources_input" ask of pitchdeckdoclist
+     src/chat/components/ConnectedSourcesCard.jsx (new_dev_migration, read 24 Nov 2026): what we fetched, per connector,
+     with the files and a summary per connector; pick connectors; Continue / Don't use this information / Add a new connector.
+     Chat shell is approximated from ChatFlowScreenV8 + OnboardLandingUI source, not a screenshot. Example brand is fictional. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Redesign tokens, copied from pitchdeckdoclist config/tailwind/pai.tailwind.config.js (new_dev_migration, 18 Nov 2026), light theme only. */
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        'bg-default-primary': '#FFFFFF', 'bg-secondary': '#F5F5F5', 'bg-tertiary': '#F5F5F5', 'bg-quaternary': '#E6E6E6',
+        'bg-brand': '#0D99FF', 'bg-brand-hover': '#007BE5', 'bg-brand-selected': 'rgba(13,153,255,0.12)', 'bg-brand-inverted': '#E5F4FF',
+        'bg-success': '#14AE5C', 'bg-success-inverted': '#E0F6E5', 'bg-warning-inverted': '#FFF1C2', 'bg-danger-inverted': '#FFE2E0',
+        'bg-ink': '#1A1A1A', 'bg-blackout': '#000000',
+        'text-primary': '#1A1A1A', 'text-secondary': '#7F7F7F', 'text-tertiary': '#7F7F7F', 'text-quaternary': '#B2B2B2',
+        'text-brand': '#007BE5', 'text-success-primary': '#009951', 'text-warning-primary': '#A15C00', 'text-danger-primary': '#DC3412', 'text-white': '#FFFFFF',
+        'border-secondary': '#E6E6E6', 'border-tertiary': 'rgba(230,230,230,0.6)', 'border-primary': 'rgba(26,26,26,0.3)', 'border-brand': '#007BE5', 'border-success-secondary': '#B9EBC6',
+        'gold': '#B8860B', 'app-50': '#E5F4FF',
+      },
+      fontSize: {
+        display: ['32px', { lineHeight: '40px', letterSpacing: '-0.02em' }],
+        title: ['20px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
+        heading: ['18px', { lineHeight: '26px', letterSpacing: '-0.005em' }],
+        body: ['14px', { lineHeight: '20px' }],
+        'body-lg': ['16px', { lineHeight: '24px' }],
+        caption: ['13px', { lineHeight: '18px' }],
+        micro: ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
+      },
+      borderRadius: { control: '6px', card: '12px', dialog: '16px' },
+      boxShadow: {
+        menu: '0 1px 2px 0 rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.16)',
+        dialog: '0 2px 6px 0 rgb(0 0 0 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.28)',
+        'button-primary': '0 1px 2px 0 rgb(0 0 0 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.12)',
+        knob: '0 1px 3px rgb(0 0 0 / 0.2)',
+      },
+      transitionTimingFunction: { std: 'cubic-bezier(0.2, 0, 0, 1)' },
+    },
+  },
+};
+</script>
+<style>
+  html, body { margin: 0; background: #F5F5F5; color: #1A1A1A; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 6px; font-weight: 500; transition: background-color .15s cubic-bezier(.2,0,0,1), border-color .15s cubic-bezier(.2,0,0,1), color .15s, transform .1s; user-select: none; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn-primary { background: #0D99FF; color: #fff; box-shadow: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12); }
+  .btn-primary:hover { background: #007BE5; }
+  .btn-secondary { background: #fff; color: #1A1A1A; border: 1px solid #E6E6E6; }
+  .btn-secondary:hover { border-color: rgba(26,26,26,.3); background: #F5F5F5; }
+  .btn-ghost { color: #7F7F7F; } .btn-ghost:hover { color: #1A1A1A; background: #F5F5F5; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-md { height: 36px; padding: 0 14px; font-size: 14px; gap: 8px; }
+  .btn:disabled { cursor: not-allowed; background: #F5F5F5; color: #7F7F7F; box-shadow: none; border-color: transparent; }
+  .icon-btn { display: inline-flex; height: 36px; width: 36px; align-items: center; justify-content: center; border-radius: 6px; color: #7F7F7F; transition: background-color .15s, color .15s; }
+  .icon-btn:hover { background: #F5F5F5; color: #1A1A1A; }
+  .badge-gold { display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#8A5A00; background:linear-gradient(180deg,#FFE7A3,#F7C94B); }
+  .nav-item { display:flex; align-items:center; gap:10px; height:32px; padding:0 8px; border-radius:6px; font-size:14px; color:#1A1A1A; }
+  .nav-item:hover { background: rgba(26,26,26,.05); }
+  .nav-item.is-active { background: rgba(26,26,26,.06); font-weight: 500; }
+  .nav-item i { font-size: 18px; color: #7F7F7F; }
+  .skeleton { background: linear-gradient(90deg, #EFEFEF 25%, #F7F7F7 37%, #EFEFEF 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 4px; }
+  @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; }
+  .thumb { aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid #E6E6E6; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+
+<title>Connector retrieval</title>
+<style>
+  .spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(26,26,26,.15); border-top-color: #1A1A1A; animation: spin .8s linear infinite; flex-shrink: 0; }
+  .fade-up { animation: fadeUp .28s cubic-bezier(.2,0,0,1) both; }
+  @keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .pop-in { animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes popIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .flash-ok { animation: flashOk 1.8s cubic-bezier(.2,0,0,1); }
+  @keyframes flashOk { 0% { background-color: #E0F6E5; border-color: #B9EBC6; } 100% { } }
+  .acc { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s cubic-bezier(.2,0,0,1); }
+  .acc.open { grid-template-rows: 1fr; }
+  .acc > div { overflow: hidden; }
+  .chev { transition: transform .2s cubic-bezier(.2,0,0,1); }
+  .open-row .chev { transform: rotate(90deg); }
+  .check { display: inline-flex; height: 18px; width: 18px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 5px; border: 1.5px solid #B2B2B2; background: #fff; transition: background-color .15s, border-color .15s; }
+  .check[aria-checked="true"] { background: #0D99FF; border-color: #0D99FF; }
+  .check[aria-checked="true"] i { opacity: 1; transform: scale(1); }
+  .check i { opacity: 0; transform: scale(.6); transition: opacity .12s, transform .18s cubic-bezier(.34,1.56,.64,1); color: #fff; font-size: 12px; }
+  .check:disabled { opacity: .4; cursor: not-allowed; }
+  .check:focus-visible { outline: 2px solid rgba(13,153,255,.35); outline-offset: 2px; }
+  .switch { position: relative; display: inline-flex; height: 20px; width: 34px; flex-shrink: 0; align-items: center; border-radius: 999px; background: #E6E6E6; transition: background-color .2s; }
+  .switch[aria-checked="true"] { background: #0D99FF; }
+  .switch .knob { height: 16px; width: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .2); transform: translateX(2px); transition: transform .2s cubic-bezier(.34,1.3,.64,1); }
+  .switch[aria-checked="true"] .knob { transform: translateX(16px); }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2,0,0,1); z-index: 95; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body class="bg-bg-default-primary">
+<div class="flex h-screen flex-col bg-bg-default-primary">
+  <header class="flex h-14 shrink-0 items-center gap-2 border-b border-border-secondary px-4">
+    <button type="button" class="btn btn-ghost btn-sm"><i class="ph ph-arrow-left"></i>Home</button>
+    <span class="text-body font-medium">New deck</span>
+  </header>
+
+  <!-- Stage 1: prompt screen -->
+  <section id="promptStage" class="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-24">
+    <h1 class="text-center text-[28px] font-semibold leading-9 tracking-[-0.02em]">What are we presenting today?</h1>
+    <p class="mt-2 text-center text-body text-text-secondary">Describe it in a sentence or two. We'll check your connected apps for anything useful.</p>
+    <div class="mt-8 w-full max-w-[720px]" id="composerSlot"></div>
+  </section>
+
+  <!-- Stage 2: chat -->
+  <section id="chatStage" class="hidden min-h-0 flex-1 flex-col">
+    <div id="chatScroll" class="min-h-0 flex-1 overflow-y-auto">
+      <div id="thread" class="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-4 pb-10 pt-8"></div>
+    </div>
+    <div class="shrink-0 px-4 pb-5"><div class="mx-auto w-full max-w-[760px]" id="composerDock"></div></div>
+  </section>
+</div>
+
+<div id="toast" class="toast flex items-center gap-2 rounded-card bg-[#1A1A1A] px-4 py-2.5 text-body text-white shadow-menu"></div>
+
+<!-- Proto-only control -->
+<div class="fixed bottom-4 left-4 z-[100] flex items-center gap-1 rounded-full border border-border-secondary bg-white/95 p-1 text-micro shadow-menu backdrop-blur">
+  <span class="px-2 font-semibold text-text-secondary">Proto</span>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pRestart">Restart</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pSkip">Skip to results</button>
+</div>
+
+<script>
+// Connector catalog + "Add connector" dialog (replica of settings/datasources/AddConnectorDialog.jsx, PR #6872).
+const CATALOG = [
+  { id: 'googledrive', name: 'Google Drive', slug: 'googledrive', cat: 'file management & storage', chip: 'files', popular: true, desc: 'Read docs, sheets and slides from your Drive so decks can quote them.' },
+  { id: 'hubspot', name: 'HubSpot', slug: 'hubspot', cat: 'crm', chip: 'crm', popular: true, desc: 'Pull deals, pipeline and company records into sales and QBR decks.' },
+  { id: 'notion', name: 'Notion', slug: 'notion', cat: 'notes', chip: 'notes', popular: true, desc: 'Use pages and databases from your workspace as source material.' },
+  { id: 'salesforce', name: 'Salesforce', slug: null, color: '#00A1E0', cat: 'crm', chip: 'crm', popular: true, desc: 'Bring opportunities, accounts and forecasts into your decks.' },
+  { id: 'googlesheets', name: 'Google Sheets', slug: 'googlesheets', cat: 'spreadsheets', chip: 'spreadsheets', popular: true, desc: 'Turn rows and charts from a sheet into slides with real numbers.' },
+  { id: 'slack', name: 'Slack', slug: null, color: '#4A154B', cat: 'team chat', chip: 'chat', popular: true, desc: 'Reference channel threads and announcements your team already wrote.' },
+  { id: 'confluence', name: 'Confluence', slug: 'confluence', cat: 'documents', chip: 'documents', popular: false, desc: 'Draw on specs, wikis and team pages.' },
+  { id: 'dropbox', name: 'Dropbox', slug: 'dropbox', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read files stored in your Dropbox folders.' },
+  { id: 'airtable', name: 'Airtable', slug: 'airtable', cat: 'spreadsheets', chip: 'spreadsheets', popular: false, desc: 'Use bases and views as structured data for slides.' },
+  { id: 'jira', name: 'Jira', slug: 'jira', cat: 'project management', chip: 'projects', popular: false, desc: 'Summarise epics, sprints and roadmaps for status updates.' },
+  { id: 'asana', name: 'Asana', slug: 'asana', cat: 'project management', chip: 'projects', popular: false, desc: 'Pull project status and milestones into updates.' },
+  { id: 'linear', name: 'Linear', slug: 'linear', cat: 'project management', chip: 'projects', popular: false, desc: 'Turn cycles and projects into progress slides.' },
+  { id: 'gmail', name: 'Gmail', slug: 'gmail', cat: 'email', chip: 'email', popular: false, desc: 'Reference email threads with customers and partners.' },
+  { id: 'googleanalytics', name: 'Google Analytics', slug: 'googleanalytics', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Chart traffic and conversion trends from GA4.' },
+  { id: 'mixpanel', name: 'Mixpanel', slug: 'mixpanel', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Bring product usage metrics into reviews.' },
+  { id: 'quickbooks', name: 'QuickBooks', slug: 'quickbooks', cat: 'accounting', chip: 'accounting', popular: false, desc: 'Use revenue and expense figures in finance decks.' },
+  { id: 'onedrive', name: 'OneDrive', slug: null, color: '#0364B8', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read Word, Excel and PowerPoint files from OneDrive.' },
+  { id: 'pipedrive', name: 'Pipedrive', slug: null, color: '#1A1A1A', cat: 'crm', chip: 'crm', popular: false, desc: 'Pull deals and activity into pipeline reviews.' },
+  { id: 'zendesk', name: 'Zendesk', slug: 'zendesk', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket trends and CSAT for account reviews.' },
+  { id: 'intercom', name: 'Intercom', slug: 'intercom', cat: 'customer support', chip: 'more', popular: false, desc: 'Use conversation themes in customer decks.' },
+];
+const CHIPS = [['crm','CRM'],['documents','Documents'],['files','File storage'],['spreadsheets','Spreadsheets'],['notes','Notes'],['projects','Project management'],['analytics','Analytics'],['email','Email'],['chat','Team chat'],['accounting','Accounting'],['more','More']];
+const ACR = new Set(['crm','ai','hr','url','sms','seo']);
+const catLabel = (t) => (t || '').replace(/\b\w+/g, (w) => ACR.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
+const appById = (id) => CATALOG.find((a) => a.id === id);
+
+// AppLogo: logo on a soft sunken tile, initials when there's no logo or it fails to load.
+function appLogo(app, size = 'md', extraClass = '') {
+  const box = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-8 w-8' : size === 'xs' ? 'h-5 w-5' : 'h-9 w-9';
+  const img = size === 'lg' ? 'h-7 w-7' : size === 'sm' ? 'h-[18px] w-[18px]' : size === 'xs' ? 'h-3 w-3' : 'h-5 w-5';
+  const tiny = size === 'xs' ? 'text-[6px]' : 'text-[10px]';
+  const initials = app.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const fallback = `<span class='text-caption font-semibold text-text-secondary'>${initials}</span>`;
+  const inner = app.slug
+    ? `<img src="https://cdn.simpleicons.org/${app.slug}" alt="" class="${img} object-contain" loading="lazy" onerror="this.outerHTML=&quot;${fallback}&quot;" />`
+    : `<span class="flex ${img} items-center justify-center rounded-[3px] ${tiny} font-bold text-white" style="background:${app.color}">${initials}</span>`;
+  return `<span class="flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-control bg-bg-tertiary ${extraClass}">${inner}</span>`;
+}
+
+// The dialog. opts: { isConnected(id), onConnect(id) -> Promise, title, description }
+const ConnectorDialog = (() => {
+  let root, state = { q: '', chip: '', busy: null, opts: null };
+  function mount() {
+    root = document.createElement('div');
+    root.className = 'fixed inset-0 z-[70] hidden';
+    root.innerHTML = `
+      <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px] opacity-0 transition-opacity duration-200" data-x data-fade></div>
+      <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+        <div data-panel role="dialog" aria-modal="true" class="pointer-events-auto relative w-full max-w-3xl translate-y-2 scale-[0.98] overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary opacity-0 shadow-dialog transition-[opacity,transform] duration-200 ease-std">
+          <div class="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
+            <div class="min-w-0"><div data-title class="text-title font-semibold">Add connector</div><div data-desc class="mt-1 text-body text-text-secondary">Connect an app your decks can draw on. Access is read-only and only for you.</div></div>
+            <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-x aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+          </div>
+          <div class="px-6 pt-3">
+            <div class="relative"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+              <input data-q placeholder="Search 120+ apps" class="h-9 w-full rounded-control border border-border-secondary pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+            <div data-chips class="scrollbar-hide mt-3 flex h-7 gap-1.5 overflow-x-auto" style="-webkit-mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%)"></div>
+            <div data-section class="mb-2 mt-6 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
+          </div>
+          <div data-list class="scrollbar-hide h-[52vh] overflow-y-auto px-6 pb-6"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(root);
+    root.querySelectorAll('[data-x]').forEach((el) => el.onclick = close);
+    root.querySelector('[data-q]').oninput = (e) => { state.q = e.target.value; render(); };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.classList.contains('hidden')) close(); });
+  }
+  function card(app) {
+    const connected = state.opts.isConnected(app.id);
+    const working = state.busy === app.id;
+    const action = connected
+      ? `<span title="Connected" class="flex h-8 w-8 items-center justify-center rounded-control bg-bg-success-inverted text-text-success-primary"><i class="ph-bold ph-check"></i></span>`
+      : `<button type="button" data-connect="${app.id}" ${state.busy ? 'disabled' : ''} aria-label="Connect ${app.name}" class="icon-btn !h-8 !w-8 border border-border-secondary disabled:opacity-50">${working ? '<i class="ph ph-arrows-clockwise spin"></i>' : '<i class="ph ph-plus"></i>'}</button>`;
+    return `<div class="flex items-start gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-4">
+      ${appLogo(app, 'lg')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-semibold">${app.name}</div><p class="mt-0.5 line-clamp-2 text-caption text-text-secondary">${app.desc}</p></div>
+      <div class="shrink-0">${action}</div></div>`;
+  }
+  function render() {
+    const q = state.q.trim().toLowerCase();
+    const chips = root.querySelector('[data-chips]');
+    chips.innerHTML = [['', 'All'], ...CHIPS].map(([id, label]) => `<button type="button" data-chip="${id}" class="h-7 shrink-0 whitespace-nowrap rounded-full border px-3 text-caption ${state.chip === id ? 'border-border-brand bg-app-50 text-text-brand' : 'border-border-secondary text-text-secondary hover:bg-bg-tertiary'}">${label}</button>`).join('');
+    chips.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { state.chip = b.dataset.chip; render(); });
+    const filtered = CATALOG.filter((a) => (!state.chip || a.chip === state.chip) && (!q || a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q)));
+    const browsing = !q && !state.chip;
+    const pop = browsing ? filtered.filter((a) => a.popular) : [];
+    const rest = browsing ? filtered.filter((a) => !a.popular) : filtered;
+    root.querySelector('[data-section]').textContent = browsing ? 'Popular' : (CHIPS.find((c) => c[0] === state.chip)?.[1] || 'All apps');
+    const grid = (items) => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">${items.map(card).join('')}</div>`;
+    let html = '';
+    if (!filtered.length) html = '<p class="py-10 text-center text-body text-text-secondary">No apps match your search.</p>';
+    if (pop.length) html += grid(pop);
+    if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
+    const list = root.querySelector('[data-list]'); list.innerHTML = html;
+    list.querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
+      state.busy = b.dataset.connect; render();
+      Promise.resolve(state.opts.onConnect(state.busy)).finally(() => { state.busy = null; render(); });
+    });
+  }
+  function open(opts) {
+    if (!root) mount();
+    state = { q: '', chip: '', busy: null, opts };
+    if (opts.title) root.querySelector('[data-title]').textContent = opts.title;
+    if (opts.description) root.querySelector('[data-desc]').textContent = opts.description;
+    root.querySelector('[data-q]').value = '';
+    render();
+    root.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      root.querySelector('[data-fade]').classList.remove('opacity-0');
+      root.querySelector('[data-panel]').classList.remove('opacity-0','translate-y-2','scale-[0.98]');
+      root.querySelector('[data-q]').focus();
+    });
+  }
+  function close() {
+    root.querySelector('[data-fade]').classList.add('opacity-0');
+    root.querySelector('[data-panel]').classList.add('opacity-0','translate-y-2','scale-[0.98]');
+    setTimeout(() => root.classList.add('hidden'), 180);
+    state.opts?.onClose?.();
+  }
+  return { open, close, refresh: () => root && render() };
+})();
+
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+function toast(msg, icon = 'check-circle', tone = '#3DDC97') {
+  const t = $('#toast'); t.innerHTML = `<i class="ph-fill ph-${icon} text-[18px]" style="color:${tone}"></i><span>${msg}</span>`;
+  t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---------------- the example ----------------
+const PROMPT = 'Make a kickoff deck for the spring launch of Pawly Fresh Bites, our new dental chews for dogs. It is for the marketing team.';
+const FILE_ICON = { doc: ['#0285FF', 'file-doc'], sheet: ['#16A34A', 'file-xls'], pdf: ['#FA423E', 'file-pdf'], page: ['#1A1A1A', 'file-text'], db: ['#1A1A1A', 'table'], report: ['#E37400', 'chart-line'] };
+const RESULTS = {
+  googledrive: {
+    unit: ['file', 'files'],
+    files: [
+      { name: 'Fresh Bites launch brief v3.docx', kind: 'doc' },
+      { name: 'Spring 2027 campaign budget.xlsx', kind: 'sheet' },
+      { name: 'Vet survey: dental habits (Oct 2026).pdf', kind: 'pdf' },
+    ],
+    summary: [
+      'Fresh Bites launches on 3 Mar 2027 in the US and UK. Chewy and Petco go first, pawly.com a week later.',
+      'Budget is £420k. Paid social takes about half, influencers about a quarter, in-store sampling the rest.',
+      'In the vet survey, 7 in 10 vets say owners skip their dog\'s dental care. The brief calls this the campaign hook.',
+    ],
+  },
+  notion: {
+    unit: ['page', 'pages'],
+    files: [
+      { name: 'Fresh Bites: positioning and messaging', kind: 'page' },
+      { name: 'Q1 2027 content calendar', kind: 'db' },
+    ],
+    summary: [
+      'Positioning line: "Fresh breath they\'ll want to share." Vet-formulated, no artificial colours.',
+      'Audience: dog owners aged 25 to 40 who already buy premium food.',
+      'Calendar: teasers from 10 Feb 2027, launch week 3 Mar, then the #FreshBitesFace photo challenge through April.',
+    ],
+  },
+  hubspot: { unit: ['record', 'records'], files: [], summary: [] },
+  googleanalytics: {
+    unit: ['report', 'reports'],
+    files: [
+      { name: 'pawly.com: dental category pages', kind: 'report' },
+      { name: 'pawly.com: top search terms', kind: 'report' },
+    ],
+    summary: [
+      'Visits to dental care pages are up about a third on the month before.',
+      '"Dog bad breath" is the top search term bringing people to the site.',
+    ],
+    partial: true,
+  },
+};
+
+// Connected in the workspace, all on for this deck by default.
+let apps = [{ id: 'googledrive', on: true }, { id: 'notion', on: true }, { id: 'hubspot', on: true }];
+// What the card shows: { id, state: 'found'|'empty'|'syncing'|'searching', picked, open }
+let found = [];
+
+// ---------------- composer ----------------
+function composer(docked) {
+  const onApps = apps.filter((a) => a.on);
+  return `<div class="rounded-[18px] border border-border-secondary bg-bg-default-primary p-3 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_8px_24px_-12px_rgb(0_0_0/0.12)] ${docked ? '' : 'fade-up'}">
+    <textarea id="promptInput" rows="${docked ? 1 : 3}" class="w-full resize-none border-0 bg-transparent px-1 text-body-lg outline-none placeholder:text-text-quaternary" placeholder="${docked ? 'Reply to keep shaping your deck' : 'Describe your deck'}" ${docked ? 'disabled' : ''}>${docked ? '' : esc(PROMPT)}</textarea>
+    <div class="mt-2 flex items-center gap-1.5">
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Upload file or link"><i class="ph ph-plus text-[18px]"></i></button>
+      <div class="relative">
+        <button type="button" id="appsChip" class="inline-flex h-8 items-center gap-1.5 rounded-full bg-bg-tertiary pl-1.5 pr-2.5 text-caption hover:bg-bg-quaternary" aria-haspopup="menu">
+          <span class="flex -space-x-1.5">${onApps.map((a) => appLogo(appById(a.id), 'xs', 'ring-2 ring-bg-tertiary !rounded-full bg-white')).join('')}</span>
+          ${onApps.length ? `${onApps.length} ${onApps.length === 1 ? 'app' : 'apps'} on` : 'Apps off'}<i class="ph ph-caret-down text-[11px] text-text-secondary"></i>
+        </button>
+        <div id="appsMenu" class="absolute bottom-[calc(100%+6px)] left-0 z-30 hidden w-64 rounded-card border border-border-secondary bg-bg-default-primary p-1.5 shadow-menu">
+          <div class="px-2 pb-1 pt-1 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Use for this deck</div>
+          ${apps.map((a) => { const app = appById(a.id); return `<label class="flex cursor-pointer items-center gap-2.5 rounded-control px-2 py-1.5 hover:bg-bg-tertiary">${appLogo(app, 'sm')}<span class="flex-1 text-body">${app.name}</span><button type="button" role="switch" aria-checked="${a.on}" data-app="${a.id}" class="switch"><span class="knob"></span></button></label>`; }).join('')}
+          <div class="my-1 h-px bg-border-secondary"></div>
+          <button type="button" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-body hover:bg-bg-tertiary"><i class="ph ph-plus text-text-secondary"></i>Connect another app</button>
+        </div>
+      </div>
+      <span class="flex-1"></span>
+      <button type="button" id="sendBtn" class="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-white transition-opacity hover:opacity-85 disabled:opacity-30" aria-label="Send" ${docked ? 'disabled' : ''}><i class="ph-bold ph-arrow-up"></i></button>
+    </div>
+  </div>`;
+}
+function mountComposer(docked) {
+  const slot = docked ? $('#composerDock') : $('#composerSlot');
+  ($('#composerSlot').innerHTML = ''), ($('#composerDock').innerHTML = '');
+  slot.innerHTML = composer(docked);
+  if (docked) return;
+  $('#appsChip').onclick = (e) => { e.stopPropagation(); $('#appsMenu').classList.toggle('hidden'); };
+  document.addEventListener('click', (e) => { if (!e.target.closest('#appsMenu')) $('#appsMenu')?.classList.add('hidden'); });
+  document.querySelectorAll('[data-app]').forEach((b) => b.onclick = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const a = apps.find((x) => x.id === b.dataset.app); a.on = !a.on; b.setAttribute('aria-checked', a.on);
+    setTimeout(() => { mountComposer(false); $('#appsMenu').classList.remove('hidden'); }, 180);
+  });
+  $('#sendBtn').onclick = () => start($('#promptInput').value.trim() || PROMPT);
+}
+
+// ---------------- chat ----------------
+const thread = () => $('#thread');
+function scrollEnd() { const s = $('#chatScroll'); s.scrollTo({ top: s.scrollHeight, behavior: 'smooth' }); }
+function addUser(text) {
+  thread().insertAdjacentHTML('beforeend', `<div class="fade-up flex justify-end"><div class="max-w-[612px] rounded-[18px] bg-bg-tertiary px-4 py-2.5 text-body-lg">${esc(text)}</div></div>`);
+}
+function addAssistant(html) {
+  const follow = thread().lastElementChild?.dataset.role === 'ai';   // back-to-back replies share one avatar
+  const el = document.createElement('div'); el.className = 'fade-up flex gap-3' + (follow ? ' -mt-3' : ''); el.dataset.role = 'ai';
+  el.innerHTML = `<span class="${follow ? 'invisible ' : ''}mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-white"><i class="ph-fill ph-sparkle text-[14px]"></i></span><div class="min-w-0 flex-1">${html}</div>`;
+  thread().appendChild(el); scrollEnd(); return el;
+}
+
+// The search trail (like ResearchStepRow): one group per app, steps tick off.
+function trailBlock(title) {
+  const el = addAssistant(`<p class="text-body-lg">${title}</p><div class="mt-3 flex flex-col gap-3" data-trail></div>`);
+  return el.querySelector('[data-trail]');
+}
+function trailGroup(trail, id) {
+  const app = appById(id);
+  trail.insertAdjacentHTML('beforeend', `<div class="fade-up rounded-card border border-border-secondary p-3" data-g="${id}">
+    <div class="flex items-center gap-2.5">${appLogo(app, 'sm')}<span class="flex-1 text-body font-medium">${app.name}</span><span data-gs class="flex items-center gap-1.5 text-caption text-text-secondary"><span class="spinner"></span>Searching</span></div>
+    <ul data-gl class="mt-2 flex flex-col gap-1.5 pl-[42px]"></ul></div>`);
+  return trail.querySelector(`[data-g="${id}"]`);
+}
+async function step(g, text) {
+  const li = document.createElement('li'); li.className = 'fade-up flex items-center gap-2 text-caption text-text-secondary';
+  li.innerHTML = `<span class="spinner !h-3 !w-3"></span><span>${text}</span>`;
+  g.querySelector('[data-gl]').appendChild(li); scrollEnd();
+  await wait(520 + Math.random() * 380);
+  return li;
+}
+function done(li, text) { li.innerHTML = `<i class="ph-bold ph-check text-[12px] text-text-success-primary"></i><span>${text}</span>`; }
+async function searchApp(trail, id) {
+  const g = trailGroup(trail, id), r = RESULTS[id];
+  await wait(400);
+  if (!r.files.length) {
+    const li = await step(g, 'Looking for anything about Fresh Bites');
+    done(li, 'Searched contacts, deals and campaigns');
+    g.querySelector('[data-gs]').innerHTML = '<span class="text-text-secondary">Nothing relevant</span>';
+    return { id, state: 'empty', picked: false, open: false };
+  }
+  for (const f of r.files) { const li = await step(g, `Opening “${esc(f.name)}”`); done(li, `Read “${esc(f.name)}”`); }
+  g.querySelector('[data-gs]').innerHTML = `<i class="ph-fill ph-check-circle pop-in text-[14px] text-[#14AE5C]"></i>${r.files.length} ${r.files.length === 1 ? r.unit[0] : r.unit[1]}`;
+  return { id, state: 'found', picked: true, open: false };
+}
+
+// ---------------- results card ----------------
+let cardEl = null;
+function fileRow(f) {
+  const [bg, ic] = FILE_ICON[f.kind];
+  const tile = f.kind === 'page' || f.kind === 'db'
+    ? `<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] border border-border-secondary bg-white text-text-primary"><i class="ph ph-${ic} text-[13px]"></i></span>`
+    : `<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-white" style="background:${bg}"><i class="ph ph-${ic} text-[13px]"></i></span>`;
+  return `<li class="flex items-center gap-2 text-caption">${tile}<span class="truncate">${esc(f.name)}</span></li>`;
+}
+function groupHtml(g) {
+  const app = appById(g.id), r = RESULTS[g.id];
+  if (g.state === 'syncing' || g.state === 'searching') {
+    return `<div class="p-4" data-card-g="${g.id}">
+      <div class="flex items-center gap-3"><span class="check" aria-hidden="true" style="opacity:.35"></span>${appLogo(app, 'sm')}<div class="min-w-0 flex-1"><div class="text-body font-medium">${app.name}</div>
+      <div class="mt-0.5 flex items-center gap-1.5 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>${g.state === 'syncing' ? 'Connected. Getting the last 30 days' : 'Looking for anything about Fresh Bites'}</div></div></div></div>`;
+  }
+  if (g.state === 'empty') {
+    return `<div class="p-4" data-card-g="${g.id}">
+      <div class="flex items-center gap-3"><button type="button" class="check" role="checkbox" aria-checked="false" disabled aria-label="${app.name}: nothing to use"><i class="ph-bold ph-check"></i></button>${appLogo(app, 'sm', 'logo-off opacity-60 grayscale')}
+      <div class="min-w-0 flex-1"><div class="text-body font-medium text-text-secondary">${app.name}</div><div class="mt-0.5 text-caption text-text-secondary">Nothing relevant to this deck</div></div></div></div>`;
+  }
+  const n = r.files.length;
+  return `<div class="p-4 transition-colors ${g.fresh ? 'flash-ok' : ''}" data-card-g="${g.id}">
+    <div class="flex items-center gap-3">
+      <button type="button" class="check" role="checkbox" aria-checked="${g.picked}" data-pick="${g.id}" aria-label="Use ${app.name}"><i class="ph-bold ph-check"></i></button>
+      ${appLogo(app, 'sm', g.picked ? '' : 'opacity-50 grayscale')}
+      <div class="min-w-0 flex-1"><div class="text-body font-medium ${g.picked ? '' : 'text-text-secondary'}">${app.name}</div><div class="mt-0.5 text-caption text-text-secondary">${n} ${n === 1 ? r.unit[0] : r.unit[1]}${r.partial ? ' · last 30 days only, older data still syncing' : ''}</div></div>
+    </div>
+    <ul class="mt-3 flex flex-col gap-1.5 pl-[74px] ${g.picked ? '' : 'opacity-50'}">${r.files.map(fileRow).join('')}</ul>
+    <div class="mt-3 pl-[74px] ${g.open ? 'open-row' : ''}">
+      <button type="button" data-acc="${g.id}" aria-expanded="${g.open}" class="-ml-1.5 inline-flex items-center gap-1 rounded-control px-1.5 py-1 text-caption font-medium text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"><i class="ph-bold ph-caret-right chev text-[11px]"></i>Summary of what we found</button>
+      <div class="acc ${g.open ? 'open' : ''}"><div>
+        <ul class="mt-2 flex list-disc flex-col gap-1.5 rounded-control bg-bg-secondary py-3 pl-8 pr-4 text-caption text-text-primary marker:text-text-quaternary ${g.picked ? '' : 'opacity-60'}">${r.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
+      </div></div>
+    </div>
+  </div>`;
+}
+function renderCard() {
+  const usable = found.filter((g) => g.state === 'found');
+  const picked = usable.filter((g) => g.picked);
+  const busy = found.some((g) => g.state === 'syncing' || g.state === 'searching');
+  cardEl.innerHTML = `<p class="text-body-lg">Here's what we found in your apps. Pick what we should use for your deck.</p>
+    <div class="mt-4 overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+      <div class="divide-y divide-border-secondary">${found.map(groupHtml).join('')}</div>
+      <div class="flex flex-wrap items-center gap-2 border-t border-border-secondary px-4 py-3">
+        <button type="button" id="addConnBtn" class="btn btn-ghost btn-sm -ml-1.5" ${busy ? 'disabled' : ''}><i class="ph ph-plus"></i>Add a new connector</button>
+        <span class="flex-1"></span>
+        <button type="button" id="skipBtn" class="btn btn-secondary btn-md">Don't use this information</button>
+        <button type="button" id="contBtn" class="btn btn-primary btn-md" ${!picked.length || busy ? 'disabled' : ''}>Continue${picked.length && picked.length < usable.length ? ` with ${picked.length} of ${usable.length}` : ''}</button>
+      </div>
+    </div>`;
+  cardEl.querySelectorAll('[data-pick]').forEach((b) => b.onclick = () => { const g = found.find((x) => x.id === b.dataset.pick); g.picked = !g.picked; g.fresh = false; renderCard(); });
+  cardEl.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => {
+    const g = found.find((x) => x.id === b.dataset.acc); g.open = !g.open;
+    const wrap = b.parentElement; wrap.classList.toggle('open-row', g.open); wrap.querySelector('.acc').classList.toggle('open', g.open); b.setAttribute('aria-expanded', g.open);
+  });
+  $('#addConnBtn').onclick = openAdd;
+  $('#skipBtn').onclick = () => finish(null);
+  $('#contBtn').onclick = () => finish(picked.map((g) => g.id));
+  found.forEach((g) => { g.fresh = false; });
+}
+
+// ---------------- add a new connector ----------------
+function openAdd() {
+  ConnectorDialog.open({
+    title: 'Add a new connector',
+    description: "Connect an app and we'll check it for anything useful for this deck. Access is read-only.",
+    isConnected: (id) => apps.some((a) => a.id === id),
+    onConnect: (id) => wait(1400).then(() => { ConnectorDialog.close(); addedApp(id); }),
+  });
+}
+async function addedApp(id) {
+  apps.push({ id, on: true }); mountComposer(true);
+  const g = { id, state: 'syncing', picked: false, open: false };
+  found.push(g); renderCard(); scrollEnd();
+  toast(`${appById(id).name} connected`);
+  await wait(2600);                       // live: the last 30 days arrive in seconds
+  g.state = 'searching'; renderCard();
+  await wait(2200);                       // then the chat searches it like the others
+  const r = RESULTS[id];
+  if (r && r.files.length) { g.state = 'found'; g.picked = true; g.fresh = true; g.open = true; }
+  else { RESULTS[id] = RESULTS[id] || { unit: ['item', 'items'], files: [], summary: [] }; g.state = 'empty'; }
+  renderCard(); scrollEnd();
+}
+
+// ---------------- flow ----------------
+async function start(text) {
+  $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
+  mountComposer(true); thread().innerHTML = ''; found = [];
+  addUser(text);
+  await wait(500);
+  const on = apps.filter((a) => a.on).map((a) => a.id);
+  if (!on.length) return finish(null, true);
+  const trail = trailBlock(`Before we start, we're checking ${on.map((id) => appById(id).name).join(', ').replace(/, ([^,]*)$/, ' and $1')} for anything about Fresh Bites.`);
+  for (const id of on) found.push(await searchApp(trail, id));
+  await wait(500);
+  collapseTrail(trail, on.length, found.reduce((n, g) => n + RESULTS[g.id].files.length, 0));
+  cardEl = addAssistant('').lastElementChild; renderCard(); scrollEnd();
+}
+// Once the search is done the step list folds into one line; the card below carries the details.
+function collapseTrail(trail, appsN, filesN) {
+  const body = trail.parentElement;
+  body.querySelector('p').remove();
+  const steps = trail.outerHTML;
+  body.innerHTML = `<div class="fade-up">
+    <button type="button" data-trailtoggle class="-ml-1.5 inline-flex items-center gap-1.5 rounded-control px-1.5 py-1 text-caption text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"><i class="ph-fill ph-check-circle text-[14px] text-[#14AE5C]"></i>Searched ${appsN} ${appsN === 1 ? 'app' : 'apps'} · read ${filesN} ${filesN === 1 ? 'file' : 'files'}<i class="ph-bold ph-caret-right chev text-[10px]"></i></button>
+    <div class="acc"><div>${steps}</div></div></div>`;
+  const btn = body.querySelector('[data-trailtoggle]');
+  btn.onclick = () => { btn.parentElement.classList.toggle('open-row'); body.querySelector('.acc').classList.toggle('open'); };
+}
+function finish(ids, noApps) {
+  cardEl?.querySelectorAll('button').forEach((b) => b.disabled = true);
+  cardEl?.querySelector('.rounded-card')?.classList.add('opacity-60');
+  const names = (ids || []).map((id) => appById(id).name);
+  addUser(noApps ? '' : ids ? `Use ${names.join(' and ')}` : "Don't use this information");
+  if (noApps) thread().lastElementChild.remove();
+  addAssistant(`<p class="text-body-lg">${ids ? `Got it. We'll build your outline from your prompt and what we found in ${names.join(' and ')}.` : "Got it. We'll build your outline from your prompt only."}</p>
+    <div class="mt-3 flex items-center gap-2 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>Drafting your outline</div>`);
+}
+$('#pRestart').onclick = () => { apps = [{ id: 'googledrive', on: true }, { id: 'notion', on: true }, { id: 'hubspot', on: true }]; $('#chatStage').classList.add('hidden'); $('#chatStage').classList.remove('flex'); $('#promptStage').classList.remove('hidden'); mountComposer(false); };
+$('#pSkip').onclick = () => {
+  $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
+  mountComposer(true); thread().innerHTML = ''; addUser(PROMPT);
+  found = [{ id: 'googledrive', state: 'found', picked: true, open: true }, { id: 'notion', state: 'found', picked: true, open: false }, { id: 'hubspot', state: 'empty', picked: false, open: false }];
+  cardEl = addAssistant('').lastElementChild; renderCard();
+};
+mountComposer(false);
+</script>
+</body>
+</html>
