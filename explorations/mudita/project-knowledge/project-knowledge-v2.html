@@ -130,6 +130,9 @@ tailwind.config = {
   .link-btn:hover { color: #0768CF; background: rgba(13,153,255,.08); }
   .modal-in { animation: modalIn .22s cubic-bezier(.2,0,0,1) both; }
   @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+  .view { transition: transform .26s cubic-bezier(.2,0,0,1), opacity .2s cubic-bezier(.2,0,0,1); }
+  .view.is-left { transform: translateX(-24%); opacity: 0; pointer-events: none; }
+  .view.is-right { transform: translateX(24%); opacity: 0; pointer-events: none; }
   .scrim-in { animation: scrimIn .18s ease both; } @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
@@ -213,7 +216,8 @@ tailwind.config = {
 <div id="modal" class="fixed inset-0 z-[60] hidden">
   <div class="scrim-in absolute inset-0 bg-black/45 backdrop-blur-[2px]" data-mclose></div>
   <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
-    <div role="dialog" aria-modal="true" aria-labelledby="mTitle" class="modal-in pointer-events-auto flex h-[min(680px,calc(100svh-24px))] w-full max-w-2xl flex-col overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary shadow-dialog">
+    <div role="dialog" aria-modal="true" aria-labelledby="mTitle" class="modal-in pointer-events-auto relative h-[min(680px,calc(100svh-24px))] w-full max-w-2xl overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary shadow-dialog">
+     <div id="mainView" class="view absolute inset-0 flex flex-col">
       <div class="flex items-start justify-between gap-4 px-6 pt-5">
         <div class="min-w-0"><h2 id="mTitle" class="text-title font-semibold">Project knowledge</h2><p class="mt-1 text-body text-text-secondary">Every new deck in Q1 Sales Kickoff uses this.</p></div>
         <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-mclose aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
@@ -240,6 +244,22 @@ tailwind.config = {
           <div id="connPane"></div>
         </div>
       </div>
+     </div>
+     <!-- Add connector: a second view in the same modal, same size, reached by navigation -->
+     <div id="catView" class="view is-right absolute inset-0 flex flex-col" inert>
+      <div class="flex items-start gap-2 px-6 pt-5">
+        <button type="button" id="catBack" class="icon-btn -ml-2 -mt-1 !h-8 !w-8 shrink-0" aria-label="Back to project knowledge"><i class="ph ph-arrow-left text-[20px]"></i></button>
+        <div class="min-w-0 flex-1"><h2 class="text-title font-semibold">Add connector</h2><p class="mt-1 text-body text-text-secondary">Connect an app for this project only. Access is read-only.</p></div>
+        <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8 shrink-0" data-mclose aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+      </div>
+      <div class="px-6 pt-4">
+        <div class="relative"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+          <input id="catQ" placeholder="Search 120+ apps" class="h-9 w-full rounded-control border border-border-secondary pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+        <div id="catChips" class="scrollbar-hide mt-3 flex h-7 gap-1.5 overflow-x-auto" style="-webkit-mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%)"></div>
+        <div id="catSection" class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
+      </div>
+      <div id="catList" class="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-6 pb-6"></div>
+     </div>
     </div>
   </div>
 </div>
@@ -544,13 +564,13 @@ const firstTab = () => !hasInstr() ? 'instr' : !S.files.length ? 'files' : 'inst
 // ================= modal =================
 const TABS = [['instr', 'Instructions', 'text-align-left'], ['files', 'Files', 'files'], ['conns', 'Connectors', 'plugs-connected']];
 function openModal(tab) {
-  S.tab = tab; $('#modal').classList.remove('hidden');
+  S.tab = tab; showView('main'); $('#modal').classList.remove('hidden');
   renderModal();
   if (tab === 'instr') setTimeout(() => $('#instrText').focus(), 60);
 }
 function closeModal() { $('#modal').classList.add('hidden'); }
 document.querySelectorAll('[data-mclose]').forEach((b) => b.onclick = closeModal);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#modal').classList.contains('hidden') && document.querySelector('[data-panel]')?.closest('.fixed')?.classList.contains('hidden') !== false) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key !== 'Escape' || $('#modal').classList.contains('hidden')) return; if (S.view === 'cat') backFromCatalog(); else closeModal(); });
 
 function renderTabs() {
   const counts = { instr: hasInstr() ? '' : '', files: readyFiles().length || '', conns: onConns().length || '' };
@@ -772,20 +792,57 @@ function renderConns(flashId) {
     setTimeout(() => { const c = S.conns.find((x) => x.id === b.dataset.reconnect); c.status = 'ACTIVE'; c.on = true; renderConns(c.id); renderAll(); toast(`${appById(c.id).name} reconnected`); }, 1300);
   });
 }
+const CAT = { q: '', chip: '', busy: null };
+function showView(which) {
+  const main = $('#mainView'), cat = $('#catView');
+  main.classList.toggle('is-left', which === 'cat'); cat.classList.toggle('is-right', which !== 'cat');
+  main.inert = which === 'cat'; cat.inert = which !== 'cat';   // inert, not aria-hidden: drops focus from the hidden view
+  S.view = which;
+}
 function openConnDialog() {
-  ConnectorDialog.open({
-    title: 'Add connector',
-    description: 'Connect an app for this project only. Access is read-only.',
-    isConnected: (id) => S.conns.some((c) => c.id === id && c.status === 'ACTIVE'),
-    onConnect: (id) => new Promise((r) => setTimeout(() => {
+  CAT.q = ''; CAT.chip = ''; $('#catQ').value = '';
+  renderCatalog(); $('#catList').scrollTop = 0;
+  showView('cat'); setTimeout(() => $('#catQ').focus({ preventScroll: true }), 120);
+}
+function backFromCatalog() { showView('main'); renderConns(); renderTabs(); $('#addConn')?.focus({ preventScroll: true }); }
+$('#catBack').onclick = backFromCatalog;
+$('#catQ').oninput = (e) => { CAT.q = e.target.value; renderCatalog(); };
+function renderCatalog() {
+  const q = CAT.q.trim().toLowerCase();
+  $('#catChips').innerHTML = [['', 'All'], ...CHIPS].map(([id, label]) => `<button type="button" data-chip="${id}" class="h-7 shrink-0 whitespace-nowrap rounded-full border px-3 text-caption ${CAT.chip === id ? 'border-border-brand bg-app-50 text-text-brand' : 'border-border-secondary text-text-secondary hover:bg-bg-tertiary'}">${label}</button>`).join('');
+  $('#catChips').querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { CAT.chip = b.dataset.chip; renderCatalog(); });
+  const filtered = CATALOG.filter((a) => (!CAT.chip || a.chip === CAT.chip) && (!q || a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q)));
+  const browsing = !q && !CAT.chip;
+  const pop = browsing ? filtered.filter((a) => a.popular) : [], rest = browsing ? filtered.filter((a) => !a.popular) : filtered;
+  $('#catSection').textContent = browsing ? 'Popular' : (CHIPS.find((c) => c[0] === CAT.chip)?.[1] || 'All apps');
+  const card = (app) => {
+    const c = S.conns.find((x) => x.id === app.id && x.status === 'ACTIVE');
+    const action = c
+      ? (c.scope === 'project'
+        ? `<span title="Added to this project" class="${CAT.flash === app.id ? 'pop-in ' : ''}flex h-8 w-8 items-center justify-center rounded-control bg-bg-success-inverted text-text-success-primary"><i class="ph-bold ph-check"></i><span class="sr-only">Added to this project</span></span>`
+        : `<span title="Already on from your workspace" class="flex h-8 w-8 items-center justify-center rounded-control bg-bg-tertiary text-text-secondary"><i class="ph-bold ph-check"></i><span class="sr-only">Already on from your workspace</span></span>`)
+      : `<button type="button" data-connect="${app.id}" ${CAT.busy ? 'disabled' : ''} aria-label="Connect ${app.name}" class="icon-btn !h-8 !w-8 border border-border-secondary disabled:opacity-50">${CAT.busy === app.id ? '<span class="spinner !h-3.5 !w-3.5"></span>' : '<i class="ph ph-plus"></i>'}</button>`;
+    return `<div class="flex items-start gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-4 ${CAT.flash === app.id ? 'flash-ok' : ''}">
+      ${appLogo(app, 'lg')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-semibold">${app.name}</div><p class="mt-0.5 line-clamp-2 text-caption text-text-secondary">${app.desc}</p></div>
+      <div class="shrink-0">${action}</div></div>`;
+  };
+  const grid = (items) => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">${items.map(card).join('')}</div>`;
+  let html = filtered.length ? '' : '<p class="py-10 text-center text-body text-text-secondary">No apps match your search.</p>';
+  if (pop.length) html += grid(pop);
+  if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
+  $('#catList').innerHTML = html;
+  $('#catList').querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
+    const id = b.dataset.connect; CAT.busy = id; renderCatalog();
+    setTimeout(() => {   // the app's own sign-in window would open here
       const existing = S.conns.find((c) => c.id === id);
       if (existing) { existing.status = 'ACTIVE'; existing.on = true; }
       else S.conns.unshift({ id, on: true, status: 'ACTIVE', scope: 'project', fresh: true });
-      renderConns(id); flash('conns');
+      CAT.busy = null; CAT.flash = id; renderCatalog(); CAT.flash = null;
+      flash('conns'); renderTabs();
       toast(`${appById(id).name} connected for this project`);
-      setTimeout(() => { const c = S.conns.find((x) => x.id === id); if (c) { c.fresh = false; if (S.tab === 'conns') renderConns(); } }, 4000);
-      r();
-    }, 1400)),
+      setTimeout(() => { const c = S.conns.find((x) => x.id === id); if (c) { c.fresh = false; if (S.view !== 'cat' && S.tab === 'conns') renderConns(); } }, 4000);
+    }, 1400);
   });
 }
 
