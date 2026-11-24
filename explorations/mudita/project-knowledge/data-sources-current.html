@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<!-- Replica of Settings → Data sources + the Add connector dialog (pitchdeckdoclist PR #6872, branch
+     add-connector-modal-polish: DataSourcesSettings.jsx, AddConnectorDialog.jsx, ConnectorCard.jsx, AppLogo.jsx; read 24 Nov 2026).
+     Rebuilt from source. The settings nav column is approximated from Settings.jsx. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Redesign tokens, copied from pitchdeckdoclist config/tailwind/pai.tailwind.config.js (new_dev_migration, 18 Nov 2026), light theme only. */
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        'bg-default-primary': '#FFFFFF', 'bg-secondary': '#F5F5F5', 'bg-tertiary': '#F5F5F5', 'bg-quaternary': '#E6E6E6',
+        'bg-brand': '#0D99FF', 'bg-brand-hover': '#007BE5', 'bg-brand-selected': 'rgba(13,153,255,0.12)', 'bg-brand-inverted': '#E5F4FF',
+        'bg-success': '#14AE5C', 'bg-success-inverted': '#E0F6E5', 'bg-warning-inverted': '#FFF1C2', 'bg-danger-inverted': '#FFE2E0',
+        'bg-ink': '#1A1A1A', 'bg-blackout': '#000000',
+        'text-primary': '#1A1A1A', 'text-secondary': '#7F7F7F', 'text-tertiary': '#7F7F7F', 'text-quaternary': '#B2B2B2',
+        'text-brand': '#007BE5', 'text-success-primary': '#009951', 'text-warning-primary': '#A15C00', 'text-danger-primary': '#DC3412', 'text-white': '#FFFFFF',
+        'border-secondary': '#E6E6E6', 'border-tertiary': 'rgba(230,230,230,0.6)', 'border-primary': 'rgba(26,26,26,0.3)', 'border-brand': '#007BE5', 'border-success-secondary': '#B9EBC6',
+        'gold': '#B8860B', 'app-50': '#E5F4FF',
+      },
+      fontSize: {
+        display: ['32px', { lineHeight: '40px', letterSpacing: '-0.02em' }],
+        title: ['20px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
+        heading: ['18px', { lineHeight: '26px', letterSpacing: '-0.005em' }],
+        body: ['14px', { lineHeight: '20px' }],
+        'body-lg': ['16px', { lineHeight: '24px' }],
+        caption: ['13px', { lineHeight: '18px' }],
+        micro: ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
+      },
+      borderRadius: { control: '6px', card: '12px', dialog: '16px' },
+      boxShadow: {
+        menu: '0 1px 2px 0 rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.16)',
+        dialog: '0 2px 6px 0 rgb(0 0 0 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.28)',
+        'button-primary': '0 1px 2px 0 rgb(0 0 0 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.12)',
+        knob: '0 1px 3px rgb(0 0 0 / 0.2)',
+      },
+      transitionTimingFunction: { std: 'cubic-bezier(0.2, 0, 0, 1)' },
+    },
+  },
+};
+</script>
+<style>
+  html, body { margin: 0; background: #F5F5F5; color: #1A1A1A; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 6px; font-weight: 500; transition: background-color .15s cubic-bezier(.2,0,0,1), border-color .15s cubic-bezier(.2,0,0,1), color .15s, transform .1s; user-select: none; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn-primary { background: #0D99FF; color: #fff; box-shadow: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12); }
+  .btn-primary:hover { background: #007BE5; }
+  .btn-secondary { background: #fff; color: #1A1A1A; border: 1px solid #E6E6E6; }
+  .btn-secondary:hover { border-color: rgba(26,26,26,.3); background: #F5F5F5; }
+  .btn-ghost { color: #7F7F7F; } .btn-ghost:hover { color: #1A1A1A; background: #F5F5F5; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-md { height: 36px; padding: 0 14px; font-size: 14px; gap: 8px; }
+  .btn:disabled { cursor: not-allowed; background: #F5F5F5; color: #7F7F7F; box-shadow: none; border-color: transparent; }
+  .icon-btn { display: inline-flex; height: 36px; width: 36px; align-items: center; justify-content: center; border-radius: 6px; color: #7F7F7F; transition: background-color .15s, color .15s; }
+  .icon-btn:hover { background: #F5F5F5; color: #1A1A1A; }
+  .badge-gold { display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#8A5A00; background:linear-gradient(180deg,#FFE7A3,#F7C94B); }
+  .nav-item { display:flex; align-items:center; gap:10px; height:32px; padding:0 8px; border-radius:6px; font-size:14px; color:#1A1A1A; }
+  .nav-item:hover { background: rgba(26,26,26,.05); }
+  .nav-item.is-active { background: rgba(26,26,26,.06); font-weight: 500; }
+  .nav-item i { font-size: 18px; color: #7F7F7F; }
+  .skeleton { background: linear-gradient(90deg, #EFEFEF 25%, #F7F7F7 37%, #EFEFEF 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 4px; }
+  @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; }
+  .thumb { aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid #E6E6E6; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+
+<title>Data sources (current)</title>
+<style>
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); opacity: 0; transition: opacity .2s, transform .2s cubic-bezier(.2,0,0,1); z-index: 95; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .tip { position: relative; } .tip:hover::after, .tip:focus::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 0; width: 280px; padding: 8px 10px; border-radius: 8px; background: #1A1A1A; color: #fff; font-size: 12px; line-height: 16px; z-index: 30; }
+</style>
+</head>
+<body>
+<div class="flex h-screen flex-col">
+  
+<header class="flex h-14 shrink-0 items-center gap-3 border-b border-border-secondary bg-bg-default-primary px-4">
+  <span class="flex items-center gap-2 text-body font-semibold"><span class="flex h-6 w-6 items-center justify-center rounded-[6px] bg-[#FF5500] text-[11px] font-bold text-white">P</span>Presentations.AI</span>
+  <div class="mx-auto hidden w-full max-w-md items-center gap-2 rounded-control bg-bg-tertiary px-3 py-1.5 text-body text-text-quaternary sm:flex"><i class="ph ph-magnifying-glass"></i>Search decks and projects<span class="ml-auto rounded border border-border-secondary bg-white px-1.5 text-micro text-text-secondary">⌘K</span></div>
+  <button type="button" class="icon-btn"><i class="ph ph-bell text-[18px]"></i></button>
+  <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFD9C2] text-caption font-semibold text-[#8A3A00]">MS</span>
+</header>
+  <div class="flex min-h-0 flex-1">
+    
+<aside class="hidden md:flex w-[248px] shrink-0 flex-col border-r border-border-secondary bg-bg-default-primary">
+  <div class="px-3 pt-3">
+    <button type="button" class="flex w-full items-center gap-2.5 rounded-control px-2 py-1.5 hover:bg-bg-tertiary">
+      <span class="flex h-7 w-7 items-center justify-center rounded-[7px] bg-[#1A1A1A] text-[12px] font-semibold text-white">N</span>
+      <span class="min-w-0 flex-1 text-left"><span class="block truncate text-body font-semibold">Northwind Sales</span><span class="block text-micro text-text-secondary">Gold plan</span></span>
+      <i class="ph ph-caret-up-down text-text-secondary"></i>
+    </button>
+    <button type="button" class="btn btn-primary btn-md mt-3 w-full"><i class="ph ph-plus"></i>New deck</button>
+  </div>
+  <nav class="mt-3 flex flex-col gap-0.5 px-3">
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-house"></i><span class="flex-1 truncate">Home</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-stack"></i><span class="flex-1 truncate">Templates</span></button>
+    <button type="button" class="nav-item is-active w-full text-left"><i class="ph ph-database"></i><span class="flex-1 truncate">Data sources</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-swatches"></i><span class="flex-1 truncate">Brand kit</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-pen-nib"></i><span class="flex-1 truncate">Hire an expert</span></button>
+  </nav>
+  <div class="mt-5 px-3">
+    <div class="flex items-center justify-between px-2 pb-1"><span class="text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Projects</span><i class="ph ph-plus text-text-secondary"></i></div>
+    <div class="flex flex-col gap-0.5">
+      <button type="button" class="nav-item w-full text-left"><i class="ph ph-cube" style="color:#0D99FF"></i><span class="flex-1 truncate">Q1 Sales Kickoff</span></button>
+      <button type="button" class="nav-item w-full text-left"><i class="ph ph-cube" style="color:#9747FF"></i><span class="flex-1 truncate">Partner Program 2027</span></button>
+      <button type="button" class="nav-item w-full text-left"><i class="ph ph-cube" style="color:#14AE5C"></i><span class="flex-1 truncate">Board Updates</span></button>
+    </div>
+    <div class="mt-4 flex items-center justify-between px-2 pb-1"><span class="text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Folders</span><i class="ph ph-plus text-text-secondary"></i></div>
+    <div class="flex flex-col gap-0.5"><button type="button" class="nav-item w-full text-left"><i class="ph ph-folder"></i><span class="flex-1 truncate">Customer stories</span></button><button type="button" class="nav-item w-full text-left"><i class="ph ph-folder"></i><span class="flex-1 truncate">Archive</span></button></div>
+  </div>
+  <div class="mt-auto p-3">
+    <div class="rounded-card border border-border-secondary p-3">
+      <div class="flex items-center justify-between text-caption"><span class="font-medium">Credits</span><span class="tabular text-text-secondary">8,420 of 10,000</span></div>
+      <div class="mt-2 h-1.5 rounded-full bg-bg-quaternary"><div class="h-1.5 w-[84%] rounded-full bg-bg-ink"></div></div>
+    </div>
+    <button type="button" class="nav-item mt-2 w-full"><i class="ph ph-user-plus"></i>Invite teammates</button>
+  </div>
+</aside>
+    <div class="min-w-0 flex-1 overflow-y-auto">
+      <div class="mx-auto flex w-full max-w-5xl gap-10 px-4 pb-24 pt-8 sm:px-6">
+        <nav class="hidden w-52 shrink-0 flex-col gap-4 md:flex">
+          <div><div class="px-2 pb-1 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Workspace</div>
+            <button class="nav-item w-full"><i class="ph ph-buildings"></i>General</button><button class="nav-item w-full"><i class="ph ph-users"></i>Members</button><button class="nav-item w-full"><i class="ph ph-cpu"></i>AI assistants and API</button><button class="nav-item w-full"><i class="ph ph-credit-card"></i>Plan and billing</button><button class="nav-item w-full"><i class="ph ph-lightning"></i>Credits and usage</button></div>
+          <div><div class="px-2 pb-1 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Account</div>
+            <button class="nav-item w-full"><i class="ph ph-user-circle"></i>Profile</button><button class="nav-item w-full"><i class="ph ph-lock-simple"></i>Sign-in and security</button><button class="nav-item is-active w-full"><i class="ph ph-database"></i>Data sources</button></div>
+        </nav>
+        <section class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div><h1 class="text-title font-semibold">Data sources</h1><p class="mt-1 text-body text-text-secondary">Connect the apps your decks can draw on. Access is read-only and only for you.</p></div>
+            <button type="button" id="addBtn" class="btn btn-primary btn-md"><i class="ph ph-plus"></i>Add connector</button>
+          </div>
+          <div class="overflow-x-auto pt-6">
+            <table class="w-full min-w-[560px] table-fixed text-left text-body">
+              <thead><tr class="whitespace-nowrap text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary"><th class="pb-2">App</th><th class="w-[44%] pb-2">Status</th><th class="w-36 pb-2"></th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast rounded-card bg-[#1A1A1A] px-4 py-2.5 text-body text-white shadow-menu"></div>
+<div class="fixed bottom-4 left-4 z-[100] rounded-full border border-border-secondary bg-white/95 px-3 py-1.5 text-micro font-semibold text-text-secondary shadow-menu">Replica · current</div>
+<script>
+// Connector catalog + "Add connector" dialog (replica of settings/datasources/AddConnectorDialog.jsx, PR #6872).
+const CATALOG = [
+  { id: 'googledrive', name: 'Google Drive', slug: 'googledrive', cat: 'file management & storage', chip: 'files', popular: true, desc: 'Read docs, sheets and slides from your Drive so decks can quote them.' },
+  { id: 'hubspot', name: 'HubSpot', slug: 'hubspot', cat: 'crm', chip: 'crm', popular: true, desc: 'Pull deals, pipeline and company records into sales and QBR decks.' },
+  { id: 'notion', name: 'Notion', slug: 'notion', cat: 'notes', chip: 'notes', popular: true, desc: 'Use pages and databases from your workspace as source material.' },
+  { id: 'salesforce', name: 'Salesforce', slug: null, color: '#00A1E0', cat: 'crm', chip: 'crm', popular: true, desc: 'Bring opportunities, accounts and forecasts into your decks.' },
+  { id: 'googlesheets', name: 'Google Sheets', slug: 'googlesheets', cat: 'spreadsheets', chip: 'spreadsheets', popular: true, desc: 'Turn rows and charts from a sheet into slides with real numbers.' },
+  { id: 'slack', name: 'Slack', slug: null, color: '#4A154B', cat: 'team chat', chip: 'chat', popular: true, desc: 'Reference channel threads and announcements your team already wrote.' },
+  { id: 'confluence', name: 'Confluence', slug: 'confluence', cat: 'documents', chip: 'documents', popular: false, desc: 'Draw on specs, wikis and team pages.' },
+  { id: 'dropbox', name: 'Dropbox', slug: 'dropbox', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read files stored in your Dropbox folders.' },
+  { id: 'airtable', name: 'Airtable', slug: 'airtable', cat: 'spreadsheets', chip: 'spreadsheets', popular: false, desc: 'Use bases and views as structured data for slides.' },
+  { id: 'jira', name: 'Jira', slug: 'jira', cat: 'project management', chip: 'projects', popular: false, desc: 'Summarise epics, sprints and roadmaps for status updates.' },
+  { id: 'asana', name: 'Asana', slug: 'asana', cat: 'project management', chip: 'projects', popular: false, desc: 'Pull project status and milestones into updates.' },
+  { id: 'linear', name: 'Linear', slug: 'linear', cat: 'project management', chip: 'projects', popular: false, desc: 'Turn cycles and projects into progress slides.' },
+  { id: 'gmail', name: 'Gmail', slug: 'gmail', cat: 'email', chip: 'email', popular: false, desc: 'Reference email threads with customers and partners.' },
+  { id: 'googleanalytics', name: 'Google Analytics', slug: 'googleanalytics', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Chart traffic and conversion trends from GA4.' },
+  { id: 'mixpanel', name: 'Mixpanel', slug: 'mixpanel', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Bring product usage metrics into reviews.' },
+  { id: 'quickbooks', name: 'QuickBooks', slug: 'quickbooks', cat: 'accounting', chip: 'accounting', popular: false, desc: 'Use revenue and expense figures in finance decks.' },
+  { id: 'onedrive', name: 'OneDrive', slug: null, color: '#0364B8', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read Word, Excel and PowerPoint files from OneDrive.' },
+  { id: 'pipedrive', name: 'Pipedrive', slug: null, color: '#1A1A1A', cat: 'crm', chip: 'crm', popular: false, desc: 'Pull deals and activity into pipeline reviews.' },
+  { id: 'zendesk', name: 'Zendesk', slug: 'zendesk', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket trends and CSAT for account reviews.' },
+  { id: 'intercom', name: 'Intercom', slug: 'intercom', cat: 'customer support', chip: 'more', popular: false, desc: 'Use conversation themes in customer decks.' },
+];
+const CHIPS = [['crm','CRM'],['documents','Documents'],['files','File storage'],['spreadsheets','Spreadsheets'],['notes','Notes'],['projects','Project management'],['analytics','Analytics'],['email','Email'],['chat','Team chat'],['accounting','Accounting'],['more','More']];
+const ACR = new Set(['crm','ai','hr','url','sms','seo']);
+const catLabel = (t) => (t || '').replace(/\b\w+/g, (w) => ACR.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
+const appById = (id) => CATALOG.find((a) => a.id === id);
+
+// AppLogo: logo on a soft sunken tile, initials when there's no logo or it fails to load.
+function appLogo(app, size = 'md', extraClass = '') {
+  const box = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-8 w-8' : size === 'xs' ? 'h-5 w-5' : 'h-9 w-9';
+  const img = size === 'lg' ? 'h-7 w-7' : size === 'sm' ? 'h-[18px] w-[18px]' : size === 'xs' ? 'h-3 w-3' : 'h-5 w-5';
+  const tiny = size === 'xs' ? 'text-[6px]' : 'text-[10px]';
+  const initials = app.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const fallback = `<span class='text-caption font-semibold text-text-secondary'>${initials}</span>`;
+  const inner = app.slug
+    ? `<img src="https://cdn.simpleicons.org/${app.slug}" alt="" class="${img} object-contain" loading="lazy" onerror="this.outerHTML=&quot;${fallback}&quot;" />`
+    : `<span class="flex ${img} items-center justify-center rounded-[3px] ${tiny} font-bold text-white" style="background:${app.color}">${initials}</span>`;
+  return `<span class="flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-control bg-bg-tertiary ${extraClass}">${inner}</span>`;
+}
+
+// The dialog. opts: { isConnected(id), onConnect(id) -> Promise, title, description }
+const ConnectorDialog = (() => {
+  let root, state = { q: '', chip: '', busy: null, opts: null };
+  function mount() {
+    root = document.createElement('div');
+    root.className = 'fixed inset-0 z-[70] hidden';
+    root.innerHTML = `
+      <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px] opacity-0 transition-opacity duration-200" data-x data-fade></div>
+      <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+        <div data-panel role="dialog" aria-modal="true" class="pointer-events-auto relative w-full max-w-3xl translate-y-2 scale-[0.98] overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary opacity-0 shadow-dialog transition-[opacity,transform] duration-200 ease-std">
+          <div class="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
+            <div class="min-w-0"><div data-title class="text-title font-semibold">Add connector</div><div data-desc class="mt-1 text-body text-text-secondary">Connect an app your decks can draw on. Access is read-only and only for you.</div></div>
+            <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-x aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+          </div>
+          <div class="px-6 pt-3">
+            <div class="relative"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+              <input data-q placeholder="Search 120+ apps" class="h-9 w-full rounded-control border border-border-secondary pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+            <div data-chips class="scrollbar-hide mt-3 flex h-7 gap-1.5 overflow-x-auto" style="-webkit-mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%)"></div>
+            <div data-section class="mb-2 mt-6 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
+          </div>
+          <div data-list class="scrollbar-hide h-[52vh] overflow-y-auto px-6 pb-6"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(root);
+    root.querySelectorAll('[data-x]').forEach((el) => el.onclick = close);
+    root.querySelector('[data-q]').oninput = (e) => { state.q = e.target.value; render(); };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.classList.contains('hidden')) close(); });
+  }
+  function card(app) {
+    const connected = state.opts.isConnected(app.id);
+    const working = state.busy === app.id;
+    const action = connected
+      ? `<span title="Connected" class="flex h-8 w-8 items-center justify-center rounded-control bg-bg-success-inverted text-text-success-primary"><i class="ph-bold ph-check"></i></span>`
+      : `<button type="button" data-connect="${app.id}" ${state.busy ? 'disabled' : ''} aria-label="Connect ${app.name}" class="icon-btn !h-8 !w-8 border border-border-secondary disabled:opacity-50">${working ? '<i class="ph ph-arrows-clockwise spin"></i>' : '<i class="ph ph-plus"></i>'}</button>`;
+    return `<div class="flex items-start gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-4">
+      ${appLogo(app, 'lg')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-semibold">${app.name}</div><p class="mt-0.5 line-clamp-2 text-caption text-text-secondary">${app.desc}</p></div>
+      <div class="shrink-0">${action}</div></div>`;
+  }
+  function render() {
+    const q = state.q.trim().toLowerCase();
+    const chips = root.querySelector('[data-chips]');
+    chips.innerHTML = [['', 'All'], ...CHIPS].map(([id, label]) => `<button type="button" data-chip="${id}" class="h-7 shrink-0 whitespace-nowrap rounded-full border px-3 text-caption ${state.chip === id ? 'border-border-brand bg-app-50 text-text-brand' : 'border-border-secondary text-text-secondary hover:bg-bg-tertiary'}">${label}</button>`).join('');
+    chips.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { state.chip = b.dataset.chip; render(); });
+    const filtered = CATALOG.filter((a) => (!state.chip || a.chip === state.chip) && (!q || a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q)));
+    const browsing = !q && !state.chip;
+    const pop = browsing ? filtered.filter((a) => a.popular) : [];
+    const rest = browsing ? filtered.filter((a) => !a.popular) : filtered;
+    root.querySelector('[data-section]').textContent = browsing ? 'Popular' : (CHIPS.find((c) => c[0] === state.chip)?.[1] || 'All apps');
+    const grid = (items) => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">${items.map(card).join('')}</div>`;
+    let html = '';
+    if (!filtered.length) html = '<p class="py-10 text-center text-body text-text-secondary">No apps match your search.</p>';
+    if (pop.length) html += grid(pop);
+    if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
+    const list = root.querySelector('[data-list]'); list.innerHTML = html;
+    list.querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
+      state.busy = b.dataset.connect; render();
+      Promise.resolve(state.opts.onConnect(state.busy)).finally(() => { state.busy = null; render(); });
+    });
+  }
+  function open(opts) {
+    if (!root) mount();
+    state = { q: '', chip: '', busy: null, opts };
+    if (opts.title) root.querySelector('[data-title]').textContent = opts.title;
+    if (opts.description) root.querySelector('[data-desc]').textContent = opts.description;
+    root.querySelector('[data-q]').value = '';
+    render();
+    root.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      root.querySelector('[data-fade]').classList.remove('opacity-0');
+      root.querySelector('[data-panel]').classList.remove('opacity-0','translate-y-2','scale-[0.98]');
+      root.querySelector('[data-q]').focus();
+    });
+  }
+  function close() {
+    root.querySelector('[data-fade]').classList.add('opacity-0');
+    root.querySelector('[data-panel]').classList.add('opacity-0','translate-y-2','scale-[0.98]');
+    setTimeout(() => root.classList.add('hidden'), 180);
+    state.opts?.onClose?.();
+  }
+  return { open, close, refresh: () => root && render() };
+})();
+
+// The user's connections. Status ACTIVE / EXPIRED, or missing scopes.
+let sources = [
+  { id: 'slack', status: 'EXPIRED' },
+  { id: 'googledrive', status: 'ACTIVE', missing: ['Google Drive files'] },
+  { id: 'hubspot', status: 'ACTIVE' },
+  { id: 'notion', status: 'ACTIVE' },
+];
+const stateOf = (s) => s.status === 'EXPIRED' ? { label: 'Expired', tone: 'warn', fix: true } : s.missing ? { label: 'Missing permissions', tone: 'warn', fix: true, scopes: s.missing } : { label: 'Connected', tone: 'good', fix: false };
+const $ = (s) => document.querySelector(s);
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+function render() {
+  const sorted = [...sources].sort((a, b) => Number(stateOf(b).fix) - Number(stateOf(a).fix) || appById(a.id).name.localeCompare(appById(b.id).name));
+  $('#rows').innerHTML = sorted.map((s) => {
+    const app = appById(s.id), st = stateOf(s);
+    const badge = `<span class="inline-flex h-5 items-center gap-1 rounded-full px-2 text-micro font-semibold ${st.tone === 'good' ? 'bg-bg-success-inverted text-text-success-primary' : 'bg-bg-warning-inverted text-text-warning-primary'}"><i class="ph-bold ${st.fix ? 'ph-warning' : 'ph-check'} text-[11px]"></i>${st.label}</span>`;
+    const tagged = st.scopes ? `<span tabindex="0" class="tip inline-flex rounded-full outline-none" data-tip="${app.name} didn't give access to everything we need. Reconnect and allow every permission it asks for. ${st.scopes.join(', ')}">${badge}</span>` : badge;
+    return `<tr class="border-t border-border-secondary">
+      <td class="py-3 pr-4"><div class="flex min-w-0 items-center gap-3">${appLogo(app)}<div class="min-w-0"><div class="truncate font-semibold">${app.name}</div><div class="truncate text-caption text-text-secondary">${catLabel(app.cat)}</div></div></div></td>
+      <td class="py-3 pr-4">${tagged}</td>
+      <td class="py-3"><div class="flex items-center justify-end gap-1">
+        ${st.fix ? `<button type="button" class="btn btn-secondary btn-sm" data-re="${s.id}">Reconnect</button>` : ''}
+        <button type="button" class="icon-btn !h-8 !w-8" data-menu="${s.id}" aria-label="More actions ${app.name}"><i class="ph ph-dots-three text-[20px]"></i></button>
+      </div></td></tr>`;
+  }).join('');
+  document.querySelectorAll('[data-re]').forEach((b) => b.onclick = () => { b.innerHTML = '<i class="ph ph-arrows-clockwise spin"></i>'; setTimeout(() => { const s = sources.find((x) => x.id === b.dataset.re); s.status = 'ACTIVE'; delete s.missing; render(); }, 1200); });
+  document.querySelectorAll('[data-menu]').forEach((b) => b.onclick = () => { if (confirm('Disconnect ' + appById(b.dataset.menu).name + '?')) { sources = sources.filter((s) => s.id !== b.dataset.menu); render(); } });
+}
+$('#addBtn').onclick = () => ConnectorDialog.open({
+  isConnected: (id) => sources.some((s) => s.id === id && s.status === 'ACTIVE'),
+  onConnect: (id) => new Promise((r) => setTimeout(() => { const s = sources.find((x) => x.id === id); if (s) { s.status = 'ACTIVE'; delete s.missing; } else sources.push({ id, status: 'ACTIVE' }); render(); r(); }, 1400)),
+});
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<!-- Replica of the live project page + Project knowledge panel (pitchdeckdoclist new_dev_migration,
+     ProjectDashboard.jsx + ProjectsKnowledge.jsx + ProjectInstructionsPopup.jsx, read 24 Nov 2026). Rebuilt from source,
+     not from a screenshot: compare against https://app.presentations.ai before trusting pixel details. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Redesign tokens, copied from pitchdeckdoclist config/tailwind/pai.tailwind.config.js (new_dev_migration, 18 Nov 2026), light theme only. */
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        'bg-default-primary': '#FFFFFF', 'bg-secondary': '#F5F5F5', 'bg-tertiary': '#F5F5F5', 'bg-quaternary': '#E6E6E6',
+        'bg-brand': '#0D99FF', 'bg-brand-hover': '#007BE5', 'bg-brand-selected': 'rgba(13,153,255,0.12)', 'bg-brand-inverted': '#E5F4FF',
+        'bg-success': '#14AE5C', 'bg-success-inverted': '#E0F6E5', 'bg-warning-inverted': '#FFF1C2', 'bg-danger-inverted': '#FFE2E0',
+        'bg-ink': '#1A1A1A', 'bg-blackout': '#000000',
+        'text-primary': '#1A1A1A', 'text-secondary': '#7F7F7F', 'text-tertiary': '#7F7F7F', 'text-quaternary': '#B2B2B2',
+        'text-brand': '#007BE5', 'text-success-primary': '#009951', 'text-warning-primary': '#A15C00', 'text-danger-primary': '#DC3412', 'text-white': '#FFFFFF',
+        'border-secondary': '#E6E6E6', 'border-tertiary': 'rgba(230,230,230,0.6)', 'border-primary': 'rgba(26,26,26,0.3)', 'border-brand': '#007BE5', 'border-success-secondary': '#B9EBC6',
+        'gold': '#B8860B', 'app-50': '#E5F4FF',
+      },
+      fontSize: {
+        display: ['32px', { lineHeight: '40px', letterSpacing: '-0.02em' }],
+        title: ['20px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
+        heading: ['18px', { lineHeight: '26px', letterSpacing: '-0.005em' }],
+        body: ['14px', { lineHeight: '20px' }],
+        'body-lg': ['16px', { lineHeight: '24px' }],
+        caption: ['13px', { lineHeight: '18px' }],
+        micro: ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
+      },
+      borderRadius: { control: '6px', card: '12px', dialog: '16px' },
+      boxShadow: {
+        menu: '0 1px 2px 0 rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.16)',
+        dialog: '0 2px 6px 0 rgb(0 0 0 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.28)',
+        'button-primary': '0 1px 2px 0 rgb(0 0 0 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.12)',
+        knob: '0 1px 3px rgb(0 0 0 / 0.2)',
+      },
+      transitionTimingFunction: { std: 'cubic-bezier(0.2, 0, 0, 1)' },
+    },
+  },
+};
+</script>
+<style>
+  html, body { margin: 0; background: #F5F5F5; color: #1A1A1A; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 6px; font-weight: 500; transition: background-color .15s cubic-bezier(.2,0,0,1), border-color .15s cubic-bezier(.2,0,0,1), color .15s, transform .1s; user-select: none; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn-primary { background: #0D99FF; color: #fff; box-shadow: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12); }
+  .btn-primary:hover { background: #007BE5; }
+  .btn-secondary { background: #fff; color: #1A1A1A; border: 1px solid #E6E6E6; }
+  .btn-secondary:hover { border-color: rgba(26,26,26,.3); background: #F5F5F5; }
+  .btn-ghost { color: #7F7F7F; } .btn-ghost:hover { color: #1A1A1A; background: #F5F5F5; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-md { height: 36px; padding: 0 14px; font-size: 14px; gap: 8px; }
+  .btn:disabled { cursor: not-allowed; background: #F5F5F5; color: #7F7F7F; box-shadow: none; border-color: transparent; }
+  .icon-btn { display: inline-flex; height: 36px; width: 36px; align-items: center; justify-content: center; border-radius: 6px; color: #7F7F7F; transition: background-color .15s, color .15s; }
+  .icon-btn:hover { background: #F5F5F5; color: #1A1A1A; }
+  .badge-gold { display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#8A5A00; background:linear-gradient(180deg,#FFE7A3,#F7C94B); }
+  .nav-item { display:flex; align-items:center; gap:10px; height:32px; padding:0 8px; border-radius:6px; font-size:14px; color:#1A1A1A; }
+  .nav-item:hover { background: rgba(26,26,26,.05); }
+  .nav-item.is-active { background: rgba(26,26,26,.06); font-weight: 500; }
+  .nav-item i { font-size: 18px; color: #7F7F7F; }
+  .skeleton { background: linear-gradient(90deg, #EFEFEF 25%, #F7F7F7 37%, #EFEFEF 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 4px; }
+  @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; }
+  .thumb { aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid #E6E6E6; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+
+<title>Project knowledge (current)</title>
+<style>
+  #topProgress { position: fixed; top: 0; left: 0; height: 2px; background: #0D99FF; width: 0; z-index: 90; transition: width 1.2s cubic-bezier(.2,0,0,1), opacity .3s; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); opacity: 0; transition: opacity .2s, transform .2s cubic-bezier(.2,0,0,1); z-index: 95; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div id="topProgress"></div>
+<div class="flex h-screen flex-col">
+  
+<header class="flex h-14 shrink-0 items-center gap-3 border-b border-border-secondary bg-bg-default-primary px-4">
+  <span class="flex items-center gap-2 text-body font-semibold"><span class="flex h-6 w-6 items-center justify-center rounded-[6px] bg-[#FF5500] text-[11px] font-bold text-white">P</span>Presentations.AI</span>
+  <div class="mx-auto hidden w-full max-w-md items-center gap-2 rounded-control bg-bg-tertiary px-3 py-1.5 text-body text-text-quaternary sm:flex"><i class="ph ph-magnifying-glass"></i>Search decks and projects<span class="ml-auto rounded border border-border-secondary bg-white px-1.5 text-micro text-text-secondary">⌘K</span></div>
+  <button type="button" class="icon-btn"><i class="ph ph-bell text-[18px]"></i></button>
+  <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFD9C2] text-caption font-semibold text-[#8A3A00]">MS</span>
+</header>
+  <div class="flex min-h-0 flex-1">
+    
+<aside class="hidden md:flex w-[248px] shrink-0 flex-col border-r border-border-secondary bg-bg-default-primary">
+  <div class="px-3 pt-3">
+    <button type="button" class="flex w-full items-center gap-2.5 rounded-control px-2 py-1.5 hover:bg-bg-tertiary">
+      <span class="flex h-7 w-7 items-center justify-center rounded-[7px] bg-[#1A1A1A] text-[12px] font-semibold text-white">N</span>
+      <span class="min-w-0 flex-1 text-left"><span class="block truncate text-body font-semibold">Northwind Sales</span><span class="block text-micro text-text-secondary">Gold plan</span></span>
+      <i class="ph ph-caret-up-down text-text-secondary"></i>
+    </button>
+    <button type="button" class="btn btn-primary btn-md mt-3 w-full"><i class="ph ph-plus"></i>New deck</button>
+  </div>
+  <nav class="mt-3 flex flex-col gap-0.5 px-3">
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-house"></i><span class="flex-1 truncate">Home</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-stack"></i><span class="flex-1 truncate">Templates</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-database"></i><span class="flex-1 truncate">Data sources</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-swatches"></i><span class="flex-1 truncate">Brand kit</span></button>
+    <button type="button" class="nav-item w-full text-left"><i class="ph ph-pen-nib"></i><span class="flex-1 truncate">Hire an expert</span></button>
+  </nav>
+  <div class="mt-5 px-3">
+    <div class="flex items-center justify-between px-2 pb-1"><span class="text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Projects</span><i class="ph ph-plus text-text-secondary"></i></div>
+    <div class="flex flex-col gap-0.5">
+      <button type="button" class="nav-item is-active w-full text-left"><i class="ph ph-cube" style="color:#0D99FF"></i><span class="flex-1 truncate">Q1 Sales Kickoff</span></button>
+      <button type="button" class="nav-item w-full text-left"><i class="ph ph-cube" style="color:#9747FF"></i><span class="flex-1 truncate">Partner Program 2027</span></button>
+      <button type="button" class="nav-item w-full text-left"><i class="ph ph-cube" style="color:#14AE5C"></i><span class="flex-1 truncate">Board Updates</span></button>
+    </div>
+    <div class="mt-4 flex items-center justify-between px-2 pb-1"><span class="text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Folders</span><i class="ph ph-plus text-text-secondary"></i></div>
+    <div class="flex flex-col gap-0.5"><button type="button" class="nav-item w-full text-left"><i class="ph ph-folder"></i><span class="flex-1 truncate">Customer stories</span></button><button type="button" class="nav-item w-full text-left"><i class="ph ph-folder"></i><span class="flex-1 truncate">Archive</span></button></div>
+  </div>
+  <div class="mt-auto p-3">
+    <div class="rounded-card border border-border-secondary p-3">
+      <div class="flex items-center justify-between text-caption"><span class="font-medium">Credits</span><span class="tabular text-text-secondary">8,420 of 10,000</span></div>
+      <div class="mt-2 h-1.5 rounded-full bg-bg-quaternary"><div class="h-1.5 w-[84%] rounded-full bg-bg-ink"></div></div>
+    </div>
+    <button type="button" class="nav-item mt-2 w-full"><i class="ph ph-user-plus"></i>Invite teammates</button>
+  </div>
+</aside>
+    <div class="min-w-0 flex-1 overflow-y-auto">
+      <main class="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6">
+        <nav class="mb-3 flex flex-wrap items-center gap-1.5 text-caption text-text-tertiary">
+  <button type="button" class="hover:text-text-primary">Northwind Sales</button><i class="ph ph-caret-right text-[11px]"></i><span class="text-text-secondary">Q1 Sales Kickoff</span>
+</nav>
+
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <input value="Q1 Sales Kickoff" class="mt-1 rounded-control border-0 bg-transparent p-0 text-display font-semibold outline-none hover:bg-bg-tertiary focus:bg-bg-tertiary" />
+          <div class="flex items-center gap-2">
+            <span class="flex -space-x-2">
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#D6E9FF] text-caption font-semibold text-[#0B4A8B] ring-2 ring-bg-secondary">AK</span>
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#E3F5E1] text-caption font-semibold text-[#1F6B2A] ring-2 ring-bg-secondary">RP</span>
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#F3E6FF] text-caption font-semibold text-[#6B2FA3] ring-2 ring-bg-secondary">JL</span>
+            </span>
+            <button type="button" class="btn btn-secondary btn-md"><i class="ph ph-share-network"></i>Share project</button>
+            <button type="button" id="openPk" class="btn btn-secondary btn-md"><i class="ph ph-book-open"></i>Project knowledge</button>
+            <button type="button" class="btn btn-primary btn-md"><i class="ph ph-plus"></i>New deck here</button>
+            <button type="button" class="icon-btn"><i class="ph ph-dots-three text-[20px]"></i></button>
+          </div>
+        </div>
+        <p class="mt-2 text-body text-text-secondary">6 decks · shared with 3 people · decks inherit the project's sharing</p>
+        <div id="deckGrid" class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- Project knowledge panel (redesign branch of ProjectsKnowledge.jsx) -->
+<div id="pkScrim" class="fixed inset-0 z-40 hidden"></div>
+<aside id="pk" role="dialog" aria-modal="true" aria-labelledby="pkTitle"
+  class="fixed right-0 top-0 z-50 flex h-full w-full translate-x-[120%] flex-col overflow-hidden bg-bg-default-primary opacity-0 transition-[transform,opacity] duration-300 ease-std sm:right-3 sm:top-[68px] sm:h-[calc(100vh-80px)] sm:w-[360px] sm:rounded-card sm:border sm:border-border-secondary sm:shadow-dialog">
+  <header class="flex items-center justify-between gap-3 px-5 pb-3 pt-6 sm:pt-4">
+    <h2 id="pkTitle" class="text-heading font-semibold">Project knowledge</h2>
+    <button type="button" class="icon-btn -mr-2" data-close aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+  </header>
+  <div class="scrollbar-hide flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-5">
+    <section>
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-body font-medium">Add instructions</span>
+        <button type="button" id="instrBtn" class="btn btn-secondary btn-sm"><i class="ph ph-plus"></i>Add</button>
+      </div>
+      <p id="instrPreview" class="mt-2 line-clamp-2 hidden text-caption text-text-secondary"></p>
+    </section>
+    <div class="h-px shrink-0 bg-border-secondary"></div>
+    <section class="flex min-h-0 flex-col gap-3">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-body font-medium">Add files</span>
+        <button type="button" id="addFilesBtn" class="btn btn-secondary btn-sm"><i class="ph ph-plus"></i>Add</button>
+        <input id="fileInput" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.pptx" class="hidden" />
+      </div>
+      <div id="dropzone" role="button" tabindex="0" class="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-card border border-dashed border-border-secondary bg-bg-secondary px-6 py-8 text-center transition-colors duration-150 hover:border-border-primary hover:bg-bg-tertiary">
+        <div class="flex items-end -space-x-2" aria-hidden="true">
+          <span class="flex h-11 w-9 -rotate-12 items-center justify-center rounded-md bg-[#FA423E] text-white shadow"><i class="ph-fill ph-file-pdf text-[18px]"></i></span>
+          <span class="relative z-10 flex h-12 w-10 items-center justify-center rounded-md bg-[#0285FF] text-white shadow"><i class="ph-fill ph-file-doc text-[20px]"></i></span>
+          <span class="flex h-11 w-9 rotate-12 items-center justify-center rounded-md bg-[#D04423] text-white shadow"><i class="ph-fill ph-file-ppt text-[18px]"></i></span>
+        </div>
+        <p class="text-body text-text-secondary"><span class="font-medium text-text-primary">Click to upload</span> or drag and drop<br />PDFs, documents or other text to<br />reference in the project</p>
+      </div>
+      <ul id="fileList" class="hidden flex-col gap-2"></ul>
+    </section>
+  </div>
+</aside>
+
+<!-- ProjectInstructionsPopup (approximation: dialog with a textarea and Save) -->
+<div id="instrDialog" class="fixed inset-0 z-[60] hidden items-center justify-center p-6">
+  <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px]" data-close-instr></div>
+  <div class="relative w-full max-w-lg rounded-dialog border border-border-secondary bg-bg-default-primary shadow-dialog">
+    <div class="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
+      <div><div class="text-title font-semibold">Instructions</div><div class="mt-1 text-body text-text-secondary">How should we write decks in this project?</div></div>
+      <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-close-instr><i class="ph ph-x text-[20px]"></i></button>
+    </div>
+    <div class="px-6 pb-6 pt-3">
+      <textarea id="instrText" rows="7" class="w-full resize-none rounded-control border border-border-secondary p-3 text-body outline-none focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" placeholder="e.g. Write for sales reps. Lead with customer outcomes, keep slides to three bullets."></textarea>
+      <div class="mt-4 flex justify-end gap-2"><button type="button" class="btn btn-secondary btn-md" data-close-instr>Cancel</button><button type="button" id="instrSave" class="btn btn-primary btn-md">Save</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast rounded-card bg-[#1A1A1A] px-4 py-2.5 text-body text-white shadow-menu"></div>
+
+<!-- Proto-only control, not part of the screen -->
+<div class="fixed bottom-4 left-4 z-[100] flex items-center gap-1 rounded-full border border-border-secondary bg-white/95 p-1 text-micro shadow-menu backdrop-blur">
+  <span class="px-2 font-semibold text-text-secondary">Replica · current</span>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-seed="empty">Empty</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-seed="filled">With knowledge</button>
+</div>
+
+<script>
+// Deck cards for the project page (DocumentCardView shape: 16:9 thumb, title, edited line).
+const DECKS = [
+  { t: 'FY27 Sales Kickoff', s: 'Win the year together', bg: '#0B1E3F', fg: '#FFFFFF', accent: '#4FB3FF', edited: 'Edited 2 hours ago' },
+  { t: 'Territory Plan: EMEA', s: 'Coverage, quotas and focus accounts', bg: '#F4EFE6', fg: '#2A2118', accent: '#D9822B', edited: 'Edited yesterday' },
+  { t: 'Product Roadmap H1', s: 'What ships, and why it matters to buyers', bg: '#FFFFFF', fg: '#111111', accent: '#7B61FF', edited: 'Edited 3 days ago' },
+  { t: 'Competitive Battlecards', s: 'How we win against the top three', bg: '#102A23', fg: '#E9F5EF', accent: '#3DDC97', edited: 'Edited 5 days ago' },
+  { t: 'Pricing and Packaging 2027', s: 'New tiers and the upgrade path', bg: '#FFF4F0', fg: '#2B1B16', accent: '#FF5A36', edited: 'Edited 1 week ago' },
+  { t: 'Customer Wins: Q4', s: 'Six stories worth retelling', bg: '#1E1E1E', fg: '#F2F2F2', accent: '#FFC53D', edited: 'Edited 2 weeks ago' },
+];
+function deckCard(d) {
+  return `<div class="group min-w-0 cursor-pointer">
+    <div class="thumb relative transition-shadow duration-150 group-hover:shadow-menu" style="background:${d.bg}">
+      <div class="absolute inset-0 flex flex-col justify-center px-[9%]">
+        <div style="width:28px;height:3px;border-radius:2px;background:${d.accent}"></div>
+        <div class="mt-2 font-semibold leading-tight" style="color:${d.fg};font-size:clamp(13px,1.5vw,18px)">${d.t}</div>
+        <div class="mt-1 opacity-70" style="color:${d.fg};font-size:clamp(9px,0.9vw,11px)">${d.s}</div>
+      </div>
+      <div class="absolute bottom-[10%] right-[9%] flex gap-1">${[40,28,52].map(w=>`<span style="display:block;width:${w/3}px;height:${w/2}px;border-radius:2px;background:${d.accent};opacity:.5"></span>`).join('')}</div>
+    </div>
+    <div class="mt-2.5 flex items-start justify-between gap-2 px-0.5">
+      <div class="min-w-0"><div class="truncate text-body font-medium">${d.t}</div><div class="mt-0.5 text-caption text-text-secondary">${d.edited}</div></div>
+      <button type="button" class="icon-btn !h-7 !w-7 opacity-0 transition-opacity group-hover:opacity-100"><i class="ph ph-dots-three text-[18px]"></i></button>
+    </div>
+  </div>`;
+}
+document.getElementById('deckGrid').innerHTML = DECKS.map(deckCard).join('');
+
+const $ = (s) => document.querySelector(s);
+const pk = $('#pk'), scrim = $('#pkScrim');
+let files = [], instructions = '';
+const TYPE = { pdf: ['#FA423E','file-pdf'], doc: ['#0285FF','file-doc'], docx: ['#0285FF','file-doc'], xls: ['#16A34A','file-xls'], xlsx: ['#16A34A','file-xls'], ppt: ['#D04423','file-ppt'], pptx: ['#D04423','file-ppt'] };
+const typeOf = (n) => TYPE[(n.split('.').pop() || '').toLowerCase()] || ['#0285FF','file-text'];
+const fmt = (b) => b < 1048576 ? (b/1024).toFixed(b/1024 >= 10 ? 0 : 1) + 'KB' : (b/1048576).toFixed(b/1048576 >= 10 ? 0 : 1) + 'MB';
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+function topBar(on) { const b = $('#topProgress'); if (on) { b.style.opacity = 1; b.style.width = '0'; requestAnimationFrame(() => b.style.width = '70%'); } else { b.style.width = '100%'; setTimeout(() => { b.style.opacity = 0; b.style.width = 0; }, 300); } }
+
+function openPanel() { scrim.classList.remove('hidden'); pk.classList.remove('translate-x-[120%]','opacity-0'); }
+function closePanel() { scrim.classList.add('hidden'); pk.classList.add('translate-x-[120%]','opacity-0'); }
+$('#openPk').onclick = () => { $('#openPk').disabled = true; setTimeout(() => { $('#openPk').disabled = false; openPanel(); }, 500); };
+scrim.onclick = closePanel; pk.querySelector('[data-close]').onclick = closePanel;
+
+function render() {
+  const has = !!instructions.trim();
+  $('#instrBtn').innerHTML = has ? '<i class="ph ph-pencil-simple-line"></i>Edit' : '<i class="ph ph-plus"></i>Add';
+  $('#instrPreview').textContent = instructions; $('#instrPreview').classList.toggle('hidden', !has);
+  $('#dropzone').classList.toggle('hidden', files.length > 0);
+  const list = $('#fileList'); list.classList.toggle('hidden', !files.length); list.classList.toggle('flex', !!files.length);
+  list.innerHTML = files.map((f, i) => {
+    const [bg, icon] = typeOf(f.name);
+    const status = f.status === 'UPLOADING' ? 'Uploading…' : f.status === 'IN_PROGRESS' ? 'Processing…' : f.status === 'ERROR' ? '<span class="text-text-danger-primary">Processing failed</span>' : `${fmt(f.size)} · Added ${f.added}`;
+    const removable = f.status === 'COMPLETED' || f.status === 'ERROR';
+    return `<li class="group flex items-center gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-3">
+      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-white" style="background:${bg}"><i class="ph ph-${icon} text-[20px]"></i></span>
+      <div class="min-w-0 flex-1"><p class="truncate text-body font-medium">${f.name}</p><p class="mt-0.5 truncate text-caption text-text-secondary">${status}</p></div>
+      <button type="button" data-del="${i}" class="icon-btn -mr-1 !h-7 !w-7 shrink-0 ${removable ? 'opacity-60 group-hover:opacity-100' : 'pointer-events-none opacity-0'}"><i class="ph ph-x"></i></button>
+    </li>`;
+  }).join('');
+  list.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => { topBar(true); setTimeout(() => { files.splice(+b.dataset.del, 1); render(); topBar(false); toast('File deleted'); }, 700); });
+}
+
+function addFiles(list) {
+  const incoming = Array.from(list).map((f) => ({ name: f.name, size: f.size || 240000, status: 'UPLOADING', added: 'just now' }));
+  files.push(...incoming); render();
+  // Live timings: upload, then ~90 s of "Processing…" polled every 7 s. Compressed here to a few seconds.
+  setTimeout(() => { incoming.forEach((f) => f.status = 'IN_PROGRESS'); render(); }, 1400);
+  incoming.forEach((f, i) => setTimeout(() => { f.status = /fail/i.test(f.name) ? 'ERROR' : 'COMPLETED'; render(); }, 5200 + i * 1800));
+}
+$('#addFilesBtn').onclick = () => $('#fileInput').click();
+$('#dropzone').onclick = () => $('#fileInput').click();
+$('#fileInput').onchange = (e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = ''; };
+['dragenter','dragover'].forEach((ev) => $('#dropzone').addEventListener(ev, (e) => { e.preventDefault(); $('#dropzone').classList.add('!border-border-brand','!bg-bg-brand-selected'); }));
+['dragleave','drop'].forEach((ev) => $('#dropzone').addEventListener(ev, (e) => { e.preventDefault(); $('#dropzone').classList.remove('!border-border-brand','!bg-bg-brand-selected'); }));
+$('#dropzone').addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
+
+const dlg = $('#instrDialog');
+$('#instrBtn').onclick = () => { $('#instrText').value = instructions; dlg.classList.replace('hidden','flex'); $('#instrText').focus(); };
+dlg.querySelectorAll('[data-close-instr]').forEach((b) => b.onclick = () => dlg.classList.replace('flex','hidden'));
+$('#instrSave').onclick = () => { instructions = $('#instrText').value; dlg.classList.replace('flex','hidden'); render(); toast('Instructions saved'); };
+
+const SEED = [
+  { name: 'Northwind brand guidelines 2027.pdf', size: 4404019, status: 'COMPLETED', added: '3 days ago' },
+  { name: 'FY27 pricing sheet.docx', size: 214000, status: 'COMPLETED', added: '2 days ago' },
+  { name: 'Win stories Q4.pptx', size: 18350000, status: 'COMPLETED', added: '2 days ago' },
+];
+document.querySelectorAll('[data-seed]').forEach((b) => b.onclick = () => {
+  if (b.dataset.seed === 'empty') { files = []; instructions = ''; }
+  else { files = SEED.map((f) => ({ ...f })); instructions = 'Write for account executives. Lead with customer outcomes, keep each slide to three points, and use our FY27 pricing.'; }
+  render();
+});
+render();
+</script>
+</body>
+</html>
