@@ -292,16 +292,16 @@
 
   /* 1 · sidebar card, bottom left, above Invite members */
   /* a grey tile on the white sidebar: the preview sits inset in it, the white button pops off it */
-  .spromo { position: relative; border-radius: var(--r12); background: var(--bg-2); padding: 6px; animation: fadeUp .35s var(--std) both; }
-  .spromo .art { position: relative; height: 104px; border-radius: 8px; background: radial-gradient(120% 90% at 20% 0%, #eaf3ff 0%, #f1ece4 70%); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); }
+  .spromo { position: relative; border-radius: var(--r12); background: var(--bg-2); overflow: hidden; animation: fadeUp .35s var(--std) both; }
+  .spromo .art { position: relative; height: 108px; background: radial-gradient(120% 90% at 20% 0%, #eaf3ff 0%, #f1ece4 70%); overflow: hidden; }
   .spromo .art .browser { position: absolute; left: 14px; right: 14px; top: 12px; border-radius: 6px 6px 0 0; overflow: hidden; background: #fff; }
   .spromo .art .chrome { height: 18px; gap: 5px; padding: 0 6px; } .spromo .art .chrome .lights i { width: 5px; height: 5px; } .spromo .art .chrome .nav-ar { display: none; }
   .spromo .art .chrome .addr { height: 11px; font-size: 6px; border-radius: 3px; max-width: 75%; } .spromo .art .chrome .addr i { font-size: 5px; }
-  .spromo .bd { padding: 10px 6px 4px; }
+  .spromo .bd { padding: 10px 12px 12px; }
   .spromo .eb { font-size: 12px; line-height: 16px; color: var(--t2); display: flex; align-items: center; gap: 5px; }
   .spromo b { display: block; margin: 2px 0 10px; font-size: 13px; line-height: 18px; font-weight: 600; }
   .spromo .btn { width: 100%; }
-  .spromo .x { position: absolute; top: 10px; right: 10px; z-index: 2; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92);
+  .spromo .x { position: absolute; top: 6px; right: 6px; z-index: 2; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92);
     box-shadow: 0 1px 3px rgba(0,0,0,.12); display: grid; place-items: center; color: var(--t2); font-size: 12px; opacity: 0; transition: opacity .15s; }
   .spromo:hover .x, .spromo .x:focus-visible { opacity: 1; }
 
@@ -345,6 +345,9 @@
   .proto a:hover { background: var(--bg-2); }
   .proto a.on { background: #1a1a1a; color: #fff; }
   .proto .sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+  .proto, .proto-show { touch-action: none; user-select: none; }
+  .proto { cursor: grab; } .proto a, .proto button { cursor: pointer; }
+  .proto.dragging, .proto-show.dragging { cursor: grabbing; box-shadow: 0 12px 32px -8px rgba(0,0,0,.3); }
   .proto-hide { width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; color: var(--t2); display: grid; place-items: center; font-size: 11px; }
   .proto-hide:hover { background: var(--bg-2); color: var(--t); }
   .proto-show { position: fixed; left: 224px; bottom: 76px; z-index: 45; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line);
@@ -711,6 +714,8 @@ function renderDash(mode) {
 /* proto controls: hide with the × or the H key; remembered per browser */
 function setProto(hide) {
   $('.proto').hidden = hide; $('#protoShow').hidden = !hide;
+  const el = hide ? $('#protoShow') : $('.proto');
+  if (el.style.left) { const x = parseFloat(el.style.left), w = el.offsetWidth; if (x + w > innerWidth - 8) el.style.left = Math.max(8, innerWidth - w - 8) + 'px'; }
   try { localStorage.setItem('deckToSiteProtoHidden', hide ? '1' : ''); } catch (e) {}
 }
 $('#protoHide').onclick = () => setProto(true);
@@ -719,6 +724,43 @@ document.addEventListener('keydown', (e) => {
   if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey && !e.altKey && !/input|textarea|select/i.test(e.target.tagName)) setProto(!$('.proto').hidden);
 });
 try { if (localStorage.getItem('deckToSiteProtoHidden')) setProto(true); } catch (e) {}
+
+/* proto controls are draggable, open or collapsed; both share one remembered position.
+   A press that moves more than 4px is a drag and doesn't click the link or button under it. */
+(function dragProto() {
+  const els = [$('.proto'), $('#protoShow')];
+  const KEY = 'deckToSiteProtoPos';
+  const place = (x, y) => els.forEach((el) => {
+    const w = el.offsetWidth || 32, h = el.offsetHeight || 32;
+    el.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + 'px';
+    el.style.top = Math.max(8, Math.min(innerHeight - h - 8, y)) + 'px';
+    el.style.bottom = 'auto'; el.style.right = 'auto';
+  });
+  try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p) requestAnimationFrame(() => place(p.x, p.y)); } catch (e) {}
+  els.forEach((el) => {
+    let sx, sy, ox, oy, moved = false, down = false;
+    // Follow the pointer on the window, so a quick drag that leaves the control still moves it.
+    const move = (e) => {
+      if (!down) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!moved && Math.hypot(dx, dy) < 4) return;
+      if (!moved) { moved = true; el.classList.add('dragging'); }
+      e.preventDefault(); place(ox + dx, oy + dy);
+    };
+    const up = () => {
+      if (!down) return; down = false; el.classList.remove('dragging');
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      if (moved) { const r = el.getBoundingClientRect(); try { localStorage.setItem(KEY, JSON.stringify({ x: r.left, y: r.top })); } catch (e) {} }
+    };
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const r = el.getBoundingClientRect(); sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; moved = false; down = true;
+      addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    });
+    el.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+  });
+  addEventListener('resize', () => { const r = els[0].hidden ? els[1].getBoundingClientRect() : els[0].getBoundingClientRect(); if (els[0].style.left) place(r.left, r.top); });
+})();
 
 /* ── states ── */
 const q = new URLSearchParams(location.search);
