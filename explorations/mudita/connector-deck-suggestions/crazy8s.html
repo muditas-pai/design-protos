@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<!-- crazy8s · round 1 · suggestions panel (baseline: deck-suggestions.html) · 26 Nov 2026 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>crazy8s · suggestions panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <style>
+    /* tokens: pai.tailwind.config.js (new_dev_migration), light theme */
+    :root {
+      --bg-primary: #ffffff; --bg-secondary: #f5f5f5; --bg-tertiary: #f5f5f5; --bg-quaternary: #e6e6e6;
+      --brand: #0d99ff; --brand-hover: #007be5; --brand-inv: #e5f4ff; --text-brand: #007be5;
+      --success: #14ae5c; --success-inv: #e0f6e5; --text-success: #009951; --success-border: #b9ebc6;
+      --warning-inv: #fff1c2; --text-warning: #a15c00;
+      --text: #1a1a1a; --text-2: #7f7f7f; --text-4: #b2b2b2;
+      --border: #e6e6e6; --border-strong: rgba(26,26,26,.3);
+      --r-control: 6px; --r-card: 12px; --r-dialog: 16px;
+      --sh-menu: 0 1px 2px 0 rgb(0 0 0 / .06), 0 8px 24px -6px rgb(0 0 0 / .16);
+      --sh-dialog: 0 2px 6px 0 rgb(0 0 0 / .08), 0 24px 64px -12px rgb(0 0 0 / .28);
+      --sh-btn: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12);
+      --sh-segment: 0 1px 2px rgba(0,0,0,.12);
+      --std: cubic-bezier(0.2, 0, 0, 1);
+      --drawer: cubic-bezier(0.32, 0.72, 0, 1);
+      --font: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { background: var(--bg-tertiary); color: var(--text); font: 14px/20px var(--font); -webkit-font-smoothing: antialiased; }
+    button, select, input, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .shell { display: flex; height: 100vh; overflow: hidden; background: var(--bg-secondary); }
+
+    /* app logo tile (AppLogo in the connector protos): logo on a sunken tile, initials fallback */
+    .lg { width: 20px; height: 20px; border-radius: 5px; background: var(--bg-primary); box-shadow: 0 0 0 1px var(--border);
+      display: inline-grid; place-items: center; flex-shrink: 0; overflow: hidden; }
+    .lg img { width: 12px; height: 12px; object-fit: contain; }
+    .lg .ini { font-size: 7px; font-weight: 700; color: #fff; width: 13px; height: 13px; border-radius: 3px; display: grid; place-items: center; }
+    .lg.big { width: 28px; height: 28px; border-radius: var(--r-control); background: var(--bg-tertiary); box-shadow: none; }
+    .lg.big img { width: 16px; height: 16px; }
+    .lg.big .ini { width: 16px; height: 16px; font-size: 8px; }
+    .logos { display: inline-flex; align-items: center; }
+    .logos .lg + .lg { margin-left: -5px; }
+    .logos .lg { box-shadow: 0 0 0 1px var(--border), 0 0 0 2px var(--bg-primary); }
+
+    /* slide covers, in the layouts the live app's generated decks use (bleed / frame / split / band).
+       Sized in container units so the same cover works as a card thumbnail and as the drawer preview. */
+    .slide { position: absolute; inset: 0; container-type: inline-size; overflow: hidden; color: #fff; background: #111; }
+    .slide img { position: absolute; object-fit: cover; display: block; }
+    .slide .tx { position: absolute; display: flex; flex-direction: column; gap: 1.6cqw; }
+    .slide .ttl { font-weight: 600; font-size: 5.4cqw; line-height: 1.12; letter-spacing: -0.01em; text-wrap: balance; }
+    .slide .sub { font-size: 2.1cqw; line-height: 1.35; opacity: .78; }
+    .slide .by { position: absolute; font-size: 1.6cqw; font-weight: 600; letter-spacing: .02em; opacity: .75; display: flex; align-items: center; gap: 1cqw; }
+    .slide .by i { font-size: 2cqw; }
+    .slide .kick { font-size: 1.6cqw; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .sl-bleed img { inset: 0; width: 100%; height: 100%; }
+    .sl-bleed::after { content: ""; position: absolute; inset: 0; background: linear-gradient(200deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.72) 88%); }
+    .sl-bleed .tx { left: 6cqw; right: 30cqw; bottom: 7cqw; z-index: 1; }
+    .sl-bleed .by { left: 6cqw; top: 5cqw; z-index: 1; }
+    .sl-frame img { right: 5cqw; top: 9cqw; width: 38cqw; height: 38cqw; border-radius: 1.4cqw; z-index: 1; }
+    .sl-frame .tx { left: 6cqw; width: 44cqw; bottom: 9cqw; }
+    .sl-frame .by { left: 6cqw; top: 5cqw; }
+    .sl-frame .rule { position: absolute; left: 49cqw; right: 0; top: 45cqw; height: .6cqw; }
+    .sl-split img { left: 0; top: 0; width: 48%; height: 100%; }
+    .sl-split .tx { left: 54%; right: 6cqw; top: 50%; transform: translateY(-50%); }
+    .sl-split .by { left: 54%; bottom: 5cqw; }
+    .sl-band img { left: 0; top: 0; width: 100%; height: 60%; }
+    .sl-band .tx { left: 6cqw; right: 6cqw; bottom: 6cqw; }
+    .sl-band .ttl { font-size: 4.6cqw; }
+    .sl-band .by { right: 6cqw; bottom: 6cqw; }
+
+    /* image-free covers: type-led, or led by the deck's own numbers */
+    .sl-type .tx { left: 6cqw; right: 30cqw; bottom: 8cqw; }
+    .sl-type .ttl { font-size: 6.4cqw; }
+    .sl-type .by { left: 6cqw; top: 5cqw; }
+    .sl-type .months { position: absolute; left: 6cqw; right: 40cqw; top: 12cqw; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+    .sl-type .months div { border-top: .6cqw solid currentColor; padding-top: 1.2cqw; font-size: 1.6cqw; font-weight: 700; letter-spacing: .12em; }
+    .sl-type .months div:nth-child(2) { border-color: #c98a4b; } .sl-type .months div:nth-child(3) { opacity: .35; }
+    .sl-type .bar { position: absolute; left: 6cqw; top: 16cqw; width: 14cqw; height: 1cqw; }
+    .sl-type .ring { position: absolute; right: -10cqw; top: -14cqw; width: 52cqw; height: 52cqw; border-radius: 50%; border: 9cqw solid; opacity: .9; }
+    .sl-stat .tx { left: 6cqw; width: 42cqw; bottom: 8cqw; }
+    .sl-stat .by { left: 6cqw; top: 5cqw; }
+    .sl-stat .kpi { position: absolute; right: 6cqw; top: 9cqw; text-align: right; }
+    .sl-stat .kpi b { display: block; font-size: 9cqw; line-height: 1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sl-stat .kpi span { font-size: 1.8cqw; opacity: .7; }
+    .sl-stat .chart { position: absolute; right: 6cqw; bottom: 8cqw; width: 40cqw; height: 16cqw; display: flex; align-items: flex-end; gap: 1.2cqw; }
+    .sl-stat .chart i { flex: 1; border-radius: .5cqw .5cqw 0 0; background: currentColor; opacity: .28; }
+    .sl-stat .chart i.hi { opacity: 1; }
+    .sl-stat .rows { position: absolute; right: 6cqw; top: 10cqw; width: 38cqw; display: flex; flex-direction: column; gap: 2cqw; font-size: 1.7cqw; }
+    .sl-stat .rows div { display: grid; grid-template-columns: 11cqw 1fr; align-items: center; gap: 1.6cqw; }
+    .sl-stat .rows em { display: block; height: 2.4cqw; border-radius: .5cqw; font-style: normal; }
+
+    /* recurring: the same cover, stacked with the previous editions behind it */
+    .stack { position: absolute; inset: 0; background: var(--bg-tertiary); }
+    .stack .ed { position: absolute; left: 6%; right: 6%; top: 12%; bottom: 0; border-radius: 6px 6px 0 0; overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 6px 16px -6px rgba(0,0,0,.25); transform-origin: top center; }
+    .stack .ed.e3 { transform: translateY(-11%) scale(.88); filter: brightness(.7) saturate(.6); }
+    .stack .ed.e2 { transform: translateY(-6%) scale(.94); filter: brightness(.85) saturate(.8); }
+
+    .d-cover { position: relative; aspect-ratio: 16 / 9; border-radius: var(--r-card); overflow: hidden; border: 1px solid var(--border); margin-top: 20px; }
+
+  /* ── gallery chrome ── */
+  body { background: #e9e9eb; padding: 40px 24px 120px; }
+  .g-head { max-width: 1104px; margin: 0 auto 32px; }
+  .g-head h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -.01em; }
+  .g-head p { margin: 6px 0 0; color: var(--text-2); max-width: 760px; }
+  .var { max-width: 1104px; margin: 0 auto 56px; }
+  .var-label { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .var-label b { font-size: 15px; font-weight: 600; }
+  .var-label span { color: var(--text-2); font-size: 13px; }
+  .var-label .fit { margin-left: auto; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 99px; background: var(--success-inv); color: var(--text-success); }
+  .var-label .fit.over { background: var(--warning-inv); color: var(--text-warning); }
+  .page { background: var(--bg-secondary); border-radius: 14px; padding: 20px 24px 0; box-shadow: 0 0 0 1px rgba(0,0,0,.06); overflow: hidden; }
+  .page .tabsline { margin-top: 28px; display: flex; gap: 12px; border-bottom: 1px solid var(--border); }
+  .page .tabsline span { height: 40px; padding: 0 12px; display: inline-flex; align-items: center; color: var(--text-2); position: relative; }
+  .page .tabsline span.on { color: var(--text); font-weight: 500; }
+  .page .tabsline span.on::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 99px; background: var(--brand); }
+  .page .tabsline em { font-style: normal; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--brand-inv); color: var(--text-brand); font-size: 11px; font-weight: 600; display: inline-grid; place-items: center; }
+  .page .ghostrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; height: 40px; }
+  .page .ghostrow i { border-radius: 12px 12px 0 0; background: #fff; box-shadow: 0 0 0 1px var(--border); }
+
+  /* shared bits */
+  .panel { border-radius: var(--r-dialog); background: #fff; border: 1px solid var(--border); }
+  .hd { display: flex; align-items: center; gap: 10px; }
+  .hd h2 { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; }
+  .hd .sp { flex: 1; }
+  .hl .lg { width: 24px; height: 24px; border-radius: 6px; } .hl .lg img { width: 14px; height: 14px; }
+  .hl .lg + .lg { margin-left: -6px; }
+  .hl .more { font-size: 11px; font-weight: 600; color: var(--text-2); background: var(--bg-tertiary); }
+  .lnk { color: var(--text-brand); font-weight: 500; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; white-space: nowrap; }
+  .lnk:hover { text-decoration: underline; text-underline-offset: 2px; }
+  .thumb { position: relative; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--border); flex-shrink: 0; }
+  .cad { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 99px; font-size: 11px; font-weight: 500; white-space: nowrap; background: var(--bg-tertiary); color: var(--text-2); }
+  .cad i { font-size: 12px; }
+  .cad.once { background: var(--brand-inv); color: var(--text-brand); }
+  .segm { display: flex; padding: 2px; border-radius: var(--r-control); background: var(--bg-tertiary); }
+  .segm button { height: 28px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--text-2); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+  .segm button.on { background: #fff; color: var(--text); box-shadow: var(--sh-segment); }
+  .segm button em { font-style: normal; font-size: 12px; color: var(--text-2); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--r-control); font-weight: 500; font-size: 13px; white-space: nowrap; border: 1px solid var(--border); background: #fff; }
+  .btn:hover { border-color: var(--border-strong); background: var(--bg-tertiary); }
+  .btn.pri { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.pri:hover { background: var(--brand-hover); }
+  .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .row-scroll { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; }
+
+  /* 01 · cover strip */
+  .v1 { padding: 10px 14px 12px; }
+  .v1 .strip { margin-top: 10px; }
+  .v1 .it { width: 150px; flex-shrink: 0; cursor: pointer; }
+  .v1 .it .thumb { width: 150px; }
+  .v1 .it .cad { position: absolute; left: 6px; bottom: 6px; z-index: 2; background: rgba(255,255,255,.95); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .v1 .it p { margin: 6px 0 0; font-size: 13px; line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; display: block; }
+  .v1 .it:hover p { text-decoration: underline; text-underline-offset: 2px; }
+
+  /* 02 · featured + list */
+  .v2 { display: grid; grid-template-columns: 1.15fr 1fr; overflow: hidden; }
+  .v2 .feat { display: flex; gap: 14px; padding: 14px; border-right: 1px solid var(--border); }
+  .v2 .feat .thumb { width: 200px; }
+  .v2 .feat .k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-brand); }
+  .v2 .feat h3 { margin: 4px 0 4px; font-size: 15px; line-height: 20px; font-weight: 600; }
+  .v2 .feat p { margin: 0 0 10px; font-size: 13px; line-height: 18px; color: var(--text-2); }
+  .v2 .list { padding: 8px 8px; }
+  .v2 .list .li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+  .v2 .list .li:hover { background: var(--bg-tertiary); }
+  .v2 .list .li .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+  .v2 .list .li .thumb { width: 40px; border-radius: 4px; }
+  .v2 .list .lh { padding: 2px 8px 4px; font-size: 12px; color: var(--text-2); display: flex; }
+  .v2 .list .lh a { margin-left: auto; }
+
+  /* 03 · two columns */
+  .v3 { display: grid; grid-template-columns: 1fr 1fr; }
+  .v3 .v3h { grid-column: 1 / -1; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); }
+  .v3 .col { padding: 8px 14px 8px; }
+  .v3 .col + .col { border-left: 1px solid var(--border); }
+  .v3 .ch { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .v3 .ch i { font-size: 16px; color: var(--text-2); }
+  .v3 .ch b { font-size: 13px; font-weight: 600; }
+  .v3 .ch span { font-size: 12px; color: var(--text-2); }
+  .v3 .r { display: flex; align-items: center; gap: 10px; padding: 3px 6px; margin: 0 -6px; border-radius: 6px; cursor: pointer; }
+  .v3 .r:hover { background: var(--bg-tertiary); }
+  .v3 .r .thumb { width: 44px; border-radius: 4px; }
+  .v3 .r .t { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v3 .r .go { color: var(--text-4); font-size: 14px; }
+  .v3 .r:hover .go { color: var(--text); }
+
+  /* 04 · prompt chips */
+  .v4 { padding: 0; background: none; border: 0; }
+  .v4 .hd { padding: 0 2px; }
+  .v4 .chips { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .v4 .chip { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px 0 6px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--border); cursor: pointer; font-size: 13px; transition: box-shadow .15s; }
+  .v4 .chip:hover { box-shadow: inset 0 0 0 1px var(--border-strong), var(--sh-menu); }
+  .v4 .chip .thumb { width: 56px; border-radius: 5px; }
+  .v4 .chip i.rec { color: var(--text-2); font-size: 14px; }
+
+  /* 05 · by app */
+  .v5 { padding: 12px 14px 14px; }
+  .v5 .apptabs { display: flex; gap: 4px; }
+  .v5 .apptabs button { height: 30px; padding: 0 10px 0 6px; border: 0; border-radius: 6px; background: transparent; display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 13px; font-weight: 500; }
+  .v5 .apptabs button.on { background: var(--bg-tertiary); color: var(--text); }
+  .v5 .apptabs button em { font-style: normal; font-size: 11px; color: var(--text-4); }
+  .v5 .cards { margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .v5 .c { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; }
+  .v5 .c:hover { box-shadow: var(--sh-menu); border-color: transparent; }
+  .v5 .c .thumb { width: 92px; }
+  .v5 .c .t { font-size: 13px; line-height: 17px; }
+  .v5 .c .cad { margin-top: 5px; }
+
+  /* 06 · a tab in Recent */
+  .v6 .tabsline { margin-top: 0 !important; }
+  .v6 .sg { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .v6 .sc { border-radius: 12px; border: 1px dashed #c7c7cc; background: #fcfcfd; overflow: hidden; cursor: pointer; }
+  .v6 .sc:hover { border-style: solid; border-color: var(--border); box-shadow: var(--sh-menu); background: #fff; }
+  .v6 .sc .thumb { border-radius: 0; box-shadow: none; border-bottom: 1px dashed #c7c7cc; }
+  .v6 .sc .b { padding: 10px 12px 12px; display: flex; align-items: center; gap: 8px; }
+  .v6 .sc .b .t { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v6 .why { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--text-2); }
+
+  /* 07 · table */
+  .v7 { overflow: hidden; }
+  .v7 .hd { padding: 8px 12px 8px 14px; border-bottom: 1px solid var(--border); }
+  .v7 table { width: 100%; border-collapse: collapse; }
+  .v7 td { padding: 4px 10px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  .v7 tr:last-child td { border-bottom: 0; }
+  .v7 tr:hover td { background: #fafafa; }
+  .v7 td.th { width: 64px; padding-left: 14px; } .v7 td.th .thumb { width: 52px; border-radius: 4px; }
+  .v7 td.t { font-weight: 500; }
+  .v7 td.w { color: var(--text-2); }
+  .v7 td.a { text-align: right; padding-right: 12px; width: 1%; white-space: nowrap; }
+  .v7 .foot { padding: 6px 14px 8px; border-top: 1px solid var(--border); }
+
+  /* 08 · timeline */
+  .v8 { padding: 12px 16px 14px; }
+  .v8 .axis { position: relative; margin-top: 14px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 12px; }
+  .v8 .axis::before { content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 2px; background: var(--bg-quaternary); border-radius: 2px; }
+  .v8 .day { position: relative; }
+  .v8 .day .dot { width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px var(--bg-quaternary); position: relative; z-index: 1; }
+  .v8 .day.now .dot { box-shadow: inset 0 0 0 5px var(--brand); }
+  .v8 .day .dl { margin: 6px 0 8px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+  .v8 .day.now .dl { color: var(--text-brand); }
+  .v8 .pins { display: flex; flex-direction: column; gap: 6px; }
+  .v8 .pin { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 4px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 12px; line-height: 15px; }
+  .v8 .pin:hover { box-shadow: var(--sh-menu); border-color: transparent; }
+  .v8 .pin .thumb { width: 44px; border-radius: 4px; }
+  .v8 .now .pins { flex-direction: row; }
+  .v8 .now .pin { flex: 1; min-width: 0; }
+  .v8 .now .pin span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+</style>
+</head>
+<body>
+<header class="g-head">
+  <h1>Round 1 · Suggestions panel</h1>
+  <p>Eight ways to frame "decks we can make from your apps" on the dashboard. Varying layout, cards, and the header and switch. Kept: the live-app design system, and every option fits above the fold so Recent still shows. Each is shown in a strip of the Home page with Recent's tabs underneath.</p>
+</header>
+<div id="gallery"></div>
+
+<script>
+const APPS = {
+  shopify: { name: "Shopify",          slug: "shopify" },
+  ga:      { name: "Google Analytics", slug: "googleanalytics" },
+  meta:    { name: "Meta Ads",         slug: "meta" },
+  klaviyo: { name: "Klaviyo",          color: "#232426" },
+  drive:   { name: "Google Drive",     slug: "googledrive" },
+  slack:   { name: "Slack",            color: "#4a154b" },
+};
+
+const SUGG = [
+  { id: "bf", kind: "once", cover: "bf",
+    title: "Black Friday early access: the first 72 hours",
+    reason: "Early access sales are up about two-thirds on the same days last year.",
+    apps: ["shopify", "klaviyo", "meta"],
+    why: [
+      ["shopify", "$184k in early-access sales since 23 Nov", "Up 64% on the same three days in 2025"],
+      ["klaviyo", "The VIP early-access email drove about a third of those orders", "Sent 23 Nov to 18,400 subscribers"],
+      ["meta", "The “Nap test” Reels ad has your lowest cost per purchase this month", "Running since 20 Nov"],
+    ],
+    outline: [
+      ["Black Friday early access: the first 72 hours", "Title", []],
+      ["The headline numbers", "Revenue, orders and order value against 2025", ["shopify"]],
+      ["Where the orders came from", "Email, paid social, search and direct", ["ga", "shopify"]],
+      ["The email that worked", "VIP early access: opens, clicks, orders", ["klaviyo"]],
+      ["Ads worth more budget", "Top three creatives by cost per purchase", ["meta"]],
+      ["What sold", "Orbit cat tree and Cloud orthopedic bed lead", ["shopify"]],
+      ["Before Cyber Monday", "Three changes to make by Sunday", []],
+    ],
+    bridge: { title: "Want the same recap after Cyber Monday?", sub: "Make it recurring and we'll build it after each sale event.", how: "event" },
+  },
+  { id: "orbit", kind: "once", cover: "orbit",
+    title: "Why the Orbit cat tree sold out",
+    reason: "Sold out in nine days. A restock case for leadership, with the numbers behind it.",
+    apps: ["shopify", "ga", "meta", "drive"],
+    why: [
+      ["shopify", "1,240 Orbit cat trees sold in 9 days; out of stock since 19 Nov", "Your fastest sell-through this year"],
+      ["ga", "Orbit page visits roughly tripled after 12 Nov", "Most new visits came from tiktok.com"],
+      ["drive", "Restock lead time is 6 weeks", "From “Supplier terms 2026” in Operations"],
+    ],
+    outline: [
+      ["Why the Orbit cat tree sold out", "Title", []],
+      ["Nine days, 1,240 units", "Daily sales since launch", ["shopify"]],
+      ["What drove the traffic", "TikTok referral spike, then paid social", ["ga", "meta"]],
+      ["Who bought it", "New vs returning, top regions", ["shopify"]],
+      ["What a sell-out costs us", "Missed demand while out of stock", ["shopify", "ga"]],
+      ["The restock ask", "Quantity and timing against a 6-week lead time", ["drive"]],
+    ],
+    bridge: null,
+  },
+  { id: "plan", kind: "once", cover: "plan",
+    title: "Q1 2027 marketing plan",
+    reason: "Planning season. We start from this year's results and your 2026 brand plan.",
+    apps: ["drive", "shopify", "ga"],
+    why: [
+      ["drive", "“2026 Brand plan” and “Q4 budget” in your Marketing folder", "Edited 3 Nov and 18 Nov"],
+      ["shopify", "Cat trees and orthopedic beds made most of this year's revenue", "January to November 2026"],
+      ["ga", "January was your slowest month for traffic two years running", "2025 and 2026"],
+    ],
+    outline: [
+      ["Q1 2027 marketing plan", "Title", []],
+      ["2026 in review", "What grew, what didn't", ["shopify", "ga"]],
+      ["Goals for Q1", "Carried over from the 2026 brand plan", ["drive"]],
+      ["Beating the January dip", "Two campaigns for the slow month", ["ga"]],
+      ["Budget by channel", "Starting from the Q4 split", ["drive", "meta"]],
+      ["Launch calendar", "January to March", []],
+    ],
+    bridge: null,
+  },
+
+  { id: "weekly", kind: "rec", cover: "weekly", how: "week",
+    title: "Weekly marketing update",
+    cadence: "Every Monday", reason: "You've built this by hand 6 times since September. We'll make it every Monday.",
+    apps: ["shopify", "ga", "meta", "klaviyo"],
+    why: [
+      ["drive", "Six “Weekly marketing update” decks since 7 Sep", "About 8 slides each, most recent 16 Nov"],
+      [["shopify","ga","meta","klaviyo"], "Every number in them comes from four of your connected apps", "Shopify, Google Analytics, Meta Ads, Klaviyo"],
+    ],
+    outline: [
+      ["The week at a glance", "Revenue, orders, traffic against last week", ["shopify", "ga"]],
+      ["Sales", "Daily revenue and top products", ["shopify"]],
+      ["Traffic and conversion", "By channel", ["ga"]],
+      ["Paid social", "Spend, cost per purchase, best ad", ["meta"]],
+      ["Email", "Campaigns sent and the orders they drove", ["klaviyo"]],
+      ["What changed and why", "The two or three things worth a conversation", []],
+      ["Next week", "Launches and campaigns on the calendar", []],
+    ],
+  },
+  { id: "monthly", kind: "rec", cover: "monthly", how: "month",
+    title: "Monthly channel review",
+    cadence: "1st of the month", reason: "Spend against return for every channel, ready for the leadership meeting.",
+    apps: ["meta", "ga", "shopify", "drive"],
+    why: [
+      ["meta", "$42k of ad spend in November across 3 campaigns", "So far this month"],
+      ["drive", "Your October leadership deck had a channel table you built by hand", "“Leadership sync · Oct”"],
+    ],
+    outline: [
+      ["The month in one slide", "Revenue, spend, return", ["shopify", "meta"]],
+      ["Channel table", "Spend, revenue and return for each channel", ["ga", "meta"]],
+      ["Biggest movers", "Up and down against last month", ["ga"]],
+      ["Customer mix", "New against returning", ["shopify"]],
+      ["Next month's budget", "Where we'd shift spend", []],
+    ],
+  },
+  { id: "campaign", kind: "rec", cover: "campaign", how: "trigger",
+    title: "Campaign recap",
+    cadence: "After each email campaign", reason: "Two days after a Klaviyo campaign goes out: opens, clicks and the orders it drove.",
+    apps: ["klaviyo", "shopify"],
+    why: [
+      ["klaviyo", "9 campaigns sent in November", "Three more scheduled before 31 Dec"],
+      ["shopify", "Orders carry the campaign they came from", "So each recap shows real revenue, not just clicks"],
+    ],
+    outline: [
+      ["Campaign at a glance", "Sent, opened, clicked, bought", ["klaviyo", "shopify"]],
+      ["Subject line and content", "What subscribers saw", ["klaviyo"]],
+      ["What it sold", "Revenue and top products from the campaign", ["shopify"]],
+      ["Against your average", "How it compares to the last 10 campaigns", ["klaviyo"]],
+    ],
+  },
+];
+
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+const $ = s => document.querySelector(s);
+const ini = a => a.name.split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+const logo = (k, big) => {
+  const a = APPS[k];
+  const inner = a.slug
+    ? `<img src="https://cdn.simpleicons.org/${a.slug}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;ini&quot; style=&quot;background:#7f7f7f&quot;>${ini(a)}</span>'">`
+    : `<span class="ini" style="background:${a.color}">${ini(a)}</span>`;
+  return `<span class="lg${big ? " big" : ""}" title="${a.name}">${inner}</span>`;
+};
+const logos = ks => `<span class="logos">${ks.map(k => logo(k)).join("")}</span>`;
+const scheduled = new Set();
+
+const IMG = id => `https://images.unsplash.com/photo-${id}?w=1000&h=1000&fit=crop&auto=format&q=70`;
+const PHOTOS = {
+  shoppingBags: "1760565030346-4b947220fe3a", catTree: "1652113935269-cb82cbd01524",
+  envelopes: "1762427354081-26d22739d641", yellowChair: "1586023492125-27b2c045efd7",
+};
+const BY = `<div class="by"><i class="ph-fill ph-paw-print"></i>PERCH &amp; PAW</div>`;
+/* layouts: bleed / frame / split / band use a photo; type / stat do not (extra = the layout's own shapes) */
+function slide(layout, { photo, title, sub, kick, bg = "#111", fg = "#fff", accent, extra = "" }) {
+  return `<div class="slide sl-${layout}" style="background:${bg};color:${fg}">
+    ${photo ? `<img src="${IMG(PHOTOS[photo])}" alt="" loading="lazy">` : ""}
+    ${accent && layout === "frame" ? `<span class="rule" style="background:${accent}"></span>` : ""}${extra}${BY}
+    <div class="tx">${kick ? `<span class="kick" style="color:${accent || "inherit"}">${kick}</span>` : ""}<div class="ttl">${title}</div>${sub ? `<div class="sub">${sub}</div>` : ""}</div></div>`;
+}
+const bars = (hs, hi) => `<div class="chart">${hs.map((h, i) => `<i class="${i >= hi ? "hi" : ""}" style="height:${h}%"></i>`).join("")}</div>`;
+const COVERS = {
+  bf: () => slide("split", { photo: "shoppingBags", bg: "#161412", accent: "#f08a24", kick: "Black Friday 2026",
+        title: "Early access: the first 72 hours", sub: "Up 64% on last year" }),
+  orbit: () => slide("bleed", { photo: "catTree", title: "Why the Orbit cat tree sold out",
+        sub: "1,240 units in 9 days, and the case for a restock" }),
+  plan: () => slide("type", { bg: "#f3ece2", fg: "#2a1d0c", kick: "Marketing plan", accent: "#9a5d27",
+        title: "Q1 2027: goals, budget and launches", sub: "January to March 2027",
+        extra: `<div class="months"><div>JAN</div><div>FEB</div><div>MAR</div></div>` }),
+  weekly: () => stack(e => slide("stat", { bg: "linear-gradient(120deg,#0b2545,#13506b)", kick: "Weekly marketing update", accent: "#8fd3ff",
+        title: ["Week of 23 Nov", "Week of 16 Nov", "Week of 9 Nov"][e], sub: "Revenue, traffic, paid social and email",
+        extra: `<div class="kpi"><b>${["$212k", "$148k", "$131k"][e]}</b><span>revenue this week</span></div>${bars([34, 40, 36, 44, 42, 58, 92], 6)}` })),
+  monthly: () => stack(e => slide("stat", { bg: "#ffffff", fg: "#14213d", kick: "Channel review", accent: "#2f6fde",
+        title: ["November 2026", "October 2026", "September 2026"][e], sub: "Spend and return by channel",
+        extra: `<div class="rows">${[["Email", 92, "#2f6fde"], ["Paid social", 74, "#2f6fde"], ["Search", 58, "#9db8ea"], ["Organic", 41, "#9db8ea"], ["Affiliates", 22, "#d5e0f5"]]
+          .map(([l, w, c]) => `<div><span>${l}</span><em style="width:${w}%;background:${c}"></em></div>`).join("")}</div>` })),
+  campaign: () => stack(e => slide("frame", { photo: "envelopes", bg: "#1d1630", accent: "#ff8fb1", kick: "Campaign recap",
+        title: ["Cyber Monday", "VIP early access", "Cosy season"][e], sub: "Opens, clicks and the orders it drove" })),
+  recentA: () => slide("bleed", { photo: "yellowChair", title: "Spring 2027 collection lookbook", sub: "Beds, sofas and throws for homes with pets" }),
+  recentB: () => slide("type", { bg: "#141416", kick: "Retail partners", accent: "#f08a24",
+        title: "Modular cat furniture for your stores", sub: "Partner pitch · 2027 range",
+        extra: `<span class="ring" style="border-color:#f08a24"></span>` }),
+  recentC: () => slide("stat", { bg: "linear-gradient(120deg,#0b2545,#13506b)", kick: "Weekly marketing update", accent: "#8fd3ff",
+        title: "Week of 9 Nov", sub: "Revenue, traffic, paid social and email",
+        extra: `<div class="kpi"><b>$131k</b><span>revenue this week</span></div>${bars([30, 36, 33, 41, 38, 46, 52], 6)}` }),
+};
+function stack(make) {
+  return `<div class="stack"><div class="ed e3">${make(2)}</div><div class="ed e2">${make(1)}</div><div class="ed">${make(0)}</div></div>`;
+}
+
+
+
+const ONCE = SUGG.filter((s) => s.kind === 'once'), REC = SUGG.filter((s) => s.kind === 'rec');
+const CONNECTED = ['shopify', 'ga', 'meta', 'klaviyo', 'drive'];
+const th = (s) => `<div class="thumb">${COVERS[s.cover]()}</div>`;
+const headLogos = () => `<span class="logos hl">${CONNECTED.slice(0, 3).map((k) => logo(k)).join('')}<span class="lg more">+2</span></span>`;
+const TITLE = 'Decks can be made from your Shopify, Analytics and more';
+const cadence = (s) => s.kind === 'once' ? '<span class="cad once">One-time</span>' : `<span class="cad"><i class="ph ph-arrows-clockwise"></i>${s.cadence}</span>`;
+const tabsLine = (extra = '') => `<div class="tabsline"><span class="on">Recent</span><span>Created by me</span><span>Starred</span><span>Shared with me</span>${extra}</div><div class="ghostrow"><i></i><i></i><i></i></div>`;
+
+const V = [];
+
+// 01 · Cover strip: one row of small covers, both kinds mixed, recurring marked on the cover
+V.push({ label: 'Cover strip', note: 'One scrolling row of covers, both kinds mixed; recurring ones carry their schedule on the cover. No switch.', html: () => `
+  <div class="panel v1"><div class="hd">${headLogos()}<h2>${TITLE}</h2><span class="sp"></span><a class="lnk" href="#">See all 6<i class="ph ph-arrow-right"></i></a></div>
+    <div class="row-scroll strip">${[ONCE[0], REC[0], ONCE[1], REC[1], ONCE[2], REC[2]].map((s) => `<div class="it"><div class="thumb">${COVERS[s.cover]()}${s.kind === 'rec' ? `<span class="cad"><i class="ph ph-arrows-clockwise"></i>${s.cadence}</span>` : ''}</div><p class="clamp2">${s.title}</p></div>`).join('')}</div></div>${tabsLine()}` });
+
+// 02 · Featured + list: the strongest idea gets the space, the rest are a quiet list
+V.push({ label: 'Featured + list', note: 'The most timely idea gets a cover, a reason and a button; the other five are one line each.', html: () => { const f = ONCE[0];
+  return `<div class="panel v2"><div class="feat">${th(f)}<div><div class="k">Suggested now</div><h3>${f.title}</h3><p class="clamp2">${f.reason}</p><button class="btn pri">Create deck</button> <span style="margin-left:8px">${logos(f.apps)}</span></div></div>
+    <div class="list"><div class="lh">${TITLE.replace('Decks can be made from your ', 'More from your ')}<a class="lnk" href="#">See all</a></div>
+      ${[ONCE[1], REC[0], ONCE[2], REC[1]].map((s) => `<div class="li"><div class="thumb">${COVERS[s.cover]()}</div><span class="t">${s.title}</span>${cadence(s)}</div>`).join('')}</div></div>${tabsLine()}`; } });
+
+// 03 · Two columns: one-time and recurring side by side, no switch
+V.push({ label: 'Two columns', note: 'One-time and Recurring side by side, three rows each. Nothing hidden behind a switch.', html: () => `
+  <div class="panel v3"><div class="hd v3h">${headLogos()}<h2>${TITLE}</h2></div>${[['ph-presentation', 'One-time', 'for this week', ONCE], ['ph-arrows-clockwise', 'Recurring', 'we make them on schedule', REC]].map(([ic, n, sub, list]) => `
+    <div class="col"><div class="ch"><i class="ph ${ic}"></i><b>${n}</b><span>${sub}</span></div>
+      ${list.map((s) => `<div class="r"><div class="thumb">${COVERS[s.cover]()}</div><span class="t">${s.title}</span>${s.kind === 'rec' ? `<span class="cad">${s.cadence}</span>` : logos(s.apps)}<i class="ph ph-caret-right go"></i></div>`).join('')}</div>`).join('')}</div>${tabsLine()}` });
+
+// 04 · Prompt chips: suggestions read like prompts, no panel at all
+V.push({ label: 'Prompt chips', note: 'No panel: the ideas sit under the composer as chips with a tiny cover, like ready-made prompts. Lightest of the eight.', html: () => `
+  <div class="v4"><div class="hd">${headLogos()}<h2 style="font-weight:500;color:var(--text-2)">${TITLE}</h2></div>
+    <div class="chips">${SUGG.map((s) => `<span class="chip"><div class="thumb">${COVERS[s.cover]()}</div>${s.title}${s.kind === 'rec' ? '<i class="ph ph-arrows-clockwise rec" title="Recurring"></i>' : ''}</span>`).join('')}</div></div>${tabsLine()}` });
+
+// 05 · By app: the switch becomes one tab per connected app
+V.push({ label: 'By app', note: 'The header switch becomes one tab per connected app, so the title can drop the app names. Recurring ones show their schedule.', html: () => {
+  const by = { shopify: SUGG.filter((s) => s.apps.includes('shopify')), ga: SUGG.filter((s) => s.apps.includes('ga')), meta: SUGG.filter((s) => s.apps.includes('meta')), klaviyo: SUGG.filter((s) => s.apps.includes('klaviyo')), drive: SUGG.filter((s) => s.apps.includes('drive')) };
+  return `<div class="panel v5" data-v5><div class="hd"><h2>Decks from your apps</h2><span class="sp"></span>
+      <div class="apptabs">${CONNECTED.map((k, i) => `<button class="${i === 0 ? 'on' : ''}" data-app="${k}">${logo(k)}${APPS[k].name.replace('Google ', '')}<em>${by[k].length}</em></button>`).join('')}</div></div>
+    <div class="cards">${by.shopify.slice(0, 3).map(v5card).join('')}</div></div>${tabsLine()}`; } });
+function v5card(s) { return `<div class="c"><div class="thumb">${COVERS[s.cover]()}</div><div><div class="t clamp2">${s.title}</div>${cadence(s)}</div></div>`; }
+
+// 06 · A tab in Recent: zero added height; suggestions live next to Recent
+V.push({ label: 'Suggested tab', note: 'No panel above Recent: a "Suggested" tab with a count sits in the deck tabs. Shown here open; dashed cards read as decks not made yet.', html: () => `
+  <div class="v6"><div class="tabsline"><span>Recent</span><span class="on">Suggested<em>6</em></span><span>Created by me</span><span>Starred</span><span>Shared with me</span></div>
+    <div class="why">${headLogos()}${TITLE}</div>
+    <div class="sg">${[ONCE[0], REC[0], ONCE[1]].map((s) => `<div class="sc"><div class="thumb">${COVERS[s.cover]()}</div><div class="b"><span class="t">${s.title}</span>${cadence(s)}</div></div>`).join('')}</div></div>` });
+
+// 07 · Table: a dense list with a clear action per row
+V.push({ label: 'Action table', note: 'A compact table: cover, title, what it is, sources, and a direct button per row. Three rows; a filter and See all in the header.', html: () => `
+  <div class="panel v7"><div class="hd">${headLogos()}<h2>${TITLE}</h2><span class="sp"></span><div class="segm"><button class="on">All<em>6</em></button><button>One-time<em>3</em></button><button>Recurring<em>3</em></button></div><a class="lnk" href="#" style="margin-left:6px">See all</a></div>
+    <table>${[ONCE[0], REC[0], ONCE[1]].map((s) => `<tr><td class="th"><div class="thumb">${COVERS[s.cover]()}</div></td><td class="t">${s.title}</td><td>${cadence(s)}</td><td class="w">${logos(s.apps)}</td>
+      <td class="a"><button class="btn ${s.kind === 'once' ? '' : ''}">${s.kind === 'once' ? 'Create' : 'Set up'}</button></td></tr>`).join('')}</table>
+    </div>${tabsLine()}` });
+
+// 08 · Timeline: when each deck would land
+V.push({ label: 'Timeline', note: 'Ideas placed on the days they\'d land: one-time decks now, recurring ones on their next run. Makes the schedule visible.', html: () => `
+  <div class="panel v8"><div class="hd">${headLogos()}<h2>${TITLE}</h2></div>
+    <div class="axis">
+      <div class="day now"><div class="dot"></div><div class="dl">Today</div><div class="pins">${ONCE.slice(0, 2).map((s) => `<div class="pin"><div class="thumb">${COVERS[s.cover]()}</div><span>${s.title}</span></div>`).join('')}</div></div>
+      ${[['Mon 30 Nov', REC[0]], ['Tue 1 Dec', REC[1]], ['Wed 2 Dec', REC[2]]].map(([d, s]) => `<div class="day"><div class="dot"></div><div class="dl">${d}</div><div class="pins"><div class="pin"><div class="thumb">${COVERS[s.cover]()}</div><span>${s.title}<br><span style="color:var(--text-2)">${s.cadence}</span></span></div></div></div>`).join('')}
+    </div></div>${tabsLine()}` });
+
+$('#gallery').innerHTML = V.map((v, i) => `<section class="var"><div class="var-label"><b style="white-space:nowrap">${String(i + 1).padStart(2, '0')} · ${v.label}</b><span>${v.note}</span><span class="fit" data-fit></span></div><div class="page" data-page>${v.html()}</div></section>`).join('');
+
+// v05 app tabs work
+document.querySelector('[data-v5]').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-app]'); if (!b) return;
+  const p = b.closest('[data-v5]'); p.querySelectorAll('[data-app]').forEach((x) => x.classList.toggle('on', x === b));
+  p.querySelector('.cards').innerHTML = SUGG.filter((s) => s.apps.includes(b.dataset.app)).slice(0, 3).map(v5card).join('');
+});
+// fold check: the panel plus the tabs must fit in the ~190px left under the hero on a laptop screen
+requestAnimationFrame(() => setTimeout(() => document.querySelectorAll('[data-page]').forEach((p) => {
+  const tabs = p.querySelector('.tabsline'); const h = tabs.getBoundingClientRect().top - p.getBoundingClientRect().top - 20;
+  const f = p.parentElement.querySelector('[data-fit]'); const ok = h <= 210;
+  f.textContent = ok ? 'Recent stays above the fold' : 'Pushes Recent down'; f.classList.toggle('over', !ok);
+}), 400));
+</script>
+</body>
+</html>
