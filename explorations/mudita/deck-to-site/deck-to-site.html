@@ -288,12 +288,6 @@
   .card .cfoot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .card .cfoot .stat { font-size: 13px; color: var(--t2); }
 
-  /* 3 · paired: an empty "site" card next to the deck */
-  .card.ghost { border-style: dashed; border-color: #cfcfd4; background: #fcfcfd; }
-  .card.ghost .cv { aspect-ratio: 16 / 9; background: radial-gradient(120% 90% at 20% 0%, #eaf3ff 0%, #f1ece4 70%); border-bottom: 1px dashed #cfcfd4; }
-  .card.ghost .cv .browser { position: absolute; left: 22px; right: 22px; top: 20px; border-radius: 8px 8px 0 0; overflow: hidden; background: #fff; filter: saturate(.85); }
-  .card.ghost .cv .veil { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(to top, rgba(252,252,253,.9) 15%, rgba(252,252,253,.2) 70%); }
-  .card.ghost .link { display: inline-flex; align-items: center; gap: 4px; color: var(--t-brand); font-weight: 500; }
 
   .proto { position: fixed; left: 224px; bottom: 76px; z-index: 45; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 99px; border: 1px solid var(--line);
     background: rgba(255,255,255,.95); backdrop-filter: blur(8px); box-shadow: var(--menu); font-size: 12px; flex-wrap: wrap; max-width: calc(100vw - 32px); }
@@ -427,7 +421,7 @@
 
 <nav class="proto" aria-label="Prototype states"><b>Editor</b>
   <a href="?screen=editor&state=nudge">Nudge card</a><a href="?screen=editor&state=export">After export</a><a href="?screen=editor&state=menu">Export menu</a>
-  <span class="sep"></span><b>Dashboard</b><a href="?screen=dash&state=banner">Sidebar card</a><a href="?screen=dash&state=card">On the card</a><a href="?screen=dash&state=paired">Paired</a><a href="?screen=dash&state=live">Live</a>
+  <span class="sep"></span><b>Dashboard</b><a href="?screen=dash&state=banner">Sidebar card</a><a href="?screen=dash&state=live">Live</a>
   <span class="sep"></span><button class="proto-hide" id="protoHide" aria-label="Hide prototype controls" title="Hide (press H)"><i class="ph-bold ph-x"></i></button>
 </nav>
 <button class="proto-show" id="protoShow" aria-label="Show prototype controls" title="Show prototype controls (press H)" hidden><i class="ph ph-sliders-horizontal"></i></button>
@@ -567,28 +561,18 @@ function renderDash(mode) {
   ];
   const plain = (c) => `<article class="card"><div class="cv">${slide(c.s)}</div><div class="cb"><div><div class="ct">${c.t}</div><div class="cm">${c.m}</div></div><i class="ph ph-dots-three more"></i></div></article>`;
 
-  let first;
-  if (mode === 'card' || mode === 'live') {
-    // 2 · the deck's own card carries it: a browser window peeks out of the cover
-    const live = mode === 'live';
+  let first = plain(deck);
+  if (mode === 'live') {
+    // after publishing: the deck's card shows the live site peeking out of the cover, with its numbers
     first = `<article class="card">
-      <div class="cv">${slide(deck.s)}<span class="flag ${live ? 'live' : ''}"><i class="ph-fill ph-globe-simple"></i>${live ? 'Live site' : 'Landing page ready to build'}</span>
+      <div class="cv">${slide(deck.s)}<span class="flag live">Live site</span>
         <div class="peek browser">${CHROME(URL_)}<div class="mini" data-mini="134"></div></div></div>
       <div class="cb"><div><div class="ct">${deck.t}</div>
-        <div class="cfoot">${live
-          ? `<span class="stat">${URL_}</span><span class="stat" style="margin-left:auto">128 visits · 9 pre-orders</span>`
-          : `<span class="stat">${deck.m}</span><button class="btn btn-secondary btn-sm" style="margin-left:auto;height:28px" data-offer><i class="ph ph-globe-simple"></i>Build page</button>`}</div></div>
+        <div class="cfoot"><span class="stat">${URL_}</span><span class="stat" style="margin-left:auto">128 visits · 9 pre-orders</span></div></div>
         <i class="ph ph-dots-three more"></i></div></article>`;
-  } else {
-    first = plain(deck);
   }
-  // 3 · paired: an empty site card sits right after the deck
-  const ghost = mode === 'paired' ? `<article class="card ghost" data-offer style="cursor:pointer">
-      <div class="cv"><div class="browser">${CHROME(URL_)}<div class="mini" data-mini="310"></div></div><div class="veil"></div></div>
-      <div class="cb"><div><div class="ct">Orbit · landing page</div><div class="cm">From Orbit launch pitch · <span class="link">Build it<i class="ph ph-arrow-right"></i></span></div></div>
-        <button class="icon-btn" data-dismiss aria-label="Don't suggest" style="width:28px;height:28px;margin:-4px -6px 0 0;font-size:16px"><i class="ph ph-x"></i></button></div></article>` : '';
 
-  $('#dgrid').innerHTML = first + ghost + others.slice(0, ghost ? 4 : 5).map(plain).join('');
+  $('#dgrid').innerHTML = first + others.map(plain).join('');
   mountMinis($('#dash'));
   $('#dash').querySelectorAll('[data-offer]').forEach((b) => b.addEventListener('click', (e) => { if (e.target.closest('[data-dismiss]')) return; openBuild('choose'); }));
   $('#dash').querySelectorAll('[data-dismiss]').forEach((b) => b.addEventListener('click', (e) => {
@@ -652,7 +636,7 @@ try { if (localStorage.getItem('deckToSiteProtoHidden')) setProto(true); } catch
 const q = new URLSearchParams(location.search);
 const screen = q.get('screen') || 'editor', state = q.get('state') || 'nudge';
 document.querySelectorAll('.proto a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === `?screen=${screen}&state=${state}`));
-if (screen === 'dash') { $('#editor').hidden = true; $('#dash').hidden = false; renderDash(['banner', 'card', 'paired', 'live'].includes(state) ? state : 'banner'); }
+if (screen === 'dash') { $('#editor').hidden = true; $('#dash').hidden = false; renderDash(state === 'live' ? 'live' : 'banner'); }
 else {
   if (state === 'nudge') setTimeout(showNudge, 900);     // e.g. first open after generation
   if (state === 'export') setTimeout(() => $('#exportBtn').click(), 500);
