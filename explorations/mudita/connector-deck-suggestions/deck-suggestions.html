@@ -164,10 +164,20 @@
        beside it, and the list heading lines up with the hero label. */
     .fl { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); overflow: hidden; padding: 0; }
     .fl .feat { display: flex; align-items: stretch; border-right: 1px solid var(--border); min-width: 0; }
-    .fl .feat .hthumb { position: relative; height: 100%; aspect-ratio: 16/9; flex-shrink: 0; overflow: hidden; cursor: pointer;
-      border-right: 1px solid var(--border); }
-    .fl .feat .hthumb .slide { transition: transform .4s var(--std); }
-    .fl .feat .hthumb:hover .slide { transform: scale(1.03); }
+    /* the cover reads as a deck: a stack of sheets on a soft stage, the cover in front */
+    .fl .feat .hthumb { position: relative; width: 300px; flex-shrink: 0; overflow: hidden; cursor: pointer;
+      background: radial-gradient(120% 120% at 30% 20%, #ffffff 0%, #f1f1f3 70%); border-right: 1px solid var(--border); }
+    .deckstack { position: absolute; left: 34px; top: 50%; width: 214px; aspect-ratio: 16/9; transform: translateY(-46%); }
+    .deckstack .sheet { position: absolute; inset: 0; border-radius: 6px; overflow: hidden; background: #fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.07), 0 6px 14px -8px rgba(0,0,0,.3); transition: transform .35s var(--std); }
+    .deckstack .sheet.s3 { transform: translate(28px, -20px) scale(.9); filter: brightness(.92) saturate(.7); }
+    .deckstack .sheet.s2 { transform: translate(14px, -10px) scale(.95); filter: brightness(.96) saturate(.85); }
+    .deckstack .sheet.s1 { box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 14px 28px -12px rgba(0,0,0,.4); }
+    .fl .feat .hthumb:hover .sheet.s3 { transform: translate(34px, -25px) scale(.9); }
+    .fl .feat .hthumb:hover .sheet.s2 { transform: translate(17px, -12px) scale(.95); }
+    .fl .feat .hthumb:hover .sheet.s1 { transform: translateY(2px); }
+    .deckstack .dcount { position: absolute; left: 8px; bottom: 8px; z-index: 3; height: 20px; padding: 0 7px; border-radius: 99px; background: rgba(20,20,22,.72);
+      color: #fff; font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; backdrop-filter: blur(4px); }
     .fl .feat .htext { min-width: 0; flex: 1; padding: 16px 24px; display: flex; flex-direction: column; justify-content: center; }
     .fl .feat .k { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-brand); }
     .fl .feat .k .logos { letter-spacing: 0; }
@@ -704,7 +714,9 @@ const COVERS = {
         title: "Week of 9 Nov", sub: "Revenue, traffic, paid social and email",
         extra: `<div class="kpi"><b>$131k</b><span>revenue this week</span></div>${bars([30, 36, 33, 41, 38, 46, 52], 6)}` }),
 };
+let STACK_FLAT = false;   // true: return the three editions as separate slides (for the hero deck stack)
 function stack(make) {
+  if (STACK_FLAT) return [make(0), make(1), make(2)];
   return `<div class="stack"><div class="ed e3">${make(2)}</div><div class="ed e2">${make(1)}</div><div class="ed">${make(0)}</div></div>`;
 }
 
@@ -726,7 +738,11 @@ const hidden = new Set();
 function render() {
   const show = ORDER.filter(id => !hidden.has(id)).map(id => SUGG.find(s => s.id === id));
   const h = show[0];
-  $("#hero").innerHTML = h ? `<div class="hthumb" data-id="${h.id}">${COVERS[h.cover]()}</div>
+  const sheets = h ? (h.kind === "once"
+      ? `<div class="sheet s3">${COVERS[h.cover]()}</div><div class="sheet s2">${COVERS[h.cover]()}</div><div class="sheet s1">${COVERS[h.cover]()}</div><span class="dcount"><i class="ph ph-cards"></i>${h.outline.length} slides</span>`
+      : (() => { STACK_FLAT = true; const ed = COVERS[h.cover](); STACK_FLAT = false;
+          return `<div class="sheet s3">${ed[2]}</div><div class="sheet s2">${ed[1]}</div><div class="sheet s1">${ed[0]}</div><span class="dcount"><i class="ph ph-arrows-clockwise"></i>${h.cadence}</span>`; })()) : "";
+  $("#hero").innerHTML = h ? `<div class="hthumb" data-id="${h.id}"><div class="deckstack">${sheets}</div></div>
     <div class="htext"><div class="k">${h.kind === "once" ? "Suggested from" : h.cadence + ", from"}${logos(h.apps)}</div><h3>${h.title}</h3>
       <div class="acts"><button class="btn btn-primary btn-sm" data-id="${h.id}">${h.kind === "once" ? "Create deck" : "Set up"}</button></div></div>` : "";
   $("#sList").innerHTML = show.slice(1, 5).map(s => {
