@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<!-- exploration · mudita · connector-deck-suggestions · 26 Nov 2026
+     Dashboard section that suggests decks from the apps a user has connected and the data we have
+     already pulled. Two kinds: "Make now" (one deck, for a moment in the data) and "Keep it running"
+     (a recurring deck = a workflow). Derived from key-screens/dashboard.html.
+     States: ?state=home | once | recurring | trigger | scheduled -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>" />
+  <title>Deck suggestions from connected apps · design-protos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Hedvig+Letters+Serif:opsz@12..24&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <style>
+    :root {
+      --bg: #fafafa; --surface: #ffffff; --surface-2: #f5f5f5;
+      --fg: #171717; --fg-2: #525252; --fg-3: #a3a3a3;
+      --navy: #0a1925; --navy-2: #1c3550;
+      --brand: #005eff; --brand-tint: #e6efff;
+      --ok: #16a34a; --ok-tint: #e8f6ee;
+      --ink: #0b0f14;
+      --line: rgba(11,15,20,0.09); --line-strong: rgba(11,15,20,0.20);
+      --sel: rgba(22,30,39,0.08);
+      --d1: rgba(11,15,20,0.06); --d2: rgba(11,15,20,0.09); --inner: rgba(255,255,255,0.8);
+      --ease: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+      --sh-card: 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-card-hover: 0 8px 24px -6px var(--d2), 0 2px 6px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-prompt: 0 24px 40px -16px var(--d2), 0 4px 6px 0 var(--d2), 0 1px 2px 0 var(--d2), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-btn: 0 1px 2px 1px var(--d1), 0 0 0 1px var(--d2), inset 0 0 0 1px var(--inner);
+      --sh-pop: 0 24px 48px -12px rgba(11,15,20,.18), 0 0 0 1px var(--d2);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font-family: "Inter", system-ui, sans-serif; font-size: 14px;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    button { font: inherit; color: inherit; }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── sidebar (from key screen) ─────────────────────────────────────────── */
+    .sidebar { width: 248px; min-width: 248px; height: 100%; background: var(--bg);
+      border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+    .ws { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+    .ws-avatar { width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+      background: linear-gradient(135deg, #c98a4b, #9a5d27); box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line);
+      display: grid; place-items: center; color: #fff; font-size: 16px; }
+    .ws-name { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .badge { display: inline-flex; align-items: center; background: var(--brand-tint); color: var(--brand);
+      font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 34px; line-height: 1.33; }
+    .nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-item { display: flex; align-items: center; gap: 8px; height: 36px; padding: 8px; border-radius: 6px;
+      color: var(--fg-2); cursor: pointer; text-decoration: none; transition: background 140ms var(--ease); }
+    .nav-item i { font-size: 20px; flex-shrink: 0; }
+    .nav-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-item:hover { background: var(--sel); }
+    .nav-item.is-active { background: var(--sel); color: var(--fg); font-weight: 600; }
+    .nav-count { flex: none !important; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px;
+      background: var(--navy); color: #fff; font-size: 11px; font-weight: 600; display: grid; place-items: center;
+      font-variant-numeric: tabular-nums; transform: scale(0); transition: transform 320ms var(--ease); }
+    .nav-count.is-on { transform: scale(1); }
+    .divider { height: 1px; background: var(--line); margin: 6px 0; }
+    .sidebar-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 8px; }
+
+    /* ── main ─────────────────────────────────────────────────────────────── */
+    .main { flex: 1; min-width: 0; height: 100%; background: var(--surface); overflow-y: auto; }
+    .topbar { height: 56px; display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+      padding: 0 24px; position: sticky; top: 0; z-index: 5; background: var(--surface); }
+    .icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent;
+      color: var(--fg-2); border-radius: 4px; cursor: pointer; font-size: 20px; transition: background 140ms var(--ease); }
+    .icon-btn:hover { background: var(--sel); }
+    .avatar { width: 28px; height: 28px; border-radius: 999px; margin-left: 4px;
+      background: #d8c3a5; color: #5b4128; font-weight: 600; font-size: 12px; display: grid; place-items: center;
+      box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px var(--line); }
+
+    .hero { padding: 32px 24px 8px; display: flex; flex-direction: column; align-items: center; }
+    .hero h1 { font-weight: 400; font-size: 2rem; letter-spacing: -0.0075em; margin: 0 0 24px; text-align: center; }
+    .prompt { width: 100%; max-width: 680px; border-radius: 6px; padding: 8px; box-shadow: var(--sh-prompt); }
+    .prompt-field { height: 104px; background: var(--bg); border: 1px dashed var(--line-strong); border-radius: 2px;
+      padding: 18px 20px; display: flex; gap: 8px; color: var(--fg-3); font-size: 16px; }
+    .prompt-field u { text-underline-offset: 2px; }
+    .prompt-field i { margin-left: auto; font-size: 20px; }
+
+    .wrap { padding: 0 24px; max-width: 1240px; margin: 0 auto; }
+
+    /* ── suggestions section ──────────────────────────────────────────────── */
+    .sugg { margin-top: 40px; }
+    .sugg-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 4px; }
+    .sugg-title { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; text-wrap: balance; }
+    .sugg-title .setup { color: var(--fg-3); font-weight: 400; }
+    .sugg-meta { display: flex; align-items: center; gap: 8px; color: var(--fg-2); font-size: 12px; margin-top: 8px; }
+    .btn-ghost { height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 0;
+      background: transparent; color: var(--fg-2); border-radius: 5px; cursor: pointer; font-weight: 500;
+      transition: background 140ms var(--ease), color 140ms var(--ease); white-space: nowrap; }
+    .btn-ghost:hover { background: var(--sel); color: var(--fg); }
+    .btn-ghost i { font-size: 16px; }
+
+    .group { margin-top: 28px; }
+    .group-label { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+    .group-label b { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg); }
+    .group-label span { font-size: 13px; color: var(--fg-2); }
+
+    .sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+
+    /* app logos — brand-coloured tiles with a line icon */
+    .logo { width: 18px; height: 18px; border-radius: 4px; display: inline-grid; place-items: center; flex-shrink: 0;
+      color: #fff; font-size: 12px; box-shadow: 0 0 0 1.5px var(--surface); }
+    .logo.lg { width: 24px; height: 24px; border-radius: 5px; font-size: 15px; }
+    .logos { display: inline-flex; align-items: center; }
+    .logos .logo + .logo { margin-left: -4px; }
+
+    .scard { position: relative; background: var(--surface); border-radius: 8px; box-shadow: var(--sh-card);
+      cursor: pointer; display: flex; flex-direction: column; text-align: left; border: 0; padding: 0; overflow: hidden;
+      transition: box-shadow 220ms var(--ease), transform 160ms var(--ease), opacity 260ms var(--ease); }
+    .scard:hover { box-shadow: var(--sh-card-hover); transform: translateY(-2px); }
+    .scard:active { transform: translateY(0) scale(.99); }
+    .scard:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .scard.is-gone { opacity: 0; transform: scale(.97); pointer-events: none; }
+    .scard-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .scard-title { font-weight: 500; line-height: 1.43; }
+    .scard-why { font-size: 12px; color: var(--fg-2); line-height: 1.45; text-wrap: pretty; }
+    .scard-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 10px; font-size: 12px; color: var(--fg-2); }
+    .scard-foot .cta { margin-left: auto; color: var(--fg); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+    .scard-foot .cta i { font-size: 14px; transition: transform 160ms var(--ease); }
+    .scard:hover .scard-foot .cta i { transform: translateX(2px); }
+    .cadence { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 99px;
+      background: var(--surface-2); color: var(--fg-2); font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .cadence i { font-size: 13px; }
+    .cadence.is-on { background: var(--ok-tint); color: #157a3a; }
+    .cadence.is-on::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+    .cadence.is-on i { display: none; }
+    .hide-btn { position: absolute; top: 8px; right: 8px; z-index: 3; width: 28px; height: 28px; border-radius: 6px; border: 0;
+      background: rgba(255,255,255,.92); color: var(--fg-2); display: grid; place-items: center; cursor: pointer;
+      box-shadow: var(--sh-btn); opacity: 0; transform: scale(.9);
+      transition: opacity 160ms var(--ease), transform 160ms var(--ease); }
+    .scard:hover .hide-btn, .hide-btn:focus-visible { opacity: 1; transform: scale(1); }
+    .hide-btn:hover { color: var(--fg); }
+
+    /* covers — mock slides with the real numbers in them */
+    .cover { position: relative; aspect-ratio: 16 / 8.6; overflow: hidden; padding: 14px 16px; display: flex; flex-direction: column; }
+    .cover .eyebrow { font-size: 8px; letter-spacing: 1.6px; text-transform: uppercase; font-weight: 600; }
+    .cover .head { font-weight: 700; line-height: 1.15; }
+    .cv-bf { background: #fbf3e3; color: #2a1d0c; }
+    .cv-bf .eyebrow { color: #b4791b; }
+    .cv-bf .head { font-size: 14px; width: 60%; margin-top: 6px; }
+    .cv-bf .stat { position: absolute; right: 16px; top: 14px; text-align: right; }
+    .cv-bf .stat b { display: block; font-size: 26px; letter-spacing: -.5px; color: #c2410c; font-variant-numeric: tabular-nums; }
+    .cv-bf .stat small { font-size: 8px; color: #8a6a3a; }
+    .cv-bf .bars { position: absolute; left: 16px; right: 16px; bottom: 12px; height: 40%; display: flex; align-items: flex-end; gap: 5px; }
+    .cv-bf .bars i { flex: 1; border-radius: 2px 2px 0 0; background: #ead7b4; }
+    .cv-bf .bars i.now { background: linear-gradient(#f1ad3c, #d97b12); }
+
+    .cv-orbit { background: linear-gradient(160deg, #0f3d2e, #14543c); color: #fff; justify-content: flex-end; }
+    .cv-orbit .eyebrow { position: absolute; top: 14px; left: 16px; color: rgba(255,255,255,.55); }
+    .cv-orbit .head { font-size: 15px; width: 58%; }
+    .cv-orbit .tag { position: absolute; top: 12px; right: 14px; font-size: 8px; font-weight: 700; letter-spacing: 1px;
+      background: #7fe7b0; color: #0f3d2e; padding: 3px 6px; border-radius: 3px; }
+    .cv-orbit svg { position: absolute; right: 14px; bottom: 14px; width: 42%; height: 52%; }
+
+    .cv-plan { background: #f6f6f4; color: #111; }
+    .cv-plan .eyebrow { color: #9a9a96; }
+    .cv-plan .head { font-size: 16px; width: 70%; margin-top: 6px; letter-spacing: -.2px; }
+    .cv-plan .tl { position: absolute; left: 16px; right: 16px; bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .cv-plan .tl div { border-top: 2px solid #111; padding-top: 4px; font-size: 7px; font-weight: 600; letter-spacing: .8px; color: #555; }
+    .cv-plan .tl div:nth-child(2) { border-color: #c98a4b; }
+    .cv-plan .tl div:nth-child(3) { border-color: #ccc; }
+
+    /* recurring covers: a stack of dated sheets — the repetition is the picture */
+    .cv-stack { background: var(--surface-2); padding: 0; }
+    .cv-stack .sheet { position: absolute; left: 16%; right: 16%; top: 14%; bottom: 0; border-radius: 4px 4px 0 0;
+      box-shadow: 0 0 0 1px rgba(11,15,20,.08), 0 -2px 6px rgba(11,15,20,.04); overflow: hidden; padding: 10px 12px; }
+    .cv-stack .sheet.s3 { transform: translate(-0%, -16px) scale(.88); transform-origin: top center; opacity: .55; }
+    .cv-stack .sheet.s2 { transform: translate(0, -8px) scale(.94); transform-origin: top center; opacity: .8; }
+    .cv-stack .sheet .date { font-size: 7px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; opacity: .6; }
+    .cv-stack .sheet .head { font-size: 12px; margin-top: 4px; width: 80%; }
+    .cv-stack .sheet .kpis { display: flex; gap: 10px; margin-top: 8px; }
+    .cv-stack .sheet .kpis div { font-size: 7px; opacity: .7; }
+    .cv-stack .sheet .kpis b { display: block; font-size: 12px; opacity: 1; font-variant-numeric: tabular-nums; }
+    .sh-navy { background: linear-gradient(135deg, #0a1c38, #10305c); color: #fff; }
+    .sh-cream { background: #fffaf0; color: #2a1d0c; }
+    .sh-ink { background: #111114; color: #fff; }
+
+    /* ── recent files (from key screen) ───────────────────────────────────── */
+    .files { margin: 44px 0 48px; }
+    .files-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .chip { height: 28px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 4px;
+      box-shadow: var(--sh-btn); font-size: 12px; color: var(--fg-2); cursor: pointer; }
+    .chip.is-active { color: var(--fg); box-shadow: 0 0 0 .75px var(--ink), 0 0 0 2px rgba(11,15,20,.48); }
+    .fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+    .card { background: var(--surface); border-radius: 8px; overflow: hidden; box-shadow: var(--sh-card); }
+    .card.is-new { animation: arrive 520ms var(--ease) both; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+    .card-body { padding: 8px 12px 12px; }
+    .card-title { font-weight: 500; line-height: 1.43; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-sub { font-size: 12px; color: var(--fg-2); margin-top: 2px; }
+    .cv-a { background: linear-gradient(120deg, #7c4a1e, #c98a4b); color: #fff; justify-content: flex-end; }
+    .cv-a .head { font-family: "Hedvig Letters Serif", Georgia, serif; font-weight: 400; font-size: 18px; width: 70%; }
+    .cv-b { background: #111114; color: #fff; justify-content: center; }
+    .cv-b .head { font-size: 18px; font-weight: 800; letter-spacing: -.3px; width: 76%; }
+    .cv-c { background: #eef1f6; color: #0a1c38; }
+    .cv-c .head { font-size: 16px; margin-top: auto; width: 70%; }
+
+    /* ── drawer ───────────────────────────────────────────────────────────── */
+    .scrim { position: fixed; inset: 0; background: rgba(11,15,20,.28); opacity: 0; pointer-events: none;
+      transition: opacity 260ms var(--ease); z-index: 20; }
+    .scrim.is-open { opacity: 1; pointer-events: auto; }
+    .drawer { position: fixed; top: 8px; right: 8px; bottom: 8px; width: 520px; max-width: calc(100vw - 16px);
+      background: var(--surface); border-radius: 10px; box-shadow: var(--sh-pop); z-index: 21;
+      display: flex; flex-direction: column; transform: translateX(calc(100% + 16px));
+      transition: transform 380ms var(--ease-drawer); }
+    .drawer.is-open { transform: none; }
+    .d-head { padding: 16px 16px 14px 20px; display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); }
+    .d-kind { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--fg-2); }
+    .d-kind i { font-size: 13px; }
+    .d-title { margin: 6px 0 0; font-size: 20px; font-weight: 500; letter-spacing: -.01em; line-height: 1.3; text-wrap: balance; }
+    .d-head .icon-btn { margin-left: auto; flex-shrink: 0; }
+    .d-body { flex: 1; overflow-y: auto; padding: 4px 20px 24px; }
+    .d-sec { padding-top: 20px; }
+    .d-sec h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--fg-2); letter-spacing: .02em; }
+
+    .why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+    .why li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 6px; background: var(--bg); line-height: 1.45; }
+    .why li .logo { margin-top: 1px; }
+    .why li small { display: block; color: var(--fg-3); font-size: 11px; margin-top: 1px; }
+
+    .outline { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+    .outline li { counter-increment: s; display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .outline li:last-child { border-bottom: 0; }
+    .outline li::before { content: counter(s); width: 22px; height: 22px; border-radius: 5px; background: var(--surface-2);
+      display: grid; place-items: center; font-size: 11px; font-weight: 600; color: var(--fg-2); flex-shrink: 0;
+      font-variant-numeric: tabular-nums; }
+    .outline .t { flex: 1; min-width: 0; }
+    .outline .t b { font-weight: 500; display: block; }
+    .outline .t span { font-size: 12px; color: var(--fg-2); }
+    .outline .logos { flex-shrink: 0; }
+
+    /* schedule block */
+    .sched { border-radius: 8px; box-shadow: var(--sh-card); padding: 4px 14px; }
+    .row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .row:last-child { border-bottom: 0; }
+    .row > label { color: var(--fg-2); font-size: 13px; }
+    .row .ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .sel { height: 32px; border-radius: 6px; border: 0; box-shadow: var(--sh-btn); background: var(--surface);
+      padding: 0 28px 0 10px; font: 500 13px "Inter", sans-serif; color: var(--fg); appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 256 256'%3E%3Cpath fill='%23525252' d='M213.7 101.7l-80 80a8 8 0 0 1-11.3 0l-80-80a8 8 0 0 1 11.3-11.4L128 164.7l74.3-74.4a8 8 0 0 1 11.4 11.4z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 9px center; }
+    .sel:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+    .static { font-size: 13px; color: var(--fg); }
+    .static small { color: var(--fg-2); }
+    .tog { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 6px; border-radius: 6px; border: 0;
+      box-shadow: var(--sh-btn); background: var(--surface); cursor: pointer; font-size: 13px; color: var(--fg-2);
+      transition: box-shadow 140ms var(--ease), color 140ms var(--ease); }
+    .tog .box { width: 16px; height: 16px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--line-strong);
+      display: grid; place-items: center; color: #fff; font-size: 11px; transition: background 140ms var(--ease); }
+    .tog .box i { opacity: 0; transform: scale(.6); transition: opacity 140ms var(--ease), transform 200ms var(--ease); }
+    .tog[aria-pressed="true"] { color: var(--fg); box-shadow: 0 0 0 1px var(--fg), var(--sh-btn); }
+    .tog[aria-pressed="true"] .box { background: var(--navy); box-shadow: none; }
+    .tog[aria-pressed="true"] .box i { opacity: 1; transform: none; }
+    .switch-row { display: flex; align-items: flex-start; gap: 10px; }
+    .switch { flex-shrink: 0; width: 32px; height: 18px; border-radius: 99px; background: var(--line-strong); border: 0; padding: 2px;
+      cursor: pointer; transition: background 200ms var(--ease); margin-top: 1px; }
+    .switch::after { content: ""; display: block; width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform 240ms var(--ease); }
+    .switch[aria-checked="true"] { background: var(--navy); }
+    .switch[aria-checked="true"]::after { transform: translateX(14px); }
+    .switch-row b { font-weight: 500; display: block; font-size: 13px; }
+    .switch-row span { font-size: 12px; color: var(--fg-2); }
+
+    .next-run { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--fg-2); }
+    .next-run i { font-size: 15px; }
+
+    .bridge { margin-top: 20px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px;
+      background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+    .bridge i.lead { font-size: 20px; color: var(--fg-2); }
+    .bridge div { flex: 1; font-size: 13px; line-height: 1.45; }
+    .bridge div span { color: var(--fg-2); display: block; font-size: 12px; }
+    .btn-out { height: 32px; padding: 0 12px; border-radius: 6px; border: 0; box-shadow: var(--sh-btn); background: var(--surface);
+      font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 140ms var(--ease), transform 120ms var(--ease); }
+    .btn-out:hover { background: var(--surface-2); }
+    .btn-out:active { transform: scale(.97); }
+
+    .d-foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+    .d-foot .spacer { flex: 1; }
+    .btn-primary { height: 36px; padding: 0 16px; border-radius: 6px; border: 0; background: var(--navy); color: #fff;
+      font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-width: 132px; justify-content: center;
+      transition: background 140ms var(--ease), transform 120ms var(--ease); }
+    .btn-primary:hover { background: var(--navy-2); }
+    .btn-primary:active { transform: scale(.97); }
+    .btn-primary[disabled] { cursor: default; background: var(--navy-2); }
+    .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+      animation: spin 700ms linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* drawer content swap between one-off and recurring */
+    .swap { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 320ms var(--ease), opacity 220ms var(--ease); }
+    .swap > div { overflow: hidden; padding: 2px; margin: -2px; }
+    .swap.is-on { grid-template-rows: 1fr; opacity: 1; }
+
+    /* toast */
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+      background: var(--navy); color: #fff; border-radius: 8px; padding: 10px 10px 10px 14px; display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 12px 32px -8px rgba(11,15,20,.4); transition: transform 320ms var(--ease), opacity 220ms var(--ease); max-width: calc(100vw - 32px); }
+    .toast.is-on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+    .toast i { font-size: 18px; color: #7fe7b0; }
+    .toast button { border: 0; background: rgba(255,255,255,.12); color: #fff; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer; font-weight: 500; }
+    .toast button:hover { background: rgba(255,255,255,.2); }
+
+    /* state switcher for reviewing */
+    .states { position: fixed; left: 260px; bottom: 16px; z-index: 40; display: flex; gap: 2px; padding: 3px; border-radius: 8px;
+      background: rgba(255,255,255,.9); backdrop-filter: blur(8px); box-shadow: var(--sh-pop); font-size: 12px; }
+    .states a { padding: 5px 9px; border-radius: 5px; color: var(--fg-2); text-decoration: none; }
+    .states a:hover { background: var(--sel); color: var(--fg); }
+    .states a.is-on { background: var(--navy); color: #fff; }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="ws">
+      <div class="ws-avatar"><i class="ph-fill ph-paw-print"></i></div>
+      <span class="ws-name">Perch &amp; Paw</span>
+      <span class="badge">Pro</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item is-active"><i class="ph ph-house-simple"></i><span>Home</span></a>
+      <a class="nav-item"><i class="ph ph-file"></i><span>Created by Me</span></a>
+      <a class="nav-item"><i class="ph ph-arrows-clockwise"></i><span>Workflows</span><span class="nav-count" id="wfCount">0</span></a>
+    </nav>
+    <div class="divider"></div>
+    <nav class="nav">
+      <a class="nav-item"><i class="ph ph-folder-simple"></i><span>Holiday 2026</span></a>
+      <a class="nav-item"><i class="ph ph-folder-simple"></i><span>Retail partners</span></a>
+    </nav>
+    <div class="divider"></div>
+    <nav class="nav">
+      <a class="nav-item"><i class="ph ph-layout"></i><span>Templates</span></a>
+      <a class="nav-item"><i class="ph ph-plugs-connected"></i><span>Connected apps</span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <nav class="nav" style="padding:0;">
+        <a class="nav-item"><i class="ph ph-gear"></i><span>Workspace settings</span></a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn" aria-label="Search"><i class="ph ph-magnifying-glass"></i></button>
+      <button class="icon-btn" aria-label="Notifications"><i class="ph ph-bell"></i></button>
+      <div class="avatar" aria-label="Your profile">SR</div>
+    </header>
+
+    <section class="hero">
+      <h1>Start your next presentation</h1>
+      <div class="prompt"><div class="prompt-field">Type here to start, or <u>drop in a file</u><i class="ph ph-upload-simple"></i></div></div>
+    </section>
+
+    <div class="wrap">
+      <section class="sugg" aria-labelledby="suggTitle">
+        <div class="sugg-head">
+          <div>
+            <h2 class="sugg-title" id="suggTitle"><span class="setup">From your connected apps,</span> decks we can make for you</h2>
+            <div class="sugg-meta"><span class="logos" id="headLogos"></span>Shopify, Google Analytics, Meta Ads, Klaviyo and Google Drive · synced 2 hours ago</div>
+          </div>
+          <button class="btn-ghost"><i class="ph ph-plugs-connected"></i>Manage apps</button>
+        </div>
+
+        <div class="group">
+          <div class="group-label"><b>Make now</b><span>Things in your data this week worth a deck</span></div>
+          <div class="sgrid" id="gridOnce"></div>
+        </div>
+        <div class="group">
+          <div class="group-label"><b>Keep it running</b><span>Reports you rebuild by hand. We make each one for you, on time.</span></div>
+          <div class="sgrid" id="gridRec"></div>
+        </div>
+      </section>
+
+      <section class="files">
+        <div class="files-head"><span class="chip is-active">Recent</span><span class="chip">Starred</span><span class="chip">Shared with me</span></div>
+        <div class="fgrid" id="recent">
+          <article class="card"><div class="cover cv-a"><div class="head">Spring 2027 collection lookbook</div></div>
+            <div class="card-body"><div class="card-title">Spring 2027 collection lookbook</div><div class="card-sub">Holiday 2026 · updated 2 days ago</div></div></article>
+          <article class="card"><div class="cover cv-b"><div class="head">Retail partner pitch: modular cat furniture</div></div>
+            <div class="card-body"><div class="card-title">Retail partner pitch: modular cat furniture</div><div class="card-sub">Retail partners · updated 5 days ago</div></div></article>
+          <article class="card"><div class="cover cv-c"><div class="head">Weekly marketing update · 16 Nov</div></div>
+            <div class="card-body"><div class="card-title">Weekly marketing update · 16 Nov</div><div class="card-sub">Created by You · 10 days ago</div></div></article>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+  <div class="d-head">
+    <div>
+      <div class="d-kind" id="dKind"></div>
+      <h2 class="d-title" id="dTitle"></h2>
+    </div>
+    <button class="icon-btn" id="dClose" aria-label="Close"><i class="ph ph-x"></i></button>
+  </div>
+  <div class="d-body" id="dBody"></div>
+  <div class="d-foot">
+    <button class="btn-ghost" id="dHide"><i class="ph ph-eye-slash"></i>Not useful</button>
+    <span class="spacer"></span>
+    <button class="btn-ghost" id="dEdit"><i class="ph ph-pencil-simple"></i>Edit in chat</button>
+    <button class="btn-primary" id="dGo"></button>
+  </div>
+</aside>
+
+<div class="toast" id="toast" role="status"><i class="ph-fill ph-check-circle"></i><span id="toastText"></span><button id="toastBtn"></button></div>
+
+<nav class="states" aria-label="Prototype states">
+  <a href="?state=home">Home</a><a href="?state=once">One deck</a><a href="?state=recurring">Recurring</a><a href="?state=trigger">After each campaign</a><a href="?state=scheduled">Scheduled</a>
+</nav>
+
+<script>
+/* ── data (fictional) ─────────────────────────────────────────────────────
+   Perch & Paw: pet furniture, sells online via Shopify. Today is Thu 26 Nov 2026;
+   Black Friday is tomorrow, Cyber Monday is 30 Nov. */
+const APPS = {
+  shopify: { name: "Shopify",          ic: "shopping-bag-open", bg: "#5e8e3e" },
+  ga:      { name: "Google Analytics", ic: "chart-bar",         bg: "#e8710a" },
+  meta:    { name: "Meta Ads",         ic: "meta-logo",         bg: "#0866ff" },
+  klaviyo: { name: "Klaviyo",          ic: "envelope-simple",   bg: "#232426" },
+  drive:   { name: "Google Drive",     ic: "google-drive-logo", bg: "#1fa463" },
+  slack:   { name: "Slack",            ic: "slack-logo",        bg: "#4a154b" },
+};
+
+const SUGG = [
+  { id: "bf", kind: "once", cover: "bf",
+    title: "Black Friday early access: the first 72 hours",
+    reason: "Early access sales are up about two-thirds on the same days last year.",
+    apps: ["shopify", "klaviyo", "meta"],
+    why: [
+      ["shopify", "$184k in early-access sales since 23 Nov", "Up 64% on the same three days in 2025"],
+      ["klaviyo", "The VIP early-access email drove about a third of those orders", "Sent 23 Nov to 18,400 subscribers"],
+      ["meta", "The “Nap test” Reels ad has your lowest cost per purchase this month", "Running since 20 Nov"],
+    ],
+    outline: [
+      ["Black Friday early access: the first 72 hours", "Title", []],
+      ["The headline numbers", "Revenue, orders and order value against 2025", ["shopify"]],
+      ["Where the orders came from", "Email, paid social, search and direct", ["ga", "shopify"]],
+      ["The email that worked", "VIP early access: opens, clicks, orders", ["klaviyo"]],
+      ["Ads worth more budget", "Top three creatives by cost per purchase", ["meta"]],
+      ["What sold", "Orbit cat tree and Cloud orthopedic bed lead", ["shopify"]],
+      ["Before Cyber Monday", "Three changes to make by Sunday", []],
+    ],
+    bridge: { title: "Want the same recap after Cyber Monday?", sub: "Make it recurring and we'll build it after each sale event.", how: "event" },
+  },
+  { id: "orbit", kind: "once", cover: "orbit",
+    title: "Why the Orbit cat tree sold out",
+    reason: "Sold out in nine days. A restock case for leadership, with the numbers behind it.",
+    apps: ["shopify", "ga", "meta", "drive"],
+    why: [
+      ["shopify", "1,240 Orbit cat trees sold in 9 days; out of stock since 19 Nov", "Your fastest sell-through this year"],
+      ["ga", "Orbit page visits roughly tripled after 12 Nov", "Most new visits came from tiktok.com"],
+      ["drive", "Restock lead time is 6 weeks", "From “Supplier terms 2026” in Operations"],
+    ],
+    outline: [
+      ["Why the Orbit cat tree sold out", "Title", []],
+      ["Nine days, 1,240 units", "Daily sales since launch", ["shopify"]],
+      ["What drove the traffic", "TikTok referral spike, then paid social", ["ga", "meta"]],
+      ["Who bought it", "New vs returning, top regions", ["shopify"]],
+      ["What a sell-out costs us", "Missed demand while out of stock", ["shopify", "ga"]],
+      ["The restock ask", "Quantity and timing against a 6-week lead time", ["drive"]],
+    ],
+    bridge: null,
+  },
+  { id: "plan", kind: "once", cover: "plan",
+    title: "Q1 2027 marketing plan",
+    reason: "Planning season. We start from this year's results and your 2026 brand plan.",
+    apps: ["drive", "shopify", "ga"],
+    why: [
+      ["drive", "“2026 Brand plan” and “Q4 budget” in your Marketing folder", "Edited 3 Nov and 18 Nov"],
+      ["shopify", "Cat trees and orthopedic beds made most of this year's revenue", "Jan–Nov 2026"],
+      ["ga", "January was your slowest month for traffic two years running", "2025 and 2026"],
+    ],
+    outline: [
+      ["Q1 2027 marketing plan", "Title", []],
+      ["2026 in review", "What grew, what didn't", ["shopify", "ga"]],
+      ["Goals for Q1", "Carried over from the 2026 brand plan", ["drive"]],
+      ["Beating the January dip", "Two campaigns for the slow month", ["ga"]],
+      ["Budget by channel", "Starting from the Q4 split", ["drive", "meta"]],
+      ["Launch calendar", "January to March", []],
+    ],
+    bridge: null,
+  },
+
+  { id: "weekly", kind: "rec", cover: "weekly", how: "week",
+    title: "Weekly marketing update",
+    cadence: "Every Monday", reason: "You've built this by hand 6 times since September. We'll make it every Monday.",
+    apps: ["shopify", "ga", "meta", "klaviyo"],
+    why: [
+      ["drive", "Six “Weekly marketing update” decks since 7 Sep", "About 8 slides each, most recent 16 Nov"],
+      [["shopify","ga","meta","klaviyo"], "Every number in them comes from four of your connected apps", "Shopify, Google Analytics, Meta Ads, Klaviyo"],
+    ],
+    outline: [
+      ["The week at a glance", "Revenue, orders, traffic against last week", ["shopify", "ga"]],
+      ["Sales", "Daily revenue and top products", ["shopify"]],
+      ["Traffic and conversion", "By channel", ["ga"]],
+      ["Paid social", "Spend, cost per purchase, best ad", ["meta"]],
+      ["Email", "Campaigns sent and the orders they drove", ["klaviyo"]],
+      ["What changed and why", "The two or three things worth a conversation", []],
+      ["Next week", "Launches and campaigns on the calendar", []],
+    ],
+  },
+  { id: "monthly", kind: "rec", cover: "monthly", how: "month",
+    title: "Monthly channel review",
+    cadence: "1st of the month", reason: "Spend against return for every channel, ready for the leadership meeting.",
+    apps: ["meta", "ga", "shopify", "drive"],
+    why: [
+      ["meta", "$42k of ad spend in November across 3 campaigns", "So far this month"],
+      ["drive", "Your October leadership deck had a channel table you built by hand", "“Leadership sync · Oct”"],
+    ],
+    outline: [
+      ["The month in one slide", "Revenue, spend, return", ["shopify", "meta"]],
+      ["Channel table", "Spend, revenue and return for each channel", ["ga", "meta"]],
+      ["Biggest movers", "Up and down against last month", ["ga"]],
+      ["Customer mix", "New against returning", ["shopify"]],
+      ["Next month's budget", "Where we'd shift spend", []],
+    ],
+  },
+  { id: "campaign", kind: "rec", cover: "campaign", how: "trigger",
+    title: "Campaign recap",
+    cadence: "After each email campaign", reason: "Two days after a Klaviyo campaign goes out: opens, clicks and the orders it drove.",
+    apps: ["klaviyo", "shopify"],
+    why: [
+      ["klaviyo", "9 campaigns sent in November", "Three more scheduled before 31 Dec"],
+      ["shopify", "Orders carry the campaign they came from", "So each recap shows real revenue, not just clicks"],
+    ],
+    outline: [
+      ["Campaign at a glance", "Sent, opened, clicked, bought", ["klaviyo", "shopify"]],
+      ["Subject line and content", "What subscribers saw", ["klaviyo"]],
+      ["What it sold", "Revenue and top products from the campaign", ["shopify"]],
+      ["Against your average", "How it compares to the last 10 campaigns", ["klaviyo"]],
+    ],
+  },
+];
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+const $ = s => document.querySelector(s);
+const logo = (k, big) => `<span class="logo${big ? " lg" : ""}" style="background:${APPS[k].bg}" title="${APPS[k].name}"><i class="ph-fill ph-${APPS[k].ic}"></i></span>`;
+const logos = ks => `<span class="logos">${ks.map(k => logo(k)).join("")}</span>`;
+const scheduled = new Set();
+
+const COVERS = {
+  bf: () => `<div class="cover cv-bf"><span class="eyebrow">Black Friday · 2026</span>
+      <div class="head">Early access: the first 72 hours</div>
+      <div class="stat"><b>+64%</b><small>vs 2025</small></div>
+      <div class="bars">${[30,34,28,40,36,44,38,52,70,88].map((h,i)=>`<i class="${i>6?"now":""}" style="height:${h}%"></i>`).join("")}</div></div>`,
+  orbit: () => `<div class="cover cv-orbit"><span class="eyebrow">Product · Orbit</span><span class="tag">SOLD OUT</span>
+      <div class="head">Why the Orbit cat tree sold out in 9 days</div>
+      <svg viewBox="0 0 100 50" preserveAspectRatio="none"><polyline fill="none" stroke="#7fe7b0" stroke-width="2.5" stroke-linejoin="round" points="0,46 12,44 24,40 36,38 48,30 60,22 72,14 84,8 92,4 100,4"/></svg></div>`,
+  plan: () => `<div class="cover cv-plan"><span class="eyebrow">Plan · 2027</span>
+      <div class="head">Q1 2027 marketing plan</div>
+      <div class="tl"><div>JAN</div><div>FEB</div><div>MAR</div></div></div>`,
+  weekly: () => stack("sh-navy", ["30 Nov", "23 Nov", "16 Nov"], "Weekly marketing update", [["Revenue","$212k"],["Orders","3,480"],["ROAS","4.1"]]),
+  monthly: () => stack("sh-cream", ["Dec 2026", "Nov 2026", "Oct 2026"], "Monthly channel review", [["Spend","$42k"],["Return","3.6×"]]),
+  campaign: () => stack("sh-ink", ["Cyber Monday", "VIP early access", "Cosy season"], "Campaign recap", [["Opened","48%"],["Orders","612"]]),
+};
+function stack(cls, dates, head, kpis) {
+  return `<div class="cover cv-stack">
+    <div class="sheet ${cls} s3"></div><div class="sheet ${cls} s2"></div>
+    <div class="sheet ${cls}"><div class="date">${dates[0]}</div><div class="head">${head}</div>
+      <div class="kpis">${kpis.map(([l,v])=>`<div><b>${v}</b>${l}</div>`).join("")}</div></div></div>`;
+}
+
+function cardHTML(s) {
+  const on = scheduled.has(s.id);
+  const foot = s.kind === "once"
+    ? `${logos(s.apps)}<span class="cta">Preview<i class="ph ph-arrow-right"></i></span>`
+    : `<span class="cadence${on ? " is-on" : ""}"><i class="ph ph-arrows-clockwise"></i>${on ? nextLabel(s) : s.cadence}</span>
+       ${logos(s.apps)}<span class="cta">${on ? "Manage" : "Set up"}<i class="ph ph-arrow-right"></i></span>`;
+  return `<div class="scard" role="button" tabindex="0" data-id="${s.id}">
+    ${on ? "" : `<button class="hide-btn" data-hide="${s.id}" aria-label="Not useful"><i class="ph ph-x"></i></button>`}
+    ${COVERS[s.cover]()}
+    <div class="scard-body"><div class="scard-title">${s.title}</div><div class="scard-why">${s.reason}</div>
+      <div class="scard-foot">${foot}</div></div></div>`;
+}
+function nextLabel(s) {
+  return { week: "Next: Mon 30 Nov", month: "Next: 1 Dec", trigger: "Watching Klaviyo", event: "After the next sale" }[s.how];
+}
+function render() {
+  $("#gridOnce").innerHTML = SUGG.filter(s => s.kind === "once").map(cardHTML).join("");
+  $("#gridRec").innerHTML = SUGG.filter(s => s.kind === "rec").map(cardHTML).join("");
+  const c = $("#wfCount"); c.textContent = scheduled.size; c.classList.toggle("is-on", scheduled.size > 0);
+}
+$("#headLogos").innerHTML = ["shopify","ga","meta","klaviyo","drive"].map(k => logo(k)).join("");
+
+/* ── drawer ───────────────────────────────────────────────────────────── */
+let cur = null, recurring = false;
+
+function scheduleBlock(s) {
+  const how = s.how || "event";
+  const when = {
+    week:    `<select class="sel"><option>Every week</option><option>Every 2 weeks</option></select>
+              <select class="sel"><option>Monday</option><option>Friday</option></select>
+              <select class="sel"><option>9:00</option><option>8:00</option><option>10:00</option></select>`,
+    month:   `<select class="sel"><option>Every month</option><option>Every quarter</option></select>
+              <select class="sel"><option>1st working day</option><option>Last working day</option></select>
+              <select class="sel"><option>9:00</option></select>`,
+    trigger: `<span class="static">After each Klaviyo campaign is sent</span>
+              <select class="sel"><option>Wait 2 days</option><option>Wait 1 day</option><option>Wait 7 days</option></select>`,
+    event:   `<span class="static">After each sale event ends</span>
+              <select class="sel"><option>Next day</option><option>Wait 2 days</option></select>`,
+  }[how];
+  const covers = { week: "The 7 days before each deck", month: "The calendar month before", trigger: "That campaign, from send until the deck", event: "Each sale, from start to end" }[how];
+  const next = { week: "First deck <b>Mon 30 Nov, 9:00</b>. It covers 23–29 Nov, so Black Friday is in it.",
+                 month: "First deck <b>Tue 1 Dec, 9:00</b>, covering November.",
+                 trigger: "Next one <b>Wed 2 Dec</b>, two days after the Cyber Monday email.",
+                 event: "Next one <b>Tue 1 Dec</b>, the day after Cyber Monday ends." }[how];
+  return `<div class="sched">
+      <div class="row"><label>Runs</label><div class="ctl">${when}</div></div>
+      <div class="row"><label>Data covers</label><div class="ctl"><span class="static">${covers}</span></div></div>
+      <div class="row"><label>Send to</label><div class="ctl">
+        <button class="tog" aria-pressed="true"><span class="box"><i class="ph-bold ph-check"></i></span>Email me</button>
+        <button class="tog" aria-pressed="false"><span class="box"><i class="ph-bold ph-check"></i></span>${logo("slack")} #marketing</button>
+        <button class="tog" aria-pressed="false"><span class="box"><i class="ph-bold ph-check"></i></span>Add people</button>
+      </div></div>
+      <div class="row" style="grid-template-columns:1fr;"><div class="switch-row">
+        <button class="switch" role="switch" aria-checked="true" aria-label="Review before it's shared"></button>
+        <div><b>Let me review before it's shared</b><span>We send it to you first. Anyone else gets it after you approve it.</span></div>
+      </div></div>
+    </div>
+    <div class="next-run"><i class="ph ph-calendar-blank"></i><span>${next}</span></div>`;
+}
+
+function openDrawer(id, asRecurring) {
+  cur = SUGG.find(s => s.id === id);
+  recurring = asRecurring ?? cur.kind === "rec";
+  const isOn = scheduled.has(cur.id);
+  $("#dKind").innerHTML = cur.kind === "rec"
+    ? `<i class="ph ph-arrows-clockwise"></i>Recurring · ${cur.cadence}`
+    : `<i class="ph ph-presentation"></i>One deck · ${cur.outline.length} slides`;
+  $("#dTitle").textContent = cur.title;
+
+  const whyHead = cur.kind === "rec" ? "Why we suggest this" : "What we found";
+  const outHead = cur.kind === "rec" ? "Each deck has" : "What's inside";
+  $("#dBody").innerHTML = `
+    <div class="d-sec"><h3>${whyHead}</h3><ul class="why">${cur.why.map(([k,t,sm]) =>
+      `<li>${Array.isArray(k) ? logos(k) : logo(k)}<div>${t}<small>${sm}</small></div></li>`).join("")}</ul></div>
+    ${cur.kind === "rec" ? `<div class="d-sec"><h3>Schedule</h3>${scheduleBlock(cur)}</div>` : ""}
+    <div class="d-sec"><h3>${outHead}</h3><ol class="outline">${cur.outline.map(([t,sub,ks]) =>
+      `<li><div class="t"><b>${t}</b><span>${sub}</span></div>${ks.length ? logos(ks) : ""}</li>`).join("")}</ol></div>
+    ${cur.kind === "once" && cur.bridge ? `
+      <div class="swap ${recurring ? "" : "is-on"}" id="bridgeWrap"><div>
+        <div class="bridge"><i class="ph ph-arrows-clockwise lead"></i>
+          <div>${cur.bridge.title}<span>${cur.bridge.sub}</span></div>
+          <button class="btn-out" id="makeRec">Make it recurring</button></div></div></div>
+      <div class="swap ${recurring ? "is-on" : ""}" id="schedWrap"><div><div class="d-sec"><h3>Repeat</h3>${scheduleBlock(cur)}</div></div></div>` : ""}
+  `;
+  setPrimary();
+  $("#dHide").style.display = isOn ? "none" : "";
+  $("#drawer").classList.add("is-open"); $("#scrim").classList.add("is-open");
+  $("#dBody").scrollTop = 0;
+  if (recurring && cur.kind === "once") $("#schedWrap")?.scrollIntoView({ block: "nearest" });
+}
+function setPrimary() {
+  const b = $("#dGo"); b.disabled = false;
+  if (scheduled.has(cur.id)) { b.innerHTML = "Save changes"; return; }
+  if (cur.kind === "once") b.innerHTML = recurring ? "Create and repeat" : "Create deck";
+  else b.innerHTML = { week: "Start weekly update", month: "Start monthly review", trigger: "Start recaps" }[cur.how];
+}
+function closeDrawer() { $("#drawer").classList.remove("is-open"); $("#scrim").classList.remove("is-open"); }
+
+$("#dBody").addEventListener("click", e => {
+  const t = e.target.closest(".tog"); if (t) t.setAttribute("aria-pressed", t.getAttribute("aria-pressed") !== "true");
+  const sw = e.target.closest(".switch"); if (sw) sw.setAttribute("aria-checked", sw.getAttribute("aria-checked") !== "true");
+  if (e.target.closest("#makeRec")) {
+    recurring = true; $("#bridgeWrap").classList.remove("is-on"); $("#schedWrap").classList.add("is-on"); setPrimary();
+    setTimeout(() => $("#schedWrap").scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+  }
+});
+$("#dClose").onclick = closeDrawer; $("#scrim").onclick = closeDrawer;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+
+$("#dGo").onclick = () => {
+  const b = $("#dGo"); if (b.disabled) return;
+  if (scheduled.has(cur.id)) { closeDrawer(); toast("Changes saved"); return; }
+  b.disabled = true; b.innerHTML = `<span class="spin"></span>${cur.kind === "once" ? "Creating" : "Setting up"}`;
+  setTimeout(() => {
+    closeDrawer();
+    if (cur.kind === "once") {
+      addRecent(cur);
+      if (recurring) { scheduled.add(cur.id); render(); }
+      toast(recurring ? "Deck created. We'll make the next one after Cyber Monday." : "Deck created", "Open");
+    } else {
+      scheduled.add(cur.id); render();
+      toast({ week: "Weekly update is set. First deck Mon 30 Nov.", month: "Monthly review is set. First deck 1 Dec.",
+              trigger: "Campaign recaps are on. Next one 2 Dec." }[cur.how], "View in Workflows");
+    }
+  }, 1400);
+};
+$("#dHide").onclick = () => { closeDrawer(); hide(cur.id); };
+
+function addRecent(s) {
+  const el = document.createElement("article"); el.className = "card is-new";
+  el.innerHTML = `${COVERS[s.cover]()}<div class="card-body"><div class="card-title">${s.title}</div><div class="card-sub">Created by You · just now</div></div>`;
+  $("#recent").prepend(el);
+}
+function hide(id) {
+  const el = document.querySelector(`.scard[data-id="${id}"]`); if (!el) return;
+  el.classList.add("is-gone");
+  setTimeout(() => { el.style.display = "none"; }, 260);
+  toast("Hidden. We'll suggest fewer like this.", "Undo", () => { el.style.display = ""; requestAnimationFrame(() => el.classList.remove("is-gone")); });
+}
+
+/* cards */
+document.addEventListener("click", e => {
+  const h = e.target.closest("[data-hide]"); if (h) { e.stopPropagation(); hide(h.dataset.hide); return; }
+  const c = e.target.closest(".scard"); if (c) openDrawer(c.dataset.id);
+});
+document.addEventListener("keydown", e => {
+  const c = e.target.closest?.(".scard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDrawer(c.dataset.id); }
+});
+
+/* toast */
+let tt;
+function toast(text, btn, fn) {
+  $("#toastText").textContent = text;
+  const b = $("#toastBtn"); b.style.display = btn ? "" : "none"; b.textContent = btn || "";
+  b.onclick = () => { fn && fn(); $("#toast").classList.remove("is-on"); };
+  $("#toast").classList.add("is-on"); clearTimeout(tt); tt = setTimeout(() => $("#toast").classList.remove("is-on"), 4200);
+}
+
+/* ── states ───────────────────────────────────────────────────────────── */
+const state = new URLSearchParams(location.search).get("state") || "home";
+document.querySelectorAll(".states a").forEach(a => a.classList.toggle("is-on", a.getAttribute("href") === `?state=${state}`));
+if (state === "scheduled") { scheduled.add("weekly"); scheduled.add("campaign"); }
+render();
+if (state === "once") openDrawer("bf");
+if (state === "recurring") openDrawer("weekly");
+if (state === "trigger") openDrawer("campaign");
+</script>
+</body>
+</html>
