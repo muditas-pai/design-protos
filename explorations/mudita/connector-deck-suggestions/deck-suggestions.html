@@ -159,6 +159,28 @@
     .pane-foot a { margin-left: auto; color: var(--text-brand); text-decoration: none; font-weight: 500; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
     .pane-foot a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
+    /* suggestions panel, from crazy 8s round 2: one hero on the left, a text list of the rest on the right */
+    .fl { display: grid; grid-template-columns: 1.15fr 1fr; overflow: hidden; padding: 0; }
+    .fl .feat { display: flex; gap: 14px; padding: 14px; border-right: 1px solid var(--border); min-width: 0; }
+    .fl .feat .hthumb { position: relative; width: 200px; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--border); flex-shrink: 0; cursor: pointer; }
+    .fl .feat .k { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-brand); }
+    .fl .feat h3 { margin: 4px 0; font-size: 15px; line-height: 20px; font-weight: 600; }
+    .fl .feat p { margin: 0 0 10px; font-size: 13px; line-height: 18px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fl .feat .acts { display: flex; align-items: center; gap: 10px; }
+    .fl .list { padding: 8px; min-width: 0; }
+    .fl .lh { padding: 2px 8px 4px; font-size: 12px; color: var(--text-2); display: flex; }
+    .fl .lh .lnk { margin-left: auto; color: var(--text-brand); font-weight: 500; font-size: 13px; text-decoration: none; }
+    .fl .lh .lnk:hover { text-decoration: underline; text-underline-offset: 2px; }
+    .fl .li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+    .fl .li:hover { background: var(--bg-tertiary); }
+    .fl .li:focus-visible { outline: 2px solid rgba(13,153,255,.35); outline-offset: -2px; }
+    .fl .li .kind { font-size: 15px; color: var(--text); flex-shrink: 0; }
+    .fl .li .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+    .fl .li .w { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+    .fl .li .w.on { color: var(--text-success); font-weight: 500; }
+    .fl .li .ar { color: var(--text-4); font-size: 14px; }
+    .fl .li:hover .ar { color: var(--text); }
+
     /* compact card: small cover, title, one-line reason, sources */
     .grid.compact { gap: 12px; }
     .ccard { position: relative; display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; text-align: left;
@@ -467,25 +489,9 @@
         </div>
       </section>
 
-      <section class="sugg" id="sugg" aria-labelledby="suggTitle">
-        <div class="sugg-head">
-          <span class="logos head-logos" id="headLogos" aria-hidden="true"></span>
-          <span class="head-ic" id="headIc" aria-hidden="true" hidden><i class="ph ph-link"></i></span>
-          <h2 id="suggTitle"></h2>
-          <span class="sp"></span>
-          <div class="segm" role="tablist" aria-label="Kind of deck">
-            <button role="tab" aria-selected="true" data-pane="once" title="Moments in your data this week, one deck each"><i class="ph ph-presentation"></i>One-time<em>3</em></button>
-            <button role="tab" aria-selected="false" data-pane="rec" title="Reports you rebuild by hand. We make each one on time."><i class="ph ph-arrows-clockwise"></i>Recurring<em>3</em></button>
-          </div>
-        </div>
-        <div class="sugg-inner">
-          <div class="pane" data-pane="once">
-            <div class="grid compact" id="gridOnce"></div>
-          </div>
-          <div class="pane" data-pane="rec" hidden>
-            <div class="grid compact" id="gridRec"></div>
-          </div>
-        </div>
+      <section class="sugg fl" id="sugg" aria-label="Decks we can make from your apps">
+        <div class="feat" id="hero"></div>
+        <div class="list"><div class="lh"><span id="listTitle"></span><a class="lnk" href="#" onclick="return false">See all</a></div><div id="sList"></div></div>
       </section>
 
       <nav class="tabs"><span class="tab on">Recent</span><span class="tab">Created by me</span><span class="tab">Starred</span><span class="tab">Shared with me</span><span class="tab">Downloads</span><span class="tab">Trash</span>
@@ -513,7 +519,6 @@
 
 <nav class="proto" aria-label="Prototype states"><b>Proto</b>
   <a href="?state=home">Home</a><a href="?state=once">One deck</a><a href="?state=recurring">Recurring</a><a href="?state=trigger">After each campaign</a><a href="?state=scheduled">Scheduled</a>
-  <span class="sep"></span><b>Header</b><a href="#" data-head="logos" class="on">Logos</a><a href="#" data-head="icon">Icon</a>
 </nav>
 
 <script>
@@ -709,9 +714,21 @@ function cardHTML(s) {
 function nextLabel(s) {
   return { week: "Next: Mon 30 Nov", month: "Next: Tue 1 Dec", trigger: "Watching Klaviyo", event: "After the next sale" }[s.how];
 }
+/* hero = the first suggestion still showing; the list = the next four. "Not useful" hides one. */
+const ORDER = ["bf", "orbit", "weekly", "plan", "monthly", "campaign"];
+const hidden = new Set();
 function render() {
-  $("#gridOnce").innerHTML = SUGG.filter(s => s.kind === "once").map(cardHTML).join("");
-  $("#gridRec").innerHTML = SUGG.filter(s => s.kind === "rec").map(cardHTML).join("");
+  const show = ORDER.filter(id => !hidden.has(id)).map(id => SUGG.find(s => s.id === id));
+  const h = show[0];
+  $("#hero").innerHTML = h ? `<div class="hthumb" data-id="${h.id}">${COVERS[h.cover]()}</div>
+    <div style="min-width:0"><div class="k">${h.kind === "once" ? "Suggested now" : "Recurring · " + h.cadence}</div><h3>${h.title}</h3><p>${h.reason}</p>
+      <div class="acts"><button class="btn btn-primary btn-sm" data-id="${h.id}">${h.kind === "once" ? "Create deck" : "Set up"}</button>${logos(h.apps)}</div></div>` : "";
+  $("#sList").innerHTML = show.slice(1, 5).map(s => {
+    const on = scheduled.has(s.id);
+    return `<div class="li" role="button" tabindex="0" data-id="${s.id}" title="${s.reason}">
+      <i class="ph ${s.kind === "once" ? "ph-presentation" : "ph-arrows-clockwise"} kind"></i><span class="t">${s.title}</span>
+      <span class="w${on ? " on" : ""}">${s.kind === "once" ? "One-time" : on ? nextLabel(s) : s.cadence}</span><i class="ph ph-caret-right ar"></i></div>`;
+  }).join("");
   const c = $("#recCount"); c.textContent = scheduled.size; c.classList.toggle("on", scheduled.size > 0);
 }
 $("#recent").innerHTML = [["recentA","Spring 2027 collection lookbook","Edited 2 days ago"],["recentB","Retail partner pitch: modular cat furniture","Edited 5 days ago"],["recentC","Weekly marketing update · 9 Nov","Edited 17 days ago"]]
@@ -720,8 +737,7 @@ const CONNECTED = ["shopify","ga","meta","klaviyo","drive"];
 /* title names at most two apps (the ones the suggestions draw on most), then "and more" */
 const SHORT = { shopify: "Shopify", ga: "Analytics", meta: "Meta Ads", klaviyo: "Klaviyo", drive: "Drive" };
 const named = CONNECTED.slice(0, 2).map(k => SHORT[k]);
-$("#headLogos").innerHTML = CONNECTED.slice(0, 3).map(k => logo(k)).join("") + (CONNECTED.length > 3 ? `<span class="lg more">+${CONNECTED.length - 3}</span>` : "");
-$("#suggTitle").textContent = `Decks can be made from your ${named.join(", ")}${CONNECTED.length > 2 ? " and more" : ""}`;
+$("#listTitle").textContent = `More from your ${named.join(", ")}${CONNECTED.length > 2 ? " and more" : ""}`;
 $("#composerLogos").innerHTML = CONNECTED.slice(0, 3).map(k => logo(k)).join("");
 
 /* ── drawer ───────────────────────────────────────────────────────────── */
@@ -832,18 +848,16 @@ function addRecent(s) {
   $("#recent").prepend(el);
 }
 function hide(id) {
-  const el = document.querySelector(`.ccard[data-id="${id}"]`); if (!el) return;
-  el.classList.add("gone");
-  setTimeout(() => { el.style.display = "none"; }, 250);
-  toast("Hidden. We'll suggest fewer like this.", "Undo", () => { el.style.display = ""; requestAnimationFrame(() => el.classList.remove("gone")); });
+  hidden.add(id); render();
+  toast("Hidden. We'll suggest fewer like this.", "Undo", () => { hidden.delete(id); render(); });
 }
 
 document.addEventListener("click", e => {
   const h = e.target.closest("[data-hide]"); if (h) { e.stopPropagation(); hide(h.dataset.hide); return; }
-  const c = e.target.closest(".ccard"); if (c) openDrawer(c.dataset.id);
+  const c = e.target.closest("#sugg [data-id]"); if (c) openDrawer(c.dataset.id);
 });
 document.addEventListener("keydown", e => {
-  const c = e.target.closest?.(".ccard"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDrawer(c.dataset.id); }
+  const c = e.target.closest?.("#sugg .li"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDrawer(c.dataset.id); }
 });
 
 let tt;
@@ -854,20 +868,7 @@ function toast(text, btn, fn) {
   $("#toast").classList.add("on"); clearTimeout(tt); tt = setTimeout(() => $("#toast").classList.remove("on"), 4200);
 }
 
-/* ── one group at a time ─ */
-function showPane(name) {
-  document.querySelectorAll(".segm button").forEach(b => b.setAttribute("aria-selected", b.dataset.pane === name));
-  document.querySelectorAll(".pane").forEach(p => p.hidden = p.dataset.pane !== name);
-}
-document.querySelectorAll(".segm button").forEach(b => b.onclick = () => showPane(b.dataset.pane));
-
-/* proto: header leads with logos or with the connector icon */
-function setHead(h) {
-  $("#headLogos").hidden = h !== "logos"; $("#headIc").hidden = h !== "icon";
-  document.querySelectorAll("[data-head]").forEach(a => a.classList.toggle("on", a.dataset.head === h));
-}
-document.querySelectorAll("[data-head]").forEach(a => a.onclick = e => { e.preventDefault(); setHead(a.dataset.head); });
-setHead(new URLSearchParams(location.search).get("head") === "icon" ? "icon" : "logos");
+function showPane() {}
 
 /* ── states ───────────────────────────────────────────────────────────── */
 const state = new URLSearchParams(location.search).get("state") || "home";
