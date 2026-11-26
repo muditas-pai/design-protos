@@ -344,6 +344,11 @@
   .proto a:hover { background: var(--bg-2); }
   .proto a.on { background: #1a1a1a; color: #fff; }
   .proto .sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+  .proto-hide { width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; color: var(--t2); display: grid; place-items: center; font-size: 11px; }
+  .proto-hide:hover { background: var(--bg-2); color: var(--t); }
+  .proto-show { position: fixed; left: 224px; bottom: 76px; z-index: 45; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line);
+    background: rgba(255,255,255,.95); box-shadow: var(--menu); color: var(--t2); display: grid; place-items: center; font-size: 16px; opacity: .55; transition: opacity .15s; }
+  .proto-show:hover { opacity: 1; color: var(--t); }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } }
   .fade-up { animation: fadeUp .28s var(--std) both; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
@@ -473,7 +478,9 @@
   <a href="?screen=editor&state=nudge">Nudge card</a><a href="?screen=editor&state=export">After export</a><a href="?screen=editor&state=menu">Export menu</a>
   <span class="sep"></span><b>Build</b><a href="?screen=editor&state=choose">Choose</a><a href="?screen=editor&state=map">Sections</a><a href="?screen=editor&state=done">Published</a>
   <span class="sep"></span><b>Dashboard</b><a href="?screen=dash&state=banner">Sidebar card</a><a href="?screen=dash&state=card">On the card</a><a href="?screen=dash&state=paired">Paired</a><a href="?screen=dash&state=live">Live</a>
+  <span class="sep"></span><button class="proto-hide" id="protoHide" aria-label="Hide prototype controls" title="Hide (press H)"><i class="ph-bold ph-x"></i></button>
 </nav>
+<button class="proto-show" id="protoShow" aria-label="Show prototype controls" title="Show prototype controls (press H)" hidden><i class="ph ph-sliders-horizontal"></i></button>
 
 <script>
 const $ = (s) => document.querySelector(s);
@@ -699,6 +706,18 @@ function renderDash(mode) {
     setTimeout(() => renderDash('none'), 200); toast("Got it. You can still build it from the deck's Export menu.", null, null);
   }));
 }
+
+/* proto controls: hide with the × or the H key; remembered per browser */
+function setProto(hide) {
+  $('.proto').hidden = hide; $('#protoShow').hidden = !hide;
+  try { localStorage.setItem('deckToSiteProtoHidden', hide ? '1' : ''); } catch (e) {}
+}
+$('#protoHide').onclick = () => setProto(true);
+$('#protoShow').onclick = () => setProto(false);
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey && !e.altKey && !/input|textarea|select/i.test(e.target.tagName)) setProto(!$('.proto').hidden);
+});
+try { if (localStorage.getItem('deckToSiteProtoHidden')) setProto(true); } catch (e) {}
 
 /* ── states ── */
 const q = new URLSearchParams(location.search);
