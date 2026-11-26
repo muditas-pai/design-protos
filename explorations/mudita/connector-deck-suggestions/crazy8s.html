@@ -223,6 +223,12 @@
   .r7 .btn.wht:hover { background: #e9e9eb; }
   .r7 .logos .lg { box-shadow: 0 0 0 1px rgba(255,255,255,.2), 0 0 0 2px #141416; }
 
+  /* ★ combined: 08's cycling hero + 03's text list */
+  .cmb .li .ar { color: var(--text-4); }
+  .cmb .li:hover .ar { color: var(--text); }
+  .cmb .li .kind { font-size: 15px; color: var(--text); }
+  .cmb .li .w { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+
   /* 08 · hero that cycles */
   .r8 .feat { flex-direction: column; gap: 10px; }
   .r8 .feat .top { display: flex; gap: 14px; }
@@ -492,6 +498,17 @@ V.push({ label: 'Cycling hero', note: 'Arrows move the hero through all six; the
   <div class="panel fl r8" data-r8><div class="feat"><div class="top" data-hero style="flex:1"></div></div>
     <div class="list"><div class="lh">Up next<a class="lnk" href="#">See all</a></div><div class="q" data-q></div></div></div>${tabsLine()}` });
 const ALL = [ONCE[0], REC[0], ONCE[1], REC[1], ONCE[2], REC[2]];
+V.unshift({ label: 'Combined: 08 hero + 03 list', note: 'Your mix: the cycling hero from 08 on the left, the text list from 03 on the right. The list is the next four; click one to bring it into the hero.', html: () => `
+  <div class="panel fl r8 cmb" data-cmb><div class="feat"><div class="top" data-hero style="flex:1"></div></div>
+    <div class="list"><div class="lh">${MORE}<a class="lnk" href="#">See all</a></div><div data-q></div></div></div>${tabsLine()}` });
+function cmb(i) {
+  const p = document.querySelector('[data-cmb]'); if (!p) return; p.dataset.i = i;
+  const s = ALL[i];
+  p.querySelector('[data-hero]').innerHTML = `${th(s)}<div style="display:flex;flex-direction:column;min-width:0;flex:1"><div class="k">${s.kind === 'once' ? 'Suggested now' : 'Recurring · ' + s.cadence}</div><h3>${s.title}</h3><p class="clamp2" style="margin:0 0 10px;font-size:13px;line-height:18px;color:var(--text-2)">${s.reason}</p>
+    <div class="nav"><button class="btn pri" style="margin-right:auto">${s.kind === 'once' ? 'Create deck' : 'Set up'}</button><div class="dots">${ALL.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div><button class="ib" data-prev aria-label="Previous"><i class="ph ph-caret-left"></i></button><button class="ib" data-next aria-label="Next"><i class="ph ph-caret-right"></i></button></div></div>`;
+  p.querySelector('[data-q]').innerHTML = [1, 2, 3, 4].map((d) => { const j = (i + d) % ALL.length, x = ALL[j];
+    return `<div class="li" data-j="${j}">${kindIcon(x)}<span class="t">${x.title}</span><span class="w">${x.kind === 'once' ? 'One-time' : x.cadence}</span><i class="ph ph-caret-right ar"></i></div>`; }).join('');
+}
 function r8(i) {
   const p = document.querySelector('[data-r8]'); if (!p) return; p.dataset.i = i;
   const s = ALL[i];
@@ -501,9 +518,16 @@ function r8(i) {
   p.querySelector('[data-q]').innerHTML = [1, 2, 3, 4].map((d) => { const j = (i + d) % ALL.length, x = ALL[j]; return `<div class="li" data-j="${j}"><span class="t">${x.title}</span>${cadence(x)}</div>`; }).join('');
 }
 
-$('#gallery').innerHTML = V.map((v, i) => `<section class="var"><div class="var-label"><b style="white-space:nowrap">${String(i + 1).padStart(2, '0')} · ${v.label}</b><span>${v.note}</span><span class="fit" data-fit></span></div><div class="page" data-page>${v.html()}</div></section>`).join('');
+$('#gallery').innerHTML = V.map((v, i) => `<section class="var"><div class="var-label"><b style="white-space:nowrap">${i === 0 ? '★' : String(i).padStart(2, '0')} · ${v.label}</b><span>${v.note}</span><span class="fit" data-fit></span></div><div class="page" data-page>${v.html()}</div></section>`).join('');
 
-// 08 cycling hero
+// combined + 08 cycling heroes
+cmb(0);
+document.querySelector('[data-cmb]').addEventListener('click', (e) => {
+  const p = e.currentTarget, i = +p.dataset.i;
+  if (e.target.closest('[data-next]')) cmb((i + 1) % ALL.length);
+  if (e.target.closest('[data-prev]')) cmb((i + ALL.length - 1) % ALL.length);
+  const r = e.target.closest('[data-j]'); if (r) cmb(+r.dataset.j);
+});
 r8(0);
 document.querySelector('[data-r8]').addEventListener('click', (e) => {
   const p = e.currentTarget, i = +p.dataset.i;
