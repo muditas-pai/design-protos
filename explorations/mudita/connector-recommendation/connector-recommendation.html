@@ -111,7 +111,7 @@ tailwind.config = {
   /* Measured from app.presentations.ai/#/create (24 Nov 2026): system font, #F5F5F5 surface, 752px chat column. */
   body.app, body.app button, body.app input, body.app textarea { font-family: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
   body.app { background: #F5F5F5; }
-  .sync-bar { width: 0; animation: syncfill 2.4s cubic-bezier(.3,.1,.3,1) forwards; }
+  .sync-bar { width: 0; animation: syncfill 5.6s cubic-bezier(.3,.1,.3,1) forwards; }
   @keyframes syncfill { to { width: 100%; } }
   .toast { position: fixed; left: 50%; top: 68px; transform: translate(-50%, -12px); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2,0,0,1); z-index: 95; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -400,16 +400,12 @@ function rowHtml(r) {
   } else if (r.state === 'away') {
     right = `<button type="button" data-connect="${r.id}" class="btn btn-ghost btn-sm">Reopen tab<i class="ph ph-arrow-square-out text-[14px]"></i></button>`;
     sub = `<span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>Finish connecting ${app.name} in the new tab, then come back here</span>`;
-  } else if (r.state === 'syncing') {
-    sub = `<span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>Connected. Syncing ${n.sync} from ${app.name}</span>`;
-    extra = `<div class="mt-2.5 h-1 overflow-hidden rounded-full bg-bg-quaternary"><div class="sync-bar h-full rounded-full bg-[#0D99FF]"></div></div>`;
-  } else if (r.state === 'finding') {
-    sub = `<span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>Getting what this deck needs</span>`;
-    extra = `<ul class="mt-2 flex flex-col gap-1 text-caption">${n.find.map((f, i) => {
-      const st = i < r.step ? 'done' : i === r.step ? 'now' : 'next';
-      const ic = st === 'done' ? '<i class="ph-bold ph-check text-[12px] text-text-success-primary"></i>' : st === 'now' ? '<span class="spinner !h-3 !w-3"></span>' : '<span class="h-1.5 w-1.5 rounded-full bg-text-quaternary"></span>';
-      return `<li class="flex items-center gap-2 ${st === 'next' ? 'text-text-tertiary' : 'text-text-primary'}"><span class="flex w-3 justify-center">${ic}</span>${f}</li>`;
-    }).join('')}</ul>`;
+  } else if (r.state === 'syncing' || r.state === 'finding') {
+    // One progress bar across both phases: only the line above it changes. The negative delay keeps the
+    // bar where it was when the row re-renders.
+    const t = ((Date.now() - (r.t0 || Date.now())) / 1000).toFixed(2);
+    sub = r.state === 'syncing' ? `Connected. Syncing ${app.name}` : 'Getting what this deck needs';
+    extra = `<div class="mt-2.5 h-1 overflow-hidden rounded-full bg-bg-quaternary"><div class="sync-bar h-full rounded-full bg-[#0D99FF]" style="animation-delay:-${t}s"></div></div>`;
   } else {
     // Success stays quiet: the same line as before, and a check where the button was.
     right = `<span class="inline-flex h-8 items-center gap-1.5 px-2.5 text-caption font-medium text-text-success-primary"><i class="ph-bold ph-check-circle text-[16px]"></i>Ready</span>`;
@@ -537,11 +533,10 @@ async function backFromTab() {
   await wait(400);
   apps.push({ id, on: true });
   toast(`${appById(id).name} connected`);
-  r.state = 'syncing'; renderCard();
-  await wait(2400);                                  // sync: matches the 2.4s bar
-  r.state = 'finding'; r.step = 0; renderCard();
-  for (let i = 0; i < n.find.length; i++) { await wait(900 + Math.random() * 400); r.step = i + 1; renderCard(); }
-  await wait(300);
+  r.t0 = Date.now(); r.state = 'syncing'; renderCard();
+  await wait(2400);                                  // sync the app
+  r.state = 'finding'; renderCard();
+  await wait(3200);                                  // then fetch what this deck needs (the bar runs 5.6s in all)
   r.state = 'ready'; r.fresh = true; renderCard();
 }
 document.addEventListener('visibilitychange', backFromTab);
