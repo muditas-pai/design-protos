@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<!-- Connector recommendation in the create chat · mudita · 26 Nov 2026.
+     When a prompt asks for a deck that runs on data from apps the user hasn't connected, the chat works out
+     what the deck needs, matches each need to an app, and asks them to connect those apps before the outline.
+     Shell, ask-card dock, AppLogo and the Add connector dialog are copied from ../connector-retrieval/connector-retrieval.html
+     (itself built from pitchdeckdoclist new_dev_migration). Example brand is fictional.
+     States: ?state=ask (the ask card) · ?state=partial (two apps connected) -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Redesign tokens, copied from pitchdeckdoclist config/tailwind/pai.tailwind.config.js (new_dev_migration, 18 Nov 2026), light theme only. */
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        'bg-default-primary': '#FFFFFF', 'bg-secondary': '#F5F5F5', 'bg-tertiary': '#F5F5F5', 'bg-quaternary': '#E6E6E6',
+        'bg-brand': '#0D99FF', 'bg-brand-hover': '#007BE5', 'bg-brand-selected': 'rgba(13,153,255,0.12)', 'bg-brand-inverted': '#E5F4FF',
+        'bg-success': '#14AE5C', 'bg-success-inverted': '#E0F6E5', 'bg-warning-inverted': '#FFF1C2', 'bg-danger-inverted': '#FFE2E0',
+        'bg-ink': '#1A1A1A', 'bg-blackout': '#000000',
+        'text-primary': '#1A1A1A', 'text-secondary': '#7F7F7F', 'text-tertiary': '#7F7F7F', 'text-quaternary': '#B2B2B2',
+        'text-brand': '#007BE5', 'text-success-primary': '#009951', 'text-warning-primary': '#A15C00', 'text-danger-primary': '#DC3412', 'text-white': '#FFFFFF',
+        'border-secondary': '#E6E6E6', 'border-tertiary': 'rgba(230,230,230,0.6)', 'border-primary': 'rgba(26,26,26,0.3)', 'border-brand': '#007BE5', 'border-success-secondary': '#B9EBC6',
+        'gold': '#B8860B', 'app-50': '#E5F4FF',
+      },
+      fontSize: {
+        display: ['32px', { lineHeight: '40px', letterSpacing: '-0.02em' }],
+        title: ['20px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
+        heading: ['18px', { lineHeight: '26px', letterSpacing: '-0.005em' }],
+        body: ['14px', { lineHeight: '20px' }],
+        'body-lg': ['16px', { lineHeight: '24px' }],
+        caption: ['13px', { lineHeight: '18px' }],
+        micro: ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
+      },
+      borderRadius: { control: '6px', card: '12px', dialog: '16px' },
+      boxShadow: {
+        menu: '0 1px 2px 0 rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.16)',
+        dialog: '0 2px 6px 0 rgb(0 0 0 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.28)',
+        'button-primary': '0 1px 2px 0 rgb(0 0 0 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.12)',
+        knob: '0 1px 3px rgb(0 0 0 / 0.2)',
+      },
+      transitionTimingFunction: { std: 'cubic-bezier(0.2, 0, 0, 1)' },
+    },
+  },
+};
+</script>
+<style>
+  html, body { margin: 0; background: #F5F5F5; color: #1A1A1A; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 6px; font-weight: 500; transition: background-color .15s cubic-bezier(.2,0,0,1), border-color .15s cubic-bezier(.2,0,0,1), color .15s, transform .1s; user-select: none; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn-primary { background: #0D99FF; color: #fff; box-shadow: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12); }
+  .btn-primary:hover { background: #007BE5; }
+  .btn-secondary { background: #fff; color: #1A1A1A; border: 1px solid #E6E6E6; }
+  .btn-secondary:hover { border-color: rgba(26,26,26,.3); background: #F5F5F5; }
+  .btn-ghost { color: #7F7F7F; } .btn-ghost:hover { color: #1A1A1A; background: #F5F5F5; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-md { height: 36px; padding: 0 14px; font-size: 14px; gap: 8px; }
+  .btn:disabled { cursor: not-allowed; background: #F5F5F5; color: #7F7F7F; box-shadow: none; border-color: transparent; }
+  .icon-btn { display: inline-flex; height: 36px; width: 36px; align-items: center; justify-content: center; border-radius: 6px; color: #7F7F7F; transition: background-color .15s, color .15s; }
+  .icon-btn:hover { background: #F5F5F5; color: #1A1A1A; }
+  .badge-gold { display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#8A5A00; background:linear-gradient(180deg,#FFE7A3,#F7C94B); }
+  .nav-item { display:flex; align-items:center; gap:10px; height:32px; padding:0 8px; border-radius:6px; font-size:14px; color:#1A1A1A; }
+  .nav-item:hover { background: rgba(26,26,26,.05); }
+  .nav-item.is-active { background: rgba(26,26,26,.06); font-weight: 500; }
+  .nav-item i { font-size: 18px; color: #7F7F7F; }
+  .skeleton { background: linear-gradient(90deg, #EFEFEF 25%, #F7F7F7 37%, #EFEFEF 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 4px; }
+  @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; }
+  .thumb { aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid #E6E6E6; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+
+<title>Connector recommendation</title>
+<style>
+  .spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(26,26,26,.15); border-top-color: #1A1A1A; animation: spin .8s linear infinite; flex-shrink: 0; }
+  .fade-up { animation: fadeUp .28s cubic-bezier(.2,0,0,1) both; }
+  @keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .pop-in { animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes popIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .flash-ok { animation: flashOk 1.8s cubic-bezier(.2,0,0,1); }
+  @keyframes flashOk { 0% { background-color: #E0F6E5; border-color: #B9EBC6; } 100% { } }
+  .acc { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s cubic-bezier(.2,0,0,1); }
+  .acc.open { grid-template-rows: 1fr; }
+  .acc > div { overflow: hidden; }
+  .chev { transition: transform .2s cubic-bezier(.2,0,0,1); }
+  .open-row .chev { transform: rotate(90deg); }
+  .check { display: inline-flex; height: 18px; width: 18px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 5px; border: 1.5px solid #B2B2B2; background: #fff; transition: background-color .15s, border-color .15s; }
+  .check[aria-checked="true"] { background: #0D99FF; border-color: #0D99FF; }
+  .check[aria-checked="true"] i { opacity: 1; transform: scale(1); }
+  .check i { opacity: 0; transform: scale(.6); transition: opacity .12s, transform .18s cubic-bezier(.34,1.56,.64,1); color: #fff; font-size: 12px; }
+  .check:disabled { opacity: .4; cursor: not-allowed; }
+  .check:focus-visible { outline: 2px solid rgba(13,153,255,.35); outline-offset: 2px; }
+  .switch { position: relative; display: inline-flex; height: 20px; width: 34px; flex-shrink: 0; align-items: center; border-radius: 999px; background: #E6E6E6; transition: background-color .2s; }
+  .switch[aria-checked="true"] { background: #0D99FF; }
+  .switch .knob { height: 16px; width: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .2); transform: translateX(2px); transition: transform .2s cubic-bezier(.34,1.3,.64,1); }
+  .switch[aria-checked="true"] .knob { transform: translateX(16px); }
+  /* Measured from app.presentations.ai/#/create (24 Nov 2026): system font, #F5F5F5 surface, 752px chat column. */
+  body.app, body.app button, body.app input, body.app textarea { font-family: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+  body.app { background: #F5F5F5; }
+  .toast { position: fixed; left: 50%; top: 68px; transform: translate(-50%, -12px); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2,0,0,1); z-index: 95; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body class="app">
+<div class="flex h-screen flex-col">
+  <header class="flex h-14 shrink-0 items-center border-b border-border-secondary px-4 sm:px-6">
+    <div class="mx-auto flex w-full max-w-[976px] items-center gap-1.5">
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Back"><i id="hdrIcon" class="ph ph-house text-[20px]"></i></button>
+      <span id="hdrPill" class="hidden h-[22px] items-center rounded-full border border-border-secondary bg-bg-tertiary px-2 text-[12px] font-medium text-text-secondary">Auto · 10 credits a slide</span>
+      <span class="flex-1"></span>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Theme"><i class="ph ph-sun text-[18px]"></i></button>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Close"><i class="ph ph-x text-[18px]"></i></button>
+    </div>
+  </header>
+
+  <!-- Stage 1: prompt screen -->
+  <section id="promptStage" class="flex min-h-0 flex-1 flex-col items-center px-4 pt-14">
+    <h1 class="text-center text-[32px] font-bold leading-10 tracking-[-0.02em]">Describe your deck, or upload a file</h1>
+    <div class="mt-5 w-full max-w-[800px]" id="composerSlot"></div>
+  </section>
+
+  <!-- Stage 2: chat -->
+  <section id="chatStage" class="hidden min-h-0 flex-1 flex-col">
+    <div id="chatScroll" class="min-h-0 flex-1 overflow-y-auto">
+      <div id="thread" class="mx-auto flex w-full max-w-[752px] flex-col gap-6 px-4 pb-10 pt-8"></div>
+    </div>
+    <!-- Ask cards dock here, in place of a text field: fixed height, scroll inside, buttons always in view. -->
+    <div class="shrink-0 px-4 pb-6"><div class="mx-auto w-full max-w-[744px]" id="askDock"></div></div>
+  </section>
+</div>
+
+<div id="toast" class="toast flex items-center gap-2 rounded-card bg-[#1A1A1A] px-4 py-2.5 text-body text-white shadow-menu"></div>
+
+<!-- Proto-only control -->
+<div class="fixed bottom-4 left-4 z-[100] flex items-center gap-1 rounded-full border border-border-secondary bg-white/95 p-1 text-micro shadow-menu backdrop-blur">
+  <span class="px-2 font-semibold text-text-secondary">Proto</span>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pRestart">Restart</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pSkip">Skip to the ask</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pPartial">Two connected</button>
+</div>
+
+<script>
+// Connector catalog + "Add connector" dialog (replica of settings/datasources/AddConnectorDialog.jsx, PR #6872).
+const CATALOG = [
+  { id: 'shopify', name: 'Shopify', slug: 'shopify', cat: 'ecommerce', chip: 'ecommerce', popular: true, desc: 'Use orders, revenue and top products in sales and marketing decks.' },
+  { id: 'metaads', name: 'Meta Ads', slug: 'meta', cat: 'advertising', chip: 'ads', popular: false, desc: 'Bring spend, reach and results from Facebook and Instagram ads.' },
+  { id: 'klaviyo', name: 'Klaviyo', slug: null, color: '#232426', cat: 'email marketing', chip: 'email', popular: false, desc: 'Show what each email campaign sent, opened and sold.' },
+  { id: 'woocommerce', name: 'WooCommerce', slug: 'woocommerce', cat: 'ecommerce', chip: 'ecommerce', popular: false, desc: 'Use orders and products from your WooCommerce store.' },
+  { id: 'googleads', name: 'Google Ads', slug: 'googleads', cat: 'advertising', chip: 'ads', popular: false, desc: 'Bring search and display campaign results into your decks.' },
+  { id: 'mailchimp', name: 'Mailchimp', slug: 'mailchimp', cat: 'email marketing', chip: 'email', popular: false, desc: 'Show campaign opens, clicks and audience growth.' },
+  { id: 'googledrive', name: 'Google Drive', slug: 'googledrive', cat: 'file management & storage', chip: 'files', popular: true, desc: 'Read docs, sheets and slides from your Drive so decks can quote them.' },
+  { id: 'hubspot', name: 'HubSpot', slug: 'hubspot', cat: 'crm', chip: 'crm', popular: true, desc: 'Pull deals, pipeline and company records into sales and QBR decks.' },
+  { id: 'notion', name: 'Notion', slug: 'notion', cat: 'notes', chip: 'notes', popular: true, desc: 'Use pages and databases from your workspace as source material.' },
+  { id: 'salesforce', name: 'Salesforce', slug: null, color: '#00A1E0', cat: 'crm', chip: 'crm', popular: true, desc: 'Bring opportunities, accounts and forecasts into your decks.' },
+  { id: 'googlesheets', name: 'Google Sheets', slug: 'googlesheets', cat: 'spreadsheets', chip: 'spreadsheets', popular: true, desc: 'Turn rows and charts from a sheet into slides with real numbers.' },
+  { id: 'slack', name: 'Slack', slug: null, color: '#4A154B', cat: 'team chat', chip: 'chat', popular: true, desc: 'Reference channel threads and announcements your team already wrote.' },
+  { id: 'confluence', name: 'Confluence', slug: 'confluence', cat: 'documents', chip: 'documents', popular: false, desc: 'Draw on specs, wikis and team pages.' },
+  { id: 'dropbox', name: 'Dropbox', slug: 'dropbox', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read files stored in your Dropbox folders.' },
+  { id: 'airtable', name: 'Airtable', slug: 'airtable', cat: 'spreadsheets', chip: 'spreadsheets', popular: false, desc: 'Use bases and views as structured data for slides.' },
+  { id: 'jira', name: 'Jira', slug: 'jira', cat: 'project management', chip: 'projects', popular: false, desc: 'Summarise epics, sprints and roadmaps for status updates.' },
+  { id: 'asana', name: 'Asana', slug: 'asana', cat: 'project management', chip: 'projects', popular: false, desc: 'Pull project status and milestones into updates.' },
+  { id: 'linear', name: 'Linear', slug: 'linear', cat: 'project management', chip: 'projects', popular: false, desc: 'Turn cycles and projects into progress slides.' },
+  { id: 'gmail', name: 'Gmail', slug: 'gmail', cat: 'email', chip: 'email', popular: false, desc: 'Reference email threads with customers and partners.' },
+  { id: 'googleanalytics', name: 'Google Analytics', slug: 'googleanalytics', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Chart traffic and conversion trends from GA4.' },
+  { id: 'mixpanel', name: 'Mixpanel', slug: 'mixpanel', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Bring product usage metrics into reviews.' },
+  { id: 'quickbooks', name: 'QuickBooks', slug: 'quickbooks', cat: 'accounting', chip: 'accounting', popular: false, desc: 'Use revenue and expense figures in finance decks.' },
+  { id: 'onedrive', name: 'OneDrive', slug: null, color: '#0364B8', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read Word, Excel and PowerPoint files from OneDrive.' },
+  { id: 'pipedrive', name: 'Pipedrive', slug: null, color: '#1A1A1A', cat: 'crm', chip: 'crm', popular: false, desc: 'Pull deals and activity into pipeline reviews.' },
+  { id: 'zendesk', name: 'Zendesk', slug: 'zendesk', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket trends and CSAT for account reviews.' },
+  { id: 'intercom', name: 'Intercom', slug: 'intercom', cat: 'customer support', chip: 'more', popular: false, desc: 'Use conversation themes in customer decks.' },
+];
+const CHIPS = [['ecommerce','Ecommerce'],['ads','Advertising'],['crm','CRM'],['documents','Documents'],['files','File storage'],['spreadsheets','Spreadsheets'],['notes','Notes'],['projects','Project management'],['analytics','Analytics'],['email','Email'],['chat','Team chat'],['accounting','Accounting'],['more','More']];
+const ACR = new Set(['crm','ai','hr','url','sms','seo']);
+const catLabel = (t) => (t || '').replace(/\b\w+/g, (w) => ACR.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
+const appById = (id) => CATALOG.find((a) => a.id === id);
+
+// AppLogo: logo on a soft sunken tile, initials when there's no logo or it fails to load.
+function appLogo(app, size = 'md', extraClass = '') {
+  const box = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-8 w-8' : size === 'xs' ? 'h-5 w-5' : 'h-9 w-9';
+  const img = size === 'lg' ? 'h-7 w-7' : size === 'sm' ? 'h-[18px] w-[18px]' : size === 'xs' ? 'h-3 w-3' : 'h-5 w-5';
+  const tiny = size === 'xs' ? 'text-[6px]' : 'text-[10px]';
+  const initials = app.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const fallback = `<span class='text-caption font-semibold text-text-secondary'>${initials}</span>`;
+  const inner = app.slug
+    ? `<img src="https://cdn.simpleicons.org/${app.slug}" alt="" class="${img} object-contain" loading="lazy" onerror="this.outerHTML=&quot;${fallback}&quot;" />`
+    : `<span class="flex ${img} items-center justify-center rounded-[3px] ${tiny} font-bold text-white" style="background:${app.color}">${initials}</span>`;
+  return `<span class="flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-control bg-bg-tertiary ${extraClass}">${inner}</span>`;
+}
+
+// The dialog. opts: { isConnected(id), onConnect(id) -> Promise, title, description }
+const ConnectorDialog = (() => {
+  let root, state = { q: '', chip: '', busy: null, opts: null };
+  function mount() {
+    root = document.createElement('div');
+    root.className = 'fixed inset-0 z-[70] hidden';
+    root.innerHTML = `
+      <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px] opacity-0 transition-opacity duration-200" data-x data-fade></div>
+      <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+        <div data-panel role="dialog" aria-modal="true" class="pointer-events-auto relative w-full max-w-3xl translate-y-2 scale-[0.98] overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary opacity-0 shadow-dialog transition-[opacity,transform] duration-200 ease-std">
+          <div class="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
+            <div class="min-w-0"><div data-title class="text-title font-semibold">Add connector</div><div data-desc class="mt-1 text-body text-text-secondary">Connect an app your decks can draw on. Access is read-only and only for you.</div></div>
+            <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-x aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+          </div>
+          <div class="px-6 pt-3">
+            <div class="relative"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+              <input data-q placeholder="Search 120+ apps" class="h-9 w-full rounded-control border border-border-secondary pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+            <div data-chips class="scrollbar-hide mt-3 flex h-7 gap-1.5 overflow-x-auto" style="-webkit-mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%)"></div>
+            <div data-section class="mb-2 mt-6 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
+          </div>
+          <div data-list class="scrollbar-hide h-[52vh] overflow-y-auto px-6 pb-6"></div>
+          <div data-foot class="hidden items-center gap-3 border-t border-border-secondary px-6 py-3">
+            <span data-foot-note class="flex-1 text-caption text-text-secondary"></span>
+            <button type="button" data-done class="btn btn-primary btn-md">Done</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(root);
+    root.querySelectorAll('[data-x]').forEach((el) => el.onclick = close);
+    root.querySelector('[data-done]').onclick = close;
+    root.querySelector('[data-q]').oninput = (e) => { state.q = e.target.value; render(); };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.classList.contains('hidden')) close(); });
+  }
+  function card(app) {
+    const connected = state.opts.isConnected(app.id);
+    const working = state.busy === app.id;
+    const action = connected
+      ? `<span title="Connected" class="flex h-8 w-8 items-center justify-center rounded-control bg-bg-success-inverted text-text-success-primary"><i class="ph-bold ph-check"></i></span>`
+      : `<button type="button" data-connect="${app.id}" ${state.busy ? 'disabled' : ''} aria-label="Connect ${app.name}" class="icon-btn !h-8 !w-8 border border-border-secondary disabled:opacity-50">${working ? '<i class="ph ph-arrows-clockwise spin"></i>' : '<i class="ph ph-plus"></i>'}</button>`;
+    return `<div class="flex items-start gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-4">
+      ${appLogo(app, 'lg')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-semibold">${app.name}</div><p class="mt-0.5 line-clamp-2 text-caption text-text-secondary">${app.desc}</p></div>
+      <div class="shrink-0">${action}</div></div>`;
+  }
+  function render() {
+    const q = state.q.trim().toLowerCase();
+    const chips = root.querySelector('[data-chips]');
+    chips.innerHTML = [['', 'All'], ...CHIPS].map(([id, label]) => `<button type="button" data-chip="${id}" class="h-7 shrink-0 whitespace-nowrap rounded-full border px-3 text-caption ${state.chip === id ? 'border-border-brand bg-app-50 text-text-brand' : 'border-border-secondary text-text-secondary hover:bg-bg-tertiary'}">${label}</button>`).join('');
+    chips.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { state.chip = b.dataset.chip; render(); });
+    const filtered = CATALOG.filter((a) => (!state.chip || a.chip === state.chip) && (!q || a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q)));
+    const browsing = !q && !state.chip;
+    const pop = browsing ? filtered.filter((a) => a.popular) : [];
+    const rest = browsing ? filtered.filter((a) => !a.popular) : filtered;
+    root.querySelector('[data-section]').textContent = browsing ? 'Popular' : (CHIPS.find((c) => c[0] === state.chip)?.[1] || 'All apps');
+    const grid = (items) => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">${items.map(card).join('')}</div>`;
+    let html = '';
+    if (!filtered.length) html = '<p class="py-10 text-center text-body text-text-secondary">No apps match your search.</p>';
+    if (pop.length) html += grid(pop);
+    if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
+    const list = root.querySelector('[data-list]'); list.innerHTML = html;
+    if (state.opts.done) {
+      const added = state.added || [];
+      root.querySelector('[data-foot-note]').innerHTML = added.length
+        ? `<span class="inline-flex items-center gap-1.5 text-text-success-primary"><i class="ph-fill ph-check-circle"></i>${added.length === 1 ? appById(added[0]).name + ' connected' : added.length + ' apps connected'}</span><span class="text-text-secondary"> · add more, or press Done</span>`
+        : 'Connect as many apps as you like, then press Done.';
+    }
+    list.querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
+      state.busy = b.dataset.connect; render();
+      const id = state.busy;
+      Promise.resolve(state.opts.onConnect(id)).then(() => { (state.added = state.added || []).push(id); }).finally(() => { state.busy = null; render(); });
+    });
+  }
+  function open(opts) {
+    if (!root) mount();
+    state = { q: '', chip: opts.chip || '', busy: null, opts };
+    if (opts.title) root.querySelector('[data-title]').textContent = opts.title;
+    if (opts.description) root.querySelector('[data-desc]').textContent = opts.description;
+    const foot = root.querySelector('[data-foot]');
+    foot.classList.toggle('hidden', !opts.done); foot.classList.toggle('flex', !!opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[52vh]', !opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[46vh]', !!opts.done);
+    root.querySelector('[data-q]').value = '';
+    render();
+    root.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      root.querySelector('[data-fade]').classList.remove('opacity-0');
+      root.querySelector('[data-panel]').classList.remove('opacity-0','translate-y-2','scale-[0.98]');
+      root.querySelector('[data-q]').focus();
+    });
+  }
+  function close() {
+    root.querySelector('[data-fade]').classList.add('opacity-0');
+    root.querySelector('[data-panel]').classList.add('opacity-0','translate-y-2','scale-[0.98]');
+    setTimeout(() => root.classList.add('hidden'), 180);
+    state.opts?.onClose?.();
+  }
+  return { open, close, refresh: () => root && render() };
+})();
+
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+function toast(msg, icon = 'check-circle', tone = '#3DDC97') {
+  const t = $('#toast'); t.innerHTML = `<i class="ph-fill ph-${icon} text-[18px]" style="color:${tone}"></i><span>${msg}</span>`;
+  t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---------------- the example ----------------
+// Perch & Paw (fictional pet furniture brand). The marketing manager asks for a deck that runs on numbers,
+// but only Google Drive is connected. Today is Thu 26 Nov 2026.
+const PROMPT = 'Weekly marketing update for the leadership team: last week\'s sales, website traffic, paid social and email results.';
+// What the deck needs, in the order the outline uses it. `fills` = outline slides that need this data.
+const NEEDS = [
+  { id: 'shopify',         need: 'Sales and orders',   fills: ['Revenue and orders', 'Top products'],   ready: '1,820 orders from last week' },
+  { id: 'googleanalytics', need: 'Website traffic',    fills: ['Traffic and conversion'],               ready: '48,200 visits from last week' },
+  { id: 'metaads',         need: 'Paid social',        fills: ['Paid social: spend and return'],        ready: '3 campaigns from last week' },
+  { id: 'klaviyo',         need: 'Email campaigns',    fills: ['Email: what we sent and what it sold'], ready: '2 campaigns from last week' },
+];
+const ALT = { shopify: 'ecommerce', googleanalytics: 'analytics', metaads: 'ads', klaviyo: 'email' };
+
+// Connected in the workspace. Drive is there, but it holds documents, not these numbers.
+let apps = [{ id: 'googledrive', on: true }];
+// Per need: 'idle' | 'auth' | 'syncing' | 'ready'
+let rows = [];
+
+// ---------------- composer ----------------
+function composer() {
+  const onApps = apps.filter((a) => a.on);
+  return `<div class="rounded-[12px] border border-[#0D99FF] bg-bg-default-primary shadow-[0_0_0_3px_rgba(13,153,255,0.12)]">
+    <textarea id="promptInput" rows="4" class="block w-full resize-none border-0 bg-transparent px-[18px] pt-4 text-[16px] leading-6 outline-none placeholder:text-text-tertiary" placeholder="Seed pitch for a scheduling app for dental clinics">${esc(PROMPT)}</textarea>
+    <div class="flex items-center gap-1.5 px-2.5 pb-2.5 pt-1">
+      <button type="button" class="flex h-8 w-8 items-center justify-center rounded-control border border-border-secondary bg-white hover:bg-bg-tertiary" aria-label="Upload file or link"><i class="ph ph-plus text-[16px]"></i></button>
+      <button type="button" class="flex h-8 items-center gap-2 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary">
+        <span class="flex -space-x-1">${onApps.map((a) => appLogo(appById(a.id), 'xs', '!bg-transparent')).join('')}</span>Connected apps
+      </button>
+      <button type="button" class="flex h-8 items-center gap-1.5 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary"><i class="ph ph-palette text-[15px] text-text-secondary"></i>Design<i class="ph ph-caret-down text-[12px] text-text-secondary"></i></button>
+      <button type="button" class="flex h-8 items-center gap-1.5 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary"><i class="ph ph-sliders-horizontal text-[15px] text-text-secondary"></i>Options</button>
+      <span class="flex-1"></span>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Dictate"><i class="ph ph-microphone text-[17px]"></i></button>
+      <button type="button" id="sendBtn" class="flex h-8 w-8 items-center justify-center rounded-control bg-[#0D99FF] text-white hover:bg-[#007BE5]" aria-label="Send"><i class="ph-bold ph-arrow-up"></i></button>
+    </div>
+  </div>`;
+}
+function mountComposer() {
+  $('#composerSlot').innerHTML = composer();
+  $('#sendBtn').onclick = () => start($('#promptInput').value.trim() || PROMPT);
+}
+
+// ---------------- chat ----------------
+const thread = () => $('#thread');
+function scrollEnd() { const s = $('#chatScroll'); s.scrollTo({ top: s.scrollHeight, behavior: 'smooth' }); }
+function addUser(text) {
+  thread().insertAdjacentHTML('beforeend', `<div class="fade-up flex justify-end"><div class="max-w-[612px] rounded-card bg-[#E5F4FF] px-4 py-3 text-[14px] leading-5">${esc(text)}</div></div>`);
+}
+function addAssistant(html) {
+  const el = document.createElement('div'); el.className = 'fade-up text-[14px] leading-5';
+  el.innerHTML = html; thread().appendChild(el); scrollEnd(); return el;
+}
+// The thinking trail (like ResearchStepRow), folded to "Thought for Ns ›" when done.
+async function thinking() {
+  const el = addAssistant(`<div class="flex flex-col gap-3" data-trail>
+    <div class="flex items-center gap-3 text-text-tertiary" data-status><span class="spinner !border-[#0D99FF]/25 !border-t-[#0D99FF]"></span><span>Working out what this deck needs…</span></div>
+    <ul data-gl class="flex list-disc flex-col gap-1 pl-[44px] text-text-tertiary marker:text-text-quaternary"></ul></div>`);
+  const list = el.querySelector('[data-gl]');
+  const steps = [
+    'Read your prompt: a weekly update for leadership',
+    'It needs sales, website traffic, paid social and email numbers',
+    'Checked Google Drive: documents only, none of these numbers',
+    'Matched each need to an app that has it',
+  ];
+  const t0 = Date.now();
+  for (const s of steps) { list.insertAdjacentHTML('beforeend', `<li class="fade-up">${s}</li>`); scrollEnd(); await wait(650 + Math.random() * 300); }
+  const secs = Math.max(1, Math.round((Date.now() - t0) / 1000));
+  el.querySelector('[data-status]').remove();
+  const inner = el.innerHTML;
+  el.innerHTML = `<div><button type="button" data-trailtoggle class="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary">Thought for ${secs}s<i class="ph ph-caret-right chev text-[12px]"></i></button>
+    <div class="acc"><div class="pt-3">${inner}</div></div></div>`;
+  const btn = el.querySelector('[data-trailtoggle]');
+  btn.onclick = () => { btn.parentElement.classList.toggle('open-row'); el.querySelector('.acc').classList.toggle('open'); };
+}
+
+// ---------------- the ask: connect apps for this deck ----------------
+let cardEl = null;
+function rowHtml(r) {
+  const app = appById(r.id), n = NEEDS.find((x) => x.id === r.id);
+  const fills = `${n.fills.length} ${n.fills.length === 1 ? 'slide' : 'slides'}`;
+  let right, sub;
+  if (r.state === 'ready') {
+    right = `<span class="inline-flex h-8 items-center gap-1.5 rounded-control bg-bg-success-inverted px-2.5 text-caption font-medium text-text-success-primary"><i class="ph-bold ph-check"></i>Connected</span>`;
+    sub = `<span class="text-text-success-primary">${n.ready}</span>`;
+  } else if (r.state === 'syncing' || r.state === 'auth') {
+    right = `<span class="inline-flex h-8 items-center gap-2 px-2.5 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>${r.state === 'auth' ? 'Waiting for ' + app.name : 'Connecting'}</span>`;
+    sub = r.state === 'auth' ? `${app.name} · fills ${fills}` : `Getting last week's data from ${app.name}`;
+  } else {
+    right = `<button type="button" data-connect="${r.id}" class="btn btn-secondary btn-sm">Connect</button>`;
+    sub = `${app.name} · fills ${fills} <span class="text-text-quaternary">·</span> <button type="button" data-alt="${r.id}" class="text-text-secondary underline decoration-border-primary underline-offset-2 hover:text-text-primary">Use another app</button>`;
+  }
+  return `<div class="flex items-center gap-3 rounded-[10px] border p-3 transition-colors ${r.state === 'ready' ? 'border-border-success-secondary bg-[#F6FCF8]' : 'border-border-secondary bg-white'} ${r.fresh ? 'flash-ok' : ''}" data-row="${r.id}" title="Fills: ${n.fills.join(', ')}">
+    ${appLogo(app, 'sm')}
+    <div class="min-w-0 flex-1"><div class="text-body font-medium">${n.need}</div><div class="mt-0.5 text-caption text-text-secondary">${sub}</div></div>
+    <div class="shrink-0">${right}</div></div>`;
+}
+const sigOf = (r) => r.state;
+function cardShell() {
+  cardEl.innerHTML = `<div data-askcard class="fade-up flex max-h-[min(60vh,520px)] flex-col overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary px-2.5 pb-2.5 pt-2 shadow-menu">
+      <div class="flex min-h-[48px] shrink-0 items-center gap-1 pb-3 pl-3 pr-1 pt-2">
+        <div class="mr-2 min-w-0 flex-1"><p class="text-[16px] font-medium leading-6">Connect apps for this deck</p>
+          <p class="text-caption text-text-secondary">Read-only, and only you can see what we pull.</p></div>
+        <button type="button" id="dismissBtn" class="icon-btn !h-7 !w-7 text-text-secondary" aria-label="Skip for now"><i class="ph ph-x text-[15px]"></i></button>
+      </div>
+      <div data-askbody class="min-h-0 flex-1 overflow-y-auto"><div data-rows class="flex flex-col gap-2"></div></div>
+      <div class="flex shrink-0 flex-wrap items-center gap-2 pl-1 pt-2.5">
+        <button type="button" id="browseBtn" class="btn btn-ghost btn-sm"><i class="ph ph-squares-four"></i>Browse all apps</button>
+        <span class="flex-1"></span>
+        <button type="button" id="skipBtn" class="btn btn-secondary btn-sm">Skip for now</button>
+        <button type="button" id="contBtn" class="btn btn-primary btn-sm">Continue</button>
+      </div>
+    </div>`;
+  cardEl.querySelector('[data-rows]').addEventListener('click', (e) => {
+    const c = e.target.closest('[data-connect]'), alt = e.target.closest('[data-alt]');
+    if (c) connect(c.dataset.connect);
+    if (alt) openCatalog(ALT[alt.dataset.alt]);
+  });
+  $('#browseBtn').onclick = () => openCatalog('');
+  $('#skipBtn').onclick = () => finish();
+  $('#dismissBtn').onclick = () => finish();
+  $('#contBtn').onclick = () => finish();
+}
+function renderCard() {
+  if (!cardEl.querySelector('[data-askcard]')) cardShell();
+  const list = cardEl.querySelector('[data-rows]');
+  rows.forEach((r, i) => {
+    let el = list.querySelector(`[data-row="${r.id}"]`);
+    if (el && el.dataset.sig === sigOf(r)) return;
+    const tmp = document.createElement('div'); tmp.innerHTML = rowHtml(r).trim();
+    const next = tmp.firstElementChild; next.dataset.sig = sigOf(r);
+    if (!el) list.insertBefore(next, list.children[i] || null); else el.replaceWith(next);
+    r.fresh = false;
+  });
+  const ready = rows.filter((r) => r.state === 'ready').length;
+  const busy = rows.some((r) => r.state === 'auth' || r.state === 'syncing');
+  const cont = $('#contBtn');
+  cont.disabled = !ready || busy;
+  cont.textContent = ready ? `Continue with ${ready} ${ready === 1 ? 'app' : 'apps'}` : 'Continue';
+  // Once something is connected, "skip" means "go on without the rest".
+  $('#skipBtn').textContent = ready ? 'Skip the rest' : 'Skip for now';
+  $('#skipBtn').classList.toggle('hidden', ready === rows.length);
+}
+
+// The app's own sign-in, mocked: read-only scopes, then Allow.
+const SCOPES = {
+  shopify: ['Orders and refunds', 'Products and inventory', 'Store analytics'],
+  googleanalytics: ['Reports for your properties'],
+  metaads: ['Ad accounts, campaigns and results'],
+  klaviyo: ['Campaigns and their results', 'Lists and segments (counts only)'],
+};
+function authWindow(id) {
+  const app = appById(id);
+  return new Promise((resolve) => {
+    const w = document.createElement('div');
+    w.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/30 p-4 fade-up';
+    w.innerHTML = `<div class="w-full max-w-[380px] overflow-hidden rounded-[10px] bg-white shadow-dialog">
+      <div class="flex items-center gap-2 border-b border-border-secondary bg-bg-tertiary px-3 py-2 text-micro text-text-secondary"><i class="ph ph-lock-simple"></i>${app.name.toLowerCase().replace(/\s+/g, '')}.com/oauth</div>
+      <div class="p-5">
+        <div class="flex items-center gap-2">${appLogo(app, 'md')}<i class="ph ph-arrows-left-right text-text-secondary"></i><span class="flex h-9 w-9 items-center justify-center rounded-control bg-[#FF5500] text-[13px] font-bold text-white">P</span></div>
+        <p class="mt-4 text-body-lg font-semibold">Presentations.AI wants to read from ${app.name}</p>
+        <ul class="mt-3 flex flex-col gap-1.5 text-caption">${SCOPES[id].map((s) => `<li class="flex items-center gap-2"><i class="ph ph-eye text-text-secondary"></i>${s}</li>`).join('')}</ul>
+        <p class="mt-3 text-micro text-text-secondary">Read-only. It can't change anything in ${app.name}.</p>
+        <div class="mt-5 flex justify-end gap-2"><button type="button" data-no class="btn btn-secondary btn-sm">Cancel</button><button type="button" data-yes class="btn btn-sm" style="background:#1A1A1A;color:#fff">Allow</button></div>
+      </div></div>`;
+    document.body.appendChild(w);
+    w.querySelector('[data-yes]').onclick = () => { w.remove(); resolve(true); };
+    w.querySelector('[data-no]').onclick = () => { w.remove(); resolve(false); };
+  });
+}
+async function connect(id) {
+  const r = rows.find((x) => x.id === id);
+  r.state = 'auth'; renderCard();
+  const ok = await authWindow(id);
+  if (!ok) { r.state = 'idle'; renderCard(); return; }
+  apps.push({ id, on: true });
+  r.state = 'syncing'; renderCard();
+  await wait(1800);
+  r.state = 'ready'; r.fresh = true; renderCard();
+  toast(`${appById(id).name} connected`);
+}
+// The full catalog, filtered to the category of the row ("Use another app"), or everything ("Browse all apps").
+function openCatalog(chip) {
+  ConnectorDialog.open({
+    title: chip ? 'Use another app' : 'Add a connector',
+    description: chip ? 'Pick the app your team uses for this. We\'ll use it in place of our suggestion.' : 'Connect any app your decks can draw on. Access is read-only and only for you.',
+    chip, done: true,
+    isConnected: (id) => apps.some((a) => a.id === id),
+    onConnect: (id) => wait(1200).then(() => { apps.push({ id, on: true }); toast(`${appById(id).name} connected`); }),
+  });
+}
+
+// ---------------- flow ----------------
+function chatHeader(on = true) { $('#hdrIcon').className = on ? 'ph ph-arrow-left text-[20px]' : 'ph ph-house text-[20px]'; $('#hdrPill').classList.toggle('hidden', !on); $('#hdrPill').classList.toggle('inline-flex', on); }
+function toChat() {
+  chatHeader();
+  $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
+  $('#askDock').innerHTML = ''; thread().innerHTML = '';
+}
+const LEAD = `<p>This deck runs on numbers from apps you haven't connected yet. Connect them and we'll use last week's real figures.</p>
+  <p class="mt-2 text-text-secondary">Skip any of them and those slides get a marked placeholder you can fill in later.</p>`;
+async function start(text) {
+  toChat(); rows = NEEDS.map((n) => ({ id: n.id, state: 'idle' }));
+  addUser(text);
+  await wait(500);
+  await thinking();
+  addAssistant(LEAD);
+  cardEl = $('#askDock'); renderCard(); scrollEnd();
+}
+function finish() {
+  $('#askDock').innerHTML = '';
+  const ready = rows.filter((r) => r.state === 'ready'), rest = rows.filter((r) => r.state !== 'ready');
+  const names = (rs) => rs.map((r) => appById(r.id).name);
+  const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  addUser(ready.length ? `Use ${list(names(ready))}` : 'Skip for now');
+  const ph = rest.flatMap((r) => NEEDS.find((n) => n.id === r.id).fills);
+  addAssistant(`<p>${ready.length
+      ? `Got it. We'll use last week's numbers from ${list(names(ready))}.`
+      : `Got it. We'll build the outline from your prompt.`}${ph.length ? ` These slides get a placeholder for now: ${list(ph.map((p) => `“${p}”`))}.` : ''}</p>
+    <div class="mt-3 flex items-center gap-2 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>Drafting your outline</div>`);
+}
+function restart() { chatHeader(false); apps = [{ id: 'googledrive', on: true }]; $('#chatStage').classList.add('hidden'); $('#chatStage').classList.remove('flex'); $('#promptStage').classList.remove('hidden'); $('#askDock').innerHTML = ''; mountComposer(); }
+function jumpToAsk(connected = []) {
+  toChat(); addUser(PROMPT);
+  addAssistant(`<p class="text-text-tertiary">Thought for 3s <i class="ph ph-caret-right text-[12px]"></i></p>`);
+  addAssistant(LEAD);
+  rows = NEEDS.map((n) => ({ id: n.id, state: connected.includes(n.id) ? 'ready' : 'idle' }));
+  connected.forEach((id) => apps.push({ id, on: true }));
+  cardEl = $('#askDock'); renderCard();
+}
+$('#pRestart').onclick = () => { history.replaceState(null, '', '?'); restart(); };
+$('#pSkip').onclick = () => { history.replaceState(null, '', '?state=ask'); restart(); jumpToAsk(); };
+$('#pPartial').onclick = () => { history.replaceState(null, '', '?state=partial'); restart(); jumpToAsk(['shopify', 'googleanalytics']); };
+mountComposer();
+const st = new URLSearchParams(location.search).get('state');
+if (st === 'ask') jumpToAsk();
+if (st === 'partial') jumpToAsk(['shopify', 'googleanalytics']);
+</script>
+</body>
+</html>
