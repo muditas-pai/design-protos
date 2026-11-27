@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <!-- Connect window, rebranded · mudita · 27 Nov 2026.
-     The live "Add connector" flow (screen recording, 27 Nov 2026) opens a pop-up that says Composio throughout:
-     Composio's hand-off page, "Connect with Composio" on Notion's consent screen, "Successfully connected Composio to Notion".
-     This proto keeps the same steps and makes every one of them say Presentations.AI:
-       1 hand-off  · connect.presentations.ai (ours)
-       2 consent   · Notion's screen, naming Presentations.AI (needs our own OAuth app registered with Notion)
-       3 pick pages· Notion's screen
-       4 connected · connect.presentations.ai (ours)
-       5 closing   · app.presentations.ai, closes itself
+     The live "Add connector" flow (screen recordings, 27 Nov 2026) opens a pop-up that says Composio throughout.
+     This proto keeps the same steps and makes every one of them say Presentations.AI, for Notion and Slack:
+       hand-off    · connect.presentations.ai (ours, the app's flat style)
+       consent     · the app's own screen, naming Presentations.AI (needs our own OAuth app registered with Notion / Slack)
+       pick pages  · Notion only
+       connected   · connect.presentations.ai (ours)
+       closing     · app.presentations.ai, closes itself
      Dialog, catalog and AppLogo copied from ../connector-recommendation/connector-recommendation.html.
-     States: ?step=handoff · consent · pages · success · done -->
+     States: ?app=notion|slack & step=handoff|consent|pages|success|done -->
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -187,6 +186,29 @@ tailwind.config = {
   .nt .pg { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 12px; font-size: 12px; }
   .nt .pg input { accent-color: #2383e2; }
   .nt .pg .ph-caret-right { margin-left: auto; color: #9b9a97; }
+  /* Slack's consent screen (their UI; only the app name and logo are ours) */
+  .sk { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #1d1c1d; background: #fff; min-height: 100%; }
+  .sk .hdr { display: flex; align-items: center; gap: 6px; height: 54px; padding: 0 18px; border-bottom: 1px solid #ddd; font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+  .sk .in { padding: 16px 18px 20px; }
+  .sk h3 { margin: 10px 0 18px; font-size: 19px; line-height: 26px; font-weight: 800; }
+  .sk .q { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .sk .sel { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 10px; border: 1px solid #868686; border-radius: 6px; font-size: 14px; font-weight: 600; }
+  .sk .sel .ph-caret-down { margin-left: auto; font-size: 13px; }
+  .sk .ws { width: 20px; height: 20px; border-radius: 4px; background: #2E7D32; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+  .sk .view { margin-top: 12px; background: #f8f8f8; border-radius: 8px; padding: 14px 18px 6px; }
+  .sk .view .t { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .sk .row > button { width: 100%; display: flex; align-items: center; gap: 14px; height: 38px; font-size: 13px; text-align: left; border-bottom: 1px solid #e8e8e8; }
+  .sk .row:last-child > button { border-bottom: 0; }
+  .sk .row > button > .ph-caret-right { margin-left: auto; font-size: 11px; transition: transform .2s; }
+  .sk .row.open > button > .ph-caret-right { transform: rotate(90deg); }
+  .sk .row ul { display: none; margin: 0; padding: 0 0 10px 30px; font-size: 12px; line-height: 18px; color: #616061; }
+  .sk .row.open ul { display: block; }
+  .sk .fine { margin-top: 14px; font-size: 12px; line-height: 17px; color: #1d1c1d; }
+  .sk .fine a { color: #1264a3; }
+  .sk .btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+  .sk .b { height: 36px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+  .sk .b.sec { border: 1px solid #868686; } .sk .b.sec:hover { background: #f8f8f8; }
+  .sk .b.pri { background: #007a5a; color: #fff; } .sk .b.pri:hover { background: #148567; }
   .nt .auth { position: absolute; inset: 0; background: rgba(15,15,15,.45); display: grid; place-items: center; }
   .nt .auth span { background: #fff; border-radius: 4px; padding: 8px 14px; font-size: 13px; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 24px -8px rgba(0,0,0,.3); }
 </style>
@@ -225,10 +247,13 @@ tailwind.config = {
 <!-- Proto-only control -->
 <div class="fixed bottom-4 right-4 z-[100] flex items-center gap-1 rounded-full border border-border-secondary bg-white/95 p-1 text-micro shadow-menu backdrop-blur">
   <span class="px-2 font-semibold text-text-secondary">Proto</span>
+  <span class="flex rounded-full bg-bg-tertiary p-0.5" id="appSwitch">
+    <button type="button" class="rounded-full px-2.5 py-0.5" data-app="notion">Notion</button>
+    <button type="button" class="rounded-full px-2.5 py-0.5" data-app="slack">Slack</button></span>
   <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="">Restart</button>
   <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="handoff">Hand-off</button>
   <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="consent">Permissions</button>
-  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="pages">Pick pages</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="pages" data-notion-only>Pick pages</button>
   <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="success">Connected</button>
   <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="done">Closing</button>
 </div>
@@ -298,7 +323,7 @@ function appLogo(app, size = 'md', extraClass = '') {
   const tiny = size === 'xs' ? 'text-[6px]' : 'text-[10px]';
   const initials = app.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const fallback = `<span class='text-caption font-semibold text-text-secondary'>${initials}</span>`;
-  const inner = app.slug
+  const inner = app.id === 'slack' ? SLACK_LOGO(size === 'lg' ? 26 : size === 'sm' ? 18 : 20) : app.slug
     ? `<img src="https://cdn.simpleicons.org/${app.slug}" alt="" class="${img} object-contain" loading="lazy" onerror="this.outerHTML=&quot;${fallback}&quot;" />`
     : `<span class="flex ${img} items-center justify-center rounded-[3px] ${tiny} font-bold text-white" style="background:${app.color}">${initials}</span>`;
   return `<span class="flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-control bg-bg-tertiary ${extraClass}">${inner}</span>`;
@@ -421,6 +446,11 @@ const PAI_LOGO = (s = 28) => `<svg width="${s}" height="${s}" viewBox="0 0 32 32
   <path fill="#fff" d="M19.8719 6.62146L10.6871 8.78916C9.68814 9.02467 8.87781 9.9808 8.87781 10.924V18.992C8.87781 18.992 8.88029 18.9498 8.90449 18.8865C8.95537 18.7535 9.1049 18.5256 9.53675 18.3932C9.54543 18.3909 9.55412 18.3885 9.56281 18.3862L10.0337 18.2743L11.495 17.9263L20.6103 15.775C22.6597 15.2917 24.0973 14.944 24.0973 12.9492L24.0973 7.9648L24.0973 7.95955V7.88153C24.0973 5.79234 22.0187 6.11469 19.8719 6.62146Z"/>
   <path fill="#fff" d="M15.5756 18.607L9.75743 19.9903C9.25371 20.11 8.84509 20.5957 8.84509 21.0749V24.0785C8.84509 24.244 8.89383 24.3871 8.97838 24.4987C9.13866 24.7101 9.42767 24.808 9.75743 24.7297L15.6075 23.3386C16.105 23.2205 16.5097 22.7452 16.5197 22.2719C16.5198 22.2659 16.5199 22.26 16.5199 22.2541V18.3826L15.5756 18.607Z"/></svg>`;
 const NOTION_LOGO = (s = 28) => `<img src="https://cdn.simpleicons.org/notion" alt="Notion" style="width:${s}px;height:${s}px">`;
+const SLACK_LOGO = (s = 28) => `<svg width="${s}" height="${s}" viewBox="0 0 122.8 122.8" aria-label="Slack"><path d="M25.8 77.6c0 7.1-5.8 12.9-12.9 12.9S0 84.7 0 77.6s5.8-12.9 12.9-12.9h12.9v12.9zm6.5 0c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9v32.3c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V77.6z" fill="#e01e5a"/><path d="M45.2 25.8c-7.1 0-12.9-5.8-12.9-12.9S38.1 0 45.2 0s12.9 5.8 12.9 12.9v12.9H45.2zm0 6.5c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H12.9C5.8 58.1 0 52.3 0 45.2s5.8-12.9 12.9-12.9h32.3z" fill="#36c5f0"/><path d="M97 45.2c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9-5.8 12.9-12.9 12.9H97V45.2zm-6.5 0c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V12.9C64.7 5.8 70.5 0 77.6 0s12.9 5.8 12.9 12.9v32.3z" fill="#2eb67d"/><path d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9zm0-6.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z" fill="#ecb22e"/></svg>`;
+// Which app's window runs. Our pages are the same for every app; the middle is the app's own consent screen.
+const FLOWS = { notion: { name: 'Notion', logo: NOTION_LOGO }, slack: { name: 'Slack', logo: SLACK_LOGO } };
+let APP = 'notion';
+const A = () => FLOWS[APP];
 
 let jumpTo = null, step = '', timers = [], resolveConnect = null;
 const later = (ms, fn) => timers.push(setTimeout(fn, ms));
@@ -428,14 +458,14 @@ const win = $('#win');
 
 const STEPS = {
   // 1 · our hand-off page, before Notion
-  handoff: { title: 'Presentations.AI', url: 'connect.presentations.ai/notion', html: () => `
+  handoff: { title: 'Presentations.AI', url: () => `connect.presentations.ai/${APP}`, html: () => `
     <div class="hpage"><div class="hand step"><div class="hd">
-        <div class="pair"><span class="tile">${PAI_LOGO(26)}</span><span class="link"><i></i><i></i><i></i></span><span class="tile">${NOTION_LOGO(24)}</span></div>
-        <h2>Connect Notion to Presentations.AI</h2></div>
-      <div class="bd"><p class="m-0 mt-2">Taking you to Notion.<br>Sign in there to continue.</p></div>
-      <div class="ft"><button type="button" disabled class="btn btn-md w-full"><span class="spinner"></span>Opening Notion</button>
+        <div class="pair"><span class="tile">${PAI_LOGO(26)}</span><span class="link"><i></i><i></i><i></i></span><span class="tile">${A().logo(24)}</span></div>
+        <h2>Connect ${A().name} to Presentations.AI</h2></div>
+      <div class="bd"><p class="m-0 mt-2">Taking you to ${A().name}.<br>Sign in there to continue.</p></div>
+      <div class="ft"><button type="button" disabled class="btn btn-md w-full"><span class="spinner"></span>Opening ${A().name}</button>
         <div class="by"><i class="ph-fill ph-lock-simple"></i>Read-only. Only you see what we pull.</div></div></div></div>`,
-    after: () => later(1800, () => go('consent')) },
+    after: () => later(1800, () => go(APP === 'slack' ? 'slackConsent' : 'consent')) },
 
   // 2 · Notion's consent screen
   consent: { title: 'Notion', url: 'api.notion.com/v1/oauth/authorize', html: () => `
@@ -486,11 +516,34 @@ const STEPS = {
       };
     } },
 
+  // 2 (Slack) · Slack's consent screen: one screen, then straight back to us
+  slackConsent: { title: 'Allow Presentations.AI to access Slack | Perch & Paw Slack', url: 'perchandpaw.slack.com/oauth', html: () => `
+    <div class="sk step"><div class="hdr">${SLACK_LOGO(24)}slack</div>
+      <div class="in">
+        <div class="flex h-12 w-12 items-center justify-center rounded-[8px] bg-[#F5F5F5]">${PAI_LOGO(30)}</div>
+        <h3>Allow Presentations.AI to access Slack</h3>
+        <div class="q">Where do you want to use Presentations.AI?</div>
+        <div class="sel"><span class="ws">P</span>Perch &amp; Paw<i class="ph ph-caret-down"></i></div>
+        <div class="view"><div class="t">Information Presentations.AI can view</div>
+          ${[['user', 'Content and info about you', ['Your name, profile photo and email']],
+             ['chat-circle', 'Content and info about channels & conversations', ['Messages in public channels you pick', 'Basic info about those channels']],
+             ['squares-four', 'Content and info about your workspace', ['Workspace name and members']]]
+            .map(([ic, t, li]) => `<div class="row"><button type="button" data-row><i class="ph ph-${ic} text-[15px]"></i>${t}<i class="ph-fill ph-caret-right"></i></button><ul>${li.map((x) => `<li>${x}</li>`).join('')}</ul></div>`).join('')}
+        </div>
+        <div class="fine">Slack will share your granted permissions with Presentations.AI. View Slack's <a>privacy policy</a>. By agreeing to allow Slack to share your granted permissions, you are also agreeing to Presentations.AI's <a>privacy agreement</a> and <a>terms of service</a>.</div>
+        <div class="btns"><button type="button" class="b sec" data-cancel>Cancel</button><button type="button" class="b pri" data-allow>Allow</button></div>
+      </div></div>`,
+    after: () => {
+      win.querySelectorAll('[data-row]').forEach((b) => b.onclick = () => b.parentElement.classList.toggle('open'));
+      win.querySelector('[data-cancel]').onclick = () => closeWin(false);
+      win.querySelector('[data-allow]').onclick = (e) => { e.currentTarget.innerHTML = '<span class="spinner !border-white/40 !border-t-white"></span>Allow'; later(1000, () => go('success')); };
+    } },
+
   // 4 · back on our side: connected
-  success: { title: 'Presentations.AI', url: 'connect.presentations.ai/notion/callback', html: () => `
+  success: { title: 'Presentations.AI', url: () => `connect.presentations.ai/${APP}/callback`, html: () => `
     <div class="hpage"><div class="hand step"><div class="hd">
-        <div class="pair"><span class="tile">${PAI_LOGO(26)}</span><span class="okdot"><i class="ph-bold ph-check"></i></span><span class="tile">${NOTION_LOGO(24)}</span></div>
-        <h2>Notion is connected</h2></div>
+        <div class="pair"><span class="tile">${PAI_LOGO(26)}</span><span class="okdot"><i class="ph-bold ph-check"></i></span><span class="tile">${A().logo(24)}</span></div>
+        <h2>${A().name} is connected</h2></div>
       <div class="bd"><p class="m-0 mt-2">Taking you back to Presentations.AI…</p></div>
       <div class="ft"><div class="by"><i class="ph-fill ph-lock-simple"></i>Read-only. Only you see what we pull.</div></div></div></div>`,
     after: () => later(1600, () => go('done')) },
@@ -507,7 +560,7 @@ const STEPS = {
 function go(s) {
   timers.forEach(clearTimeout); timers = [];
   step = s; const st = STEPS[s];
-  $('#wTitle').textContent = st.title; $('#wUrl').textContent = st.url;
+  $('#wTitle').textContent = st.title; $('#wUrl').textContent = typeof st.url === 'function' ? st.url() : st.url;
   const ld = $('#wLoad'); ld.classList.remove('go'); void ld.offsetWidth; ld.classList.add('go');
   $('#wPage').innerHTML = st.html(); $('#wPage').scrollTop = 0;
   win.classList.remove('off');
@@ -527,7 +580,8 @@ function openDialog() {
     isConnected: (id) => connected.has(id),
     onConnect: (id) => new Promise((res) => {
       resolveConnect = (ok) => { if (ok) { connected.add(id); toast(`${appById(id).name} connected`); } res(); };
-      // Every app runs the same window; the steps are written out for Notion.
+      // Every app runs the same window; the app's own screens are written out for Notion and Slack.
+      APP = id === 'slack' ? 'slack' : 'notion';
       later(250, () => { go(jumpTo || 'handoff'); jumpTo = null; });
     }),
   });
@@ -538,15 +592,19 @@ function restart(to) {
   openDialog();
   if (to) {
     // Jump into the window as if + on Notion was pressed.
-    jumpTo = to;
-    setTimeout(() => document.querySelector('[data-connect="notion"]')?.click(), 50);
+    jumpTo = to === 'consent' && APP === 'slack' ? 'slackConsent' : (to === 'pages' && APP === 'slack' ? 'slackConsent' : to);
+    const id = APP; setTimeout(() => document.querySelector(`[data-connect="${id}"]`)?.click(), 50);
   }
 }
-document.querySelectorAll('[data-jump]').forEach((b) => b.onclick = () => {
-  history.replaceState(null, '', b.dataset.jump ? '?step=' + b.dataset.jump : '?');
-  restart(b.dataset.jump);
-});
-restart(new URLSearchParams(location.search).get('step') || '');
+function paintSwitch() {
+  document.querySelectorAll('[data-app]').forEach((b) => { const on = b.dataset.app === APP; b.classList.toggle('bg-white', on); b.classList.toggle('shadow-sm', on); b.classList.toggle('font-semibold', on); });
+  document.querySelector('[data-notion-only]').classList.toggle('hidden', APP === 'slack');
+}
+let cur = '';
+function setUrl() { const q = new URLSearchParams(); if (APP !== 'notion') q.set('app', APP); if (cur) q.set('step', cur); history.replaceState(null, '', '?' + q); }
+document.querySelectorAll('[data-app]').forEach((b) => b.onclick = () => { APP = b.dataset.app; paintSwitch(); setUrl(); restart(cur); });
+document.querySelectorAll('[data-jump]').forEach((b) => b.onclick = () => { cur = b.dataset.jump; setUrl(); restart(cur); });
+{ const q = new URLSearchParams(location.search); APP = q.get('app') === 'slack' ? 'slack' : 'notion'; cur = q.get('step') || ''; paintSwitch(); restart(cur); }
 </script>
 </body>
 </html>
