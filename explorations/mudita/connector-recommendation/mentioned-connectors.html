@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<!-- Mentioned connectors in the create chat · mudita · 27 Nov 2026.
+     Fork of ./connector-recommendation.html. Here the prompt names apps the user hasn't connected
+     ("from my Notion and HubSpot"). The ask card follows the same pattern as the recommendation card:
+     title + subtitle, search, rows split by hairlines with Connect, the same new-tab connect, one progress bar,
+     a quiet Ready state, then All apps. Apps already connected are listed so the user knows what we'd use instead.
+     States: ?state=ask · ?state=partial (Notion connected) · ?state=loading (HubSpot mid-fetch) -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Redesign tokens, copied from pitchdeckdoclist config/tailwind/pai.tailwind.config.js (new_dev_migration, 18 Nov 2026), light theme only. */
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        'bg-default-primary': '#FFFFFF', 'bg-secondary': '#F5F5F5', 'bg-tertiary': '#F5F5F5', 'bg-quaternary': '#E6E6E6',
+        'bg-brand': '#0D99FF', 'bg-brand-hover': '#007BE5', 'bg-brand-selected': 'rgba(13,153,255,0.12)', 'bg-brand-inverted': '#E5F4FF',
+        'bg-success': '#14AE5C', 'bg-success-inverted': '#E0F6E5', 'bg-warning-inverted': '#FFF1C2', 'bg-danger-inverted': '#FFE2E0',
+        'bg-ink': '#1A1A1A', 'bg-blackout': '#000000',
+        'text-primary': '#1A1A1A', 'text-secondary': '#7F7F7F', 'text-tertiary': '#7F7F7F', 'text-quaternary': '#B2B2B2',
+        'text-brand': '#007BE5', 'text-success-primary': '#009951', 'text-warning-primary': '#A15C00', 'text-danger-primary': '#DC3412', 'text-white': '#FFFFFF',
+        'border-secondary': '#E6E6E6', 'border-tertiary': 'rgba(230,230,230,0.6)', 'border-primary': 'rgba(26,26,26,0.3)', 'border-brand': '#007BE5', 'border-success-secondary': '#B9EBC6',
+        'gold': '#B8860B', 'app-50': '#E5F4FF',
+      },
+      fontSize: {
+        display: ['32px', { lineHeight: '40px', letterSpacing: '-0.02em' }],
+        title: ['20px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
+        heading: ['18px', { lineHeight: '26px', letterSpacing: '-0.005em' }],
+        body: ['14px', { lineHeight: '20px' }],
+        'body-lg': ['16px', { lineHeight: '24px' }],
+        caption: ['13px', { lineHeight: '18px' }],
+        micro: ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
+      },
+      borderRadius: { control: '6px', card: '12px', dialog: '16px' },
+      boxShadow: {
+        menu: '0 1px 2px 0 rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.16)',
+        dialog: '0 2px 6px 0 rgb(0 0 0 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.28)',
+        'button-primary': '0 1px 2px 0 rgb(0 0 0 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.12)',
+        knob: '0 1px 3px rgb(0 0 0 / 0.2)',
+      },
+      transitionTimingFunction: { std: 'cubic-bezier(0.2, 0, 0, 1)' },
+    },
+  },
+};
+</script>
+<style>
+  html, body { margin: 0; background: #F5F5F5; color: #1A1A1A; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 6px; font-weight: 500; transition: background-color .15s cubic-bezier(.2,0,0,1), border-color .15s cubic-bezier(.2,0,0,1), color .15s, transform .1s; user-select: none; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn-primary { background: #0D99FF; color: #fff; box-shadow: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12); }
+  .btn-primary:hover { background: #007BE5; }
+  .btn-secondary { background: #fff; color: #1A1A1A; border: 1px solid #E6E6E6; }
+  .btn-secondary:hover { border-color: rgba(26,26,26,.3); background: #F5F5F5; }
+  .btn-ghost { color: #7F7F7F; } .btn-ghost:hover { color: #1A1A1A; background: #F5F5F5; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-md { height: 36px; padding: 0 14px; font-size: 14px; gap: 8px; }
+  .btn:disabled { cursor: not-allowed; background: #F5F5F5; color: #7F7F7F; box-shadow: none; border-color: transparent; }
+  .icon-btn { display: inline-flex; height: 36px; width: 36px; align-items: center; justify-content: center; border-radius: 6px; color: #7F7F7F; transition: background-color .15s, color .15s; }
+  .icon-btn:hover { background: #F5F5F5; color: #1A1A1A; }
+  .badge-gold { display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#8A5A00; background:linear-gradient(180deg,#FFE7A3,#F7C94B); }
+  .nav-item { display:flex; align-items:center; gap:10px; height:32px; padding:0 8px; border-radius:6px; font-size:14px; color:#1A1A1A; }
+  .nav-item:hover { background: rgba(26,26,26,.05); }
+  .nav-item.is-active { background: rgba(26,26,26,.06); font-weight: 500; }
+  .nav-item i { font-size: 18px; color: #7F7F7F; }
+  .skeleton { background: linear-gradient(90deg, #EFEFEF 25%, #F7F7F7 37%, #EFEFEF 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 4px; }
+  @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; }
+  .thumb { aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid #E6E6E6; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+
+<title>Mentioned connectors</title>
+<style>
+  .spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(26,26,26,.15); border-top-color: #1A1A1A; animation: spin .8s linear infinite; flex-shrink: 0; }
+  .fade-up { animation: fadeUp .28s cubic-bezier(.2,0,0,1) both; }
+  @keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .pop-in { animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes popIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .flash-ok { animation: flashOk 1.8s cubic-bezier(.2,0,0,1); }
+  @keyframes flashOk { 0% { background-color: #E0F6E5; } 100% { } }
+  .acc { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s cubic-bezier(.2,0,0,1); }
+  .acc.open { grid-template-rows: 1fr; }
+  .acc > div { overflow: hidden; }
+  .chev { transition: transform .2s cubic-bezier(.2,0,0,1); }
+  .open-row .chev { transform: rotate(90deg); }
+  .check { display: inline-flex; height: 18px; width: 18px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 5px; border: 1.5px solid #B2B2B2; background: #fff; transition: background-color .15s, border-color .15s; }
+  .check[aria-checked="true"] { background: #0D99FF; border-color: #0D99FF; }
+  .check[aria-checked="true"] i { opacity: 1; transform: scale(1); }
+  .check i { opacity: 0; transform: scale(.6); transition: opacity .12s, transform .18s cubic-bezier(.34,1.56,.64,1); color: #fff; font-size: 12px; }
+  .check:disabled { opacity: .4; cursor: not-allowed; }
+  .check:focus-visible { outline: 2px solid rgba(13,153,255,.35); outline-offset: 2px; }
+  .switch { position: relative; display: inline-flex; height: 20px; width: 34px; flex-shrink: 0; align-items: center; border-radius: 999px; background: #E6E6E6; transition: background-color .2s; }
+  .switch[aria-checked="true"] { background: #0D99FF; }
+  .switch .knob { height: 16px; width: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .2); transform: translateX(2px); transition: transform .2s cubic-bezier(.34,1.3,.64,1); }
+  .switch[aria-checked="true"] .knob { transform: translateX(16px); }
+  /* Measured from app.presentations.ai/#/create (24 Nov 2026): system font, #F5F5F5 surface, 752px chat column. */
+  body.app, body.app button, body.app input, body.app textarea { font-family: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+  body.app { background: #F5F5F5; }
+  /* A quiet scrollbar for the list: thin, no track, only visible while the pointer is over the list.
+     The edge fades already say "there's more". */
+  /* The bar lives in the card's own right padding (negative margin), and the list keeps a gutter,
+     so the bar never sits against the Connect buttons. */
+  [data-askbody] { scrollbar-width: thin; scrollbar-color: transparent transparent; transition: scrollbar-color .2s;
+    scrollbar-gutter: stable; margin-right: -8px; padding-right: 6px; }
+  [data-askbody]:hover { scrollbar-color: rgba(26,26,26,.18) transparent; }
+  [data-askbody]::-webkit-scrollbar { width: 10px; }
+  [data-askbody]::-webkit-scrollbar-track { background: transparent; }
+  [data-askbody]::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; border: 3px solid transparent; background-clip: padding-box; }
+  [data-askbody]:hover::-webkit-scrollbar-thumb { background-color: rgba(26,26,26,.18); }
+  [data-askbody]::-webkit-scrollbar-thumb:hover { background-color: rgba(26,26,26,.32); }
+  .sync-bar { width: 0; animation: syncfill 5.6s cubic-bezier(.3,.1,.3,1) forwards; }
+  @keyframes syncfill { to { width: 100%; } }
+  .toast { position: fixed; left: 50%; top: 68px; transform: translate(-50%, -12px); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2,0,0,1); z-index: 95; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body class="app">
+<div class="flex h-screen flex-col">
+  <header class="flex h-14 shrink-0 items-center border-b border-border-secondary px-4 sm:px-6">
+    <div class="mx-auto flex w-full max-w-[976px] items-center gap-1.5">
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Back"><i id="hdrIcon" class="ph ph-house text-[20px]"></i></button>
+      <span id="hdrPill" class="hidden h-[22px] items-center rounded-full border border-border-secondary bg-bg-tertiary px-2 text-[12px] font-medium text-text-secondary">Auto · 10 credits a slide</span>
+      <span class="flex-1"></span>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Theme"><i class="ph ph-sun text-[18px]"></i></button>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Close"><i class="ph ph-x text-[18px]"></i></button>
+    </div>
+  </header>
+
+  <!-- Stage 1: prompt screen -->
+  <section id="promptStage" class="flex min-h-0 flex-1 flex-col items-center px-4 pt-14">
+    <h1 class="text-center text-[32px] font-bold leading-10 tracking-[-0.02em]">Describe your deck, or upload a file</h1>
+    <div class="mt-5 w-full max-w-[800px]" id="composerSlot"></div>
+  </section>
+
+  <!-- Stage 2: chat -->
+  <section id="chatStage" class="hidden min-h-0 flex-1 flex-col">
+    <div id="chatScroll" class="min-h-0 flex-1 overflow-y-auto">
+      <div id="thread" class="mx-auto flex w-full max-w-[752px] flex-col gap-6 px-4 pb-10 pt-8"></div>
+    </div>
+    <!-- Ask cards dock here, in place of a text field: fixed height, scroll inside, buttons always in view. -->
+    <div class="shrink-0 px-4 pb-6"><div class="mx-auto w-full max-w-[744px]" id="askDock"></div></div>
+  </section>
+</div>
+
+<div id="toast" class="toast flex items-center gap-2 rounded-card bg-[#1A1A1A] px-4 py-2.5 text-body text-white shadow-menu"></div>
+
+<!-- Proto-only control -->
+<div class="fixed right-4 top-[68px] z-[100] flex items-center gap-1 rounded-full border border-border-secondary bg-white/95 p-1 text-micro shadow-menu backdrop-blur">
+  <span class="px-2 font-semibold text-text-secondary">Proto</span>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pRestart">Restart</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pSkip">Skip to the ask</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pPartial">Notion connected</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" id="pLoading">Coming back</button>
+</div>
+
+<script>
+// Connector catalog + "Add connector" dialog (replica of settings/datasources/AddConnectorDialog.jsx, PR #6872).
+const CATALOG = [
+  { id: 'shopify', name: 'Shopify', slug: 'shopify', cat: 'ecommerce', chip: 'ecommerce', popular: true, desc: 'Use orders, revenue and top products in sales and marketing decks.' },
+  { id: 'metaads', name: 'Meta Ads', slug: 'meta', cat: 'advertising', chip: 'ads', popular: false, desc: 'Bring spend, reach and results from Facebook and Instagram ads.' },
+  { id: 'klaviyo', name: 'Klaviyo', slug: null, color: '#232426', cat: 'email marketing', chip: 'email', popular: false, desc: 'Show what each email campaign sent, opened and sold.' },
+  { id: 'woocommerce', name: 'WooCommerce', slug: 'woocommerce', cat: 'ecommerce', chip: 'ecommerce', popular: false, desc: 'Use orders and products from your WooCommerce store.' },
+  { id: 'googleads', name: 'Google Ads', slug: 'googleads', cat: 'advertising', chip: 'ads', popular: false, desc: 'Bring search and display campaign results into your decks.' },
+  { id: 'mailchimp', name: 'Mailchimp', slug: 'mailchimp', cat: 'email marketing', chip: 'email', popular: false, desc: 'Show campaign opens, clicks and audience growth.' },
+  { id: 'googledrive', name: 'Google Drive', slug: 'googledrive', cat: 'file management & storage', chip: 'files', popular: true, desc: 'Read docs, sheets and slides from your Drive so decks can quote them.' },
+  { id: 'hubspot', name: 'HubSpot', slug: 'hubspot', cat: 'crm', chip: 'crm', popular: true, desc: 'Pull deals, pipeline and company records into sales and QBR decks.' },
+  { id: 'notion', name: 'Notion', slug: 'notion', cat: 'notes', chip: 'notes', popular: true, desc: 'Use pages and databases from your workspace as source material.' },
+  { id: 'salesforce', name: 'Salesforce', slug: null, color: '#00A1E0', cat: 'crm', chip: 'crm', popular: true, desc: 'Bring opportunities, accounts and forecasts into your decks.' },
+  { id: 'googlesheets', name: 'Google Sheets', slug: 'googlesheets', cat: 'spreadsheets', chip: 'spreadsheets', popular: true, desc: 'Turn rows and charts from a sheet into slides with real numbers.' },
+  { id: 'slack', name: 'Slack', slug: null, color: '#4A154B', cat: 'team chat', chip: 'chat', popular: true, desc: 'Reference channel threads and announcements your team already wrote.' },
+  { id: 'confluence', name: 'Confluence', slug: 'confluence', cat: 'documents', chip: 'documents', popular: false, desc: 'Draw on specs, wikis and team pages.' },
+  { id: 'dropbox', name: 'Dropbox', slug: 'dropbox', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read files stored in your Dropbox folders.' },
+  { id: 'airtable', name: 'Airtable', slug: 'airtable', cat: 'spreadsheets', chip: 'spreadsheets', popular: false, desc: 'Use bases and views as structured data for slides.' },
+  { id: 'jira', name: 'Jira', slug: 'jira', cat: 'project management', chip: 'projects', popular: false, desc: 'Summarise epics, sprints and roadmaps for status updates.' },
+  { id: 'asana', name: 'Asana', slug: 'asana', cat: 'project management', chip: 'projects', popular: false, desc: 'Pull project status and milestones into updates.' },
+  { id: 'linear', name: 'Linear', slug: 'linear', cat: 'project management', chip: 'projects', popular: false, desc: 'Turn cycles and projects into progress slides.' },
+  { id: 'gmail', name: 'Gmail', slug: 'gmail', cat: 'email', chip: 'email', popular: false, desc: 'Reference email threads with customers and partners.' },
+  { id: 'googleanalytics', name: 'Google Analytics', slug: 'googleanalytics', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Chart traffic and conversion trends from GA4.' },
+  { id: 'mixpanel', name: 'Mixpanel', slug: 'mixpanel', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Bring product usage metrics into reviews.' },
+  { id: 'quickbooks', name: 'QuickBooks', slug: 'quickbooks', cat: 'accounting', chip: 'accounting', popular: false, desc: 'Use revenue and expense figures in finance decks.' },
+  { id: 'onedrive', name: 'OneDrive', slug: null, color: '#0364B8', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read Word, Excel and PowerPoint files from OneDrive.' },
+  { id: 'pipedrive', name: 'Pipedrive', slug: null, color: '#1A1A1A', cat: 'crm', chip: 'crm', popular: false, desc: 'Pull deals and activity into pipeline reviews.' },
+  { id: 'zendesk', name: 'Zendesk', slug: 'zendesk', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket trends and CSAT for account reviews.' },
+  { id: 'intercom', name: 'Intercom', slug: 'intercom', cat: 'customer support', chip: 'more', popular: false, desc: 'Use conversation themes in customer decks.' },
+  { id: 'stripe', name: 'Stripe', slug: 'stripe', cat: 'payments', chip: 'more', popular: false, desc: 'Show revenue, refunds and subscription growth.' },
+  { id: 'bigcommerce', name: 'BigCommerce', slug: 'bigcommerce', cat: 'ecommerce', chip: 'more', popular: false, desc: 'Use orders and products from your BigCommerce store.' },
+  { id: 'etsy', name: 'Etsy', slug: 'etsy', cat: 'ecommerce', chip: 'more', popular: false, desc: 'Bring Etsy shop sales and listings into your decks.' },
+  { id: 'square', name: 'Square', slug: 'square', cat: 'payments', chip: 'more', popular: false, desc: 'Use in-store sales and payments from Square.' },
+  { id: 'amazonseller', name: 'Amazon Seller Central', slug: null, color: '#FF9900', cat: 'ecommerce', chip: 'more', popular: false, desc: 'Show marketplace sales, returns and top listings.' },
+  { id: 'tiktokads', name: 'TikTok Ads', slug: 'tiktok', cat: 'advertising', chip: 'more', popular: false, desc: 'Bring spend and results from TikTok campaigns.' },
+  { id: 'linkedinads', name: 'LinkedIn Ads', slug: null, color: '#0A66C2', cat: 'advertising', chip: 'more', popular: false, desc: 'Show spend, leads and results from LinkedIn campaigns.' },
+  { id: 'pinterestads', name: 'Pinterest Ads', slug: 'pinterest', cat: 'advertising', chip: 'more', popular: false, desc: 'Bring spend and saves from Pinterest campaigns.' },
+  { id: 'amplitude', name: 'Amplitude', slug: null, color: '#1E61F0', cat: 'analytics', chip: 'more', popular: false, desc: 'Chart product usage and retention.' },
+  { id: 'segment', name: 'Segment', slug: null, color: '#52BD94', cat: 'analytics', chip: 'more', popular: false, desc: 'Use events and audiences collected by Segment.' },
+  { id: 'xero', name: 'Xero', slug: 'xero', cat: 'accounting', chip: 'more', popular: false, desc: 'Use revenue and expenses in finance decks.' },
+  { id: 'typeform', name: 'Typeform', slug: 'typeform', cat: 'surveys', chip: 'more', popular: false, desc: 'Summarise survey and form responses.' },
+  { id: 'surveymonkey', name: 'SurveyMonkey', slug: 'surveymonkey', cat: 'surveys', chip: 'more', popular: false, desc: 'Turn survey results into charts.' },
+  { id: 'trustpilot', name: 'Trustpilot', slug: 'trustpilot', cat: 'reviews', chip: 'more', popular: false, desc: 'Quote ratings and recent reviews.' },
+  { id: 'instagram', name: 'Instagram', slug: 'instagram', cat: 'social media', chip: 'more', popular: false, desc: 'Show reach and engagement from your posts.' },
+  { id: 'youtube', name: 'YouTube', slug: 'youtube', cat: 'social media', chip: 'more', popular: false, desc: 'Show views and watch time for your channel.' },
+  { id: 'monday', name: 'monday.com', slug: null, color: '#FF3D57', cat: 'project management', chip: 'more', popular: false, desc: 'Pull project status and timelines.' },
+  { id: 'clickup', name: 'ClickUp', slug: 'clickup', cat: 'project management', chip: 'more', popular: false, desc: 'Turn tasks and goals into progress slides.' },
+  { id: 'trello', name: 'Trello', slug: 'trello', cat: 'project management', chip: 'more', popular: false, desc: 'Summarise boards and cards for status updates.' },
+  { id: 'box', name: 'Box', slug: 'box', cat: 'file management & storage', chip: 'more', popular: false, desc: 'Read files stored in Box folders.' },
+  { id: 'sharepoint', name: 'SharePoint', slug: null, color: '#038387', cat: 'documents', chip: 'more', popular: false, desc: 'Draw on pages and files from SharePoint.' },
+  { id: 'zoom', name: 'Zoom', slug: 'zoom', cat: 'meetings', chip: 'more', popular: false, desc: 'Use meeting notes and recordings.' },
+  { id: 'calendly', name: 'Calendly', slug: 'calendly', cat: 'meetings', chip: 'more', popular: false, desc: 'Show booked meetings and no-show rates.' },
+  { id: 'gorgias', name: 'Gorgias', slug: null, color: '#161616', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket volume and response times.' },
+];
+const CHIPS = [['ecommerce','Ecommerce'],['ads','Advertising'],['crm','CRM'],['documents','Documents'],['files','File storage'],['spreadsheets','Spreadsheets'],['notes','Notes'],['projects','Project management'],['analytics','Analytics'],['email','Email'],['chat','Team chat'],['accounting','Accounting'],['more','More']];
+const ACR = new Set(['crm','ai','hr','url','sms','seo']);
+const catLabel = (t) => (t || '').replace(/\b\w+/g, (w) => ACR.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
+const appById = (id) => CATALOG.find((a) => a.id === id);
+
+// AppLogo: logo on a soft sunken tile, initials when there's no logo or it fails to load.
+function appLogo(app, size = 'md', extraClass = '') {
+  const box = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-8 w-8' : size === 'xs' ? 'h-5 w-5' : 'h-9 w-9';
+  const img = size === 'lg' ? 'h-7 w-7' : size === 'sm' ? 'h-[18px] w-[18px]' : size === 'xs' ? 'h-3 w-3' : 'h-5 w-5';
+  const tiny = size === 'xs' ? 'text-[6px]' : 'text-[10px]';
+  const initials = app.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const fallback = `<span class='text-caption font-semibold text-text-secondary'>${initials}</span>`;
+  const inner = app.slug
+    ? `<img src="https://cdn.simpleicons.org/${app.slug}" alt="" class="${img} object-contain" loading="lazy" onerror="this.outerHTML=&quot;${fallback}&quot;" />`
+    : `<span class="flex ${img} items-center justify-center rounded-[3px] ${tiny} font-bold text-white" style="background:${app.color}">${initials}</span>`;
+  return `<span class="flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-control bg-bg-tertiary ${extraClass}">${inner}</span>`;
+}
+
+// The dialog. opts: { isConnected(id), onConnect(id) -> Promise, title, description }
+const ConnectorDialog = (() => {
+  let root, state = { q: '', chip: '', busy: null, opts: null };
+  function mount() {
+    root = document.createElement('div');
+    root.className = 'fixed inset-0 z-[70] hidden';
+    root.innerHTML = `
+      <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px] opacity-0 transition-opacity duration-200" data-x data-fade></div>
+      <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+        <div data-panel role="dialog" aria-modal="true" class="pointer-events-auto relative w-full max-w-3xl translate-y-2 scale-[0.98] overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary opacity-0 shadow-dialog transition-[opacity,transform] duration-200 ease-std">
+          <div class="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
+            <div class="min-w-0"><div data-title class="text-title font-semibold">Add connector</div><div data-desc class="mt-1 text-body text-text-secondary">Connect an app your decks can draw on. Access is read-only and only for you.</div></div>
+            <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-x aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+          </div>
+          <div class="px-6 pt-3">
+            <div class="relative"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+              <input data-q placeholder="Search 120+ apps" class="h-9 w-full rounded-control border border-border-secondary pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+            <div data-chips class="scrollbar-hide mt-3 flex h-7 gap-1.5 overflow-x-auto" style="-webkit-mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%)"></div>
+            <div data-section class="mb-2 mt-6 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
+          </div>
+          <div data-list class="scrollbar-hide h-[52vh] overflow-y-auto px-6 pb-6"></div>
+          <div data-foot class="hidden items-center gap-3 border-t border-border-secondary px-6 py-3">
+            <span data-foot-note class="flex-1 text-caption text-text-secondary"></span>
+            <button type="button" data-done class="btn btn-primary btn-md">Done</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(root);
+    root.querySelectorAll('[data-x]').forEach((el) => el.onclick = close);
+    root.querySelector('[data-done]').onclick = close;
+    root.querySelector('[data-q]').oninput = (e) => { state.q = e.target.value; render(); };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.classList.contains('hidden')) close(); });
+  }
+  function card(app) {
+    const connected = state.opts.isConnected(app.id);
+    const working = state.busy === app.id;
+    const action = connected
+      ? `<span title="Connected" class="flex h-8 w-8 items-center justify-center rounded-control bg-bg-success-inverted text-text-success-primary"><i class="ph-bold ph-check"></i></span>`
+      : `<button type="button" data-connect="${app.id}" ${state.busy ? 'disabled' : ''} aria-label="Connect ${app.name}" class="icon-btn !h-8 !w-8 border border-border-secondary disabled:opacity-50">${working ? '<i class="ph ph-arrows-clockwise spin"></i>' : '<i class="ph ph-plus"></i>'}</button>`;
+    return `<div class="flex items-start gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-4">
+      ${appLogo(app, 'lg')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-semibold">${app.name}</div><p class="mt-0.5 line-clamp-2 text-caption text-text-secondary">${app.desc}</p></div>
+      <div class="shrink-0">${action}</div></div>`;
+  }
+  function render() {
+    const q = state.q.trim().toLowerCase();
+    const chips = root.querySelector('[data-chips]');
+    chips.innerHTML = [['', 'All'], ...CHIPS].map(([id, label]) => `<button type="button" data-chip="${id}" class="h-7 shrink-0 whitespace-nowrap rounded-full border px-3 text-caption ${state.chip === id ? 'border-border-brand bg-app-50 text-text-brand' : 'border-border-secondary text-text-secondary hover:bg-bg-tertiary'}">${label}</button>`).join('');
+    chips.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { state.chip = b.dataset.chip; render(); });
+    const filtered = CATALOG.filter((a) => (!state.chip || a.chip === state.chip) && (!q || a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q)));
+    const browsing = !q && !state.chip;
+    const pop = browsing ? filtered.filter((a) => a.popular) : [];
+    const rest = browsing ? filtered.filter((a) => !a.popular) : filtered;
+    root.querySelector('[data-section]').textContent = browsing ? 'Popular' : (CHIPS.find((c) => c[0] === state.chip)?.[1] || 'All apps');
+    const grid = (items) => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">${items.map(card).join('')}</div>`;
+    let html = '';
+    if (!filtered.length) html = '<p class="py-10 text-center text-body text-text-secondary">No apps match your search.</p>';
+    if (pop.length) html += grid(pop);
+    if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
+    const list = root.querySelector('[data-list]'); list.innerHTML = html;
+    if (state.opts.done) {
+      const added = state.added || [];
+      root.querySelector('[data-foot-note]').innerHTML = added.length
+        ? `<span class="inline-flex items-center gap-1.5 text-text-success-primary"><i class="ph-fill ph-check-circle"></i>${added.length === 1 ? appById(added[0]).name + ' connected' : added.length + ' apps connected'}</span><span class="text-text-secondary"> · add more, or press Done</span>`
+        : 'Connect as many apps as you like, then press Done.';
+    }
+    list.querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
+      state.busy = b.dataset.connect; render();
+      const id = state.busy;
+      Promise.resolve(state.opts.onConnect(id)).then(() => { (state.added = state.added || []).push(id); }).finally(() => { state.busy = null; render(); });
+    });
+  }
+  function open(opts) {
+    if (!root) mount();
+    state = { q: '', chip: opts.chip || '', busy: null, opts };
+    if (opts.title) root.querySelector('[data-title]').textContent = opts.title;
+    if (opts.description) root.querySelector('[data-desc]').textContent = opts.description;
+    const foot = root.querySelector('[data-foot]');
+    foot.classList.toggle('hidden', !opts.done); foot.classList.toggle('flex', !!opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[52vh]', !opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[46vh]', !!opts.done);
+    root.querySelector('[data-q]').value = '';
+    render();
+    root.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      root.querySelector('[data-fade]').classList.remove('opacity-0');
+      root.querySelector('[data-panel]').classList.remove('opacity-0','translate-y-2','scale-[0.98]');
+      root.querySelector('[data-q]').focus();
+    });
+  }
+  function close() {
+    root.querySelector('[data-fade]').classList.add('opacity-0');
+    root.querySelector('[data-panel]').classList.add('opacity-0','translate-y-2','scale-[0.98]');
+    setTimeout(() => root.classList.add('hidden'), 180);
+    state.opts?.onClose?.();
+  }
+  return { open, close, refresh: () => root && render() };
+})();
+
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+function toast(msg, icon = 'check-circle', tone = '#3DDC97') {
+  const t = $('#toast'); t.innerHTML = `<i class="ph-fill ph-${icon} text-[18px]" style="color:${tone}"></i><span>${msg}</span>`;
+  t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---------------- the example ----------------
+// Perch & Paw (fictional pet furniture brand). The marketing manager asks for a deck that runs on numbers,
+// but only Google Drive is connected. Today is Thu 26 Nov 2026.
+const PROMPT = 'Weekly marketing update for the leadership team: last week\'s sales, website traffic, paid social and email results. Use my Notion and HubSpot.';
+// What the deck needs, in the order the outline uses it. `fills` = outline slides that need this data.
+const NEEDS = [
+  { id: 'notion', need: 'Campaign notes and plans', fills: ['What changed and why', 'Next week'],
+    sync: 'pages and databases', find: [], ready: '' },
+  { id: 'hubspot', need: 'Leads and email results', fills: ['Email: what we sent and what it sold', 'New leads'],
+    sync: 'contacts and campaigns', find: [], ready: '' },
+];
+
+// Connected in the workspace. Drive is there, but it holds documents, not these numbers.
+let apps = [{ id: 'googledrive', on: true }];
+// Per need: 'idle' | 'away' (connecting in the other tab) | 'syncing' | 'finding' (step n of find) | 'ready'
+let rows = [];
+
+// ---------------- composer ----------------
+function composer() {
+  const onApps = apps.filter((a) => a.on);
+  return `<div class="rounded-[12px] border border-[#0D99FF] bg-bg-default-primary shadow-[0_0_0_3px_rgba(13,153,255,0.12)]">
+    <textarea id="promptInput" rows="4" class="block w-full resize-none border-0 bg-transparent px-[18px] pt-4 text-[16px] leading-6 outline-none placeholder:text-text-tertiary" placeholder="Seed pitch for a scheduling app for dental clinics">${esc(PROMPT)}</textarea>
+    <div class="flex items-center gap-1.5 px-2.5 pb-2.5 pt-1">
+      <button type="button" class="flex h-8 w-8 items-center justify-center rounded-control border border-border-secondary bg-white hover:bg-bg-tertiary" aria-label="Upload file or link"><i class="ph ph-plus text-[16px]"></i></button>
+      <button type="button" class="flex h-8 items-center gap-2 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary">
+        <span class="flex -space-x-1">${onApps.map((a) => appLogo(appById(a.id), 'xs', '!bg-transparent')).join('')}</span>Connected apps
+      </button>
+      <button type="button" class="flex h-8 items-center gap-1.5 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary"><i class="ph ph-palette text-[15px] text-text-secondary"></i>Design<i class="ph ph-caret-down text-[12px] text-text-secondary"></i></button>
+      <button type="button" class="flex h-8 items-center gap-1.5 rounded-control border border-border-secondary bg-white px-3 text-[14px] hover:bg-bg-tertiary"><i class="ph ph-sliders-horizontal text-[15px] text-text-secondary"></i>Options</button>
+      <span class="flex-1"></span>
+      <button type="button" class="icon-btn !h-8 !w-8" aria-label="Dictate"><i class="ph ph-microphone text-[17px]"></i></button>
+      <button type="button" id="sendBtn" class="flex h-8 w-8 items-center justify-center rounded-control bg-[#0D99FF] text-white hover:bg-[#007BE5]" aria-label="Send"><i class="ph-bold ph-arrow-up"></i></button>
+    </div>
+  </div>`;
+}
+function mountComposer() {
+  $('#composerSlot').innerHTML = composer();
+  $('#sendBtn').onclick = () => start($('#promptInput').value.trim() || PROMPT);
+}
+
+// ---------------- chat ----------------
+const thread = () => $('#thread');
+function scrollEnd() { const s = $('#chatScroll'); s.scrollTo({ top: s.scrollHeight, behavior: 'smooth' }); }
+function addUser(text) {
+  thread().insertAdjacentHTML('beforeend', `<div class="fade-up flex justify-end"><div class="max-w-[612px] rounded-card bg-[#E5F4FF] px-4 py-3 text-[14px] leading-5">${esc(text)}</div></div>`);
+}
+function addAssistant(html) {
+  const el = document.createElement('div'); el.className = 'fade-up text-[14px] leading-5';
+  el.innerHTML = html; thread().appendChild(el); scrollEnd(); return el;
+}
+// The thinking trail (like ResearchStepRow), folded to "Thought for Ns ›" when done.
+async function thinking() {
+  const el = addAssistant(`<div class="flex flex-col gap-3" data-trail>
+    <div class="flex items-center gap-3 text-text-tertiary" data-status><span class="spinner !border-[#0D99FF]/25 !border-t-[#0D99FF]"></span><span>Working out what this deck needs…</span></div>
+    <ul data-gl class="flex list-disc flex-col gap-1 pl-[44px] text-text-tertiary marker:text-text-quaternary"></ul></div>`);
+  const list = el.querySelector('[data-gl]');
+  const steps = [
+    'Read your prompt: a weekly update for leadership',
+    'You asked for data from Notion and HubSpot',
+    'Neither is connected yet',
+    'Google Drive is connected, so we can use it if you skip',
+  ];
+  const t0 = Date.now();
+  for (const s of steps) { list.insertAdjacentHTML('beforeend', `<li class="fade-up">${s}</li>`); scrollEnd(); await wait(650 + Math.random() * 300); }
+  const secs = Math.max(1, Math.round((Date.now() - t0) / 1000));
+  el.querySelector('[data-status]').remove();
+  const inner = el.innerHTML;
+  el.innerHTML = `<div><button type="button" data-trailtoggle class="inline-flex items-center gap-1.5 text-text-tertiary hover:text-text-primary">Thought for ${secs}s<i class="ph ph-caret-right chev text-[12px]"></i></button>
+    <div class="acc"><div class="pt-3">${inner}</div></div></div>`;
+  const btn = el.querySelector('[data-trailtoggle]');
+  btn.onclick = () => { btn.parentElement.classList.toggle('open-row'); el.querySelector('.acc').classList.toggle('open'); };
+}
+
+// ---------------- the ask: connect apps for this deck ----------------
+let cardEl = null;
+function rowHtml(r) {
+  const app = appById(r.id), n = NEEDS.find((x) => x.id === r.id);
+  const fills = `${n.fills.length} ${n.fills.length === 1 ? 'slide' : 'slides'}`;
+  let right = '', sub = '', extra = '';
+  if (r.state === 'idle') {
+    right = `<button type="button" data-connect="${r.id}" class="btn btn-secondary btn-sm">Connect</button>`;
+    sub = n.fills.length ? `${n.need} · fills ${fills}` : n.need;
+  } else if (r.state === 'away') {
+    right = `<button type="button" data-connect="${r.id}" class="btn btn-ghost btn-sm">Reopen tab<i class="ph ph-arrow-square-out text-[14px]"></i></button>`;
+    sub = `<span class="inline-flex items-center gap-1.5"><span class="spinner !h-3 !w-3"></span>Finish connecting ${app.name} in the new tab, then come back here</span>`;
+  } else if (r.state === 'syncing' || r.state === 'finding') {
+    // One progress bar across both phases: only the line above it changes. The negative delay keeps the
+    // bar where it was when the row re-renders.
+    const t = ((Date.now() - (r.t0 || Date.now())) / 1000).toFixed(2);
+    sub = r.state === 'syncing' ? `Connected. Syncing ${app.name}` : 'Getting what this deck needs';
+    extra = `<div class="mt-2.5 h-1 overflow-hidden rounded-full bg-bg-quaternary"><div class="sync-bar h-full rounded-full bg-[#0D99FF]" style="animation-delay:-${t}s"></div></div>`;
+  } else {
+    // Success stays quiet: the same line as before, and a check where the button was.
+    right = `<span class="inline-flex h-8 items-center gap-1.5 px-2.5 text-caption font-medium text-text-success-primary"><i class="ph-bold ph-check-circle text-[16px]"></i>Ready</span>`;
+    sub = n.fills.length ? `${n.need} · fills ${fills}` : n.need;
+  }
+  return `<div class="px-2 py-3 transition-colors ${r.fresh ? 'flash-ok' : ''}" data-row="${r.id}" title="${n.fills.length ? 'Fills: ' + n.fills.join(', ') : app.name}">
+    <div class="flex items-center gap-3">${appLogo(app, 'sm')}
+      <div class="min-w-0 flex-1"><div class="text-body font-medium">${app.name}</div><div class="mt-0.5 text-caption text-text-secondary">${sub}</div></div>
+      ${right ? `<div class="shrink-0">${right}</div>` : ''}</div>
+    ${extra ? `<div class="pl-[44px]">${extra}</div>` : ''}</div>`;
+}
+const sigOf = (r) => r.state + "|" + (r.step || 0);
+function cardShell() {
+  cardEl.innerHTML = `<div data-askcard class="fade-up flex h-[min(60vh,428px)] flex-col overflow-hidden rounded-card border border-border-secondary bg-bg-default-primary px-2.5 pb-2.5 pt-2 shadow-menu">
+      <div class="flex min-h-[48px] shrink-0 items-center gap-1 pb-3 pl-3 pr-1 pt-2">
+        <div class="mr-2 min-w-0 flex-1"><p class="text-[16px] font-medium leading-6">Connect Notion and HubSpot</p>
+          <p class="text-caption text-text-secondary">You mentioned them in your prompt. Read-only, and only you see what we pull.</p></div>
+        <button type="button" id="dismissBtn" class="icon-btn !h-7 !w-7 text-text-secondary" aria-label="Skip for now"><i class="ph ph-x text-[15px]"></i></button>
+      </div>
+      <div class="relative mb-2 shrink-0 px-0.5"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+        <input id="appSearch" type="search" autocomplete="off" placeholder="Search 120+ apps" aria-label="Search apps"
+          class="h-9 w-full rounded-control border border-border-secondary bg-white pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+      <div data-askbody class="min-h-0 flex-1 overflow-y-auto">
+        <div data-sec-sug class="px-2 pb-1 pt-1 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">You mentioned</div>
+        <div data-rows class="flex flex-col divide-y divide-border-secondary"></div>
+        <div data-conn-wrap>
+          <div class="mt-3 border-t border-border-secondary px-2 pb-1 pt-4 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Already connected</div>
+          <div data-conn class="flex flex-col divide-y divide-border-secondary"></div>
+        </div>
+        <div data-all-wrap>
+          <div class="mt-3 border-t border-border-secondary px-2 pb-1 pt-4 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>
+          <div data-all class="flex flex-col divide-y divide-border-secondary"></div>
+          <div data-sentinel class="h-px"></div>
+        </div>
+        <div data-results class="hidden flex-col divide-y divide-border-secondary"></div>
+      </div>
+      <div class="flex shrink-0 flex-wrap items-center gap-2 pl-1 pt-2.5">
+        <span class="flex-1"></span>
+        <button type="button" id="skipBtn" class="btn btn-secondary btn-sm">Skip for now</button>
+        <button type="button" id="contBtn" class="btn btn-primary btn-sm">Continue</button>
+      </div>
+    </div>`;
+  cardEl.querySelector('[data-rows]').addEventListener('click', (e) => {
+    const c = e.target.closest('[data-connect]');
+    if (c) connect(c.dataset.connect);
+  });
+  $('#appSearch').addEventListener('input', renderResults);
+  cardEl.querySelector('[data-all]').addEventListener('click', pickApp);
+  { const body = cardEl.querySelector('[data-askbody]'); body.addEventListener('scroll', () => edgeFade(body)); new ResizeObserver(() => edgeFade(body)).observe(body); new MutationObserver(() => edgeFade(body)).observe(body, { childList: true, subtree: true }); }
+  startAllApps();
+  cardEl.querySelector('[data-results]').addEventListener('click', pickApp);
+  $('#skipBtn').onclick = () => finish();
+  $('#dismissBtn').onclick = () => finish();
+  $('#contBtn').onclick = () => finish();
+}
+function renderCard() {
+  if (!cardEl.querySelector('[data-askcard]')) cardShell();
+  const list = cardEl.querySelector('[data-rows]');
+  rows.forEach((r, i) => {
+    let el = list.querySelector(`[data-row="${r.id}"]`);
+    if (el && el.dataset.sig === sigOf(r)) return;
+    const tmp = document.createElement('div'); tmp.innerHTML = rowHtml(r).trim();
+    const next = tmp.firstElementChild; next.dataset.sig = sigOf(r);
+    if (!el) list.insertBefore(next, list.children[i] || null); else el.replaceWith(next);
+    r.fresh = false;
+  });
+  const conn = apps.filter((a) => !rows.some((r) => r.id === a.id));
+  cardEl.querySelector('[data-conn]').innerHTML = conn.map((a) => { const app = appById(a.id); return `<div class="flex items-center gap-3 px-2 py-3">${appLogo(app, 'sm')}
+    <div class="min-w-0 flex-1"><div class="text-body font-medium">${app.name}</div><div class="mt-0.5 text-caption text-text-secondary">We'll search it if you skip</div></div>
+    <span class="inline-flex h-8 items-center gap-1.5 px-2.5 text-caption font-medium text-text-success-primary"><i class="ph-bold ph-check-circle text-[16px]"></i>Connected</span></div>`; }).join('');
+  cardEl.querySelector('[data-conn-wrap]').classList.toggle('hidden', !conn.length);
+  const ready = rows.filter((r) => r.state === 'ready').length;
+  const busy = rows.some((r) => ['away', 'syncing', 'finding'].includes(r.state));
+  const cont = $('#contBtn');
+  cont.disabled = !ready || busy;
+  cont.textContent = ready ? `Continue with ${ready} ${ready === 1 ? 'app' : 'apps'}` : 'Continue';
+  // Once something is connected, "skip" means "go on without the rest".
+  $('#skipBtn').textContent = ready ? 'Skip the rest' : 'Skip for now';
+  $('#skipBtn').classList.toggle('hidden', ready === rows.length);
+}
+
+// Fade the list at whichever edge has more to scroll (same as the retrieval card).
+function edgeFade(el) {
+  const top = el.scrollTop > 1, bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+  const m = `linear-gradient(to bottom, ${top ? 'transparent 0, black 28px' : 'black 0'}, ${bottom ? 'black calc(100% - 28px), transparent 100%' : 'black 100%'})`;
+  el.style.maskImage = m; el.style.webkitMaskImage = m;
+}
+
+// One row for any catalog app (search results and All apps).
+function appRowHtml(a) {
+  const row = rows.find((r) => r.id === a.id);
+  const on = apps.some((x) => x.id === a.id) || (row && row.state !== 'idle');
+  const right = on ? `<span class="inline-flex h-8 items-center gap-1.5 px-2.5 text-caption font-medium text-text-success-primary"><i class="ph-bold ph-check-circle text-[16px]"></i>Connected</span>`
+                   : `<button type="button" data-pick="${a.id}" class="btn btn-secondary btn-sm">Connect</button>`;
+  const sug = NEEDS.find((n) => n.id === a.id && n.fills.length);
+  return `<div class="flex items-center gap-3 px-2 py-3" data-app-row="${a.id}">${appLogo(a, 'sm')}
+    <div class="min-w-0 flex-1"><div class="text-body font-medium">${a.name}${sug ? ' <span class="ml-1 rounded-full bg-app-50 px-1.5 py-0.5 text-[11px] font-medium text-text-brand">Suggested</span>' : ''}</div>
+    <div class="mt-0.5 truncate text-caption text-text-secondary">${sug ? `${sug.need} · fills ${sug.fills.length} ${sug.fills.length === 1 ? 'slide' : 'slides'}` : catLabel(a.cat)}</div></div>
+    <div class="shrink-0">${right}</div></div>`;
+}
+// Connecting an app from search or All apps: it joins the list at the top and runs the same new-tab flow.
+function pickApp(e) {
+  const c = e.target.closest('[data-pick]'); if (!c) return;
+  const id = c.dataset.pick;
+  if (!NEEDS.some((n) => n.id === id)) {
+    const app = appById(id);
+    NEEDS.push({ id, need: catLabel(app.cat), fills: [], sync: 'your data', find: [], ready: 'Ready to use' });
+  }
+  if (!rows.some((r) => r.id === id)) rows.push({ id, state: 'idle' });
+  $('#appSearch').value = ''; renderResults(); renderCard();
+  cardEl.querySelector(`[data-all] [data-app-row="${id}"]`)?.remove();
+  connect(id);
+  setTimeout(() => cardEl.querySelector(`[data-row="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60);
+}
+// All apps: everything not already suggested, loaded ten at a time as the list scrolls.
+const PAGE = 10;
+let allQueue = [], allBusy = false, allObs = null;
+const skeleton = () => `<div class="flex items-center gap-3 px-2 py-3" data-skel><span class="skeleton h-8 w-8 !rounded-control"></span>
+  <div class="flex-1"><div class="skeleton h-3.5 w-28"></div><div class="skeleton mt-2 h-3 w-40"></div></div><span class="skeleton h-8 w-[78px] !rounded-control"></span></div>`;
+function startAllApps() {
+  allQueue = CATALOG.filter((a) => !NEEDS.some((n) => n.id === a.id) && !apps.some((x) => x.id === a.id));
+  const list = cardEl.querySelector('[data-all]'); list.innerHTML = '';
+  allObs?.disconnect();
+  allObs = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) loadMore(); }, { root: cardEl.querySelector('[data-askbody]'), rootMargin: '0px 0px 120px 0px' });
+  allObs.observe(cardEl.querySelector('[data-sentinel]'));
+}
+async function loadMore() {
+  if (allBusy || !allQueue.length) return;
+  allBusy = true;
+  const list = cardEl.querySelector('[data-all]');
+  list.insertAdjacentHTML('beforeend', skeleton() + skeleton() + skeleton());
+  await wait(700);                                   // stands in for the next page arriving
+  list.querySelectorAll('[data-skel]').forEach((el) => el.remove());
+  const page = allQueue.splice(0, PAGE);
+  list.insertAdjacentHTML('beforeend', page.map((a) => appRowHtml(a).replace('class="flex items-center gap-3 px-2 py-3"', 'class="fade-up flex items-center gap-3 px-2 py-3"')).join(''));
+  allBusy = false;
+  if (!allQueue.length) allObs?.disconnect();
+  else { const sen = cardEl.querySelector('[data-sentinel]'); const r = sen.getBoundingClientRect(), b = cardEl.querySelector('[data-askbody]').getBoundingClientRect(); if (r.top < b.bottom + 120) loadMore(); }
+}
+
+// Search: while there's a query, the suggestions give way to matching apps from the catalog.
+function renderResults() {
+  const q = $('#appSearch').value.trim().toLowerCase();
+  const rowsEl = cardEl.querySelector('[data-rows]'), res = cardEl.querySelector('[data-results]');
+  rowsEl.classList.toggle('hidden', !!q); rowsEl.classList.toggle('flex', !q);
+  cardEl.querySelector('[data-sec-sug]').classList.toggle('hidden', !!q);
+  cardEl.querySelector('[data-all-wrap]').classList.toggle('hidden', !!q);
+  cardEl.querySelector('[data-conn-wrap]').classList.toggle('hidden', !!q || !apps.some((a) => !rows.some((r) => r.id === a.id)));
+  res.classList.toggle('hidden', !q); res.classList.toggle('flex', !!q);
+  if (!q) return;
+  const hits = CATALOG.filter((a) => a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q));
+  res.innerHTML = hits.length ? hits.map(appRowHtml).join('') : '<p class="py-6 text-center text-caption text-text-secondary">No apps match that search.</p>';
+}
+
+// Connect opens the existing connector flow in a new tab (mocked here as a stand-in page).
+// When the user comes back to this tab, we sync the app, then fetch what this deck needs.
+let awaiting = null;
+function openConnectorTab(id) {
+  const app = appById(id);
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Connect ${app.name}</title>
+    <body style="margin:0;height:100vh;display:grid;place-items:center;background:#f5f5f5;font:14px/1.5 -apple-system,system-ui,sans-serif;color:#1a1a1a">
+    <div style="max-width:420px;padding:28px;background:#fff;border:1px solid #e6e6e6;border-radius:16px;text-align:center">
+      <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7f7f7f;font-weight:600">Prototype stand-in</div>
+      <h1 style="font-size:20px;margin:8px 0 6px">The existing ${app.name} connect flow runs here</h1>
+      <p style="color:#7f7f7f;margin:0 0 18px">Close this tab to go back to the deck, as if you'd finished connecting.</p>
+      <button onclick="window.close()" style="height:36px;padding:0 16px;border:0;border-radius:6px;background:#0d99ff;color:#fff;font-weight:500;cursor:pointer">Done, close this tab</button>
+    </div></body>`);
+  w.document.close();
+}
+function connect(id) {
+  const r = rows.find((x) => x.id === id);
+  r.state = 'away'; renderCard();
+  awaiting = id;
+  openConnectorTab(id);
+}
+async function backFromTab() {
+  if (!awaiting || document.visibilityState !== 'visible') return;
+  const id = awaiting; awaiting = null;
+  const r = rows.find((x) => x.id === id), n = NEEDS.find((x) => x.id === id);
+  await wait(400);
+  apps.push({ id, on: true });
+  toast(`${appById(id).name} connected`);
+  r.t0 = Date.now(); r.state = 'syncing'; renderCard();
+  await wait(2400);                                  // sync the app
+  r.state = 'finding'; renderCard();
+  await wait(3200);                                  // then fetch what this deck needs (the bar runs 5.6s in all)
+  r.state = 'ready'; r.fresh = true; renderCard();
+}
+document.addEventListener('visibilitychange', backFromTab);
+window.addEventListener('focus', backFromTab);
+
+// The full catalog, filtered to the category of the row ("Use another app"), or everything ("Browse all apps").
+function openCatalog(chip) {
+  ConnectorDialog.open({
+    title: chip ? 'Use another app' : 'Add a connector',
+    description: chip ? 'Pick the app your team uses for this. We\'ll use it in place of our suggestion.' : 'Connect any app your decks can draw on. Access is read-only and only for you.',
+    chip, done: true,
+    isConnected: (id) => apps.some((a) => a.id === id),
+    onConnect: (id) => wait(1200).then(() => { apps.push({ id, on: true }); toast(`${appById(id).name} connected`); }),
+  });
+}
+
+// ---------------- flow ----------------
+function chatHeader(on = true) { $('#hdrIcon').className = on ? 'ph ph-arrow-left text-[20px]' : 'ph ph-house text-[20px]'; $('#hdrPill').classList.toggle('hidden', !on); $('#hdrPill').classList.toggle('inline-flex', on); }
+function toChat() {
+  chatHeader();
+  $('#promptStage').classList.add('hidden'); $('#chatStage').classList.remove('hidden'); $('#chatStage').classList.add('flex');
+  $('#askDock').innerHTML = ''; thread().innerHTML = '';
+}
+const LEAD = `<p>You asked for Notion and HubSpot, and they aren't connected yet. Connect them and we'll use their data in the deck.</p>
+  <p class="mt-2 text-text-secondary">Or skip, and we'll work from your prompt and Google Drive.</p>`;
+async function start(text) {
+  toChat(); rows = NEEDS.map((n) => ({ id: n.id, state: 'idle' }));
+  addUser(text);
+  await wait(500);
+  await thinking();
+  addAssistant(LEAD);
+  cardEl = $('#askDock'); renderCard(); scrollEnd();
+}
+function finish() {
+  $('#askDock').innerHTML = '';
+  const ready = rows.filter((r) => r.state === 'ready'), rest = rows.filter((r) => r.state !== 'ready');
+  const names = (rs) => rs.map((r) => appById(r.id).name);
+  const list = (a) => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  addUser(ready.length ? `Use ${list(names(ready))}` : 'Skip for now');
+  const ph = rest.flatMap((r) => NEEDS.find((n) => n.id === r.id).fills);
+  addAssistant(`<p>${ready.length
+      ? `Got it. We'll use ${list(names(ready))}${rest.length ? ' and Google Drive' : ''}.`
+      : `Got it. We'll work from your prompt and Google Drive.`}${ph.length ? ` These slides get a placeholder for now: ${list(ph.map((p) => `“${p}”`))}.` : ''}</p>
+    <div class="mt-3 flex items-center gap-2 text-caption text-text-secondary"><span class="spinner !h-3 !w-3"></span>Drafting your outline</div>`);
+}
+function restart() { chatHeader(false); apps = [{ id: 'googledrive', on: true }]; $('#chatStage').classList.add('hidden'); $('#chatStage').classList.remove('flex'); $('#promptStage').classList.remove('hidden'); $('#askDock').innerHTML = ''; mountComposer(); }
+function jumpToAsk(connected = []) {
+  toChat(); addUser(PROMPT);
+  addAssistant(`<p class="text-text-tertiary">Thought for 3s <i class="ph ph-caret-right text-[12px]"></i></p>`);
+  addAssistant(LEAD);
+  rows = NEEDS.map((n) => ({ id: n.id, state: connected.includes(n.id) ? 'ready' : 'idle' }));
+  connected.forEach((id) => apps.push({ id, on: true }));
+  cardEl = $('#askDock'); renderCard();
+}
+$('#pRestart').onclick = () => { history.replaceState(null, '', '?'); restart(); };
+$('#pSkip').onclick = () => { history.replaceState(null, '', '?state=ask'); restart(); jumpToAsk(); };
+$('#pLoading').onclick = () => { history.replaceState(null, '', '?state=loading'); restart(); jumpToAsk(['notion']); awaiting = 'hubspot'; rows.find((r) => r.id === 'hubspot').state = 'away'; renderCard(); setTimeout(backFromTab, 600); };
+$('#pPartial').onclick = () => { history.replaceState(null, '', '?state=partial'); restart(); jumpToAsk(['notion']); };
+mountComposer();
+const st = new URLSearchParams(location.search).get('state');
+if (st === 'ask') jumpToAsk();
+if (st === 'partial') jumpToAsk(['notion']);
+if (st === 'loading') { jumpToAsk(['notion']); awaiting = 'hubspot'; rows.find((r) => r.id === 'hubspot').state = 'away'; renderCard(); setTimeout(backFromTab, 600); }
+</script>
+</body>
+</html>
