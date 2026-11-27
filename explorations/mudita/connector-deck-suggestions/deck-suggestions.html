@@ -300,6 +300,20 @@
     .sl-stat .chart { position: absolute; right: 6cqw; bottom: 8cqw; width: 40cqw; height: 16cqw; display: flex; align-items: flex-end; gap: 1.2cqw; }
     .sl-stat .chart i { flex: 1; border-radius: .5cqw .5cqw 0 0; background: currentColor; opacity: .28; }
     .sl-stat .chart i.hi { opacity: 1; }
+    /* interior pages for the hero's deck stack: light, so they don't read as more covers */
+    .sl-in { background: #fff; color: #1a1a1a; }
+    .sl-in .bar { position: absolute; left: 0; right: 0; top: 0; height: 1.4cqw; }
+    .sl-in .tx { left: 6cqw; top: 7cqw; width: 40cqw; gap: 1.2cqw; }
+    .sl-in .ttl { font-size: 3.6cqw; }
+    .sl-in .sub { font-size: 1.8cqw; opacity: .6; }
+    .sl-in .by { left: 6cqw; bottom: 5cqw; opacity: .45; }
+    .sl-in .chart { position: absolute; right: 3cqw; top: 9cqw; bottom: 9cqw; width: 40cqw; display: flex; align-items: flex-end; gap: 1.4cqw; }
+    .sl-in .chart i { flex: 1; border-radius: .5cqw .5cqw 0 0; opacity: .3; }
+    .sl-in .chart i.hi { opacity: 1; }
+    .sl-in .pts { position: absolute; right: 3cqw; top: 9cqw; width: 40cqw; display: flex; flex-direction: column; gap: 2.4cqw; }
+    .sl-in .pts div { display: flex; gap: 1.6cqw; align-items: center; }
+    .sl-in .pts b { width: 4cqw; height: 4cqw; border-radius: 50%; flex-shrink: 0; }
+    .sl-in .pts em { height: 1.4cqw; border-radius: 99px; background: currentColor; opacity: .14; }
     .sl-stat .rows { position: absolute; right: 6cqw; top: 10cqw; width: 38cqw; display: flex; flex-direction: column; gap: 2cqw; font-size: 1.7cqw; }
     .sl-stat .rows div { display: grid; grid-template-columns: 11cqw 1fr; align-items: center; gap: 1.6cqw; }
     .sl-stat .rows em { display: block; height: 2.4cqw; border-radius: .5cqw; font-style: normal; }
@@ -713,6 +727,18 @@ const COVERS = {
         title: "Week of 9 Nov", sub: "Revenue, traffic, paid social and email",
         extra: `<div class="kpi"><b>$131k</b><span>revenue this week</span></div>${bars([30, 36, 33, 41, 38, 46, 52], 6)}` }),
 };
+/* interior pages behind the hero cover: different layouts from the cover, in the deck's own accent */
+const INNER = { bf: ["#fbf6f0", "#f08a24"], orbit: ["#f6f1ea", "#8a5a2b"], plan: ["#ffffff", "#9a5d27"],
+  weekly: ["#ffffff", "#13506b"], monthly: ["#f5f8fd", "#2f6fde"], campaign: ["#fdf6f8", "#d9467a"] };
+function inner(s, n) {
+  const [bg, ac] = INNER[s.cover] || ["#fff", "#1a1a1a"];
+  const [title, sub] = s.outline[n] || s.outline[s.outline.length - 1];
+  const body = n === 1
+    ? `<div class="chart">${[38, 46, 41, 55, 62, 74, 96].map((h, i) => `<i class="${i > 4 ? "hi" : ""}" style="height:${h}%;background:${ac}"></i>`).join("")}</div>`
+    : `<div class="pts">${[78, 62, 70].map(w => `<div><b style="background:${ac}"></b><em style="width:${w}%"></em></div>`).join("")}</div>`;
+  return `<div class="slide sl-in" style="background:${bg}"><span class="bar" style="background:${ac}"></span>${body}${BY}
+    <div class="tx"><div class="ttl">${title}</div><div class="sub">${sub}</div></div></div>`;
+}
 let STACK_FLAT = false;   // true: return the three editions as separate slides (for the hero deck stack)
 function stack(make) {
   if (STACK_FLAT) return [make(0), make(1), make(2)];
@@ -737,10 +763,10 @@ const hidden = new Set();
 function render() {
   const show = ORDER.filter(id => !hidden.has(id)).map(id => SUGG.find(s => s.id === id));
   const h = show[0];
-  const sheets = h ? (h.kind === "once"
-      ? `<div class="sheet s3">${COVERS[h.cover]()}</div><div class="sheet s2">${COVERS[h.cover]()}</div><div class="sheet s1">${COVERS[h.cover]()}</div><span class="dcount"><i class="ph ph-cards"></i>${h.outline.length} slides</span>`
-      : (() => { STACK_FLAT = true; const ed = COVERS[h.cover](); STACK_FLAT = false;
-          return `<div class="sheet s3">${ed[2]}</div><div class="sheet s2">${ed[1]}</div><div class="sheet s1">${ed[0]}</div><span class="dcount"><i class="ph ph-arrows-clockwise"></i>${h.cadence}</span>`; })()) : "";
+  const front = h ? (h.kind === "once" ? COVERS[h.cover]() : (() => { STACK_FLAT = true; const ed = COVERS[h.cover](); STACK_FLAT = false; return ed[0]; })()) : "";
+  const sheets = h ? `<div class="sheet s3">${inner(h, 2)}</div><div class="sheet s2">${inner(h, 1)}</div><div class="sheet s1">${front}</div>`
+    + (h.kind === "once" ? `<span class="dcount"><i class="ph ph-cards"></i>${h.outline.length} slides</span>`
+                         : `<span class="dcount"><i class="ph ph-arrows-clockwise"></i>${h.cadence}</span>`) : "";
   $("#hero").innerHTML = h ? `<div class="hthumb" data-id="${h.id}"><div class="deckstack">${sheets}</div></div>
     <div class="htext"><div class="k">${h.kind === "once" ? "Suggested from" : h.cadence + ", from"}${logos(h.apps)}</div><h3>${h.title}</h3>
       <div class="acts"><button class="btn btn-primary btn-sm" data-id="${h.id}">${h.kind === "once" ? "Create deck" : "Set up"}</button></div></div>` : "";
