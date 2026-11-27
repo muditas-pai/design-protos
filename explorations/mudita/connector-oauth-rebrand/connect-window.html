@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<!-- Connect window, rebranded · mudita · 27 Nov 2026.
+     The live "Add connector" flow (screen recording, 27 Nov 2026) opens a pop-up that says Composio throughout:
+     Composio's hand-off page, "Connect with Composio" on Notion's consent screen, "Successfully connected Composio to Notion".
+     This proto keeps the same steps and makes every one of them say Presentations.AI:
+       1 hand-off  · connect.presentations.ai (ours)
+       2 consent   · Notion's screen, naming Presentations.AI (needs our own OAuth app registered with Notion)
+       3 pick pages· Notion's screen
+       4 connected · connect.presentations.ai (ours)
+       5 closing   · app.presentations.ai, closes itself
+     Dialog, catalog and AppLogo copied from ../connector-recommendation/connector-recommendation.html.
+     States: ?step=handoff · consent · pages · success · done -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Redesign tokens, copied from pitchdeckdoclist config/tailwind/pai.tailwind.config.js (new_dev_migration, 18 Nov 2026), light theme only. */
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        'bg-default-primary': '#FFFFFF', 'bg-secondary': '#F5F5F5', 'bg-tertiary': '#F5F5F5', 'bg-quaternary': '#E6E6E6',
+        'bg-brand': '#0D99FF', 'bg-brand-hover': '#007BE5', 'bg-brand-selected': 'rgba(13,153,255,0.12)', 'bg-brand-inverted': '#E5F4FF',
+        'bg-success': '#14AE5C', 'bg-success-inverted': '#E0F6E5', 'bg-warning-inverted': '#FFF1C2', 'bg-danger-inverted': '#FFE2E0',
+        'bg-ink': '#1A1A1A', 'bg-blackout': '#000000',
+        'text-primary': '#1A1A1A', 'text-secondary': '#7F7F7F', 'text-tertiary': '#7F7F7F', 'text-quaternary': '#B2B2B2',
+        'text-brand': '#007BE5', 'text-success-primary': '#009951', 'text-warning-primary': '#A15C00', 'text-danger-primary': '#DC3412', 'text-white': '#FFFFFF',
+        'border-secondary': '#E6E6E6', 'border-tertiary': 'rgba(230,230,230,0.6)', 'border-primary': 'rgba(26,26,26,0.3)', 'border-brand': '#007BE5', 'border-success-secondary': '#B9EBC6',
+        'gold': '#B8860B', 'app-50': '#E5F4FF',
+      },
+      fontSize: {
+        display: ['32px', { lineHeight: '40px', letterSpacing: '-0.02em' }],
+        title: ['20px', { lineHeight: '28px', letterSpacing: '-0.01em' }],
+        heading: ['18px', { lineHeight: '26px', letterSpacing: '-0.005em' }],
+        body: ['14px', { lineHeight: '20px' }],
+        'body-lg': ['16px', { lineHeight: '24px' }],
+        caption: ['13px', { lineHeight: '18px' }],
+        micro: ['12px', { lineHeight: '16px', letterSpacing: '0.01em' }],
+      },
+      borderRadius: { control: '6px', card: '12px', dialog: '16px' },
+      boxShadow: {
+        menu: '0 1px 2px 0 rgb(0 0 0 / 0.06), 0 8px 24px -6px rgb(0 0 0 / 0.16)',
+        dialog: '0 2px 6px 0 rgb(0 0 0 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.28)',
+        'button-primary': '0 1px 2px 0 rgb(0 0 0 / 0.08), inset 0 1px 0 0 rgb(255 255 255 / 0.12)',
+        knob: '0 1px 3px rgb(0 0 0 / 0.2)',
+      },
+      transitionTimingFunction: { std: 'cubic-bezier(0.2, 0, 0, 1)' },
+    },
+  },
+};
+</script>
+<style>
+  html, body { margin: 0; background: #F5F5F5; color: #1A1A1A; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrollbar-hide { scrollbar-width: none; } .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 6px; font-weight: 500; transition: background-color .15s cubic-bezier(.2,0,0,1), border-color .15s cubic-bezier(.2,0,0,1), color .15s, transform .1s; user-select: none; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn-primary { background: #0D99FF; color: #fff; box-shadow: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12); }
+  .btn-primary:hover { background: #007BE5; }
+  .btn-secondary { background: #fff; color: #1A1A1A; border: 1px solid #E6E6E6; }
+  .btn-secondary:hover { border-color: rgba(26,26,26,.3); background: #F5F5F5; }
+  .btn-ghost { color: #7F7F7F; } .btn-ghost:hover { color: #1A1A1A; background: #F5F5F5; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-md { height: 36px; padding: 0 14px; font-size: 14px; gap: 8px; }
+  .btn:disabled { cursor: not-allowed; background: #F5F5F5; color: #7F7F7F; box-shadow: none; border-color: transparent; }
+  .icon-btn { display: inline-flex; height: 36px; width: 36px; align-items: center; justify-content: center; border-radius: 6px; color: #7F7F7F; transition: background-color .15s, color .15s; }
+  .icon-btn:hover { background: #F5F5F5; color: #1A1A1A; }
+  .badge-gold { display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#8A5A00; background:linear-gradient(180deg,#FFE7A3,#F7C94B); }
+  .nav-item { display:flex; align-items:center; gap:10px; height:32px; padding:0 8px; border-radius:6px; font-size:14px; color:#1A1A1A; }
+  .nav-item:hover { background: rgba(26,26,26,.05); }
+  .nav-item.is-active { background: rgba(26,26,26,.06); font-weight: 500; }
+  .nav-item i { font-size: 18px; color: #7F7F7F; }
+  .skeleton { background: linear-gradient(90deg, #EFEFEF 25%, #F7F7F7 37%, #EFEFEF 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 4px; }
+  @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin .8s linear infinite; }
+  .thumb { aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; border: 1px solid #E6E6E6; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+
+<title>Connect window</title>
+<style>
+  .spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(26,26,26,.15); border-top-color: #1A1A1A; animation: spin .8s linear infinite; flex-shrink: 0; }
+  .fade-up { animation: fadeUp .28s cubic-bezier(.2,0,0,1) both; }
+  @keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .pop-in { animation: popIn .3s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes popIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .flash-ok { animation: flashOk 1.8s cubic-bezier(.2,0,0,1); }
+  @keyframes flashOk { 0% { background-color: #E0F6E5; } 100% { } }
+  .acc { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s cubic-bezier(.2,0,0,1); }
+  .acc.open { grid-template-rows: 1fr; }
+  .acc > div { overflow: hidden; }
+  .chev { transition: transform .2s cubic-bezier(.2,0,0,1); }
+  .open-row .chev { transform: rotate(90deg); }
+  .check { display: inline-flex; height: 18px; width: 18px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 5px; border: 1.5px solid #B2B2B2; background: #fff; transition: background-color .15s, border-color .15s; }
+  .check[aria-checked="true"] { background: #0D99FF; border-color: #0D99FF; }
+  .check[aria-checked="true"] i { opacity: 1; transform: scale(1); }
+  .check i { opacity: 0; transform: scale(.6); transition: opacity .12s, transform .18s cubic-bezier(.34,1.56,.64,1); color: #fff; font-size: 12px; }
+  .check:disabled { opacity: .4; cursor: not-allowed; }
+  .check:focus-visible { outline: 2px solid rgba(13,153,255,.35); outline-offset: 2px; }
+  .switch { position: relative; display: inline-flex; height: 20px; width: 34px; flex-shrink: 0; align-items: center; border-radius: 999px; background: #E6E6E6; transition: background-color .2s; }
+  .switch[aria-checked="true"] { background: #0D99FF; }
+  .switch .knob { height: 16px; width: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .2); transform: translateX(2px); transition: transform .2s cubic-bezier(.34,1.3,.64,1); }
+  .switch[aria-checked="true"] .knob { transform: translateX(16px); }
+  /* Measured from app.presentations.ai/#/create (24 Nov 2026): system font, #F5F5F5 surface, 752px chat column. */
+  body.app, body.app button, body.app input, body.app textarea { font-family: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+  body.app { background: #F5F5F5; }
+  /* A quiet scrollbar for the list: thin, no track, only visible while the pointer is over the list.
+     The edge fades already say "there's more". */
+  /* The bar lives in the card's own right padding (negative margin), and the list keeps a gutter,
+     so the bar never sits against the Connect buttons. */
+  [data-askbody] { scrollbar-width: thin; scrollbar-color: transparent transparent; transition: scrollbar-color .2s;
+    scrollbar-gutter: stable; margin-right: -8px; padding-right: 6px; }
+  [data-askbody]:hover { scrollbar-color: rgba(26,26,26,.18) transparent; }
+  [data-askbody]::-webkit-scrollbar { width: 10px; }
+  [data-askbody]::-webkit-scrollbar-track { background: transparent; }
+  [data-askbody]::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; border: 3px solid transparent; background-clip: padding-box; }
+  [data-askbody]:hover::-webkit-scrollbar-thumb { background-color: rgba(26,26,26,.18); }
+  [data-askbody]::-webkit-scrollbar-thumb:hover { background-color: rgba(26,26,26,.32); }
+  .sync-bar { width: 0; animation: syncfill 5.6s cubic-bezier(.3,.1,.3,1) forwards; }
+  @keyframes syncfill { to { width: 100%; } }
+  .toast { position: fixed; left: 50%; top: 68px; transform: translate(-50%, -12px); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2,0,0,1); z-index: 95; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+<style>
+  /* The connect window: a small browser window over the dashboard, like the real OAuth pop-up. */
+  .win { position: fixed; left: 24px; top: 24px; width: 476px; height: 628px; z-index: 90; display: flex; flex-direction: column; overflow: hidden;
+    border-radius: 12px; background: #fff; box-shadow: 0 0 0 .5px rgba(0,0,0,.25), 0 30px 80px -20px rgba(0,0,0,.45), 0 10px 24px -10px rgba(0,0,0,.25);
+    transition: opacity .18s, transform .22s cubic-bezier(.2,0,0,1); }
+  .win.off { opacity: 0; transform: scale(.97); pointer-events: none; }
+  .win .bar { height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: #f6f6f6; border-bottom: 1px solid #e3e3e3; font-size: 12px; font-weight: 600; }
+  .win .dots { display: flex; gap: 7px; } .win .dots i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .win .url { height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12px; color: #7f7f7f; border-bottom: 1px solid #ececec; position: relative; }
+  .win .url .load { position: absolute; left: 0; bottom: -1px; height: 2px; background: #0D99FF; width: 0; }
+  .win .url .load.go { animation: load 1.4s cubic-bezier(.3,.1,.3,1) forwards; }
+  @keyframes load { to { width: 100%; opacity: 0; } }
+  .win .page { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
+  .step { animation: fadeUp .25s cubic-bezier(.2,0,0,1) both; }
+
+  /* our hand-off pages (connect.presentations.ai) */
+  .hand { margin: 48px auto 0; width: 300px; border-radius: 12px; overflow: hidden; border: 1px solid #ececec; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.12); background: #fff; display: flex; flex-direction: column; min-height: 476px; }
+  .hand .hd { padding: 26px 20px 18px; text-align: center; }
+  .hand .pair { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+  .hand .tile { width: 52px; height: 52px; border-radius: 12px; background: #fff; display: grid; place-items: center; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 12px -4px rgba(0,0,0,.12); }
+  .hand h2 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+  .hand .bd { flex: 1; padding: 0 20px; text-align: center; font-size: 13px; line-height: 19px; color: #6b6b6b; }
+  .hand .ft { padding: 14px; border-top: 1px solid #f0f0f0; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+  .hand .by { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: #7f7f7f; }
+  .link { display: flex; gap: 3px; } .link i { width: 4px; height: 2px; border-radius: 2px; background: #0D99FF; display: block; animation: dash 1s ease-in-out infinite; }
+  .link i:nth-child(2) { animation-delay: .15s; } .link i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dash { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+  .okdot { width: 22px; height: 22px; border-radius: 50%; background: #14AE5C; color: #fff; display: grid; place-items: center; font-size: 13px; }
+
+  /* Notion's consent pages (their UI; only the app name and logo are ours) */
+  .nt { font-family: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #37352f; background: #fbfbfa; min-height: 100%; padding: 12px 36px 24px; }
+  .nt .box { background: #fff; border: 1px solid #ececea; border-radius: 4px; }
+  .nt .top { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #ececea; font-size: 14px; font-weight: 500; }
+  .nt .ws { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .nt .in { padding: 20px 30px 18px; }
+  .nt h3 { margin: 0 0 18px; text-align: center; font-size: 16px; font-weight: 500; }
+  .nt .lbl { font-size: 12px; color: #37352f; margin-bottom: 8px; }
+  .nt .perm { border: 1px solid #e9e9e7; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
+  .nt .perm > button { width: 100%; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; text-align: left; }
+  .nt .perm > button .ph-caret-down { margin-left: auto; color: #9b9a97; transition: transform .2s; }
+  .nt .perm.open > button .ph-caret-down { transform: rotate(180deg); }
+  .nt .perm p { margin: 0; padding: 0 10px 8px 30px; color: #787774; line-height: 17px; display: none; }
+  .nt .perm.open p { display: block; }
+  .nt .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .nt .b { height: 28px; border-radius: 4px; font-size: 13px; font-weight: 500; }
+  .nt .b.sec { border: 1px solid #dfdfde; background: #fff; } .nt .b.sec:hover { background: #f7f7f5; }
+  .nt .b.pri { background: #2383e2; color: #fff; } .nt .b.pri:hover { background: #0077d4; }
+  .nt .trust { margin-top: 14px; font-size: 11px; line-height: 16px; color: #787774; }
+  .nt .trust b { color: #37352f; font-weight: 600; }
+  .nt .grp { background: #f7f7f5; border-radius: 4px; height: 26px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: #787774; font-weight: 500; margin-top: 6px; }
+  .nt .grp i { margin-left: auto; }
+  .nt .pg { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 12px; font-size: 12px; }
+  .nt .pg input { accent-color: #2383e2; }
+  .nt .pg .ph-caret-right { margin-left: auto; color: #9b9a97; }
+  .nt .auth { position: absolute; inset: 0; background: rgba(15,15,15,.45); display: grid; place-items: center; }
+  .nt .auth span { background: #fff; border-radius: 4px; padding: 8px 14px; font-size: 13px; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 24px -8px rgba(0,0,0,.3); }
+</style>
+</head>
+<body class="app">
+
+<!-- Dashboard behind (only context; the dialog covers it) -->
+<div class="flex h-screen">
+  <aside class="flex w-[220px] shrink-0 flex-col gap-1 border-r border-border-secondary bg-bg-secondary p-3">
+    <div class="mb-2 flex items-center gap-2 px-1 py-1"><span class="flex h-8 w-8 items-center justify-center rounded-control bg-[#2E7D32] text-[13px] font-bold text-white">P</span>
+      <div class="min-w-0"><div class="truncate text-body font-semibold">Perch &amp; Paw</div><div class="text-micro text-text-secondary">Pro plan · 1 member</div></div></div>
+    <button type="button" class="btn btn-primary btn-md mb-2 w-full"><i class="ph ph-plus"></i>New deck</button>
+    <a class="nav-item is-active"><i class="ph ph-house"></i>Home</a>
+    <a class="nav-item"><i class="ph ph-squares-four"></i>Templates</a>
+    <a class="nav-item"><i class="ph ph-database"></i>Data sources</a>
+    <a class="nav-item"><i class="ph ph-palette"></i>Brand Kit</a>
+    <a class="nav-item"><i class="ph ph-user-circle-plus"></i>Hire an expert</a>
+  </aside>
+  <main class="min-w-0 flex-1 p-8">
+    <div class="h-9 w-[360px] rounded-control border border-border-secondary bg-white"></div>
+    <div class="mt-10 grid grid-cols-3 gap-5">
+      <div class="thumb bg-[#0b2545]"></div><div class="thumb bg-[#f3ece2]"></div><div class="thumb bg-[#161412]"></div>
+    </div>
+  </main>
+</div>
+
+<!-- The connect window -->
+<div class="win off" id="win" role="dialog" aria-label="Connect window">
+  <div class="bar"><span class="dots"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></span><span id="wTitle">Presentations.AI</span></div>
+  <div class="url"><i class="ph ph-lock-simple text-[12px]"></i><span id="wUrl">connect.presentations.ai</span><span class="load" id="wLoad"></span></div>
+  <div class="page" id="wPage"></div>
+</div>
+
+<div id="toast" class="toast flex items-center gap-2 rounded-card bg-[#1A1A1A] px-4 py-2.5 text-body text-white shadow-menu"></div>
+
+<!-- Proto-only control -->
+<div class="fixed bottom-4 right-4 z-[100] flex items-center gap-1 rounded-full border border-border-secondary bg-white/95 p-1 text-micro shadow-menu backdrop-blur">
+  <span class="px-2 font-semibold text-text-secondary">Proto</span>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="">Restart</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="handoff">Hand-off</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="consent">Permissions</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="pages">Pick pages</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="success">Connected</button>
+  <button type="button" class="rounded-full px-2.5 py-1 hover:bg-bg-tertiary" data-jump="done">Closing</button>
+</div>
+<script>
+// Connector catalog + "Add connector" dialog (replica of settings/datasources/AddConnectorDialog.jsx, PR #6872).
+const CATALOG = [
+  { id: 'shopify', name: 'Shopify', slug: 'shopify', cat: 'ecommerce', chip: 'ecommerce', popular: true, desc: 'Use orders, revenue and top products in sales and marketing decks.' },
+  { id: 'metaads', name: 'Meta Ads', slug: 'meta', cat: 'advertising', chip: 'ads', popular: false, desc: 'Bring spend, reach and results from Facebook and Instagram ads.' },
+  { id: 'klaviyo', name: 'Klaviyo', slug: null, color: '#232426', cat: 'email marketing', chip: 'email', popular: false, desc: 'Show what each email campaign sent, opened and sold.' },
+  { id: 'woocommerce', name: 'WooCommerce', slug: 'woocommerce', cat: 'ecommerce', chip: 'ecommerce', popular: false, desc: 'Use orders and products from your WooCommerce store.' },
+  { id: 'googleads', name: 'Google Ads', slug: 'googleads', cat: 'advertising', chip: 'ads', popular: false, desc: 'Bring search and display campaign results into your decks.' },
+  { id: 'mailchimp', name: 'Mailchimp', slug: 'mailchimp', cat: 'email marketing', chip: 'email', popular: false, desc: 'Show campaign opens, clicks and audience growth.' },
+  { id: 'googledrive', name: 'Google Drive', slug: 'googledrive', cat: 'file management & storage', chip: 'files', popular: true, desc: 'Read docs, sheets and slides from your Drive so decks can quote them.' },
+  { id: 'hubspot', name: 'HubSpot', slug: 'hubspot', cat: 'crm', chip: 'crm', popular: true, desc: 'Pull deals, pipeline and company records into sales and QBR decks.' },
+  { id: 'notion', name: 'Notion', slug: 'notion', cat: 'notes', chip: 'notes', popular: true, desc: 'Use pages and databases from your workspace as source material.' },
+  { id: 'salesforce', name: 'Salesforce', slug: null, color: '#00A1E0', cat: 'crm', chip: 'crm', popular: true, desc: 'Bring opportunities, accounts and forecasts into your decks.' },
+  { id: 'googlesheets', name: 'Google Sheets', slug: 'googlesheets', cat: 'spreadsheets', chip: 'spreadsheets', popular: true, desc: 'Turn rows and charts from a sheet into slides with real numbers.' },
+  { id: 'slack', name: 'Slack', slug: null, color: '#4A154B', cat: 'team chat', chip: 'chat', popular: true, desc: 'Reference channel threads and announcements your team already wrote.' },
+  { id: 'confluence', name: 'Confluence', slug: 'confluence', cat: 'documents', chip: 'documents', popular: false, desc: 'Draw on specs, wikis and team pages.' },
+  { id: 'dropbox', name: 'Dropbox', slug: 'dropbox', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read files stored in your Dropbox folders.' },
+  { id: 'airtable', name: 'Airtable', slug: 'airtable', cat: 'spreadsheets', chip: 'spreadsheets', popular: false, desc: 'Use bases and views as structured data for slides.' },
+  { id: 'jira', name: 'Jira', slug: 'jira', cat: 'project management', chip: 'projects', popular: false, desc: 'Summarise epics, sprints and roadmaps for status updates.' },
+  { id: 'asana', name: 'Asana', slug: 'asana', cat: 'project management', chip: 'projects', popular: false, desc: 'Pull project status and milestones into updates.' },
+  { id: 'linear', name: 'Linear', slug: 'linear', cat: 'project management', chip: 'projects', popular: false, desc: 'Turn cycles and projects into progress slides.' },
+  { id: 'gmail', name: 'Gmail', slug: 'gmail', cat: 'email', chip: 'email', popular: false, desc: 'Reference email threads with customers and partners.' },
+  { id: 'googleanalytics', name: 'Google Analytics', slug: 'googleanalytics', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Chart traffic and conversion trends from GA4.' },
+  { id: 'mixpanel', name: 'Mixpanel', slug: 'mixpanel', cat: 'analytics', chip: 'analytics', popular: false, desc: 'Bring product usage metrics into reviews.' },
+  { id: 'quickbooks', name: 'QuickBooks', slug: 'quickbooks', cat: 'accounting', chip: 'accounting', popular: false, desc: 'Use revenue and expense figures in finance decks.' },
+  { id: 'onedrive', name: 'OneDrive', slug: null, color: '#0364B8', cat: 'file management & storage', chip: 'files', popular: false, desc: 'Read Word, Excel and PowerPoint files from OneDrive.' },
+  { id: 'pipedrive', name: 'Pipedrive', slug: null, color: '#1A1A1A', cat: 'crm', chip: 'crm', popular: false, desc: 'Pull deals and activity into pipeline reviews.' },
+  { id: 'zendesk', name: 'Zendesk', slug: 'zendesk', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket trends and CSAT for account reviews.' },
+  { id: 'intercom', name: 'Intercom', slug: 'intercom', cat: 'customer support', chip: 'more', popular: false, desc: 'Use conversation themes in customer decks.' },
+  { id: 'stripe', name: 'Stripe', slug: 'stripe', cat: 'payments', chip: 'more', popular: false, desc: 'Show revenue, refunds and subscription growth.' },
+  { id: 'bigcommerce', name: 'BigCommerce', slug: 'bigcommerce', cat: 'ecommerce', chip: 'more', popular: false, desc: 'Use orders and products from your BigCommerce store.' },
+  { id: 'etsy', name: 'Etsy', slug: 'etsy', cat: 'ecommerce', chip: 'more', popular: false, desc: 'Bring Etsy shop sales and listings into your decks.' },
+  { id: 'square', name: 'Square', slug: 'square', cat: 'payments', chip: 'more', popular: false, desc: 'Use in-store sales and payments from Square.' },
+  { id: 'amazonseller', name: 'Amazon Seller Central', slug: null, color: '#FF9900', cat: 'ecommerce', chip: 'more', popular: false, desc: 'Show marketplace sales, returns and top listings.' },
+  { id: 'tiktokads', name: 'TikTok Ads', slug: 'tiktok', cat: 'advertising', chip: 'more', popular: false, desc: 'Bring spend and results from TikTok campaigns.' },
+  { id: 'linkedinads', name: 'LinkedIn Ads', slug: null, color: '#0A66C2', cat: 'advertising', chip: 'more', popular: false, desc: 'Show spend, leads and results from LinkedIn campaigns.' },
+  { id: 'pinterestads', name: 'Pinterest Ads', slug: 'pinterest', cat: 'advertising', chip: 'more', popular: false, desc: 'Bring spend and saves from Pinterest campaigns.' },
+  { id: 'amplitude', name: 'Amplitude', slug: null, color: '#1E61F0', cat: 'analytics', chip: 'more', popular: false, desc: 'Chart product usage and retention.' },
+  { id: 'segment', name: 'Segment', slug: null, color: '#52BD94', cat: 'analytics', chip: 'more', popular: false, desc: 'Use events and audiences collected by Segment.' },
+  { id: 'xero', name: 'Xero', slug: 'xero', cat: 'accounting', chip: 'more', popular: false, desc: 'Use revenue and expenses in finance decks.' },
+  { id: 'typeform', name: 'Typeform', slug: 'typeform', cat: 'surveys', chip: 'more', popular: false, desc: 'Summarise survey and form responses.' },
+  { id: 'surveymonkey', name: 'SurveyMonkey', slug: 'surveymonkey', cat: 'surveys', chip: 'more', popular: false, desc: 'Turn survey results into charts.' },
+  { id: 'trustpilot', name: 'Trustpilot', slug: 'trustpilot', cat: 'reviews', chip: 'more', popular: false, desc: 'Quote ratings and recent reviews.' },
+  { id: 'instagram', name: 'Instagram', slug: 'instagram', cat: 'social media', chip: 'more', popular: false, desc: 'Show reach and engagement from your posts.' },
+  { id: 'youtube', name: 'YouTube', slug: 'youtube', cat: 'social media', chip: 'more', popular: false, desc: 'Show views and watch time for your channel.' },
+  { id: 'monday', name: 'monday.com', slug: null, color: '#FF3D57', cat: 'project management', chip: 'more', popular: false, desc: 'Pull project status and timelines.' },
+  { id: 'clickup', name: 'ClickUp', slug: 'clickup', cat: 'project management', chip: 'more', popular: false, desc: 'Turn tasks and goals into progress slides.' },
+  { id: 'trello', name: 'Trello', slug: 'trello', cat: 'project management', chip: 'more', popular: false, desc: 'Summarise boards and cards for status updates.' },
+  { id: 'box', name: 'Box', slug: 'box', cat: 'file management & storage', chip: 'more', popular: false, desc: 'Read files stored in Box folders.' },
+  { id: 'sharepoint', name: 'SharePoint', slug: null, color: '#038387', cat: 'documents', chip: 'more', popular: false, desc: 'Draw on pages and files from SharePoint.' },
+  { id: 'zoom', name: 'Zoom', slug: 'zoom', cat: 'meetings', chip: 'more', popular: false, desc: 'Use meeting notes and recordings.' },
+  { id: 'calendly', name: 'Calendly', slug: 'calendly', cat: 'meetings', chip: 'more', popular: false, desc: 'Show booked meetings and no-show rates.' },
+  { id: 'gorgias', name: 'Gorgias', slug: null, color: '#161616', cat: 'customer support', chip: 'more', popular: false, desc: 'Summarise ticket volume and response times.' },
+];
+const CHIPS = [['ecommerce','Ecommerce'],['ads','Advertising'],['crm','CRM'],['documents','Documents'],['files','File storage'],['spreadsheets','Spreadsheets'],['notes','Notes'],['projects','Project management'],['analytics','Analytics'],['email','Email'],['chat','Team chat'],['accounting','Accounting'],['more','More']];
+const ACR = new Set(['crm','ai','hr','url','sms','seo']);
+const catLabel = (t) => (t || '').replace(/\b\w+/g, (w) => ACR.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
+const appById = (id) => CATALOG.find((a) => a.id === id);
+
+// AppLogo: logo on a soft sunken tile, initials when there's no logo or it fails to load.
+function appLogo(app, size = 'md', extraClass = '') {
+  const box = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-8 w-8' : size === 'xs' ? 'h-5 w-5' : 'h-9 w-9';
+  const img = size === 'lg' ? 'h-7 w-7' : size === 'sm' ? 'h-[18px] w-[18px]' : size === 'xs' ? 'h-3 w-3' : 'h-5 w-5';
+  const tiny = size === 'xs' ? 'text-[6px]' : 'text-[10px]';
+  const initials = app.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const fallback = `<span class='text-caption font-semibold text-text-secondary'>${initials}</span>`;
+  const inner = app.slug
+    ? `<img src="https://cdn.simpleicons.org/${app.slug}" alt="" class="${img} object-contain" loading="lazy" onerror="this.outerHTML=&quot;${fallback}&quot;" />`
+    : `<span class="flex ${img} items-center justify-center rounded-[3px] ${tiny} font-bold text-white" style="background:${app.color}">${initials}</span>`;
+  return `<span class="flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-control bg-bg-tertiary ${extraClass}">${inner}</span>`;
+}
+
+// The dialog. opts: { isConnected(id), onConnect(id) -> Promise, title, description }
+const ConnectorDialog = (() => {
+  let root, state = { q: '', chip: '', busy: null, opts: null };
+  function mount() {
+    root = document.createElement('div');
+    root.className = 'fixed inset-0 z-[70] hidden';
+    root.innerHTML = `
+      <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px] opacity-0 transition-opacity duration-200" data-x data-fade></div>
+      <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+        <div data-panel role="dialog" aria-modal="true" class="pointer-events-auto relative w-full max-w-3xl translate-y-2 scale-[0.98] overflow-hidden rounded-dialog border border-border-secondary bg-bg-default-primary opacity-0 shadow-dialog transition-[opacity,transform] duration-200 ease-std">
+          <div class="flex items-start justify-between gap-4 px-6 pb-2 pt-5">
+            <div class="min-w-0"><div data-title class="text-title font-semibold">Add connector</div><div data-desc class="mt-1 text-body text-text-secondary">Connect an app your decks can draw on. Access is read-only and only for you.</div></div>
+            <button type="button" class="icon-btn -mr-2 -mt-1 !h-8 !w-8" data-x aria-label="Close"><i class="ph ph-x text-[20px]"></i></button>
+          </div>
+          <div class="px-6 pt-3">
+            <div class="relative"><i class="ph ph-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+              <input data-q placeholder="Search 120+ apps" class="h-9 w-full rounded-control border border-border-secondary pl-9 pr-3 text-body outline-none transition-shadow focus:border-[#0D99FF] focus:ring-2 focus:ring-[#0D99FF]/20" /></div>
+            <div data-chips class="scrollbar-hide mt-3 flex h-7 gap-1.5 overflow-x-auto" style="-webkit-mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,black calc(100% - 56px),transparent 100%)"></div>
+            <div data-section class="mb-2 mt-6 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">Popular</div>
+          </div>
+          <div data-list class="scrollbar-hide h-[52vh] overflow-y-auto px-6 pb-6"></div>
+          <div data-foot class="hidden items-center gap-3 border-t border-border-secondary px-6 py-3">
+            <span data-foot-note class="flex-1 text-caption text-text-secondary"></span>
+            <button type="button" data-done class="btn btn-primary btn-md">Done</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(root);
+    root.querySelectorAll('[data-x]').forEach((el) => el.onclick = close);
+    root.querySelector('[data-done]').onclick = close;
+    root.querySelector('[data-q]').oninput = (e) => { state.q = e.target.value; render(); };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.classList.contains('hidden')) close(); });
+  }
+  function card(app) {
+    const connected = state.opts.isConnected(app.id);
+    const working = state.busy === app.id;
+    const action = connected
+      ? `<span title="Connected" class="flex h-8 w-8 items-center justify-center rounded-control bg-bg-success-inverted text-text-success-primary"><i class="ph-bold ph-check"></i></span>`
+      : `<button type="button" data-connect="${app.id}" ${state.busy ? 'disabled' : ''} aria-label="Connect ${app.name}" class="icon-btn !h-8 !w-8 border border-border-secondary disabled:opacity-50">${working ? '<i class="ph ph-arrows-clockwise spin"></i>' : '<i class="ph ph-plus"></i>'}</button>`;
+    return `<div class="flex items-start gap-3 rounded-card border border-border-secondary bg-bg-default-primary p-4">
+      ${appLogo(app, 'lg')}
+      <div class="min-w-0 flex-1"><div class="truncate text-body font-semibold">${app.name}</div><p class="mt-0.5 line-clamp-2 text-caption text-text-secondary">${app.desc}</p></div>
+      <div class="shrink-0">${action}</div></div>`;
+  }
+  function render() {
+    const q = state.q.trim().toLowerCase();
+    const chips = root.querySelector('[data-chips]');
+    chips.innerHTML = [['', 'All'], ...CHIPS].map(([id, label]) => `<button type="button" data-chip="${id}" class="h-7 shrink-0 whitespace-nowrap rounded-full border px-3 text-caption ${state.chip === id ? 'border-border-brand bg-app-50 text-text-brand' : 'border-border-secondary text-text-secondary hover:bg-bg-tertiary'}">${label}</button>`).join('');
+    chips.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { state.chip = b.dataset.chip; render(); });
+    const filtered = CATALOG.filter((a) => (!state.chip || a.chip === state.chip) && (!q || a.name.toLowerCase().includes(q) || a.cat.includes(q) || a.desc.toLowerCase().includes(q)));
+    const browsing = !q && !state.chip;
+    const pop = browsing ? filtered.filter((a) => a.popular) : [];
+    const rest = browsing ? filtered.filter((a) => !a.popular) : filtered;
+    root.querySelector('[data-section]').textContent = browsing ? 'Popular' : (CHIPS.find((c) => c[0] === state.chip)?.[1] || 'All apps');
+    const grid = (items) => `<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">${items.map(card).join('')}</div>`;
+    let html = '';
+    if (!filtered.length) html = '<p class="py-10 text-center text-body text-text-secondary">No apps match your search.</p>';
+    if (pop.length) html += grid(pop);
+    if (rest.length) html += (browsing && pop.length ? '<div class="mb-2 mt-5 text-micro font-semibold uppercase tracking-[0.08em] text-text-secondary">All apps</div>' : '') + grid(rest);
+    const list = root.querySelector('[data-list]'); list.innerHTML = html;
+    if (state.opts.done) {
+      const added = state.added || [];
+      root.querySelector('[data-foot-note]').innerHTML = added.length
+        ? `<span class="inline-flex items-center gap-1.5 text-text-success-primary"><i class="ph-fill ph-check-circle"></i>${added.length === 1 ? appById(added[0]).name + ' connected' : added.length + ' apps connected'}</span><span class="text-text-secondary"> · add more, or press Done</span>`
+        : 'Connect as many apps as you like, then press Done.';
+    }
+    list.querySelectorAll('[data-connect]').forEach((b) => b.onclick = () => {
+      state.busy = b.dataset.connect; render();
+      const id = state.busy;
+      Promise.resolve(state.opts.onConnect(id)).then(() => { (state.added = state.added || []).push(id); }).finally(() => { state.busy = null; render(); });
+    });
+  }
+  function open(opts) {
+    if (!root) mount();
+    state = { q: '', chip: opts.chip || '', busy: null, opts };
+    if (opts.title) root.querySelector('[data-title]').textContent = opts.title;
+    if (opts.description) root.querySelector('[data-desc]').textContent = opts.description;
+    const foot = root.querySelector('[data-foot]');
+    foot.classList.toggle('hidden', !opts.done); foot.classList.toggle('flex', !!opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[52vh]', !opts.done);
+    root.querySelector('[data-list]').classList.toggle('h-[46vh]', !!opts.done);
+    root.querySelector('[data-q]').value = '';
+    render();
+    root.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      root.querySelector('[data-fade]').classList.remove('opacity-0');
+      root.querySelector('[data-panel]').classList.remove('opacity-0','translate-y-2','scale-[0.98]');
+      root.querySelector('[data-q]').focus();
+    });
+  }
+  function close() {
+    root.querySelector('[data-fade]').classList.add('opacity-0');
+    root.querySelector('[data-panel]').classList.add('opacity-0','translate-y-2','scale-[0.98]');
+    setTimeout(() => root.classList.add('hidden'), 180);
+    state.opts?.onClose?.();
+  }
+  return { open, close, refresh: () => root && render() };
+})();
+
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+function toast(msg, icon = 'check-circle', tone = '#3DDC97') {
+  const t = $('#toast'); t.innerHTML = `<i class="ph-fill ph-${icon} text-[18px]" style="color:${tone}"></i><span>${msg}</span>`;
+  t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+
+// ---------------- the connect window ----------------
+// Same steps as the live Composio flow (screen recording, 27 Nov 2026), with every Composio surface
+// rebranded: our hand-off pages live on connect.presentations.ai, and Notion's consent screens name
+// Presentations.AI because the OAuth app registered with Notion is ours.
+const PAI_LOGO = (s = 28) => `<svg width="${s}" height="${s}" viewBox="0 0 32 32" aria-label="Presentations.AI"><defs><linearGradient id="pg${s}" x1="15.5" y1=".9" x2="16" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#376BFF"/><stop offset="1" stop-color="#3426FF"/></linearGradient></defs>
+  <rect width="32" height="32" rx="6.24" fill="url(#pg${s})"/>
+  <path fill="#fff" d="M19.8719 6.62146L10.6871 8.78916C9.68814 9.02467 8.87781 9.9808 8.87781 10.924V18.992C8.87781 18.992 8.88029 18.9498 8.90449 18.8865C8.95537 18.7535 9.1049 18.5256 9.53675 18.3932C9.54543 18.3909 9.55412 18.3885 9.56281 18.3862L10.0337 18.2743L11.495 17.9263L20.6103 15.775C22.6597 15.2917 24.0973 14.944 24.0973 12.9492L24.0973 7.9648L24.0973 7.95955V7.88153C24.0973 5.79234 22.0187 6.11469 19.8719 6.62146Z"/>
+  <path fill="#fff" d="M15.5756 18.607L9.75743 19.9903C9.25371 20.11 8.84509 20.5957 8.84509 21.0749V24.0785C8.84509 24.244 8.89383 24.3871 8.97838 24.4987C9.13866 24.7101 9.42767 24.808 9.75743 24.7297L15.6075 23.3386C16.105 23.2205 16.5097 22.7452 16.5197 22.2719C16.5198 22.2659 16.5199 22.26 16.5199 22.2541V18.3826L15.5756 18.607Z"/></svg>`;
+const NOTION_LOGO = (s = 28) => `<img src="https://cdn.simpleicons.org/notion" alt="Notion" style="width:${s}px;height:${s}px">`;
+
+let jumpTo = null, step = '', timers = [], resolveConnect = null;
+const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+const win = $('#win');
+
+const STEPS = {
+  // 1 · our hand-off page, before Notion
+  handoff: { title: 'Presentations.AI', url: 'connect.presentations.ai/notion', html: () => `
+    <div class="hand step"><div class="hd" style="background:linear-gradient(180deg,#e9efff 0%,#fff 100%)">
+        <div class="pair"><span class="tile">${PAI_LOGO(30)}</span><span class="link"><i></i><i></i><i></i></span><span class="tile">${NOTION_LOGO(28)}</span></div>
+        <h2>Connect Notion to Presentations.AI</h2></div>
+      <div class="bd"><p class="m-0 mt-2">Taking you to Notion.<br>Sign in there to continue.</p></div>
+      <div class="ft"><button type="button" disabled class="btn btn-md w-full"><span class="spinner"></span>Opening Notion</button>
+        <div class="by"><i class="ph-fill ph-lock-simple"></i>Read-only. Only you see what we pull.</div></div></div>`,
+    after: () => later(1800, () => go('consent')) },
+
+  // 2 · Notion's consent screen
+  consent: { title: 'Notion', url: 'api.notion.com/v1/oauth/authorize', html: () => `
+    <div class="nt step"><div class="box">
+      <div class="top">${NOTION_LOGO(18)}Notion<span class="ws">🐾 Perch &amp; Paw<i class="ph ph-caret-down text-[11px]"></i></span></div>
+      <div class="in">
+        <div class="mx-auto mb-2 flex justify-center">${PAI_LOGO(36)}</div>
+        <h3>Connect with Presentations.AI</h3>
+        <div class="lbl">Presentations.AI will have permission to</div>
+        ${[['eye', 'View pages you select', 'Presentations.AI can read the pages you pick in the next step. You can share more pages with it later in Notion.', true],
+           ['chat-circle', 'View comments within pages you select', 'Comments on those pages, so decks can quote decisions and feedback.'],
+           ['users', 'View workspace users and their emails', 'Names of people mentioned in your pages.']]
+          .map(([ic, t, d, open]) => `<div class="perm${open ? ' open' : ''}"><button type="button" data-perm><i class="ph ph-${ic} text-[13px]"></i>${t}<i class="ph ph-caret-down text-[11px]"></i></button><p>${d}</p></div>`).join('')}
+        <div class="btns"><button type="button" class="b sec" data-cancel>Cancel</button><button type="button" class="b pri" data-next>Select pages</button></div>
+        <div class="trust"><b>Make sure you trust Presentations.AI (app.presentations.ai)</b><br>If you continue, you may be sharing sensitive information. Notion does not review third party connections such as “Presentations.AI”. Learn how “Presentations.AI” handles your data by reviewing their <u>Privacy Policy</u> and <u>Terms of Service</u>.</div>
+      </div></div></div>`,
+    after: () => {
+      win.querySelectorAll('[data-perm]').forEach((b) => b.onclick = () => b.parentElement.classList.toggle('open'));
+      win.querySelector('[data-next]').onclick = () => go('pages');
+      win.querySelector('[data-cancel]').onclick = () => closeWin(false);
+    } },
+
+  // 3 · Notion's page picker
+  pages: { title: 'Notion', url: 'api.notion.com/v1/oauth/authorize', html: () => `
+    <div class="nt step"><div class="box">
+      <div class="top">${NOTION_LOGO(18)}Notion<span class="ws">🐾 Perch &amp; Paw<i class="ph ph-caret-down text-[11px]"></i></span></div>
+      <div class="in" style="min-height:440px;display:flex;flex-direction:column">
+        <h3 style="margin-bottom:14px">Allow “Presentations.AI” to access these pages</h3>
+        <div class="lbl">Select pages <i class="ph ph-question text-[11px] text-[#9b9a97]"></i></div>
+        <div class="flex h-7 items-center gap-2 rounded-[4px] border border-[#e9e9e7] bg-[#f7f7f5] px-2 text-[12px] text-[#9b9a97]"><i class="ph ph-magnifying-glass"></i>Search pages</div>
+        <div class="mt-1 flex-1">
+          <div class="grp">System<i class="ph ph-caret-down"></i></div>
+          <label class="pg"><input type="checkbox" checked>👥 People</label>
+          <div class="grp">Teamspaces<i class="ph ph-caret-down"></i></div>
+          <div class="pg" style="color:#787774;font-size:11px">Teamspace pages<span class="ml-auto text-[#2383e2]">Select all</span></div>
+          <label class="pg"><input type="checkbox" checked>📣 Marketing<i class="ph ph-caret-right"></i></label>
+          <label class="pg"><input type="checkbox">🏠 General<i class="ph ph-caret-right"></i></label>
+          <div class="grp">Shared<i class="ph ph-caret-right"></i></div>
+          <div class="grp">Private<i class="ph ph-caret-right"></i></div>
+        </div>
+        <div class="btns"><button type="button" class="b sec" data-back>Back</button><button type="button" class="b pri" data-allow>Allow access</button></div>
+      </div></div></div>`,
+    after: () => {
+      win.querySelector('[data-back]').onclick = () => go('consent');
+      win.querySelector('[data-allow]').onclick = () => {
+        win.querySelector('.nt').insertAdjacentHTML('beforeend', '<div class="auth"><span><span class="spinner"></span>Authorizing…</span></div>');
+        later(1200, () => go('success'));
+      };
+    } },
+
+  // 4 · back on our side: connected
+  success: { title: 'Presentations.AI', url: 'connect.presentations.ai/notion/callback', html: () => `
+    <div class="hand step"><div class="hd" style="background:linear-gradient(180deg,#e3f6ea 0%,#fff 100%)">
+        <div class="pair"><span class="tile">${PAI_LOGO(30)}</span><span class="okdot"><i class="ph-bold ph-check"></i></span><span class="tile">${NOTION_LOGO(28)}</span></div>
+        <h2>Notion is connected</h2></div>
+      <div class="bd"><p class="m-0 mt-2">Taking you back to Presentations.AI…</p></div>
+      <div class="ft"><div class="by"><i class="ph-fill ph-lock-simple"></i>Read-only. Only you see what we pull.</div></div></div>`,
+    after: () => later(1600, () => go('done')) },
+
+  // 5 · the window closes itself
+  done: { title: 'Presentations.AI', url: 'app.presentations.ai', html: () => `
+    <div class="step flex h-full flex-col items-center justify-center gap-1 text-center">
+      <div class="mb-2">${PAI_LOGO(32)}</div>
+      <div class="text-body font-medium">Connected. You can close this window.</div>
+      <div class="text-caption text-text-secondary">It closes by itself.</div></div>`,
+    after: () => later(1400, () => closeWin(true)) },
+};
+
+function go(s) {
+  timers.forEach(clearTimeout); timers = [];
+  step = s; const st = STEPS[s];
+  $('#wTitle').textContent = st.title; $('#wUrl').textContent = st.url;
+  const ld = $('#wLoad'); ld.classList.remove('go'); void ld.offsetWidth; ld.classList.add('go');
+  $('#wPage').innerHTML = st.html(); $('#wPage').scrollTop = 0;
+  win.classList.remove('off');
+  st.after?.();
+}
+function closeWin(ok) {
+  timers.forEach(clearTimeout); timers = [];
+  win.classList.add('off');
+  const r = resolveConnect; resolveConnect = null;
+  r?.(ok);
+}
+
+// ---------------- flow ----------------
+let connected = new Set(['googledrive']);
+function openDialog() {
+  ConnectorDialog.open({
+    isConnected: (id) => connected.has(id),
+    onConnect: (id) => new Promise((res) => {
+      resolveConnect = (ok) => { if (ok) { connected.add(id); toast(`${appById(id).name} connected`); } res(); };
+      // Every app runs the same window; the steps are written out for Notion.
+      later(250, () => { go(jumpTo || 'handoff'); jumpTo = null; });
+    }),
+  });
+}
+function restart(to) {
+  timers.forEach(clearTimeout); timers = []; win.classList.add('off');
+  connected = new Set(['googledrive']); resolveConnect = null;
+  openDialog();
+  if (to) {
+    // Jump into the window as if + on Notion was pressed.
+    jumpTo = to;
+    setTimeout(() => document.querySelector('[data-connect="notion"]')?.click(), 50);
+  }
+}
+document.querySelectorAll('[data-jump]').forEach((b) => b.onclick = () => {
+  history.replaceState(null, '', b.dataset.jump ? '?step=' + b.dataset.jump : '?');
+  restart(b.dataset.jump);
+});
+restart(new URLSearchParams(location.search).get('step') || '');
+</script>
+</body>
+</html>
