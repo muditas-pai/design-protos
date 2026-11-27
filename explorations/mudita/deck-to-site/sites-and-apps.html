@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<!-- Websites and apps · mudita · 27 Nov 2026.
+     Prototype of ./sites-and-apps-scope.html: one New button (Deck, Website, App), mixed tiles with Figma-style
+     type badges, the create chat with ask cards, the editor (Edit · Responses/Data · Settings), the required check
+     before the first publish, and the live state. Example brand is fictional (Perch & Paw).
+     States: ?s=dash · menu · create-site · create-app · editor-site · editor-app · check · live · responses · data -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Websites and apps</title>
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<style>
+  /* tokens: pai.tailwind.config.js (new_dev_migration), light theme */
+  :root {
+    --bg-primary: #fff; --bg-secondary: #f5f5f5; --bg-tertiary: #f5f5f5; --bg-quaternary: #e6e6e6;
+    --brand: #0d99ff; --brand-hover: #007be5; --brand-inv: #e5f4ff; --text-brand: #007be5;
+    --success: #14ae5c; --success-inv: #e0f6e5; --text-success: #009951;
+    --warning-inv: #fff1c2; --text-warning: #a15c00;
+    --text: #1a1a1a; --text-2: #7f7f7f; --text-4: #b2b2b2;
+    --border: #e6e6e6; --border-strong: rgba(26,26,26,.3);
+    --r-control: 6px; --r-card: 12px; --r-dialog: 16px;
+    --sh-menu: 0 1px 2px 0 rgb(0 0 0 / .06), 0 8px 24px -6px rgb(0 0 0 / .16);
+    --sh-dialog: 0 2px 6px 0 rgb(0 0 0 / .08), 0 24px 64px -12px rgb(0 0 0 / .28);
+    --sh-btn: 0 1px 2px 0 rgb(0 0 0 / .08), inset 0 1px 0 0 rgb(255 255 255 / .12);
+    --sh-segment: 0 1px 2px rgba(0,0,0,.12);
+    --std: cubic-bezier(0.2, 0, 0, 1);
+    --font: -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    /* the customer's brand (Perch & Paw), used only inside their website and app */
+    --pp: #3B2418; --pp2: #6B4430; --pp-cream: #F3ECE2; --pp-accent: #C98A4B;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg-secondary); color: var(--text); font: 14px/20px var(--font); -webkit-font-smoothing: antialiased; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+  .view { height: 100vh; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--r-control);
+    font-weight: 500; white-space: nowrap; border: 1px solid transparent; background: none; user-select: none;
+    transition: background-color .15s var(--std), border-color .15s var(--std), color .15s var(--std), transform .1s var(--std); }
+  .btn:active:not(:disabled) { transform: scale(.97); }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; gap: 6px; }
+  .btn-primary { background: var(--brand); color: #fff; box-shadow: var(--sh-btn); }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-secondary { background: #fff; border-color: var(--border); }
+  .btn-secondary:hover { border-color: var(--border-strong); background: var(--bg-tertiary); }
+  .btn-ghost { color: var(--text-2); } .btn-ghost:hover { color: var(--text); background: var(--bg-tertiary); }
+  .btn:disabled { cursor: not-allowed; background: var(--bg-tertiary); color: var(--text-2); box-shadow: none; border-color: transparent; }
+  .btn i { font-size: 16px; }
+  .icon-btn { width: 36px; height: 36px; display: inline-grid; place-items: center; border: 0; background: transparent; border-radius: var(--r-control);
+    color: var(--text-2); font-size: 20px; transition: background .15s, color .15s; }
+  .icon-btn:hover { background: var(--bg-tertiary); color: var(--text); }
+  .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(26,26,26,.15); border-top-color: var(--text); animation: spin .8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fade-up { animation: fadeUp .28s var(--std) both; }
+  @keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } }
+
+  /* type badge, Figma-style: white icon on a coloured square, one colour per type */
+  .ty { width: 20px; height: 20px; border-radius: 5px; display: inline-grid; place-items: center; flex-shrink: 0; color: #fff; font-size: 13px; }
+  .ty.deck { background: #0D99FF; } .ty.site { background: #14AE5C; } .ty.app { background: #9747FF; }
+  .ty.lg { width: 32px; height: 32px; border-radius: 8px; font-size: 18px; }
+  .ty.sm { width: 16px; height: 16px; border-radius: 4px; font-size: 11px; }
+
+  /* ── dashboard shell ── */
+  .shell { display: flex; height: 100vh; overflow: hidden; }
+  .side { width: 256px; flex-shrink: 0; display: flex; flex-direction: column; padding: 12px; background: #fff; border-right: 1px solid var(--border); position: relative; }
+  .wsw { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px; border: 0; background: none; border-radius: var(--r-control); text-align: left; }
+  .wsw-av { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: #f6e7d6; color: #9a5d27; font-size: 17px; }
+  .wsw-name { font-weight: 600; } .wsw-meta { font-size: 12px; line-height: 16px; color: var(--text-2); }
+  .wsw > i { margin-left: auto; color: var(--text-2); font-size: 16px; }
+  .side .new { margin-top: 12px; width: 100%; }
+  .side .new .ph-caret-down { margin-left: auto; font-size: 13px; opacity: .85; }
+  .side .new span { margin-right: auto; }
+  .nav { margin-top: 16px; display: flex; flex-direction: column; gap: 2px; }
+  .nav a { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: var(--r-control); color: var(--text-2); text-decoration: none; cursor: pointer; }
+  .nav a:hover { background: var(--bg-tertiary); color: var(--text); }
+  .nav a.on { background: var(--bg-tertiary); color: var(--text); font-weight: 500; }
+  .nav a i { font-size: 20px; }
+  .side-foot { margin-top: auto; }
+
+  /* the New menu */
+  .menu { position: absolute; left: 12px; right: 12px; top: 100px; z-index: 30; background: #fff; border: 1px solid var(--border); border-radius: var(--r-card);
+    box-shadow: var(--sh-menu); padding: 6px; transform-origin: top center; animation: menuIn .16s var(--std); }
+  @keyframes menuIn { from { opacity: 0; transform: scale(.97) translateY(-4px); } }
+  .menu button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px; border: 0; background: none; border-radius: 8px; text-align: left; }
+  .menu button:hover { background: var(--bg-tertiary); }
+  .menu b { display: block; font-weight: 500; } .menu small { display: block; font-size: 12px; line-height: 16px; color: var(--text-2); }
+  .menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 2px; }
+
+  .main { flex: 1; min-width: 0; overflow-y: auto; }
+  .top { position: sticky; top: 0; z-index: 10; height: 56px; display: flex; align-items: center; gap: 6px; padding: 0 24px; background: rgba(255,255,255,.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .search { flex: 1; max-width: 448px; height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--r-control); border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-2); }
+  .search kbd { margin-left: auto; font: 500 11px var(--font); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); background: #fff; }
+  .me { width: 32px; height: 32px; border-radius: 50%; background: #d8c3a5; color: #5b4128; display: grid; place-items: center; font-size: 12px; font-weight: 600; margin-left: 4px; }
+  .col { max-width: 1152px; margin: 0 auto; padding: 32px 24px 96px; }
+  .hero h1 { margin: 12px 0 0; text-align: center; font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; }
+  .composer { max-width: 720px; margin: 20px auto 0; border-radius: var(--r-dialog); border: 1px solid var(--border); background: #fff; box-shadow: var(--sh-menu); }
+  .composer .ta { padding: 18px 18px 0; min-height: 84px; font-size: 16px; line-height: 24px; color: var(--text-4); }
+  .composer .bar { display: flex; align-items: center; gap: 4px; padding: 8px 10px 10px; }
+  .composer .send { margin-left: auto; width: 32px; height: 32px; padding: 0; opacity: .35; }
+
+  .tabs { margin-top: 48px; display: flex; align-items: flex-end; gap: 12px; border-bottom: 1px solid var(--border); }
+  .tab { position: relative; height: 40px; padding: 0 12px; display: inline-flex; align-items: center; color: var(--text-2); }
+  .tab.on { color: var(--text); font-weight: 500; }
+  .tab.on::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 99px; background: var(--brand); }
+  .types { display: flex; gap: 6px; margin-top: 16px; }
+  .types button { height: 32px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--border); background: #fff; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+  .types button:hover { border-color: var(--border-strong); color: var(--text); }
+  .types button.on { border-color: var(--text); color: var(--text); font-weight: 500; }
+  .grid { margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* tiles: same card, the thumbnail's frame shows the form factor */
+  .tile { background: #fff; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; cursor: pointer; text-align: left; padding: 0; transition: box-shadow .2s var(--std); }
+  .tile:hover { box-shadow: var(--sh-menu); }
+  .tile.new-in { animation: fadeUp .4s var(--std) both; }
+  .tile .cv { aspect-ratio: 16/9; position: relative; overflow: hidden; border-bottom: 1px solid var(--border); }
+  .tile .cb { padding: 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .tile .cb > div { flex: 1; min-width: 0; }
+  .tile .ct { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .cm { font-size: 13px; line-height: 18px; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .more { color: var(--text-2); font-size: 20px; }
+  .tile .ty { margin-top: 0; }
+  .cv.deck { background: var(--pp); color: #fff; }
+  .cv.deck .ph { position: absolute; right: 0; top: 0; bottom: 0; width: 42%; background: center/cover; }
+  .cv.deck .sl { position: absolute; left: 7%; right: 46%; bottom: 10%; }
+  .cv.deck small { display: block; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; margin-bottom: 6px; }
+  .cv.deck b { font-size: 17px; line-height: 21px; font-weight: 600; }
+  .cv.site, .cv.app { background: #EDEDED; }
+  .cv.site { padding: 14px 16px 0; }
+  .brw { height: 100%; border-radius: 7px 7px 0 0; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 8px 18px -8px rgba(0,0,0,.25); overflow: hidden; display: flex; flex-direction: column; }
+  .brw .bar { height: 16px; display: flex; align-items: center; gap: 3px; padding: 0 7px; background: #F5F5F5; border-bottom: 1px solid #E6E6E6; flex-shrink: 0; }
+  .brw .bar i { width: 5px; height: 5px; border-radius: 50%; background: #D0D0D0; display: block; }
+  .brw .bar span { margin-left: 6px; font-size: 8px; color: #7F7F7F; }
+  .brw .pg { flex: 1; position: relative; padding: 10px 12px; background: var(--pp-cream); color: var(--pp); }
+  .brw .pg .nv { display: flex; gap: 8px; font-size: 7px; font-weight: 700; letter-spacing: .08em; margin-bottom: 10px; }
+  .brw .pg .nv span:first-child { margin-right: auto; }
+  .brw .pg b { display: block; font-size: 13px; line-height: 15px; max-width: 56%; }
+  .brw .pg .cta { display: inline-block; margin-top: 8px; font-size: 7px; font-weight: 700; padding: 4px 7px; border-radius: 3px; background: var(--pp); color: #fff; }
+  .brw .pg .im { position: absolute; right: 12px; top: 22px; width: 36%; aspect-ratio: 1; border-radius: 4px; background: center/cover #C99A72; }
+  .cv.app { display: flex; align-items: flex-end; justify-content: center; padding-top: 14px; }
+  .phs { width: 40%; height: 100%; border-radius: 12px 12px 0 0; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 8px 18px -8px rgba(0,0,0,.25); padding: 9px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .phs .hd { font-size: 8px; font-weight: 700; color: var(--pp); }
+  .phs .op { height: 15px; border-radius: 4px; background: var(--pp-cream); display: flex; align-items: center; gap: 4px; padding: 0 5px; }
+  .phs .op i { width: 6px; height: 6px; border-radius: 50%; background: var(--pp-accent); display: block; }
+  .phs .op em { height: 3px; border-radius: 3px; background: #DCCBB8; flex: 1; }
+  .phs .bt { margin-top: auto; height: 13px; border-radius: 4px; background: var(--pp); }
+  .appicon { position: absolute; left: 12px; top: 12px; width: 26px; height: 26px; border-radius: 7px; background: var(--pp); color: #fff; display: grid; place-items: center; font-size: 14px; }
+  .state { position: absolute; right: 10px; bottom: 10px; height: 20px; padding: 0 7px; border-radius: 99px; background: rgba(255,255,255,.94); font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 0 0 1px rgba(0,0,0,.06); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); } .dot.draft { background: var(--text-4); }
+
+  /* ── create chat ── */
+  .create { display: flex; flex-direction: column; background: var(--bg-secondary); }
+  .chead { height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--border); background: #fff; }
+  .chead .pill { height: 24px; padding: 0 8px 0 4px; border-radius: 99px; background: var(--bg-tertiary); display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+  .cbody { flex: 1; min-height: 0; overflow-y: auto; }
+  .thread { max-width: 752px; margin: 0 auto; padding: 32px 16px 24px; display: flex; flex-direction: column; gap: 20px; }
+  .u { align-self: flex-end; max-width: 612px; border-radius: var(--r-card); background: #E5F4FF; padding: 12px 16px; }
+  .a { font-size: 14px; line-height: 20px; }
+  .a .muted { color: var(--text-2); }
+  .trail { color: var(--text-2); display: flex; flex-direction: column; gap: 4px; }
+  .trail .st { display: flex; align-items: center; gap: 10px; }
+  .dock { flex-shrink: 0; padding: 0 16px 24px; }
+  .dock > div { max-width: 744px; margin: 0 auto; }
+  .ask { background: #fff; border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--sh-menu); padding: 16px; }
+  .ask .q { font-size: 16px; line-height: 24px; font-weight: 500; }
+  .ask .qs { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+  .ask .stp { float: right; font-size: 12px; color: var(--text-2); }
+  .opts { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; text-align: left; transition: border-color .15s, background .15s; }
+  .opt:hover { border-color: var(--border-strong); }
+  .opt[aria-checked="true"] { border-color: var(--brand); background: #F5FBFF; }
+  .opt i.ic { font-size: 18px; color: var(--text-2); margin-top: 1px; }
+  .opt[aria-checked="true"] i.ic { color: var(--text-brand); }
+  .opt b { display: block; font-weight: 500; } .opt small { display: block; font-size: 12px; line-height: 16px; color: var(--text-2); margin-top: 2px; }
+  .ask .ft { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .ask .ft .sp { flex: 1; }
+  .plan { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--border); }
+  .plan li { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--border); }
+  .plan li .n { width: 24px; height: 24px; border-radius: var(--r-control); background: var(--bg-tertiary); display: grid; place-items: center; font-size: 12px; font-weight: 600; color: var(--text-2); flex-shrink: 0; }
+  .plan li b { font-weight: 500; display: block; } .plan li span { font-size: 13px; color: var(--text-2); }
+  .plan li .keep { margin-left: auto; font-size: 12px; color: var(--text-brand); background: var(--brand-inv); padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .build { display: flex; flex-direction: column; gap: 8px; }
+  .build .row { display: flex; align-items: center; gap: 10px; color: var(--text-2); }
+  .build .row.done { color: var(--text); } .build .row.done i { color: var(--success); }
+  .pbar { height: 4px; border-radius: 99px; background: var(--bg-quaternary); overflow: hidden; margin-top: 6px; }
+  .pbar i { display: block; height: 100%; width: 0; background: var(--brand); border-radius: inherit; transition: width .5s var(--std); }
+
+  /* ── editor ── */
+  .editor { display: flex; flex-direction: column; background: var(--bg-secondary); }
+  .ebar { height: 56px; flex-shrink: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--border); }
+  .ebar .l, .ebar .r { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ebar .r { justify-content: flex-end; }
+  .ebar .nm { font-weight: 600; white-space: nowrap; }
+  .chip { height: 22px; padding: 0 8px; border-radius: 99px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; background: var(--bg-tertiary); color: var(--text-2); white-space: nowrap; }
+  .chip.live { background: var(--success-inv); color: var(--text-success); }
+  .segm { display: flex; padding: 2px; border-radius: var(--r-control); background: var(--bg-tertiary); }
+  .segm button { height: 30px; padding: 0 12px; border: 0; border-radius: 5px; background: transparent; color: var(--text-2); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+  .segm button[aria-selected="true"] { background: #fff; color: var(--text); box-shadow: var(--sh-segment); }
+  .segm button em { font-style: normal; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--brand-inv); color: var(--text-brand); font-size: 11px; font-weight: 600; display: inline-grid; place-items: center; }
+  .segm.ic button { width: 32px; padding: 0; justify-content: center; font-size: 16px; }
+  .ework { flex: 1; min-height: 0; display: flex; }
+  .secs { width: 220px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); padding: 12px 8px; overflow-y: auto; }
+  .secs .h { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); padding: 4px 8px 8px; display: flex; align-items: center; }
+  .secs .h i { margin-left: auto; font-size: 16px; cursor: pointer; }
+  .secs a { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 8px; border-radius: var(--r-control); color: var(--text); cursor: pointer; }
+  .secs a:hover { background: var(--bg-tertiary); }
+  .secs a.on { background: var(--bg-tertiary); font-weight: 500; }
+  .secs a i { color: var(--text-2); font-size: 16px; }
+  .secs .grip { margin-left: auto; opacity: 0; } .secs a:hover .grip { opacity: 1; }
+  .canvas { flex: 1; min-width: 0; overflow: auto; padding: 24px; display: flex; justify-content: center; align-items: flex-start; }
+  .frame { width: 100%; max-width: 920px; background: #fff; border-radius: 10px; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 12px 32px -12px rgba(0,0,0,.22); overflow: hidden; transition: max-width .3s var(--std); }
+  .frame .fbar { height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: #F5F5F5; border-bottom: 1px solid #E6E6E6; font-size: 12px; color: var(--text-2); }
+  .frame .fbar .dots { display: flex; gap: 5px; margin-right: 8px; } .frame .fbar .dots i { width: 9px; height: 9px; border-radius: 50%; background: #D6D6D6; display: block; }
+  .frame .fbar .addr { flex: 1; max-width: 360px; height: 22px; border-radius: 5px; background: #fff; border: 1px solid #E6E6E6; display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+  .frame.phone { max-width: 390px; border-radius: 36px; padding: 12px; background: #111; }
+  .frame.phone .fbar { display: none; }
+  .frame.phone #frameBody { border-radius: 26px; overflow: hidden; }
+  .frame.phone .s-nav { padding: 14px 18px; } .frame.phone .s-nav span:not(.lg) { display: none; }
+  .frame.phone .s-hero { grid-template-columns: 1fr; padding: 10px 18px 32px; gap: 20px; } .frame.phone .s-hero h1 { font-size: 30px; line-height: 34px; }
+  .frame.phone .s-form { flex-direction: column; } .frame.phone .s-why, .frame.phone .s-rev .qs { grid-template-columns: 1fr; } .frame.phone .s-why, .frame.phone .s-rev { padding: 32px 18px; }
+  .frame.phone .s-foot { flex-wrap: wrap; padding: 20px 18px; }
+  .chat { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+  .chat .h { height: 44px; display: flex; align-items: center; padding: 0 14px; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .chat .log { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; font-size: 13px; line-height: 19px; }
+  .chat .log .u { padding: 8px 12px; font-size: 13px; max-width: 90%; }
+  .chat .in { margin: 12px; border: 1px solid var(--border); border-radius: var(--r-card); padding: 10px 10px 8px 12px; }
+  .chat .in textarea { width: 100%; border: 0; resize: none; outline: none; min-height: 40px; font-size: 13px; }
+  .chat .in .row { display: flex; align-items: center; justify-content: space-between; }
+  .chat .sug { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px; }
+  .chat .sug button { height: 28px; padding: 0 10px; border-radius: 99px; border: 1px solid var(--border); background: #fff; font-size: 12px; color: var(--text-2); }
+  .chat .sug button:hover { color: var(--text); border-color: var(--border-strong); }
+  .pane { flex: 1; min-width: 0; overflow-y: auto; }
+  .pane .wrap { max-width: 880px; margin: 0 auto; padding: 32px 24px 64px; }
+  .pane h2 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -.01em; }
+  .pane .sub { color: var(--text-2); margin-top: 2px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+  .stat { background: #fff; border: 1px solid var(--border); border-radius: var(--r-card); padding: 14px 16px; }
+  .stat small { color: var(--text-2); font-size: 12px; } .stat b { display: block; font-size: 22px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .stat .bars { display: flex; align-items: flex-end; gap: 3px; height: 28px; margin-top: 6px; } .stat .bars i { flex: 1; background: var(--brand); opacity: .25; border-radius: 2px 2px 0 0; } .stat .bars i:last-child { opacity: 1; }
+  .tbl { margin-top: 16px; background: #fff; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; }
+  .tbl .tools { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .tbl .tools .sp { flex: 1; }
+  .tbl table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl th { text-align: left; font-weight: 500; color: var(--text-2); font-size: 12px; padding: 8px 14px; border-bottom: 1px solid var(--border); background: #FAFAFA; }
+  .tbl td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl td.m { color: var(--text-2); white-space: nowrap; }
+  .tbl tr.fresh td { animation: fresh 2s var(--std); }
+  @keyframes fresh { from { background: var(--success-inv); } }
+  .lists { display: flex; gap: 6px; margin-top: 20px; }
+  .lists button { height: 32px; padding: 0 12px; border-radius: var(--r-control); border: 1px solid var(--border); background: #fff; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+  .lists button.on { color: var(--text); border-color: var(--text); font-weight: 500; }
+  .lists button em { font-style: normal; color: var(--text-2); font-weight: 400; }
+  .switch { position: relative; display: inline-flex; height: 20px; width: 34px; flex-shrink: 0; align-items: center; border-radius: 999px; background: var(--bg-quaternary); border: 0; transition: background-color .2s; }
+  .switch[aria-checked="true"] { background: var(--brand); }
+  .switch i { height: 16px; width: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .2); transform: translateX(2px); transition: transform .2s cubic-bezier(.34,1.3,.64,1); display: block; }
+  .switch[aria-checked="true"] i { transform: translateX(16px); }
+  .setgrid { display: grid; grid-template-columns: 200px 1fr; gap: 24px; margin-top: 24px; }
+  .setnav a { display: block; height: 32px; line-height: 32px; padding: 0 10px; border-radius: var(--r-control); color: var(--text-2); cursor: pointer; }
+  .setnav a.on { background: #fff; color: var(--text); font-weight: 500; box-shadow: 0 0 0 1px var(--border); }
+  .setcard { background: #fff; border: 1px solid var(--border); border-radius: var(--r-card); }
+  .setrow { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .setrow:last-child { border-bottom: 0; }
+  .setrow > div { flex: 1; min-width: 0; }
+  .setrow b { display: block; font-weight: 500; } .setrow small { display: block; color: var(--text-2); font-size: 13px; line-height: 18px; margin-top: 2px; }
+  .field { height: 36px; border: 1px solid var(--border); border-radius: var(--r-control); padding: 0 10px; display: flex; align-items: center; gap: 4px; font-size: 13px; background: #fff; }
+  .field .fx { color: var(--text-2); }
+  .lock { font-size: 12px; color: var(--text-brand); background: var(--brand-inv); padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+
+  /* ── the customer's website, rendered in the frame ── */
+  .site { background: var(--pp-cream); color: var(--pp); font-family: var(--font); }
+  .site [contenteditable] { outline: none; border-radius: 3px; }
+  .site [contenteditable]:hover { box-shadow: 0 0 0 1.5px rgba(13,153,255,.55); }
+  .site [contenteditable]:focus { box-shadow: 0 0 0 2px var(--brand); }
+  .site section { position: relative; }
+  .site section.sel::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px var(--brand); pointer-events: none; z-index: 2; }
+  .s-nav { display: flex; align-items: center; gap: 24px; padding: 18px 40px; font-size: 13px; font-weight: 600; }
+  .s-nav .lg { margin-right: auto; display: flex; align-items: center; gap: 8px; letter-spacing: .1em; font-size: 12px; }
+  .s-hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; padding: 28px 40px 56px; align-items: center; }
+  .s-hero .kick { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--pp-accent); }
+  .s-hero h1 { font-size: 40px; line-height: 44px; letter-spacing: -.02em; margin: 10px 0 14px; font-weight: 700; }
+  .s-hero p { font-size: 16px; line-height: 24px; color: var(--pp2); margin: 0 0 22px; }
+  .s-form { display: flex; gap: 8px; max-width: 420px; }
+  .s-form input { flex: 1; height: 44px; border-radius: 8px; border: 1px solid #DCCBB8; background: #fff; padding: 0 14px; font-size: 14px; outline: none; }
+  .s-form button { height: 44px; padding: 0 18px; border-radius: 8px; border: 0; background: var(--pp); color: #fff; font-weight: 600; }
+  .s-form small { display: block; }
+  .s-note { font-size: 12px; color: var(--pp2); margin-top: 10px; opacity: .8; }
+  .s-hero .img { aspect-ratio: 4/5; border-radius: 14px; background: center/cover #C99A72; }
+  .s-why { background: #fff; padding: 48px 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .s-why h3 { margin: 10px 0 6px; font-size: 17px; } .s-why p { margin: 0; color: var(--pp2); font-size: 14px; line-height: 21px; }
+  .s-why i { font-size: 26px; color: var(--pp-accent); }
+  .s-rev { padding: 48px 40px; }
+  .s-rev h2 { margin: 0 0 20px; font-size: 24px; }
+  .s-rev .qs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .s-rev blockquote { margin: 0; background: #fff; border-radius: 12px; padding: 18px; font-size: 14px; line-height: 21px; }
+  .s-rev cite { display: block; margin-top: 10px; font-style: normal; font-size: 12px; color: var(--pp2); }
+  .s-foot { background: var(--pp); color: #E9DCCB; padding: 26px 40px; font-size: 12px; display: flex; gap: 20px; }
+  .s-foot span:first-child { margin-right: auto; }
+  .badge-pai { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* ── the customer's app (phone) ── */
+  .appv { background: var(--pp-cream); color: var(--pp); min-height: 640px; display: flex; flex-direction: column; padding: 22px 18px 18px; }
+  .appv .ah { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+  .appv .ah span { width: 26px; height: 26px; border-radius: 7px; background: var(--pp); color: #fff; display: grid; place-items: center; font-size: 14px; }
+  .appv .prog { display: flex; gap: 4px; margin: 18px 0 20px; } .appv .prog i { flex: 1; height: 4px; border-radius: 99px; background: #E3D3C3; } .appv .prog i.on { background: var(--pp); }
+  .appv .qn { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--pp-accent); }
+  .appv h2 { font-size: 24px; line-height: 29px; margin: 6px 0 18px; }
+  .appv .ch { display: flex; flex-direction: column; gap: 10px; }
+  .appv .ch button { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px; border: 1.5px solid transparent; background: #fff; text-align: left; font-size: 15px; font-weight: 500; color: var(--pp); }
+  .appv .ch button i { font-size: 22px; color: var(--pp-accent); }
+  .appv .ch button.on { border-color: var(--pp); }
+  .appv .go { margin-top: auto; height: 48px; border-radius: 12px; border: 0; background: var(--pp); color: #fff; font-weight: 600; font-size: 15px; }
+  .appv .res { background: #fff; border-radius: 14px; overflow: hidden; }
+  .appv .res .img { aspect-ratio: 4/3; background: center/cover #C99A72; }
+  .appv .res div.t { padding: 14px; } .appv .res b { font-size: 17px; display: block; } .appv .res small { color: var(--pp2); font-size: 13px; }
+
+  /* ── dialogs ── */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 60; display: grid; place-items: center; animation: fade .18s var(--std); }
+  @keyframes fade { from { opacity: 0; } }
+  .dlg { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; background: #fff; border-radius: var(--r-dialog); box-shadow: var(--sh-dialog); padding: 22px 24px 20px; animation: dlgIn .22s var(--std); }
+  @keyframes dlgIn { from { opacity: 0; transform: scale(.98) translateY(6px); } }
+  .dlg h3 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
+  .dlg .sub { color: var(--text-2); margin-top: 2px; }
+  .chk { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+  .chk:first-of-type { margin-top: 14px; }
+  .chk > i { font-size: 18px; margin-top: 1px; }
+  .chk .w { color: var(--text-warning); } .chk .ok { color: var(--success); }
+  .chk div { flex: 1; } .chk b { font-weight: 500; display: block; } .chk small { display: block; color: var(--text-2); font-size: 13px; line-height: 18px; margin-top: 1px; }
+  .chk .src { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 12px; color: var(--text-2); background: var(--bg-tertiary); border-radius: 99px; padding: 1px 8px; }
+  .chk .go { font-size: 13px; color: var(--text-brand); border: 0; background: none; padding: 0; white-space: nowrap; height: 20px; }
+  .chk.seen > i.w { color: var(--success); }
+  .agree { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 12px; background: var(--bg-tertiary); border-radius: 10px; font-size: 13px; cursor: pointer; }
+  .agree input { width: 16px; height: 16px; accent-color: var(--brand); }
+  .dlg .ft { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .live-hd { display: flex; align-items: center; gap: 12px; }
+  .live-hd .ok { width: 36px; height: 36px; border-radius: 50%; background: var(--success-inv); color: var(--text-success); display: grid; place-items: center; font-size: 20px; }
+  .addr-big { margin-top: 16px; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 12px; border: 1px solid var(--border); border-radius: 10px; }
+  .addr-big span { flex: 1; font-weight: 500; }
+  .tip { margin-top: 14px; display: flex; gap: 10px; padding: 12px; border-radius: 10px; background: var(--bg-tertiary); font-size: 13px; line-height: 18px; color: var(--text-2); }
+  .tip i { font-size: 18px; color: var(--text); }
+
+  .toast { position: fixed; left: 50%; top: 68px; transform: translate(-50%, -12px); opacity: 0; transition: opacity .2s, transform .25s var(--std); z-index: 95; pointer-events: none;
+    display: flex; align-items: center; gap: 8px; background: #1A1A1A; color: #fff; padding: 10px 16px; border-radius: var(--r-card); box-shadow: var(--sh-menu); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast i { color: #3DDC97; font-size: 18px; }
+
+  /* proto-only bar */
+  .proto { position: fixed; left: 16px; bottom: 16px; white-space: nowrap; z-index: 100; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 99px;
+    background: rgba(255,255,255,.96); border: 1px solid var(--border); box-shadow: var(--sh-menu); font-size: 12px; backdrop-filter: blur(8px); }
+  .proto b { padding: 0 8px; color: var(--text-2); }
+  .proto button { height: 26px; padding: 0 10px; border: 0; border-radius: 99px; background: none; color: var(--text); }
+  .proto button:hover { background: var(--bg-tertiary); }
+  .proto button.on { background: var(--text); color: #fff; }
+  .proto .x { color: var(--text-2); }
+  .proto select { height: 26px; border: 1px solid var(--border); border-radius: 99px; padding: 0 8px; background: #fff; font-size: 12px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+
+<!-- ───────────── Dashboard ───────────── -->
+<div class="view shell" id="vDash">
+  <aside class="side">
+    <button class="wsw"><span class="wsw-av"><i class="ph-fill ph-paw-print"></i></span><span><div class="wsw-name">Perch &amp; Paw</div><div class="wsw-meta">Pro plan · 6 members</div></span><i class="ph ph-caret-up-down"></i></button>
+    <button class="btn btn-primary new" id="newBtn" aria-haspopup="menu" aria-expanded="false"><i class="ph ph-plus"></i><span>New</span><i class="ph-bold ph-caret-down"></i></button>
+    <div class="menu" id="newMenu" role="menu" hidden>
+      <button role="menuitem" data-new="deck"><span class="ty deck lg"><i class="ph-fill ph-presentation"></i></span><span><b>Deck</b><small>Slides you present or send</small></span></button>
+      <button role="menuitem" data-new="site"><span class="ty site lg"><i class="ph-fill ph-browser"></i></span><span><b>Website</b><small>Pages people visit, with a link</small></span></button>
+      <button role="menuitem" data-new="app"><span class="ty app lg"><i class="ph-fill ph-device-mobile"></i></span><span><b>App</b><small>Something people use, on a phone or computer</small></span></button>
+    </div>
+    <nav class="nav">
+      <a class="on"><i class="ph ph-house"></i>Home</a><a><i class="ph ph-cards"></i>Templates</a><a><i class="ph ph-database"></i>Data sources</a>
+      <a><i class="ph ph-swatches"></i>Brand Kit</a><a><i class="ph ph-pen-nib"></i>Hire an expert</a><a><i class="ph ph-gift"></i>Refer and earn</a>
+    </nav>
+    <div class="side-foot"><nav class="nav"><a><i class="ph ph-user-plus"></i>Invite members</a><a><i class="ph ph-gear-six"></i>Settings</a></nav></div>
+  </aside>
+  <main class="main">
+    <header class="top">
+      <div class="search"><i class="ph ph-magnifying-glass"></i>Search decks, websites and apps<kbd>⌘K</kbd></div>
+      <button class="icon-btn" style="margin-left:auto" aria-label="Help"><i class="ph ph-question"></i></button>
+      <button class="icon-btn" aria-label="Notifications"><i class="ph ph-bell"></i></button><span class="me">S</span>
+    </header>
+    <div class="col">
+      <section class="hero">
+        <h1>What are you making next?</h1>
+        <div class="composer"><div class="ta">A launch plan for our new modular cat wall</div>
+          <div class="bar"><button class="btn btn-secondary btn-sm" style="width:32px;padding:0" aria-label="Add"><i class="ph ph-plus"></i></button>
+            <button class="btn btn-secondary btn-sm"><i class="ph ph-plugs-connected"></i>Connected apps</button>
+            <button class="btn btn-secondary btn-sm"><i class="ph-fill ph-paw-print" style="color:#9a5d27"></i>Perch &amp; Paw<i class="ph ph-caret-down"></i></button>
+            <button class="btn btn-primary send" aria-label="Send"><i class="ph-bold ph-arrow-up"></i></button></div></div>
+      </section>
+      <nav class="tabs"><span class="tab on">Recent</span><span class="tab">Created by me</span><span class="tab">Starred</span><span class="tab">Shared with me</span><span class="tab">Trash</span></nav>
+      <div class="types" id="types">
+        <button class="on" data-f="all">All</button>
+        <button data-f="deck"><span class="ty deck sm"><i class="ph-fill ph-presentation"></i></span>Decks</button>
+        <button data-f="site"><span class="ty site sm"><i class="ph-fill ph-browser"></i></span>Websites</button>
+        <button data-f="app"><span class="ty app sm"><i class="ph-fill ph-device-mobile"></i></span>Apps</button>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ───────────── Create chat ───────────── -->
+<div class="view create" id="vCreate" hidden>
+  <header class="chead"><button class="icon-btn" id="cBack" aria-label="Back"><i class="ph ph-arrow-left"></i></button><span class="pill" id="cPill"></span></header>
+  <div class="cbody" id="cBody"><div class="thread" id="thread"></div></div>
+  <div class="dock"><div id="dock"></div></div>
+</div>
+
+<!-- ───────────── Editor ───────────── -->
+<div class="view editor" id="vEditor" hidden>
+  <header class="ebar">
+    <div class="l"><button class="icon-btn" id="eBack" aria-label="Back to Home"><i class="ph ph-house"></i></button><span id="eBadge"></span><span class="nm" id="eName"></span><span class="chip" id="eState"><span class="dot draft"></span>Draft</span></div>
+    <div class="segm" id="eTabs" role="tablist"></div>
+    <div class="r"><div class="segm ic" id="eDev"><button aria-selected="true" data-dev="desktop" aria-label="Computer"><i class="ph ph-desktop"></i></button><button data-dev="phone" aria-label="Phone"><i class="ph ph-device-mobile"></i></button></div>
+      <button class="btn btn-secondary btn-sm" id="eShare"><i class="ph ph-link"></i>Copy link</button><button class="btn btn-primary btn-sm" id="ePublish">Publish</button></div>
+  </header>
+  <div class="ework" id="eWork"></div>
+</div>
+
+<div class="toast" id="toast"><i class="ph-fill ph-check-circle"></i><span></span></div>
+
+<div class="proto" id="proto"><b>Proto</b>
+  <select id="pSel" aria-label="Jump to a state">
+    <option value="dash">Dashboard</option><option value="menu">New menu</option><option value="create-site">Create a website</option><option value="create-app">Create an app</option>
+    <option value="editor-site">Website editor</option><option value="editor-app">App editor</option><option value="check">Check before publishing</option><option value="live">Website is live</option>
+    <option value="responses">Website responses</option><option value="data">App data</option></select>
+  <button id="pRestart">Restart</button><button class="x" id="pHide" aria-label="Hide (H)"><i class="ph ph-x"></i></button></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const IMG = (id, w = 900) => `https://images.unsplash.com/photo-${id}?w=${w}&h=${w}&fit=crop&auto=format&q=70`;
+const CAT = '1652113935269-cb82cbd01524', CHAIR = '1586023492125-27b2c045efd7', BED = '1615751072497-5f5169febe17';
+const BADGE = { deck: ['deck', 'ph-presentation'], site: ['site', 'ph-browser'], app: ['app', 'ph-device-mobile'] };
+const badge = (t, cls = '') => `<span class="ty ${BADGE[t][0]} ${cls}"><i class="ph-fill ${BADGE[t][1]}"></i></span>`;
+function toast(m) { const t = $('#toast'); $('span', t).textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+function show(id) { $$('.view').forEach((v) => v.hidden = v.id !== id); }
+let runId = 0;   // bumps on every jump so old timers stop
+
+/* ───────── the two things we make in this proto ───────── */
+const KINDS = {
+  site: {
+    noun: 'website', Noun: 'Website', name: 'Orbit launch site', addr: 'orbit.perchandpaw.site',
+    prompt: 'A page for the Orbit cat tree coming back in January, with a waitlist. Use the story from our Orbit pitch deck.',
+    thinking: ['Read your prompt: a launch page with a waitlist', 'Found your Orbit pitch deck: the sell-out story, photos and reviews', 'Brand kit: Perch & Paw colours and fonts'],
+    q1: { q: 'What should visitors do?', s: 'The page is built around this.', opts: [['envelope-simple', 'Join a waitlist', 'Leave their email for first access'], ['calendar-check', 'Book something', 'A visit, a call or a demo'], ['shopping-bag', 'Buy', 'Go to your shop to check out'], ['book-open', 'Just read', 'No form, only information']], pick: 0 },
+    q2: { q: 'What do you want to keep from each person?', s: "We'll set up the list for you. You'll find it under Responses.", opts: [['at', 'Their email', 'Needed to tell them it\'s back'], ['user', 'Their name', 'So emails can greet them'], ['paw-print', 'Their cat\'s name', 'A nice touch for launch emails'], ['map-pin', 'Where they live', 'To plan shipping']], multi: true, pick: [0, 1] },
+    plan: [['Top of page', 'Headline, photo and the waitlist form', 'Keeps: email, name'], ['Why it sold out', 'Three reasons, from your pitch deck', ''], ['Reviews', 'Three quotes from customers', ''], ['Questions', 'Shipping, size and price', ''], ['Footer', 'Links, privacy page, contact', '']],
+    tabs: [['edit', 'Edit'], ['responses', 'Responses'], ['settings', 'Settings']],
+  },
+  app: {
+    noun: 'app', Noun: 'App', name: 'Bed finder', addr: 'bedfinder.perchandpaw.site',
+    prompt: 'A quiz that helps people pick the right Perch & Paw bed for their cat, then sends them to the shop.',
+    thinking: ['Read your prompt: a product quiz', 'Matched quiz answers to your 6 beds in Shopify', 'Brand kit: Perch & Paw colours and fonts'],
+    q1: { q: 'What should people do in it?', s: 'The app is built around this.', opts: [['list-checks', 'Answer a few questions', 'And get a result at the end'], ['calendar-check', 'Book something', 'Pick a time and confirm'], ['chart-line-up', 'Track something', 'Log things and see them over time'], ['calculator', 'Work something out', 'Like a price or size calculator']], pick: 0 },
+    q2: { q: 'What should it remember?', s: "We'll set up the lists for you. You'll find them under Data.", opts: [['list-checks', 'Each person\'s answers', 'So you can see what people pick'], ['at', 'Their email', 'If they want the result sent to them'], ['bed', 'Your beds', 'Read from Shopify, kept up to date'], ['user', 'Accounts', 'People sign in and come back']], multi: true, pick: [0, 1, 2] },
+    plan: [['Welcome', 'What the quiz is, one button to start', ''], ['3 questions', 'How the cat sleeps, size, where the bed goes', 'Keeps: answers'], ['Result', 'The best bed, with a photo and price from Shopify', 'Reads: Shopify'], ['Send it to me', 'Optional email for the result', 'Keeps: email']],
+    tabs: [['edit', 'Edit'], ['data', 'Data'], ['settings', 'Settings']],
+  },
+};
+
+/* ───────── dashboard ───────── */
+const TILES = [
+  { t: 'deck', name: 'Orbit pitch', meta: 'Edited 2 hours ago' },
+  { t: 'site', name: 'Spring lookbook', meta: 'Edited yesterday', draft: true, addr: 'Not published' },
+  { t: 'deck', name: 'Weekly marketing update', meta: 'Edited 3 days ago', navy: true },
+  { t: 'app', name: 'Store finder', meta: '18 searches this week', live: true },
+  { t: 'deck', name: 'Q1 2027 marketing plan', meta: 'Edited last week', light: true },
+];
+let made = [];   // tiles added in this session
+function thumb(x) {
+  if (x.t === 'deck') return `<div class="cv deck" style="${x.navy ? 'background:#0b2545' : x.light ? 'background:#f3ece2;color:#2a1d0c' : ''}">
+      ${x.navy || x.light ? '' : `<div class="ph" style="background-image:url(${IMG(CAT, 500)})"></div>`}
+      <div class="sl"${x.navy || x.light ? ' style="right:20%"' : ''}><small>Perch &amp; Paw</small><b>${x.name === 'Orbit pitch' ? 'Why the Orbit cat tree sold out' : x.name}</b></div></div>`;
+  const st = `<span class="state"><span class="dot${x.live ? '' : ' draft'}"></span>${x.live ? 'Live' : 'Draft'}</span>`;
+  if (x.t === 'site') return `<div class="cv site"><div class="brw"><div class="bar"><i></i><i></i><i></i><span>${x.addr}</span></div>
+      <div class="pg"${x.draft ? ' style="background:#fff"' : ''}><div class="nv"><span>PERCH &amp; PAW</span><span>SHOP</span><span>STORY</span></div><b>${x.headline || 'Spring 2027 collection'}</b>${x.headline ? '<span class="cta">Join the waitlist</span>' : ''}
+      <div class="im" style="background-image:url(${IMG(x.headline ? CAT : CHAIR, 300)})"></div></div></div>${st}</div>`;
+  return `<div class="cv app"><span class="appicon"><i class="ph-fill ph-paw-print"></i></span><div class="phs"><div class="hd">${x.headline || 'Find a stockist'}</div>
+      <div class="op"><i></i><em></em></div><div class="op"><i></i><em></em></div><div class="op"><i></i><em></em></div><div class="bt"></div></div>${st}</div>`;
+}
+let filter = 'all';
+function renderGrid() {
+  const all = [...made, ...TILES].filter((x) => filter === 'all' || x.t === filter);
+  $('#grid').innerHTML = all.map((x) => `<button class="tile${x.fresh ? ' new-in' : ''}" data-open="${x.kind || ''}">${thumb(x)}
+    <div class="cb">${badge(x.t)}<div><div class="ct">${x.name}</div><div class="cm">${x.meta}</div></div><i class="ph ph-dots-three more"></i></div></button>`).join('');
+  made.forEach((m) => m.fresh = false);
+  $$('#grid [data-open]').forEach((b) => b.onclick = () => { if (b.dataset.open) openEditor(b.dataset.open); else toast('Opens the editor'); });
+}
+$$('#types button').forEach((b) => b.onclick = () => { filter = b.dataset.f; $$('#types button').forEach((x) => x.classList.toggle('on', x === b)); renderGrid(); });
+function menu(open) { $('#newMenu').hidden = !open; $('#newBtn').setAttribute('aria-expanded', open); }
+$('#newBtn').onclick = (e) => { e.stopPropagation(); menu($('#newMenu').hidden); };
+document.addEventListener('click', (e) => { if (!e.target.closest('#newMenu')) menu(false); });
+$$('[data-new]').forEach((b) => b.onclick = () => { menu(false); if (b.dataset.new === 'deck') return toast('Opens the deck create flow, as today'); startCreate(b.dataset.new); });
+function goDash() { show('vDash'); renderGrid(); }
+
+/* ───────── create chat ───────── */
+let K, kind, answers;
+const thread = () => $('#thread');
+const scrollEnd = () => { const b = $('#cBody'); b.scrollTo({ top: b.scrollHeight, behavior: 'smooth' }); };
+function say(html, cls = 'a') { const el = document.createElement('div'); el.className = `${cls} fade-up`; el.innerHTML = html; thread().appendChild(el); scrollEnd(); return el; }
+async function startCreate(k, jump) {
+  const my = ++runId; kind = k; K = KINDS[k]; answers = { q1: K.q1.pick, q2: [...K.q2.pick] };
+  show('vCreate'); thread().innerHTML = ''; $('#dock').innerHTML = '';
+  $('#cPill').innerHTML = `${badge(k, 'sm')}New ${K.noun}`;
+  say(K.prompt, 'u');
+  if (jump === 'plan') { say(`<span class="muted">Thought for 3s</span>`); return askPlan(); }
+  const tr = say(`<div class="trail"><div class="st"><span class="spinner"></span>Working out what this ${K.noun} needs…</div></div>`);
+  for (const s of K.thinking) { await wait(650); if (my !== runId) return; tr.firstElementChild.insertAdjacentHTML('beforeend', `<div class="fade-up" style="padding-left:24px">· ${s}</div>`); scrollEnd(); }
+  await wait(500); if (my !== runId) return;
+  tr.innerHTML = `<span class="muted">Thought for 2s</span>`;
+  say(`<p style="margin:0">Two quick questions, then we'll plan the ${K.noun}.</p>`);
+  ask('q1');
+}
+function ask(which) {
+  const Q = K[which], step = which === 'q1' ? 1 : 2;
+  const sel = (i) => Q.multi ? answers.q2.includes(i) : answers.q1 === i;
+  $('#dock').innerHTML = `<div class="ask fade-up"><span class="stp">${step} of 2</span><div class="q">${Q.q}</div><div class="qs">${Q.s}</div>
+    <div class="opts" role="${Q.multi ? 'group' : 'radiogroup'}">${Q.opts.map(([ic, b, s], i) => `<button class="opt" role="${Q.multi ? 'checkbox' : 'radio'}" aria-checked="${sel(i)}" data-i="${i}"><i class="ph ph-${ic} ic"></i><span><b>${b}</b><small>${s}</small></span></button>`).join('')}</div>
+    <div class="ft">${step === 2 ? '<button class="btn btn-ghost btn-sm" data-back>Back</button>' : ''}<span class="sp"></span><button class="btn btn-primary btn-sm" data-next>Continue</button></div></div>`;
+  $$('#dock .opt').forEach((b) => b.onclick = () => {
+    const i = +b.dataset.i;
+    if (Q.multi) { answers.q2 = answers.q2.includes(i) ? answers.q2.filter((x) => x !== i) : [...answers.q2, i]; b.setAttribute('aria-checked', answers.q2.includes(i)); }
+    else { answers.q1 = i; $$('#dock .opt').forEach((x) => x.setAttribute('aria-checked', +x.dataset.i === i)); }
+  });
+  $('#dock [data-back]')?.addEventListener('click', () => ask('q1'));
+  $('#dock [data-next]').onclick = () => {
+    if (which === 'q1') { say(K.q1.opts[answers.q1][1], 'u'); ask('q2'); }
+    else { { const a = answers.q2.map((i, j) => j ? K.q2.opts[i][1].replace(/^Their/, 'their').replace(/^Your/, 'your').replace(/^Each/, 'each') : K.q2.opts[i][1]); say(a.length ? (a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0]) : 'Nothing', 'u'); } askPlan(); }
+  };
+}
+function askPlan() {
+  say(`<p style="margin:0">Here's the plan. Change anything by asking, or build it.</p>`);
+  $('#dock').innerHTML = `<div class="ask fade-up"><div class="q">${badge(kind, 'sm')} ${K.name}</div><div class="qs">${K.plan.length} ${kind === 'site' ? 'sections on one page' : 'screens'} · Perch &amp; Paw brand kit</div>
+    <ol class="plan">${K.plan.map(([b, s, k], i) => `<li><span class="n">${i + 1}</span><div><b>${b}</b><span>${s}</span></div>${k ? `<span class="keep">${k}</span>` : ''}</li>`).join('')}</ol>
+    <div class="ft"><button class="btn btn-secondary btn-sm"><i class="ph ph-chat-circle"></i>Change the plan</button><span class="sp"></span><button class="btn btn-primary btn-sm" data-build>Build ${K.noun}</button></div></div>`;
+  $('#dock [data-build]').onclick = build;
+}
+async function build() {
+  const my = ++runId;
+  say(`Build the ${K.noun}`, 'u');
+  const steps = kind === 'site' ? ['Writing the page from your pitch deck', 'Placing photos and reviews', 'Setting up the waitlist and the Responses list', 'Adding a privacy page'] : ['Writing the questions', 'Reading your beds from Shopify', 'Setting up the Answers and Emails lists', 'Making it work on phones'];
+  $('#dock').innerHTML = `<div class="ask fade-up"><div class="q">Building ${K.name}</div><div class="build" style="margin-top:12px">${steps.map((s) => `<div class="row"><i class="ph ph-circle"></i>${s}</div>`).join('')}</div><div class="pbar"><i></i></div></div>`;
+  const rows = $$('#dock .build .row');
+  for (let i = 0; i < rows.length; i++) {
+    rows[i].firstElementChild.outerHTML = '<span class="spinner"></span>';
+    $('#dock .pbar i').style.width = `${((i + .5) / rows.length) * 100}%`;
+    await wait(800); if (my !== runId) return;
+    rows[i].classList.add('done'); rows[i].firstElementChild.outerHTML = '<i class="ph-bold ph-check-circle"></i>';
+  }
+  $('#dock .pbar i').style.width = '100%';
+  await wait(500); if (my !== runId) return;
+  if (!made.some((m) => m.kind === kind)) made.unshift({ t: kind, kind, name: K.name, meta: 'Draft · edited just now', addr: 'Not published', headline: kind === 'site' ? 'The cat tree that sold out is back' : 'Find the right bed', fresh: true });
+  openEditor(kind);
+}
+$('#cBack').onclick = () => { runId++; goDash(); };
+
+/* ───────── editor ───────── */
+let tab = 'edit', dev = 'desktop', live = { site: false, app: false }, reviewed = { site: false, app: false };
+const RESP = [['Priya Shah', 'priya@gmail.com', 'Just now'], ['Sam Lee', 'sam.lee@outlook.com', '12 min ago'], ['Ana Ruiz', 'ana@hey.com', '1 hour ago'], ['Tom Becker', 'tom.b@gmail.com', '3 hours ago'], ['Mei Chen', 'mei@chen.studio', 'Yesterday'], ['Jo Park', 'jo.park@icloud.com', 'Yesterday']];
+function siteHTML() {
+  return `<div class="site">
+    <section data-sec="0" class="s-nav"><span class="lg"><i class="ph-fill ph-paw-print"></i>PERCH &amp; PAW</span><span>Shop</span><span>Our story</span><span>Reviews</span></section>
+    <section data-sec="0" class="s-hero"><div><div class="kick" contenteditable>Back in January</div><h1 contenteditable>The cat tree that sold out in 9 days is back</h1>
+      <p contenteditable>Orbit is solid oak and wool felt, and it fits in a corner. Join the waitlist to get one from the first batch, before it opens to everyone.</p>
+      <div class="s-form"><input placeholder="Your email" aria-label="Your email"><button type="button">Join the waitlist</button></div><div class="s-note" contenteditable>212 people are already on the list.</div></div>
+      <div class="img" style="background-image:url(${IMG(CAT)})"></div></section>
+    <section data-sec="1" class="s-why">${[['tree', 'Built to last', 'Solid oak posts and wool felt platforms. No chipboard, no glue smell.'], ['ruler', 'Fits a corner', 'Under a metre wide, so it works in a flat, not just a house.'], ['paw-print', 'Cats chose it', 'Tested with 40 cats before launch. 37 used it on day one.']].map(([i, h, p]) => `<div><i class="ph ph-${i}"></i><h3 contenteditable>${h}</h3><p contenteditable>${p}</p></div>`).join('')}</section>
+    <section data-sec="2" class="s-rev"><h2 contenteditable>What owners say</h2><div class="qs">${[['Our two cats fight over the top platform. That has never happened with any other tree.', 'Hannah, Leeds'], ['It looks like furniture, not a cat thing. Guests ask where it is from.', 'Marco, Bristol'], ['Ordered on launch day, sold out by the weekend. Glad it is coming back.', 'Dee, Glasgow']].map(([q, c]) => `<blockquote contenteditable>“${q}”<cite>${c}</cite></blockquote>`).join('')}</div></section>
+    <section data-sec="4" class="s-foot"><span>© 2026 Perch &amp; Paw</span><span>Privacy</span><span>Contact</span><span class="badge-pai">Made with Presentations.AI</span></section></div>`;
+}
+let appStep = 0, appPick = 1;
+function appHTML() {
+  if (appStep === 3) return `<div class="appv"><div class="ah"><span><i class="ph-fill ph-paw-print"></i></span>Bed finder</div><div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <div class="qn">Your match</div><h2 contenteditable>The Nest, in oat</h2><div class="res"><div class="img" style="background-image:url(${IMG(CHAIR, 600)})"></div><div class="t"><b>$129</b><small>Deep sides for cats who curl up. In stock, ships in 2 days.</small></div></div>
+    <button class="go" style="margin-top:16px">See it in the shop</button><button class="go" style="background:none;color:var(--pp);height:40px" data-restart>Start again</button></div>`;
+  const Q = [['How does your cat sleep?', [['circle-dashed', 'Curled up in a ball'], ['arrows-out-line-horizontal', 'Stretched right out'], ['house-simple', 'Hidden away']]],
+             ['How big is your cat?', [['dot-outline', 'Small, under 4 kg'], ['circle', 'Medium, 4 to 6 kg'], ['circle-half', 'Large, over 6 kg']]],
+             ['Where will the bed go?', [['couch', 'Living room'], ['bed', 'Bedroom'], ['sun', 'By a window']]]][appStep];
+  return `<div class="appv"><div class="ah"><span><i class="ph-fill ph-paw-print"></i></span>Bed finder</div><div class="prog">${[0, 1, 2].map((i) => `<i class="${i <= appStep ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="qn">Question ${appStep + 1} of 3</div><h2 contenteditable>${Q[0]}</h2><div class="ch">${Q[1].map(([ic, t], i) => `<button data-pick="${i}" class="${i === appPick ? 'on' : ''}"><i class="ph ph-${ic}"></i>${t}</button>`).join('')}</div>
+    <button class="go" data-next>Next</button></div>`;
+}
+function wireApp() {
+  const f = $('#frameBody'); if (!f || kind !== 'app') return;
+  $$('[data-pick]', f).forEach((b) => b.onclick = () => { appPick = +b.dataset.pick; f.innerHTML = appHTML(); wireApp(); });
+  $('[data-next]', f)?.addEventListener('click', () => { appStep++; appPick = 0; f.innerHTML = appHTML(); wireApp(); });
+  $('[data-restart]', f)?.addEventListener('click', () => { appStep = 0; appPick = 1; f.innerHTML = appHTML(); wireApp(); });
+}
+function openEditor(k, t = 'edit') {
+  runId++; kind = k; K = KINDS[k]; tab = t; dev = k === 'app' ? 'phone' : 'desktop';
+  show('vEditor'); paintBar(); renderPane();
+}
+function paintBar() {
+  $('#eBadge').innerHTML = badge(kind); $('#eName').textContent = K.name;
+  $('#eState').className = 'chip' + (live[kind] ? ' live' : ''); $('#eState').innerHTML = live[kind] ? `<span class="dot"></span>Live` : `<span class="dot draft"></span>Draft`;
+  const n = kind === 'site' ? (live.site ? 212 : 0) : (live.app ? 48 : 0);
+  $('#eTabs').innerHTML = K.tabs.map(([id, l]) => `<button role="tab" data-t="${id}" aria-selected="${tab === id}">${l}${(id === 'responses' || id === 'data') && n ? `<em>${n}</em>` : ''}</button>`).join('');
+  $$('#eTabs button').forEach((b) => b.onclick = () => { tab = b.dataset.t; paintBar(); renderPane(); });
+  $$('#eDev button').forEach((b) => b.setAttribute('aria-selected', b.dataset.dev === dev));
+  $('#eDev').style.visibility = tab === 'edit' ? 'visible' : 'hidden';
+  $('#eShare').hidden = !live[kind];
+  $('#ePublish').textContent = live[kind] ? 'Update' : 'Publish';
+}
+$$('#eDev button').forEach((b) => b.onclick = () => { dev = b.dataset.dev; paintBar(); renderPane(); });
+function renderPane() {
+  const w = $('#eWork');
+  if (tab === 'edit') {
+    const secs = kind === 'site' ? [['rows', 'Top of page'], ['list-bullets', 'Why it sold out'], ['quotes', 'Reviews'], ['question', 'Questions'], ['minus', 'Footer']]
+      : [['hand-waving', 'Welcome'], ['number-circle-one', 'How it sleeps'], ['number-circle-two', 'Size'], ['number-circle-three', 'Where it goes'], ['star', 'Result'], ['envelope-simple', 'Send it to me']];
+    w.innerHTML = `<aside class="secs"><div class="h">${kind === 'site' ? 'Sections' : 'Screens'}<i class="ph ph-plus" title="Add"></i></div>
+        ${secs.map(([ic, l], i) => `<a data-s="${i}" class="${i === (kind === 'app' ? appStep + 1 : 0) ? 'on' : ''}"><i class="ph ph-${ic}"></i>${l}<i class="ph ph-dots-six-vertical grip"></i></a>`).join('')}</aside>
+      <div class="canvas"><div class="frame ${dev === 'phone' ? 'phone' : ''}"><div class="fbar"><span class="dots"><i></i><i></i><i></i></span><span class="addr"><i class="ph ph-lock-simple"></i>${live[kind] ? K.addr : 'Preview · not published yet'}</span></div>
+        <div id="frameBody">${kind === 'site' ? siteHTML() : appHTML()}</div></div></div>
+      <aside class="chat"><div class="h">Ask for changes</div><div class="log" id="log"><div class="a">${kind === 'site' ? 'Built from your Orbit pitch deck.' : 'Built from your beds in Shopify.'} Click any text on the ${K.noun} to change it, or ask me here.</div></div>
+        <div class="sug">${(kind === 'site' ? ['Add a questions section', 'Make the headline shorter', 'Ask for their cat\'s name too'] : ['Add a question about age', 'Show two beds in the result', 'Use bigger buttons']).map((s) => `<button data-sg>${s}</button>`).join('')}</div>
+        <div class="in"><textarea placeholder="Describe a change"></textarea><div class="row"><button class="icon-btn" style="width:28px;height:28px;font-size:16px"><i class="ph ph-plus"></i></button><button class="btn btn-primary" style="width:28px;height:28px;padding:0"><i class="ph-bold ph-arrow-up"></i></button></div></div></aside>`;
+    wireApp();
+    $$('.secs a').forEach((a) => a.onclick = () => {
+      $$('.secs a').forEach((x) => x.classList.toggle('on', x === a));
+      if (kind === 'app') { const s = +a.dataset.s; appStep = Math.max(0, Math.min(3, s === 0 ? 0 : s - 1)); if (s >= 4) appStep = 3; $('#frameBody').innerHTML = appHTML(); wireApp(); return; }
+      const sec = $(`#frameBody [data-sec="${a.dataset.s}"]`); $$('#frameBody section').forEach((x) => x.classList.toggle('sel', x === sec));
+      sec?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+    $$('[data-sg]').forEach((b) => b.onclick = async () => {
+      const log = $('#log'); log.insertAdjacentHTML('beforeend', `<div class="u fade-up">${b.textContent}</div><div class="a fade-up" data-w><span class="spinner" style="display:inline-block;vertical-align:-2px;margin-right:6px"></span>Changing the ${K.noun}…</div>`);
+      b.remove(); await wait(1200); const wd = $('[data-w]', log); if (wd) { wd.removeAttribute('data-w'); wd.innerHTML = 'Done. Undo with ⌘Z, or ask for something else.'; }
+    });
+  } else if (tab === 'responses') {
+    const on = live.site;
+    w.innerHTML = `<div class="pane"><div class="wrap"><h2>Responses</h2><div class="sub">Everyone who joined the waitlist. One person filling in the form is one response.</div>
+      ${on ? `<div class="stats"><div class="stat"><small>Sign-ups</small><b>212</b><div class="bars">${[20, 34, 28, 45, 52, 61, 90].map((h) => `<i style="height:${h}%"></i>`).join('')}</div></div>
+        <div class="stat"><small>Visits</small><b>1,940</b><div class="bars">${[40, 52, 47, 60, 66, 70, 95].map((h) => `<i style="height:${h}%"></i>`).join('')}</div></div>
+        <div class="stat"><small>Visitors who signed up</small><b>About 1 in 9</b><div class="bars">${[30, 32, 35, 38, 40, 42, 44].map((h) => `<i style="height:${h}%"></i>`).join('')}</div></div></div>
+      <div class="tbl"><div class="tools"><b>Waitlist</b><span class="muted" style="color:var(--text-2)">· 212</span><span class="sp"></span>
+        <span style="display:inline-flex;align-items:center;gap:8px;font-size:13px">Email me for each one<button class="switch" role="switch" aria-checked="true" data-sw><i></i></button></span>
+        <button class="btn btn-secondary btn-sm"><i class="ph ph-download-simple"></i>Download</button><button class="btn btn-secondary btn-sm"><i class="ph ph-plugs-connected"></i>Send to Klaviyo</button></div>
+        <table><thead><tr><th>Name</th><th>Email</th><th>When</th></tr></thead><tbody>${RESP.map(([n, e, t], i) => `<tr class="${i === 0 ? 'fresh' : ''}"><td>${n}</td><td>${e}</td><td class="m">${t}</td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="tbl" style="margin-top:20px"><div style="padding:48px 24px;text-align:center"><i class="ph ph-tray" style="font-size:28px;color:var(--text-4)"></i><div style="font-weight:500;margin-top:8px">No responses yet</div><div class="sub">They show up here once the website is live and people join the waitlist.</div><button class="btn btn-primary btn-sm" style="margin-top:14px" data-pub>Publish</button></div></div>`}
+      </div></div>`;
+    $('[data-sw]')?.addEventListener('click', (e) => { const s = e.currentTarget; s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'); });
+    $('[data-pub]')?.addEventListener('click', openCheck);
+  } else if (tab === 'data') {
+    w.innerHTML = `<div class="pane"><div class="wrap"><h2>Data</h2><div class="sub">What the app keeps and reads. Edit rows here like a sheet, or ask in the editor to add a list.</div>
+      <div class="lists" id="lists"><button class="on" data-l="0"><i class="ph ph-list-checks"></i>Answers <em>${live.app ? 48 : 0}</em></button><button data-l="1"><i class="ph ph-at"></i>Emails <em>${live.app ? 19 : 0}</em></button><button data-l="2"><i class="ph ph-bed"></i>Beds <em>6</em> <span class="lock" style="margin-left:4px">From Shopify</span></button></div>
+      <div class="tbl" id="dtbl"></div></div></div>`;
+    const L = [
+      [['Sleeps', 'Size', 'Where', 'Matched', 'When'], live.app ? [['Curled up', 'Medium', 'Living room', 'The Nest', 'Just now'], ['Stretched out', 'Large', 'By a window', 'The Lounger', '20 min ago'], ['Hidden away', 'Small', 'Bedroom', 'The Cave', '1 hour ago'], ['Curled up', 'Small', 'Bedroom', 'The Nest', '2 hours ago']] : []],
+      [['Email', 'Their match', 'When'], live.app ? [['priya@gmail.com', 'The Nest', 'Just now'], ['tom.b@gmail.com', 'The Cave', '1 hour ago']] : []],
+      [['Bed', 'Price', 'In stock'], [['The Nest', '$129', '84'], ['The Lounger', '$149', '31'], ['The Cave', '$119', '56'], ['The Perch', '$99', '12'], ['The Hammock', '$89', '40'], ['The Den', '$169', '9']]],
+    ];
+    const paint = (i) => { const [h, rows] = L[i]; $('#dtbl').innerHTML = rows.length ? `<table><thead><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, j) => `<td class="${j === r.length - 1 && i !== 2 ? 'm' : ''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+      : `<div style="padding:40px;text-align:center;color:var(--text-2)">Nothing yet. Answers show up once the app is live.</div>`; };
+    paint(0); $$('#lists button').forEach((b) => b.onclick = () => { $$('#lists button').forEach((x) => x.classList.toggle('on', x === b)); paint(+b.dataset.l); });
+  } else {
+    const groups = kind === 'site' ? ['Address', 'Search and sharing', 'Forms', 'Visits', 'Versions'] : ['Address', 'On the home screen', 'Who can use it', 'Search and sharing', 'Versions'];
+    w.innerHTML = `<div class="pane"><div class="wrap"><h2>Settings</h2><div class="sub">Filled in for you. Change anything here.</div>
+      <div class="setgrid"><nav class="setnav">${groups.map((g, i) => `<a class="${i === 0 ? 'on' : ''}">${g}</a>`).join('')}</nav><div style="display:flex;flex-direction:column;gap:16px">
+        <div class="setcard">
+          <div class="setrow"><div><b>Address</b><small>Where people find your ${K.noun}. Free, and ready now.</small></div><div class="field" style="width:280px"><span>${K.addr.split('.')[0]}</span><span class="fx">.perchandpaw.site</span></div></div>
+          <div class="setrow"><div><b>Your own domain</b><small>Use perchandpaw.com/${K.addr.split('.')[0]} instead.</small></div><button class="btn btn-secondary btn-sm">Connect a domain</button></div></div>
+        ${kind === 'app' ? `<div class="setcard">
+          <div class="setrow"><div style="flex:0 0 auto"><span class="appicon" style="position:static;width:48px;height:48px;border-radius:12px;font-size:24px"><i class="ph-fill ph-paw-print"></i></span></div><div><b>App icon and name</b><small>What people see when they add it to their home screen. Made from your brand kit.</small></div><button class="btn btn-secondary btn-sm">Change</button></div>
+          <div class="setrow"><div><b>Add to home screen</b><small>People can keep it on their phone. It opens full screen, like any app.</small></div><button class="switch" role="switch" aria-checked="true" data-sw><i></i></button></div>
+          <div class="setrow"><div><b>App Store and Google Play</b><small>List it in the stores so people can search for it.</small></div><span class="lock">Gold</span></div></div>
+          <div class="setcard"><div class="setrow"><div><b>Who can use it</b><small>Anyone with the link, people with a password, or people you invite.</small></div><select class="field" style="width:200px"><option>Anyone with the link</option><option>Password</option><option>Invited people</option></select></div></div>`
+        : `<div class="setcard">
+          <div class="setrow"><div><b>Title and description</b><small>“The Orbit cat tree is back in January. Join the waitlist.” Written from your page.</small></div><button class="btn btn-secondary btn-sm">Edit</button></div>
+          <div class="setrow"><div><b>Sharing image</b><small>Shows when the link is posted on social or in a message.</small></div><span style="width:96px;aspect-ratio:1.9;border-radius:6px;background:center/cover url(${IMG(CAT, 300)})"></span></div></div>
+          <div class="setcard"><div class="setrow"><div><b>Email me for each response</b><small>Goes to you at hello@perchandpaw.com.</small></div><button class="switch" role="switch" aria-checked="true" data-sw><i></i></button></div>
+          <div class="setrow"><div><b>Send responses to another app</b><small>Each sign-up lands in Klaviyo, HubSpot or Google Sheets too.</small></div><button class="btn btn-secondary btn-sm"><i class="ph ph-plugs-connected"></i>Choose an app</button></div></div>`}
+      </div></div></div></div>`;
+    $$('[data-sw]').forEach((s) => s.onclick = () => s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'));
+  }
+}
+$('#eBack').onclick = goDash;
+$('#eShare').onclick = () => toast('Link copied');
+$('#ePublish').onclick = () => live[kind] ? toast(`${K.Noun} updated`) : openCheck();
+
+/* ───────── check before the first publish ───────── */
+function openCheck() {
+  const items = kind === 'site'
+    ? [['“Sold out in 9 days”', 'A claim about sales. Still true?', 'From your Orbit pitch deck', 'file-text'], ['“212 people are already on the list”', 'A number on a public page. We\'ll keep it updated from Responses, or you can remove it.', 'Written by AI', 'sparkle'], ['“Tested with 40 cats”', 'A claim people may quote back to you.', 'From your Orbit pitch deck', 'file-text']]
+    : [['Prices and stock', 'Shown in the result. Read live from Shopify, so they stay right.', 'From Shopify', 'storefront'], ['“Ships in 2 days”', 'A promise to customers. Is it true for every bed?', 'Written by AI', 'sparkle']];
+  const ok = kind === 'site' ? [['Privacy page and cookie notice', 'Added, because the page keeps emails.'], ['Links, images, spelling', 'All links work. The photos come from your pitch deck.']] : [['Privacy page', 'Added, because the app keeps answers and emails.'], ['Works on phones', 'Checked on small and large screens.']];
+  const sc = document.createElement('div'); sc.className = 'scrim'; sc.id = 'scrim';
+  sc.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="chkT"><h3 id="chkT">Check before it goes live</h3>
+    <div class="sub">This is the first time ${K.name} goes public under your name. We found ${items.length} things worth a look.</div>
+    ${items.map(([b, s, src, ic], i) => `<div class="chk" data-c="${i}"><i class="ph ph-warning-circle w"></i><div><b>${b}</b><small>${s}</small><span class="src"><i class="ph ph-${ic}"></i>${src}</span></div><button class="go" data-look>Look at it</button></div>`).join('')}
+    ${ok.map(([b, s]) => `<div class="chk"><i class="ph ph-check-circle ok"></i><div><b>${b}</b><small>${s}</small></div></div>`).join('')}
+    <label class="agree"><input type="checkbox" id="agree">I've checked this ${K.noun}, and it's OK to publish under Perch &amp; Paw</label>
+    <div class="ft"><button class="btn btn-secondary" data-x>Back to editing</button><button class="btn btn-primary" id="doPub" disabled>Publish</button></div></div>`;
+  document.body.appendChild(sc);
+  $$('[data-look]', sc).forEach((b) => b.onclick = () => { const r = b.closest('.chk'); r.classList.add('seen'); b.textContent = 'Looked'; b.disabled = true; b.style.color = 'var(--text-2)'; });
+  $('#agree').onchange = (e) => $('#doPub').disabled = !e.target.checked;
+  $('[data-x]', sc).onclick = () => sc.remove();
+  sc.onclick = (e) => { if (e.target === sc) sc.remove(); };
+  $('#doPub').onclick = async () => {
+    $('#doPub').innerHTML = '<span class="spinner" style="border-color:rgba(255,255,255,.4);border-top-color:#fff"></span>Publishing'; $('#doPub').disabled = true;
+    await wait(1100); sc.remove(); goLive();
+  };
+}
+function goLive() {
+  live[kind] = true; reviewed[kind] = true;
+  const m = made.find((x) => x.kind === kind);
+  const meta = kind === 'site' ? '212 sign-ups this week' : '48 answers this week';
+  if (m) { m.live = true; m.addr = K.addr; m.meta = meta; m.draft = false; }
+  else made.unshift({ t: kind, kind, name: K.name, meta, addr: K.addr, live: true, headline: kind === 'site' ? 'The cat tree that sold out is back' : 'Find the right bed' });
+  paintBar(); renderPane();
+  const sc = document.createElement('div'); sc.className = 'scrim';
+  sc.innerHTML = `<div class="dlg" role="dialog" aria-modal="true"><div class="live-hd"><span class="ok"><i class="ph-bold ph-check"></i></span><div><h3>${K.name} is live</h3><div class="sub">Anyone with the link can ${kind === 'site' ? 'visit it' : 'use it'}.</div></div></div>
+    <div class="addr-big"><i class="ph ph-globe-simple" style="color:var(--text-2)"></i><span>${K.addr}</span><button class="btn btn-secondary btn-sm" data-copy><i class="ph ph-copy"></i>Copy</button><button class="btn btn-secondary btn-sm"><i class="ph ph-arrow-square-out"></i>Open</button></div>
+    <div class="tip"><i class="ph ph-${kind === 'site' ? 'tray' : 'device-mobile'}"></i><span>${kind === 'site' ? 'Sign-ups show up under <b style="color:var(--text)">Responses</b>, and we\'ll email you for each one.' : 'On a phone, people can add it to their home screen and open it like any other app. Answers show up under <b style="color:var(--text)">Data</b>.'}</span></div>
+    <div class="ft"><button class="btn btn-primary" data-x>Done</button></div></div>`;
+  document.body.appendChild(sc);
+  $('[data-copy]', sc).onclick = () => toast('Link copied');
+  $('[data-x]', sc).onclick = () => sc.remove();
+}
+
+/* ───────── proto controls ───────── */
+function reset() { runId++; $$('.scrim').forEach((s) => s.remove()); made = []; live = { site: false, app: false }; appStep = 0; appPick = 1; filter = 'all'; $$('#types button').forEach((x) => x.classList.toggle('on', x.dataset.f === 'all')); menu(false); }
+const madeSite = () => made.unshift({ t: 'site', kind: 'site', name: KINDS.site.name, meta: 'Draft · edited just now', addr: 'Not published', headline: 'The cat tree that sold out is back' });
+const madeApp = () => made.unshift({ t: 'app', kind: 'app', name: KINDS.app.name, meta: 'Draft · edited just now', addr: 'Not published', headline: 'Find the right bed' });
+const STATES = {
+  dash: () => { madeSite(); goDash(); },
+  menu: () => { goDash(); setTimeout(() => menu(true), 30); },
+  'create-site': () => startCreate('site'),
+  'create-app': () => startCreate('app'),
+  'editor-site': () => { madeSite(); openEditor('site'); },
+  'editor-app': () => { madeApp(); openEditor('app'); },
+  check: () => { madeSite(); openEditor('site'); openCheck(); },
+  live: () => { madeSite(); openEditor('site'); kind = 'site'; K = KINDS.site; goLive(); },
+  responses: () => { madeSite(); kind = 'site'; K = KINDS.site; live.site = true; made[0].live = true; made[0].addr = K.addr; made[0].meta = '212 sign-ups this week'; openEditor('site', 'responses'); },
+  data: () => { madeApp(); live.app = true; made[0].live = true; made[0].addr = KINDS.app.addr; made[0].meta = '48 answers this week'; openEditor('app', 'data'); },
+};
+function go(s) { reset(); (STATES[s] || STATES.dash)(); $('#pSel').value = s; history.replaceState(null, '', '?s=' + s); }
+$('#pSel').onchange = (e) => go(e.target.value);
+$('#pRestart').onclick = () => go($('#pSel').value);
+$('#pHide').onclick = () => $('#proto').hidden = true;
+document.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'h' && !e.target.closest('input, textarea, [contenteditable]')) $('#proto').hidden = !$('#proto').hidden; });
+go(new URLSearchParams(location.search).get('s') || 'dash');
+</script>
+</body>
+</html>
